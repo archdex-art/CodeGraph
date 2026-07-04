@@ -1,0 +1,17 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/fleet/route": "app/api/fleet/route.js",
+  "/api/health/route": "app/api/health/route.js",
+  "/api/index/route": "app/api/index/route.js",
+  "/api/jobs/[id]/route": "app/api/jobs/[id]/route.js",
+  "/api/repos/[id]/agents/route": "app/api/repos/[id]/agents/route.js",
+  "/api/repos/[id]/fix/route": "app/api/repos/[id]/fix/route.js",
+  "/api/repos/[id]/intel/route": "app/api/repos/[id]/intel/route.js",
+  "/api/repos/[id]/route": "app/api/repos/[id]/route.js",
+  "/api/repos/route": "app/api/repos/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/fleet/page": "app/fleet/page.js",
+  "/page": "app/page.js",
+  "/repos/[id]/page": "app/repos/[id]/page.js"
+}

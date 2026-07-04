@@ -1,0 +1,28 @@
+services:
+  codegraph:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: codegraph-app:latest
+    ports:
+      - "4000:4000"
+    environment:
+      # Public base URL the app advertises for itself (e.g. marketing "Start Indexing" links).
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:4000}
+    volumes:
+      # Persist the SQLite DB + WAL across container restarts.
+      - codegraph-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4000/api/health').then(r=>{if(r.status!==200)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  codegraph-data:

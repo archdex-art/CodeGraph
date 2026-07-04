@@ -1,0 +1,3 @@
+{
+  "/api/repos/[id]/intel/route": "app/api/repos/[id]/intel/route.js"
+}
