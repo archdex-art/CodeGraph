@@ -1,7 +1,0 @@
-{
-  "/api/repos/[id]/route": "app/api/repos/[id]/route.js",
-  "/api/repos/route": "app/api/repos/route.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/page": "app/page.js",
-  "/repos/[id]/page": "app/repos/[id]/page.js"
-}
