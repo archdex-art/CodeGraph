@@ -1,0 +1,23 @@
+# Render Blueprint — deploys the CodeGraph app (app/) as a Docker web service.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: codegraph
+    runtime: docker
+    dockerfilePath: ./app/Dockerfile
+    dockerContext: ./app
+    # Persistent disks require a paid instance type; Starter is the minimum.
+    plan: starter
+    region: oregon
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Public base URL the app advertises for itself. After the first deploy,
+      # set this to your live Render URL (e.g. https://codegraph.onrender.com).
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+    # The SQLite DB + WAL live here and MUST persist across deploys/restarts.
+    disk:
+      name: codegraph-data
+      mountPath: /app/data
+      sizeGB: 1
