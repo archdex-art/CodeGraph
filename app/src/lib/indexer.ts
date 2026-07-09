@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtempSync, rmSync, readFileSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { readdirSync, statSync } from "node:fs";
@@ -74,13 +74,23 @@ interface ScannedFile {
   imports: string[]; // resolved-ish relative targets
 }
 
-/** Shallow-clone a public git repo to a temp dir. Caller must rm it. */
-export async function cloneRepo(url: string): Promise<string> {
+/**
+ * Clone a public git repo. With no `destDir`, clones into a disposable temp
+ * dir (single-branch, depth 1 — fastest path for one-shot indexing/fix
+ * sandboxes; caller must rm it). With `destDir`, clones into that exact path
+ * — used for the editor's persistent workspace, so it fetches all branches
+ * (bounded depth) to support real branch switching + history.
+ */
+export async function cloneRepo(url: string, destDir?: string): Promise<string> {
   if (!/^https?:\/\/[\w.-]+\/[\w./~-]+/.test(url)) {
     throw new Error("Invalid repository URL. Use a public https git URL.");
   }
-  const dir = mkdtempSync(path.join(tmpdir(), "cg-"));
-  await exec("git", ["clone", "--depth", "1", "--single-branch", url, dir], {
+  const dir = destDir ?? mkdtempSync(path.join(tmpdir(), "cg-"));
+  if (destDir) mkdirSync(path.dirname(destDir), { recursive: true });
+  const args = destDir
+    ? ["clone", "--depth", "50", url, dir]
+    : ["clone", "--depth", "1", "--single-branch", url, dir];
+  await exec("git", args, {
     timeout: Number(process.env.CG_CLONE_TIMEOUT_MS) || 90_000,
     maxBuffer: 1024 * 1024 * 16,
     env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
@@ -319,13 +329,28 @@ interface Rule {
   severity: number;
   title: string;
   exts?: Record<string, true>;
+  /** Optional second-pass filter over the regex match to cut heuristic false
+   *  positives — e.g. the secret rule uses this to reject placeholder/example
+   *  values (`api_key="am_live_..."` in docs/marketing copy is not a live secret). */
+  validate?: (line: string, match: RegExpExecArray) => boolean;
+}
+
+// A real secret never contains a literal "..." ellipsis or matches a common
+// placeholder word — those are documentation/example conventions.
+const PLACEHOLDER_SECRET_RE = /^(\.{3,}|x{4,}|\*{4,}|your[-_ ]?\w*|example\w*|placeholder\w*|changeme|insert[-_ ]?\w*|redacted|dummy|fake|sample|todo|<.*>|\{\{.*\}\})$/i;
+function isPlaceholderSecret(value: string): boolean {
+  return PLACEHOLDER_SECRET_RE.test(value) || value.includes("...");
 }
 
 // Heuristic, language-agnostic-ish defect/risk rules.
 const RULES: Rule[] = [
   { re: /\beval\s*\(/, dimension: "security", severity: 5, title: "Use of eval()" },
   { re: /child_process|os\.system\(|subprocess\.(call|run|Popen)\(/, dimension: "security", severity: 3, title: "Shell/process execution" },
-  { re: /(password|secret|api[_-]?key|token)\s*[:=]\s*['"][^'"]{6,}['"]/i, dimension: "security", severity: 5, title: "Possible hardcoded secret" },
+  {
+    re: /(password|secret|api[_-]?key|token)\s*[:=]\s*['"]([^'"]{6,})['"]/i,
+    dimension: "security", severity: 5, title: "Possible hardcoded secret",
+    validate: (_line, m) => !isPlaceholderSecret(m[2]),
+  },
   { re: /https?:\/\/[^"'\s]*(?<![\w.])(localhost|127\.0\.0\.1)/, dimension: "security", severity: 2, title: "Hardcoded local URL" },
   { re: /\bdangerouslySetInnerHTML\b|innerHTML\s*=/, dimension: "security", severity: 3, title: "Raw HTML injection sink" },
   { re: /SELECT\s+.+\+|query\(\s*['"`].*\$\{/i, dimension: "security", severity: 4, title: "Possible SQL string concatenation" },
@@ -348,7 +373,8 @@ function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>): Issue[]
     for (const rule of RULES) {
       if (rule.exts && !rule.exts[f.ext]) continue;
       for (let i = 0; i < lines.length; i++) {
-        if (rule.re.test(lines[i])) {
+        const m = rule.re.exec(lines[i]);
+        if (m && (!rule.validate || rule.validate(lines[i], m))) {
           issues.push(mkIssue(rule.dimension, rule.severity, rule.title, f.rel, i + 1, br));
           break; // one hit per rule per file keeps signal clean
         }

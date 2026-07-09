@@ -67,3 +67,8 @@ npm run build        # typecheck + standalone build
 ## Backup / restore
 - State is a single file: `data/codegraph.sqlite` (+ `-wal`, `-shm`). Back up the `data` volume.
 - Restore by placing the file back and restarting.
+
+## Built-in editor workspaces
+- Indexing a **git** repo now clones it into `data/workspaces/<repoId>/` (depth 50, all branches) instead of a disposable temp dir, so the Editor tab has a live working tree to read/write/commit against. This lives on the same persistent disk as the SQLite DB — bump `disk.sizeGB` in `render.yaml` (or the `codegraph-data` volume) if you index many/large repositories.
+- Deleting a git-sourced repo removes its `workspaces/<repoId>` directory. Deleting a **local**-sourced repo never touches disk — its "workspace" is the user's real folder passed in at index time.
+- The remediation executor (`/api/repos/:id/fix`) is unaffected: it still clones into a disposable `os.tmpdir()` sandbox and removes it when done.

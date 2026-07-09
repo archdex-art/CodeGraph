@@ -1,9 +1,9 @@
 import { initTreeSitter } from "./codeintel/ast-extractor";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { db } from "./db";
+import { db, dataDir } from "./db";
 import { cloneRepo, indexRepo, cleanup, resolveLocalDir } from "./indexer";
-import type { Job, JobStatus, RepoDetail, RepoSummary, SourceType, VizGraph } from "./types";
+import type { Job, JobStatus, RepoDetail, RepoSummary, SaveMode, SourceType, VizGraph } from "./types";
 
 const EMPTY_VIZ: VizGraph = { nodes: [], edges: [], truncated: false };
 
@@ -44,14 +44,15 @@ function setRepoStatus(repoId: string, status: JobStatus) {
 }
 
 async function runJob(jobId: string, repoId: string, source: string, sourceType: SourceType) {
-  let tempDir: string | null = null;
   try {
     let root: string;
     if (sourceType === "git") {
       setJob(jobId, "cloning", 15, "Cloning repository…");
       setRepoStatus(repoId, "cloning");
-      root = await cloneRepo(source);
-      tempDir = root; // clean up clones only
+      // Clone straight into the persistent data dir (not os.tmpdir()) so the
+      // editor's workspace survives process restarts / container redeploys.
+      const workspaceDir = path.join(dataDir(), "workspaces", repoId);
+      root = await cloneRepo(source, workspaceDir);
     } else {
       setJob(jobId, "cloning", 15, "Reading local folder…");
       setRepoStatus(repoId, "cloning");
@@ -68,9 +69,12 @@ async function runJob(jobId: string, repoId: string, source: string, sourceType:
     setJob(jobId, "scoring", 85, "Computing Health Score…");
     setRepoStatus(repoId, "scoring");
 
+    // Keep the on-disk checkout around as a persistent workspace for the
+    // built-in editor (git clones are no longer deleted after indexing;
+    // local folders were never copied in the first place).
     db()
       .prepare(
-        `UPDATE repos SET status='done', score=?, loc=?, languages=?, graph=?, dimensions=?, issues=?, deps=?, viz=?, tree=?, modules=?, symbols=?, finished_at=?
+        `UPDATE repos SET status='done', score=?, loc=?, languages=?, graph=?, dimensions=?, issues=?, deps=?, viz=?, tree=?, modules=?, symbols=?, workspace_dir=?, finished_at=?
          WHERE id=?`
       )
       .run(
@@ -85,6 +89,7 @@ async function runJob(jobId: string, repoId: string, source: string, sourceType:
         JSON.stringify(result.tree),
         JSON.stringify(result.modules),
         JSON.stringify(result.symbolGraph),
+        root,
         Date.now(),
         repoId
       );
@@ -95,8 +100,6 @@ async function runJob(jobId: string, repoId: string, source: string, sourceType:
     db()
       .prepare("UPDATE repos SET status='error', error=?, finished_at=? WHERE id=?")
       .run(msg, Date.now(), repoId);
-  } finally {
-    if (tempDir) cleanup(tempDir);
   }
 }
 
@@ -128,11 +131,16 @@ export function listRepos(): RepoSummary[] {
   }));
 }
 
-/** Delete a repo and its jobs. Returns false if the repo didn't exist. */
+/** Delete a repo and its jobs. Removes the on-disk workspace only for git
+ *  clones (a "local" workspace is the user's real folder — never touched). */
 export function deleteRepo(id: string): boolean {
   const d = db();
+  const row = d.prepare("SELECT source_type, workspace_dir FROM repos WHERE id=?").get(id) as
+    | { source_type: string; workspace_dir: string | null }
+    | undefined;
   d.prepare("DELETE FROM jobs WHERE repo_id = ?").run(id);
   const res = d.prepare("DELETE FROM repos WHERE id = ?").run(id);
+  if (row?.source_type === "git" && row.workspace_dir) cleanup(row.workspace_dir);
   return Number(res.changes ?? 0) > 0;
 }
 
@@ -145,6 +153,7 @@ export function getRepo(id: string): RepoDetail | null {
     name: r.name as string,
     sourceType: ((r.source_type as string) || "git") as SourceType,
     status: r.status as JobStatus,
+    hasWorkspace: Boolean(r.workspace_dir),
     score: (r.score as number | null) ?? null,
     error: (r.error as string | null) ?? null,
     loc: (r.loc as number) ?? 0,
@@ -160,4 +169,22 @@ export function getRepo(id: string): RepoDetail | null {
     createdAt: r.created_at as number,
     finishedAt: (r.finished_at as number | null) ?? null,
   };
+}
+
+/** Resolve the on-disk workspace root for a repo, or null if not indexed yet. */
+export function getWorkspaceDir(id: string): { dir: string; sourceType: SourceType } | null {
+  const r = db().prepare("SELECT workspace_dir, source_type FROM repos WHERE id=?").get(id) as
+    | { workspace_dir: string | null; source_type: string }
+    | undefined;
+  if (!r || !r.workspace_dir) return null;
+  return { dir: r.workspace_dir, sourceType: (r.source_type as SourceType) || "git" };
+}
+
+export function getSaveMode(id: string): SaveMode {
+  const r = db().prepare("SELECT save_mode FROM repos WHERE id=?").get(id) as { save_mode: string } | undefined;
+  return ((r?.save_mode as SaveMode) || "local");
+}
+
+export function setSaveMode(id: string, mode: SaveMode): void {
+  db().prepare("UPDATE repos SET save_mode=? WHERE id=?").run(mode, id);
 }

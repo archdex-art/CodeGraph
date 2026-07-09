@@ -5,8 +5,13 @@ import path from "node:path";
 // Singleton DB across hot-reloads / route invocations.
 const g = globalThis as unknown as { __cgDb?: DatabaseSync };
 
+/** Resolve the persistent data directory (SQLite + editor workspaces live here). */
+export function dataDir(): string {
+  return process.env.CG_DATA_DIR || path.join(process.cwd(), "data");
+}
+
 function init(): DatabaseSync {
-  const dir = process.env.CG_DATA_DIR || path.join(process.cwd(), "data");
+  const dir = dataDir();
   mkdirSync(dir, { recursive: true });
   const db = new DatabaseSync(path.join(dir, "codegraph.sqlite"));
   db.exec("PRAGMA journal_mode = WAL;");
@@ -51,6 +56,8 @@ function init(): DatabaseSync {
   if (!cols.has("tree")) db.exec(`ALTER TABLE repos ADD COLUMN tree TEXT DEFAULT '{}'`);
   if (!cols.has("modules")) db.exec(`ALTER TABLE repos ADD COLUMN modules TEXT DEFAULT '{"nodes":[],"edges":[]}'`);
   if (!cols.has("symbols")) db.exec(`ALTER TABLE repos ADD COLUMN symbols TEXT DEFAULT '{"symbols":[],"edges":[],"truncated":false,"stats":{"symbols":0,"edges":0,"resolvedCalls":0}}'`);
+  if (!cols.has("workspace_dir")) db.exec("ALTER TABLE repos ADD COLUMN workspace_dir TEXT");
+  if (!cols.has("save_mode")) db.exec("ALTER TABLE repos ADD COLUMN save_mode TEXT NOT NULL DEFAULT 'local'");
   return db;
 }
 

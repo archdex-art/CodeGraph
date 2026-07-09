@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ModuleGraph } from "@/lib/types";
 import { langColor } from "@/lib/colors";
 import { layeredLayout } from "@/lib/layout";
 import { NodeGraph, type NGNode, type NGEdge } from "./NodeGraph";
+import { GraphSearch } from "./GraphSearch";
 
 const BOX = { w: 180, h: 64, hGap: 40, vGap: 84 };
 
 export function ArchitectureView({ modules }: { modules: ModuleGraph }) {
+  const [focusId, setFocusId] = useState<string | null>(null);
+
   const { nodes, edges } = useMemo(() => {
     const ids = modules.nodes.map((m) => m.id);
     const tierOf = new Map(modules.nodes.map((m) => [m.id, m.tier]));
@@ -38,8 +41,9 @@ export function ArchitectureView({ modules }: { modules: ModuleGraph }) {
   }
 
   return (
-    <div>
-      <NodeGraph nodes={nodes} edges={edges} height={620} />
+    <div className="space-y-2">
+      <GraphSearch nodes={nodes} onFocus={setFocusId} placeholder="Search modules…" />
+      <NodeGraph nodes={nodes} edges={edges} height={620} focusId={focusId} />
       <p className="mt-2 text-[11px] text-gray-600">
         Top-level modules layered by dependency direction (entry points on top). Arrow thickness/number = import count · color = dominant language · dot = issues.
       </p>

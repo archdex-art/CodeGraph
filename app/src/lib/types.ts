@@ -130,6 +130,8 @@ export interface RepoSummary {
 }
 
 export interface RepoDetail extends RepoSummary {
+  /** True once a persistent on-disk workspace exists for the built-in editor. */
+  hasWorkspace: boolean;
   error: string | null;
   loc: number;
   languages: LanguageStat[];
@@ -223,3 +225,44 @@ export const DIMENSION_META: Record<
   dependency_hygiene: { label: "Dependency hygiene", weight: 0.16, color: "#fbbf24" },
   test_integrity: { label: "Test integrity", weight: 0.12, color: "#22d3ee" },
 };
+
+// --- Built-in editor: file tree entries (lazy, one level at a time) ---
+export interface FsEntry {
+  name: string;
+  path: string; // workspace-relative, posix separators
+  type: "file" | "dir";
+  size?: number; // bytes, files only
+}
+
+// --- Built-in editor: Git status/branches/log ---
+export type GitFileStatus = "modified" | "added" | "deleted" | "untracked" | "renamed" | "conflicted";
+
+export interface GitStatusEntry {
+  path: string;
+  status: GitFileStatus;
+  staged: boolean;
+}
+
+export interface GitStatus {
+  branch: string;
+  ahead: number;
+  behind: number;
+  clean: boolean;
+  entries: GitStatusEntry[];
+  detached: boolean;
+}
+
+export interface GitBranch {
+  name: string;
+  current: boolean;
+  remote: boolean;
+}
+
+export interface GitLogEntry {
+  hash: string;
+  author: string;
+  date: string;
+  message: string;
+}
+
+export type SaveMode = "local" | "git-manual" | "git-auto";

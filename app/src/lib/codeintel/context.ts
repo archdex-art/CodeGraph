@@ -10,11 +10,25 @@ interface BuildOpts {
 }
 
 /**
+ * Escape text for safe embedding inside the assembled XML-tagged prompt.
+ * Real signatures/docstrings routinely contain `<`, `>`, `&`, `"` — generics
+ * (`Record<string, T>`), intersection types (`A & B`), or literal HTML/quotes
+ * in a comment — which would otherwise corrupt the tag structure of the
+ * context handed to a downstream LLM or any strict XML/HTML consumer.
+ */
+function escapeXml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/**
  * Graph-RAG context builder.
  * 1. Seed: rank symbols against the query (name/tag/doc + centrality).
  * 2. Expand: pull callees (dependencies the code needs) + top callers (usage sites) + siblings.
- * 3. Budget: greedily fill a token budget by descending relevance, deduped.
- * 4. Assemble: structured, LLM-friendly prompt with provenance.
+ * 3. Budget: greedily fill a token budget by descending relevance, deduped — using the
+ *    SAME rendered XML block that lands in the final prompt, so `tokenBudget` is honored
+ *    (tag/attribute overhead was previously excluded from the budgeting pass, letting the
+ *    real prompt run meaningfully over the requested budget).
+ * 4. Assemble: structured, escaped, LLM-friendly prompt with provenance.
  */
 export function buildContext(graph: SymbolGraph, query: string, opts: BuildOpts = {}): AIContext {
   const tokenBudget = opts.tokenBudget ?? 3000;
@@ -54,21 +68,23 @@ export function buildContext(graph: SymbolGraph, query: string, opts: BuildOpts 
     for (const m of qe.members(seed.id).slice(0, 6)) add(m, "member", 65);
   }
 
-  // Rank and token-budget.
+  // Rank and token-budget against the real rendered block for each slice.
   const ranked = [...slices.values()].sort((a, b) => b.score - a.score);
   const chosen: ContextSlice[] = [];
+  const blocks = new Map<string, string>();
   let tokens = 0;
   let truncated = false;
   for (const slice of ranked) {
     if (chosen.length >= maxSymbols) { truncated = true; break; }
-    const block = renderSymbol(slice.symbol);
+    const block = symbolBlock(slice.symbol, slice.reason);
     const t = estTokens(block);
     if (tokens + t > tokenBudget) { truncated = true; continue; }
     tokens += t;
+    blocks.set(slice.symbol.id, block);
     chosen.push(slice);
   }
 
-  const prompt = assemble(query, chosen);
+  const prompt = assemble(query, chosen, blocks);
   return {
     query,
     seeds: seeds.map((s) => s.id),
@@ -79,12 +95,25 @@ export function buildContext(graph: SymbolGraph, query: string, opts: BuildOpts 
   };
 }
 
-function renderSymbol(s: CodeSymbol): string {
-  const doc = s.doc ? `  // ${s.doc}\n` : "";
-  return `${doc}  ${s.signature}  [${s.file}:${s.line}${s.tags.length ? " · " + s.tags.join(",") : ""}]`;
+/** Render one symbol as the exact `<symbol>` XML block that lands in the final prompt
+ *  (shared by the budgeting pass and `assemble()` so the two never diverge). */
+function symbolBlock(s: CodeSymbol, role: string): string {
+  const attrs = [
+    `kind="${escapeXml(s.kind)}"`,
+    `name="${escapeXml(s.name)}"`,
+    `line="${s.line}"`,
+    `role="${escapeXml(role)}"`,
+  ];
+  if (s.exported) attrs.push(`exported="true"`);
+  const lines = [`    <symbol ${attrs.join(" ")}>`];
+  if (s.doc) lines.push(`      <doc>${escapeXml(s.doc)}</doc>`);
+  lines.push(`      <signature>${escapeXml(s.signature)}</signature>`);
+  if (s.fanIn || s.fanOut) lines.push(`      <graph callers="${s.fanIn}" callees="${s.fanOut}"/>`);
+  lines.push(`    </symbol>`);
+  return lines.join("\n");
 }
 
-function assemble(query: string, slices: ContextSlice[]): string {
+function assemble(query: string, slices: ContextSlice[], blocks: Map<string, string>): string {
   const byFile = new Map<string, ContextSlice[]>();
   for (const sl of slices) {
     const l = byFile.get(sl.symbol.file) || [];
@@ -93,20 +122,15 @@ function assemble(query: string, slices: ContextSlice[]): string {
   }
 
   const parts: string[] = [];
-  parts.push(`<task>${query}</task>`);
+  parts.push(`<task>${escapeXml(query)}</task>`);
   parts.push(`<codegraph_context symbols="${slices.length}">`);
   parts.push(
     `<!-- Assembled by CodeGraph Graph-RAG: seeds ranked by relevance, expanded along call/containment edges. -->`
   );
   for (const [file, group] of byFile) {
-    parts.push(`  <file path="${file}">`);
+    parts.push(`  <file path="${escapeXml(file)}">`);
     for (const sl of group.sort((a, b) => a.symbol.line - b.symbol.line)) {
-      const s = sl.symbol;
-      parts.push(`    <symbol kind="${s.kind}" name="${s.name}" line="${s.line}" role="${sl.reason}"${s.exported ? ' exported="true"' : ""}>`);
-      if (s.doc) parts.push(`      <doc>${s.doc}</doc>`);
-      parts.push(`      <signature>${s.signature}</signature>`);
-      if (s.fanIn || s.fanOut) parts.push(`      <graph callers="${s.fanIn}" callees="${s.fanOut}"/>`);
-      parts.push(`    </symbol>`);
+      parts.push(blocks.get(sl.symbol.id)!);
     }
     parts.push(`  </file>`);
   }
