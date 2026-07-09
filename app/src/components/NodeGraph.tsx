@@ -57,11 +57,15 @@ export function NodeGraph({
   edges,
   height = 600,
   onSelect,
+  focusId,
 }: {
   nodes: NGNode[];
   edges: NGEdge[];
   height?: number;
   onSelect?: (id: string | null) => void;
+  /** Externally-driven "jump to this node" — e.g. from a search bar. Centers
+   *  the view on the matching node and highlights it like a click/hover would. */
+  focusId?: string | null;
 }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [vp, setVp] = useState({ w: 900, h: height });
@@ -113,9 +117,18 @@ export function NodeGraph({
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
-    const ro = new ResizeObserver(() => setVp({ w: wrap.clientWidth, h: wrap.clientHeight || height }));
+    const measure = () => {
+      const w = wrap.clientWidth;
+      const h = wrap.clientHeight;
+      // A `display:none` ancestor (e.g. an inactive-but-kept-mounted tab)
+      // collapses this container to 0x0 — that's not a real resize we want
+      // to lay out against, so keep the last known-good viewport instead.
+      if (w === 0 && h === 0) return;
+      setVp({ w: w || 900, h: h || height });
+    };
+    const ro = new ResizeObserver(measure);
     ro.observe(wrap);
-    setVp({ w: wrap.clientWidth, h: wrap.clientHeight || height });
+    measure();
     return () => ro.disconnect();
   }, [height]);
 
@@ -123,6 +136,20 @@ export function NodeGraph({
     fit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bounds, vp.w, vp.h]);
+
+  // Search-to-focus: center the view on the externally-selected node.
+  useEffect(() => {
+    if (!focusId) return;
+    const n = nodeMap.get(focusId);
+    if (!n) return;
+    setSelId(focusId);
+    onSelect?.(focusId);
+    setView((v) => {
+      const scale = Math.max(0.8, Math.min(2, v.scale || 1));
+      return { scale, ox: vp.w / 2 - n.x * scale, oy: vp.h / 2 - n.y * scale };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId, nodeMap]);
 
   const active = hoverId ?? selId;
   const activeNeighbors = active ? adj.get(active) : null;

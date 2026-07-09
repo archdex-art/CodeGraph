@@ -70,3 +70,37 @@ POST /api/repos/:id/fix
 
 ## Next (M5)
 Add more fixers behind the same safety bar (unpinned-dep pinning via lockfile, unused-import removal), and optional real PR creation via a GitHub token (push branch + open PR) — the diff + branch + body are already produced.
+
+## M6 — Built-in Editor + Git Integration (BUILT)
+
+A VS Code Web–style editor lives at the repo report's **Editor** tab (`src/components/CodeEditor.tsx`), backed by a **persistent on-disk workspace** per repo instead of the disposable clone used for indexing.
+
+```
+index a repo (git|local)
+  → workspace_dir persisted on the `repos` row (git clones are no longer deleted after indexing)
+  → RepoDetail.hasWorkspace signals the editor is available
+  → all fs/git operations below run server-side, scoped to that one directory
+```
+
+### Filesystem (`src/lib/workspace.ts`, `/api/repos/:id/fs`)
+Every path is resolved with `resolveSafe()` and rejected if it would escape the workspace root (`WorkspacePathError` → 400) — verified live against a `../../../etc/passwd` traversal attempt. Ops: `list` (lazy, one directory level), `read` (binary-sniffed, size-capped at 4MB), `write`, `create` (file/dir), `rename`/`move`, `duplicate`, `upload` (base64 → bytes), `download` (raw byte stream). `DELETE` removes a subtree but refuses to delete the workspace root itself.
+
+### Git (`src/lib/gitops.ts`, `/api/repos/:id/git`)
+Thin wrapper over `execFile("git", […])` — argv arrays only, never a shell string, so branch names/commit messages/paths can't inject commands. Ops: `status` (porcelain v2 → modified/added/deleted/untracked/renamed/conflicted), `branches` (local + remote, symbolic remote HEAD filtered out via `%(symref:short)`), `log`, `diff`, `commit` (`git add -A` + `-c user.name/email` so no global git config is required), `push`/`pull`, `checkout`/`createBranch`. Push accepts an optional PAT that's spliced into the remote URL **per-call only** (`withToken()`) — never written to disk or the DB. git stderr is surfaced verbatim in API error responses (e.g. a real `403 Permission denied` or a non-fast-forward pull) instead of a generic 500.
+
+### Save modes
+Three modes, switchable anytime from the Git panel, persisted server-side (`repos.save_mode`): **Save locally** (fs write only), **Save to Git — manual** (fs write; user stages/commits from the Git panel), **Save to Git — auto** (fs write → auto-commit using a `{file}`/`{time}` message template → optional auto-push). Merge conflicts are surfaced as a status banner (`conflicted` porcelain code) rather than a full 3-way merge UI — resolve the `<<<<<<<`/`=======`/`>>>>>>>` markers directly in the editor, then commit.
+
+### UI (`src/components/editor/*`)
+- `FileExplorer.tsx` — lazy nested tree, right-click context menu (new file/folder, rename, duplicate, delete, upload, download), drag-and-drop move.
+- `GitPanel.tsx` — save-mode selector, branch switch/create, pull/push, status list → click for a colorized diff modal, commit box, commit history.
+- `SearchPanel.tsx` — find-in-files (`/api/repos/:id/search`) and plain-text replace-all across the matched files.
+- `StatusBar.tsx` — branch, sync state (↑ahead/↓behind), save mode, cursor position, language mode, editor theme toggle (light/dark, independent of the app's dark shell).
+- Monaco (`@monaco-editor/react`, loaded from CDN — no bundler/webpack config needed) supplies minimap, folding, bracket matching, multi-cursor, and built-in IntelliSense for TS/JS/JSON/CSS/HTML for free.
+- Ctrl/Cmd+S saves regardless of focus; open tabs, theme, autosave, and save-mode prefs persist per-repo in `localStorage` across sessions.
+
+### Verified (express, live)
+Cloned `octocat/Hello-World`, then over the real API: wrote/created/duplicated/renamed/deleted files, confirmed a traversal attempt is rejected, read `git status`/`branches`/`diff`/`log`, committed, created + checked out a branch, attempted an unauthorized push (got a genuine `403` from GitHub, proving it's real git not a stub), then deleted the repo and confirmed the git clone's workspace directory was removed from disk while a **local**-source workspace's real folder was left untouched on delete.
+
+### Known limitations (by design, not started)
+No integrated terminal, no LSP-backed cross-file IntelliSense (Monaco's built-in per-language service only), no OAuth device flow (PAT-only auth, entered per-session and never persisted), no 3-way merge conflict editor (conflicts are surfaced, not auto-resolved), find/replace-across-files is plain-text (no regex).

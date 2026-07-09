@@ -1,16 +1,19 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { VizGraph } from "@/lib/types";
 import { langColor } from "@/lib/colors";
 import { forceLayout } from "@/lib/layout";
 import { NodeGraph, type NGNode, type NGEdge } from "./NodeGraph";
+import { GraphSearch } from "./GraphSearch";
 
 const BOX_W = 156;
 const BOX_H = 56;
 const MAX_NODES = 120;
 
 export function NetworkView({ graph }: { graph: VizGraph }) {
+  const [focusId, setFocusId] = useState<string | null>(null);
+
   const { nodes, edges, shown, total } = useMemo(() => {
     // Blender-style graph of the actual import network (files only, connected).
     const importEdges = graph.edges.filter((e) => e.kind === "imports");
@@ -66,8 +69,9 @@ export function NetworkView({ graph }: { graph: VizGraph }) {
   }
 
   return (
-    <div>
-      <NodeGraph nodes={nodes} edges={edges} height={620} />
+    <div className="space-y-2">
+      <GraphSearch nodes={nodes} onFocus={setFocusId} placeholder="Search files…" />
+      <NodeGraph nodes={nodes} edges={edges} height={620} focusId={focusId} />
       <p className="mt-2 text-[11px] text-gray-600">
         File-level import network. Each box is a file; arrows point from importer → imported. Hover a node to highlight its connections.
         {shown < total ? ` Showing ${shown} most-connected of ${total} files.` : ""}

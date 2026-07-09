@@ -11,6 +11,10 @@ app/data/*.sqlite
 app/data/*.sqlite-shm
 app/data/*.sqlite-wal
 
+# Built-in editor: persistent per-repo git workspaces (cloned target repos —
+# runtime state on the Render disk, never part of this repo's own history)
+app/data/workspaces/
+
 # Python
 __pycache__/
 *.pyc
