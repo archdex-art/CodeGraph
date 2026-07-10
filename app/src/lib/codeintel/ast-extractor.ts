@@ -11,18 +11,41 @@ function wasmDir(): string {
   return resolve(process.cwd(), "wasm");
 }
 
+// web-tree-sitter's Emscripten-generated loader can leave its init promise
+// permanently unresolved (neither resolved nor rejected) when the WASM
+// binary is missing/unreadable — verified: it throws inside an internal
+// `abort()` call that never reaches the promise chain, so a bare `await`
+// here hangs the whole indexing job forever instead of hitting the `catch`
+// below. Race against a hard timeout so any failure mode — missing file,
+// slow/starved compile, or this loader bug — degrades to the regex
+// fallback instead of stalling every job that follows.
+const INIT_TIMEOUT_MS = Number(process.env.CG_TREE_SITTER_INIT_TIMEOUT_MS) || 20_000;
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+  ]);
+}
+
 export async function initTreeSitter(): Promise<void> {
   if (initAttempted) return;
   initAttempted = true;
   try {
-    await Parser.init({
-      locateFile: (name: string) => resolve(wasmDir(), name),
-    });
+    await withTimeout(
+      Parser.init({ locateFile: (name: string) => resolve(wasmDir(), name) }),
+      INIT_TIMEOUT_MS,
+      "Tree-sitter WASM init"
+    );
     const p = new Parser();
-    tsLanguage = await Parser.Language.load(resolve(wasmDir(), "tree-sitter-typescript.wasm"));
+    tsLanguage = await withTimeout(
+      Parser.Language.load(resolve(wasmDir(), "tree-sitter-typescript.wasm")),
+      INIT_TIMEOUT_MS,
+      "Tree-sitter grammar load"
+    );
     parser = p; // only mark ready once a grammar loaded
   } catch {
-    // WASM unavailable in this environment → extractors fall back to regex.
+    // WASM unavailable/too slow in this environment → extractors fall back to regex.
     parser = null;
     tsLanguage = null;
   }
