@@ -45,6 +45,16 @@ function init(): DatabaseSync {
       message TEXT DEFAULT '',
       error TEXT
     );
+    CREATE TABLE IF NOT EXISTS trash (
+      id TEXT PRIMARY KEY,
+      repo_id TEXT NOT NULL,
+      orig_path TEXT NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      size INTEGER DEFAULT 0,
+      deleted_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_trash_repo ON trash(repo_id, deleted_at);
   `);
   // Migrate older installs: add columns introduced after first release.
   const cols = new Set(

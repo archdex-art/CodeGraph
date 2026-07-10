@@ -118,7 +118,7 @@ export function FileExplorer({
   }
 
   async function handleDelete(entry: FsEntry) {
-    if (!confirm(`Delete ${entry.path}? This cannot be undone.`)) return;
+    if (!confirm(`Move "${entry.path}" to Trash? You can restore it from the Trash panel.`)) return;
     try {
       await fsDelete(repoId, entry.path);
       await refreshParentOf(entry.path);

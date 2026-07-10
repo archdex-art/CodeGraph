@@ -4,19 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { OnMount } from "@monaco-editor/react";
 import {
-  FolderTree, Search as SearchIcon, GitBranch as GitBranchIcon, X, Save, Circle,
+  FolderTree, Search as SearchIcon, GitBranch as GitBranchIcon, Trash2, X, Save, Circle,
 } from "lucide-react";
 import { FileExplorer } from "./editor/FileExplorer";
 import { GitPanel } from "./editor/GitPanel";
 import { SearchPanel } from "./editor/SearchPanel";
+import { TrashPanel } from "./editor/TrashPanel";
 import { StatusBar, type SaveState } from "./editor/StatusBar";
-import { fsRead, fsWrite, gitStatus as fetchGitStatus, gitCommit, gitPush, getSaveMode, setSaveMode as persistSaveMode } from "@/lib/api";
+import { fsRead, fsWrite, gitStatus as fetchGitStatus, gitCommit, gitPush, getSaveMode, setSaveMode as persistSaveMode, trashList } from "@/lib/api";
 import { languageForPath } from "@/lib/editorLang";
 import type { GitStatus, RepoDetail, SaveMode } from "@/lib/types";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react").then((m) => m.Editor), { ssr: false });
 
-type Panel = "explorer" | "search" | "git";
+type Panel = "explorer" | "search" | "git" | "trash";
 
 interface Tab {
   path: string;
@@ -73,6 +74,7 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
   const [refreshToken, setRefreshToken] = useState(0);
   const [gitStat, setGitStat] = useState<GitStatus | null>(null);
   const [diffModal, setDiffModal] = useState<{ path: string; diff: string } | null>(null);
+  const [trashCount, setTrashCount] = useState(0);
   const [pendingReveal, setPendingReveal] = useState<number | null>(null);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const restoredRef = useRef(false);
@@ -114,6 +116,12 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
   }, [repoId, hasGit]);
 
   useEffect(() => { refreshGitStatus(); }, [refreshGitStatus, refreshToken]);
+
+  const refreshTrash = useCallback(() => {
+    trashList(repoId).then((entries) => setTrashCount(entries.length)).catch(() => setTrashCount(0));
+  }, [repoId]);
+
+  useEffect(() => { refreshTrash(); }, [refreshTrash, refreshToken]);
 
   // Warn on tab close / navigation with unsaved work.
   useEffect(() => {
@@ -264,6 +272,7 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
           {hasGit && (
             <ActivityBtn active={panel === "git"} onClick={() => setPanel("git")} icon={<GitBranchIcon className="w-4.5 h-4.5" />} title="Source Control" badge={gitStat && gitStat.entries.length > 0 ? gitStat.entries.length : undefined} />
           )}
+          <ActivityBtn active={panel === "trash"} onClick={() => setPanel("trash")} icon={<Trash2 className="w-4.5 h-4.5" />} title="Trash" badge={trashCount > 0 ? trashCount : undefined} />
         </div>
 
         {/* Side panel */}
@@ -293,6 +302,7 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
               onOpenDiff={(path, diff) => setDiffModal({ path, diff })}
             />
           )}
+          {panel === "trash" && <TrashPanel repoId={repoId} onMutated={() => setRefreshToken((n) => n + 1)} />}
         </div>
 
         {/* Main editing area */}
@@ -400,7 +410,7 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
 
 function ActivityBtn({ active, onClick, icon, title, badge }: { active: boolean; onClick: () => void; icon: React.ReactNode; title: string; badge?: number }) {
   return (
-    <button onClick={onClick} title={title} className={`relative p-2.5 rounded-lg ${active ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}>
+    <button onClick={onClick} title={title} aria-label={title} className={`relative p-2.5 rounded-lg ${active ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}>
       {icon}
       {!!badge && <span className="absolute -top-0.5 -right-0.5 bg-purple-500 text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center">{badge > 9 ? "9+" : badge}</span>}
     </button>

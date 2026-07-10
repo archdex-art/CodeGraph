@@ -5,12 +5,12 @@ import {
   readWorkspaceFile,
   writeWorkspaceFile,
   createEntry,
-  deleteEntry,
   renameEntry,
   duplicateEntry,
   resolveSafe,
   WorkspacePathError,
 } from "@/lib/workspace";
+import { moveToTrash } from "@/lib/trash";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
@@ -98,7 +98,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 }
 
-// DELETE /api/repos/:id/fs?path=src/foo.ts
+// DELETE /api/repos/:id/fs?path=src/foo.ts  -> moves the entry to the repo's
+// trash (restorable via /api/repos/:id/trash) instead of erasing it.
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ws = workspaceOr404(id);
@@ -107,8 +108,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const relPath = searchParams.get("path");
   if (!relPath) return NextResponse.json({ error: "Missing path" }, { status: 400 });
   try {
-    deleteEntry(ws.dir, relPath);
-    return NextResponse.json({ ok: true });
+    const trash = moveToTrash(id, ws.dir, relPath);
+    return NextResponse.json({ ok: true, trash });
   } catch (e) {
     return err(e, 400);
   }

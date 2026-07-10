@@ -9,7 +9,6 @@ import {
   readFileSync,
   writeFileSync,
   mkdirSync,
-  rmSync,
   renameSync,
   existsSync,
   cpSync,
@@ -115,12 +114,6 @@ export function createEntry(root: string, relPath: string, type: "file" | "dir")
     mkdirSync(path.dirname(full), { recursive: true });
     writeFileSync(full, "", "utf8");
   }
-}
-
-export function deleteEntry(root: string, relPath: string): void {
-  const full = resolveSafe(root, relPath);
-  if (toRel(root, full) === ".") throw new Error("Cannot delete workspace root");
-  rmSync(full, { recursive: true, force: true });
 }
 
 export function renameEntry(root: string, fromRel: string, toRel_: string): void {

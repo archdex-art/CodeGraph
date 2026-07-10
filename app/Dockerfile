@@ -37,9 +37,13 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
 # Runtime SQLite DB + WAL live here; must be writable by the non-root user.
+# Fixed up again at container start (see docker-entrypoint.sh) because a
+# platform-attached persistent disk (e.g. Render) mounts fresh over this
+# path and resets ownership, regardless of the chown below.
 RUN mkdir -p /app/data && chown -R node:node /app
 
-USER node
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 4000
 
@@ -47,4 +51,7 @@ EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||4000)+'/api/health').then(r=>{if(r.status!==200)process.exit(1)}).catch(()=>process.exit(1))"
 
+# Starts as root so the entrypoint can fix /app/data ownership, then drops
+# to the unprivileged `node` user (via setpriv) to run the actual server.
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "server.js"]

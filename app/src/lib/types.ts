@@ -234,6 +234,16 @@ export interface FsEntry {
   size?: number; // bytes, files only
 }
 
+// --- Built-in editor: soft-deleted entries (restorable) ---
+export interface TrashEntry {
+  id: string;
+  path: string; // workspace-relative path it was deleted from, posix separators
+  name: string;
+  type: "file" | "dir";
+  size: number; // bytes (recursive for dirs)
+  deletedAt: number; // epoch ms
+}
+
 // --- Built-in editor: Git status/branches/log ---
 export type GitFileStatus = "modified" | "added" | "deleted" | "untracked" | "renamed" | "conflicted";
 
