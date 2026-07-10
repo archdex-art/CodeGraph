@@ -15,9 +15,9 @@
 | Metric | Baseline (2026-07-10, morning) | Current | Target (Phase 4) |
 |---|---|---|---|
 | Security | 3/10 | **8/10** | 8.5/10 |
-| Overall project | 7/10 | **8.6/10** | 9.2/10 |
+| Overall project | 7/10 | **8.7/10** | 9.2/10 |
 
-*Phases 0–3 of the plan are complete and verified end-to-end (typecheck, full test suite, production Docker build under Render's exact 512MB/0.5CPU constraints). Security jumped from 3→8: the live arbitrary-file-read hole is closed, SSRF is guarded, dependency vulnerabilities are patched, an opt-in auth gate and security headers are in place. The 0.5 gap to target is deliberately conservative — Basic Auth is opt-in (not yet turned on for the live deployment) and the residual `postcss`-in-`next` advisory is accepted risk (see Phase 0.3 notes), both real, known, and tracked rather than silently claimed as fully closed.*
+*Phases 0–3 of the plan are complete and verified end-to-end (typecheck, full test suite, production Docker build under Render's exact 512MB/0.5CPU constraints, branch protection live against confirmed CI check names). Security jumped from 3→8: the live arbitrary-file-read hole is closed, SSRF is guarded, dependency vulnerabilities are patched, an opt-in auth gate and security headers are in place. The 0.5 gap to target is deliberately conservative — Basic Auth is opt-in (not yet turned on for the live deployment) and the residual `postcss`-in-`next` advisory is accepted risk (see Phase 0.3 notes), both real, known, and tracked rather than silently claimed as fully closed.*
 
 ---
 
@@ -35,12 +35,12 @@
 ---
 
 ## Phase 1 — Reliability Guardrails
-**Status: 🔄 Nearly done — branch protection needs one CI run to register check names first**
+**Status: ✅ Done**
 
 | # | Task | Status | Date | Notes |
 |---|---|---|---|---|
 | 1.1 | GitHub Actions CI (test + build on push/PR) | ✅ Done | 2026-07-10 | `.github/workflows/ci.yml` — two jobs: `test-and-build` (typecheck, unit tests, `next build`) and `docker-smoke-test` (builds the real image, runs it under `--memory=512m --memory-swap=512m --cpus=0.5 --tmpfs /app/data:uid=0,gid=0` — i.e. Render's exact constraints — indexes `octocat/Hello-World` *and* `expressjs/express` end-to-end, confirms the server survives). Ran this exact sequence locally against the final built image before pushing; passed identically. |
-| 1.2 | Branch protection on `main` | ⬜ Blocked on first CI run | — | `gh` confirms admin access to set this. Deferred until after this push so the required status check names (`Test & Build (app/)`, `Docker build + adversarial smoke test`) are registered with GitHub first — setting protection against check names that have never run risks a rejected/confusing API call. Scoped conservatively: `required_status_checks` only, no PR-required/`enforce_admins` — so the direct-push hotfix workflow used throughout today's incident response still works; only PR merges gain a hard gate. |
+| 1.2 | Branch protection on `main` | ✅ Done | 2026-07-10 | Pushed, CI ran green on the first real run (both jobs), which registered the check names with GitHub; applied via `gh api PUT .../branches/main/protection` and verified live: `required_checks: ["Test & Build (app/)", "Docker build + adversarial smoke test"]`, `strict: true`, `enforce_admins: false`, `pr_required: null`. Scoped conservatively — PR merges now require both checks green; direct pushes (the hotfix workflow used throughout today's incident response) are untouched. |
 | 1.3 | Post-deploy smoke-test script | ✅ Done | 2026-07-10 | `app/scripts/smoke.sh` — health check → real index job → poll to completion → confirm server still healthy after. Explicitly designed around the lesson from all three incidents: a green `/api/health` alone would not have caught any of them. Verified working (pass case) and verified it fails correctly (non-zero exit) against an unreachable target. |
 | 1.4 | Postmortems for today's incidents | ✅ Done | 2026-07-10 | `docs/postmortems/` — 4 write-ups, not 3 (the plan under-counted; the crash-loop from the disk-permission fix's own `setpriv` step was a distinct incident): `2026-07-10-disk-permission-crash.md`, `2026-07-10-render-crash-loop.md`, `2026-07-10-tree-sitter-init-hang.md`, `2026-07-10-tree-sitter-oom.md`. Each follows Summary/Impact/Root Cause/Detection/Resolution/Action Items. |
 
@@ -91,3 +91,4 @@ No change from the plan — not attempted in this pass. Phases 0–3 were priori
 | 2026-07-10 | Full security + quality audit of live app; identified live arbitrary-file-read exposure, missing CI, thin API test coverage, stale root docs |
 | 2026-07-10 | `IMPROVEMENT_PLAN.md` + this tracker created |
 | 2026-07-10 | **Executed Phases 0–3 of the plan**: local-access + SSRF + dependency + auth-gate + security-header hardening; GitHub Actions CI with a real Docker smoke test under Render's exact constraints; smoke-test script; 4 incident postmortems; 54 new regression tests (one real pre-commit typecheck bug caught and fixed during review); legacy docs archived; new `ARCHITECTURE.md` and `README.md`. All verified end-to-end against the actual production Docker image before pushing. |
+| 2026-07-10 | Pushed Phases 0–3; CI passed on the first real run (both jobs green); branch protection applied and verified against the real, registered check names. |
