@@ -3,6 +3,19 @@ import type { AIContext, CodeSymbol, FsEntry, GitBranch, GitLogEntry, GitStatus,
 import type { RemediationPlan } from "./agents/types";
 import type { FixResult } from "./agents/executor-types";
 
+export interface HealthStatus {
+  status: string;
+  uptime: number;
+  ts: number;
+  localAccessAllowed: boolean;
+}
+
+export async function fetchHealth(): Promise<HealthStatus> {
+  const res = await fetch("/api/health", { cache: "no-store" });
+  if (!res.ok) throw new Error("Health check failed");
+  return res.json();
+}
+
 export async function startIndex(input: {
   repoUrl?: string;
   localPath?: string;

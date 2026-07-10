@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, GitBranch, Loader2, FolderOpen, FolderSearch } from "lucide-react";
-import { startIndex, fetchJob } from "@/lib/api";
+import { startIndex, fetchJob, fetchHealth } from "@/lib/api";
 import { FolderBrowser } from "@/components/FolderBrowser";
 import type { Job } from "@/lib/types";
 
@@ -25,8 +25,18 @@ export default function StartPage() {
   const [job, setJob] = useState<Job | null>(null);
   const [repoId, setRepoId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [localAccessAllowed, setLocalAccessAllowed] = useState(true); // optimistic; corrected after the health check resolves
   const busy = job !== null && job.status !== "error";
   const value = mode === "git" ? url : pathVal;
+
+  useEffect(() => {
+    fetchHealth()
+      .then((h) => {
+        setLocalAccessAllowed(h.localAccessAllowed);
+        if (!h.localAccessAllowed) setMode((m) => (m === "local" ? "git" : m));
+      })
+      .catch(() => {}); // health check itself failing isn't this page's concern; leave the optimistic default
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,9 +107,10 @@ export default function StartPage() {
             </button>
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || !localAccessAllowed}
               onClick={() => setMode("local")}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === "local" ? "bg-white text-black" : "text-gray-400 hover:text-white"}`}
+              title={localAccessAllowed ? undefined : "Disabled on this deployment: local-folder indexing would expose the server's filesystem to visitors. Use a Git URL, or self-host with CG_ALLOW_LOCAL_ACCESS=true."}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === "local" ? "bg-white text-black" : "text-gray-400 hover:text-white"} disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-gray-400`}
             >
               <FolderOpen className="w-4 h-4" /> Local folder
             </button>

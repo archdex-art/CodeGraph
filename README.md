@@ -1,50 +1,27 @@
 # CodeGraph
 
-> **Own the world model of software.** A Git analyzer that continuously builds a living, temporally-consistent semantic knowledge graph of an entire codebase — code, architecture, APIs, docs, ownership, dependencies, runtime behavior, issues, PRs, design intent — and exposes it as **shared memory for a swarm of specialized AI agents** that reason, critique, judge, and iteratively improve outputs.
+> A Git analyzer that builds a knowledge graph of a codebase, computes a blast-radius-weighted **Health Score**, and runs a deterministic swarm of specialist agents that find and fix issues — grounded in the graph, not vibes.
 
----
+**This is a real, working product**, not a design doc. Point it at a public repo and it clones, indexes, scores, and lets you explore and fix the codebase through three visualizations, a code-intelligence layer, an agent swarm, and a built-in editor.
 
-## The One-Liner
-Own the world model of software, deployed as shared memory for agent swarms, and you own the layer every future dev-AI product is forced to build on.
+## Run it
+```bash
+cd app
+npm install
+npm run dev        # http://localhost:4000
+```
+Requires Node ≥ 22 (uses the built-in `node:sqlite`) and `git` on PATH. Full setup, Docker, and deployment: `app/DEPLOY.md`.
 
-## The Problem
-Today's "AI for code" tools operate on flat file chunks + vector similarity. They have **no persistent, typed, cross-domain world model**. So agents:
-- Re-discover the same context every request (expensive, lossy).
-- Can't reason about *causality* (why a change breaks something downstream).
-- Can't connect static structure to runtime behavior to human/process intent.
-- Can't share memory or critique each other against a common ground truth.
-
-## The Insight
-A codebase is not a pile of files — it's a **graph of interrelated facts across eight domains** that evolves over time. If you fuse those domains into one queryable, confidence-weighted, temporal graph, agents stop guessing and start *reasoning*. The graph becomes:
-1. **Shared memory** — agents read/write a common world model.
-2. **Ground truth** — judgments are checked against the graph, not vibes.
-3. **A compounding moat** — every repo indexed and every agent judgment improves schema + retrieval.
-
----
-
-## Document Map
-
-| File | Contents |
+## Where things live
+| Path | What |
 |---|---|
-| [`01_architecture.md`](./01_architecture.md) | System architecture, components, data flow, deployment topology. |
-| [`02_knowledge_graph_schema.md`](./02_knowledge_graph_schema.md) | Node/edge ontology, temporal + probabilistic model, storage. |
-| [`03_indexing_pipeline.md`](./03_indexing_pipeline.md) | Repository ingestion, multi-domain extractors, incremental updates. |
-| [`04_agent_framework.md`](./04_agent_framework.md) | Specialized agents, consensus/critique/judge loop, memory protocol. |
-| [`05_execution_model.md`](./05_execution_model.md) | Task lifecycle, scheduling, verification, replay, safety. |
-| [`06_roadmap_and_stack.md`](./06_roadmap_and_stack.md) | Phased roadmap, tech stack, team, risks, GTM, metrics. |
-| [`07_codebase_health_score.md`](./07_codebase_health_score.md) | Graph-derived health/quality score, dimensions, error model, trends. |
+| [`app/`](./app) | **The actual product.** Next.js app — indexer, health score, visualizations, code intelligence, agent swarm, built-in editor. |
+| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Accurate, current system architecture — stack, request flow, security model, hard-won operational constraints. |
+| [`IMPROVEMENT_PLAN.md`](./IMPROVEMENT_PLAN.md) / [`PROGRESS_TRACKER.md`](./PROGRESS_TRACKER.md) | What's being worked on next, and live status against it. |
+| [`docs/postmortems/`](./docs/postmortems) | Incident write-ups for production issues found and fixed. |
+| [`docs/archive/legacy-design/`](./docs/archive/legacy-design) | An earlier, more ambitious design (Python + Postgres + NATS + Temporal) that informed the current build but was never itself deployed. Historical reference only — see its own `README.md` before trusting anything in there as current. |
 
-## The Eight Domains Fused
-1. **Code structure** — AST, symbols, types, call graph, dataflow.
-2. **Architecture** — modules, services, boundaries, layering.
-3. **APIs & contracts** — public interfaces, schemas, versioning.
-4. **Documentation & design intent** — docs, ADRs, design docs, comments.
-5. **Ownership & process** — authors, teams, CODEOWNERS, review patterns.
-6. **Dependencies** — internal + external, versions, vulnerabilities, licenses.
-7. **Runtime behavior** — traces, call paths, latency causality, failures.
-8. **Social/history** — issues, PRs, commits, discussions, incident links.
+## The pitch (long-term direction, partially built)
+Today's "AI for code" tools mostly operate on flat file chunks + vector similarity — no persistent, typed world model, so agents re-discover context every request and can't reason about causality. CodeGraph's bet: fuse a codebase's structure, dependencies, issues, and (eventually) ownership/runtime/docs into one graph, and let a swarm of specialist agents reason against that shared ground truth instead of guessing.
 
-> The defensibility is the **fusion** across these with temporal consistency — not any single extractor.
-
-## Status
-Design phase. This folder is the implementation planning artifact. Start with `01_architecture.md`.
+What's **actually built today**: code structure, dependencies, and static-issue domains, feeding a deterministic 7-agent swarm (Security/Performance/Refactor/Dead-code/Dependency/Architecture/Test) with no LLM required. Runtime behavior, ownership, and docs/design-intent domains are still ahead — see `docs/archive/legacy-design/06_roadmap_and_stack.md` for the longer-term shape, understanding that document predates and doesn't describe the current implementation.

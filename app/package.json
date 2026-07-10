@@ -27,6 +27,9 @@
     "tree-sitter-wasms": "^0.1.13",
     "web-tree-sitter": "^0.22.6"
   },
+  "overrides": {
+    "dompurify": "^3.4.11"
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

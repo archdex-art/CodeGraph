@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test-and-build:
+    name: Test & Build (app/)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build (Next.js production build)
+        run: npm run build
+
+  docker-smoke-test:
+    name: Docker build + adversarial smoke test
+    runs-on: ubuntu-latest
+    needs: test-and-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production image
+        run: docker build -t codegraph-ci:${{ github.sha }} ./app
+
+      - name: Run under Render-equivalent constraints (512MB, 0.5 CPU, root-owned disk mount)
+        run: |
+          docker run -d --name ci-smoke -p 4000:4000 \
+            --memory=512m --memory-swap=512m --cpus=0.5 \
+            --tmpfs /app/data:uid=0,gid=0,mode=0755 \
+            codegraph-ci:${{ github.sha }}
+          sleep 3
+
+      - name: Health check
+        run: |
+          curl -sf http://localhost:4000/api/health | tee /dev/stderr | grep -q '"status":"ok"'
+
+      - name: Index real repos end-to-end and confirm nothing hangs, errors, or crashes the server
+        run: |
+          set -e
+          index_and_wait() {
+            local repo_url="$1"
+            echo "=== indexing $repo_url ==="
+            RESP=$(curl -sf -X POST http://localhost:4000/api/index \
+              -H "Content-Type: application/json" \
+              -d "{\"repoUrl\":\"$repo_url\"}")
+            JOB_ID=$(echo "$RESP" | python3 -c "import sys,json;print(json.load(sys.stdin)['jobId'])")
+            for i in $(seq 1 40); do
+              STATUS=$(curl -sf "http://localhost:4000/api/jobs/$JOB_ID")
+              echo "poll $i: $STATUS"
+              if echo "$STATUS" | grep -q '"status":"done"'; then return 0; fi
+              if echo "$STATUS" | grep -q '"status":"error"'; then echo "indexing errored"; return 1; fi
+              if ! docker ps --filter name=ci-smoke --format '{{.Status}}' | grep -q Up; then
+                echo "container died mid-index"; docker logs ci-smoke; return 1
+              fi
+              sleep 1
+            done
+            echo "timed out waiting for $repo_url to finish indexing"; return 1
+          }
+          # Hello-World has no real code files — fast sanity check that the
+          # pipeline runs at all, but would NOT have caught the WASM-memory
+          # OOM incident (docs/postmortems/2026-07-10-tree-sitter-oom.md).
+          index_and_wait "https://github.com/octocat/Hello-World"
+          # express is a completely ordinary repo that reliably OOM-killed
+          # the container before that fix — this is the regression guard.
+          index_and_wait "https://github.com/expressjs/express"
+          curl -sf http://localhost:4000/api/health | grep -q '"status":"ok"' \
+            || { echo "server unhealthy after indexing (residual crash?)"; exit 1; }
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker logs ci-smoke || true

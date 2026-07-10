@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readdirSync, statSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
+import { localAccessAllowed, LOCAL_ACCESS_DISABLED_MESSAGE } from "@/lib/localAccess";
 
 // GET /api/browse?path=/abs/dir  -> { path, parent, home, entries: [{name, path}] }
 // Server-side directory listing so the "Start Indexing" local-folder field can
@@ -22,6 +23,9 @@ function resolveBrowsePath(input: string): string {
 }
 
 export async function GET(req: NextRequest) {
+  if (!localAccessAllowed()) {
+    return NextResponse.json({ error: LOCAL_ACCESS_DISABLED_MESSAGE }, { status: 403 });
+  }
   const target = resolveBrowsePath(new URL(req.url).searchParams.get("path") || "");
 
   if (!existsSync(target)) {
