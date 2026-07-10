@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { db, dataDir } from "./db";
 import { cloneRepo, indexRepo, cleanup, resolveLocalDir } from "./indexer";
+import { emptyTrash } from "./trash";
 import type { Job, JobStatus, RepoDetail, RepoSummary, SaveMode, SourceType, VizGraph } from "./types";
 
 const EMPTY_VIZ: VizGraph = { nodes: [], edges: [], truncated: false };
@@ -131,8 +132,10 @@ export function listRepos(): RepoSummary[] {
   }));
 }
 
-/** Delete a repo and its jobs. Removes the on-disk workspace only for git
- *  clones (a "local" workspace is the user's real folder — never touched). */
+/** Delete a repo, its jobs, and its trash. Removes the on-disk workspace only
+ *  for git clones (a "local" workspace is the user's real folder — never
+ *  touched); trash blobs always live under our own data dir, so those are
+ *  purged regardless of source type. */
 export function deleteRepo(id: string): boolean {
   const d = db();
   const row = d.prepare("SELECT source_type, workspace_dir FROM repos WHERE id=?").get(id) as
@@ -141,6 +144,7 @@ export function deleteRepo(id: string): boolean {
   d.prepare("DELETE FROM jobs WHERE repo_id = ?").run(id);
   const res = d.prepare("DELETE FROM repos WHERE id = ?").run(id);
   if (row?.source_type === "git" && row.workspace_dir) cleanup(row.workspace_dir);
+  emptyTrash(id);
   return Number(res.changes ?? 0) > 0;
 }
 

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowRight, GitBranch, Loader2, FolderOpen } from "lucide-react";
+import { ArrowRight, GitBranch, Loader2, FolderOpen, FolderSearch } from "lucide-react";
 import { startIndex, fetchJob } from "@/lib/api";
+import { FolderBrowser } from "@/components/FolderBrowser";
 import type { Job } from "@/lib/types";
 
 const EXAMPLES = [
@@ -20,6 +21,7 @@ export default function StartPage() {
   const [mode, setMode] = useState<Mode>("git");
   const [url, setUrl] = useState("");
   const [pathVal, setPathVal] = useState("");
+  const [browsing, setBrowsing] = useState(false);
   const [job, setJob] = useState<Job | null>(null);
   const [repoId, setRepoId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -118,15 +120,26 @@ export default function StartPage() {
                 className="flex-1 rounded-lg bg-[#0a0a0a] border border-white/10 px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 font-mono disabled:opacity-50"
               />
             ) : (
-              <input
-                type="text"
-                required
-                disabled={busy}
-                value={pathVal}
-                onChange={(e) => setPathVal(e.target.value)}
-                placeholder="/Users/you/projects/my-app"
-                className="flex-1 rounded-lg bg-[#0a0a0a] border border-white/10 px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 font-mono disabled:opacity-50"
-              />
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="text"
+                  required
+                  disabled={busy}
+                  value={pathVal}
+                  onChange={(e) => setPathVal(e.target.value)}
+                  placeholder="/Users/you/projects/my-app"
+                  className="flex-1 rounded-lg bg-[#0a0a0a] border border-white/10 px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 font-mono disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setBrowsing(true)}
+                  title="Browse for a folder"
+                  className="flex items-center gap-2 px-4 py-3 rounded-lg border border-white/10 bg-[#0a0a0a] text-sm text-gray-300 hover:text-white hover:border-purple-500/50 transition-colors disabled:opacity-50 shrink-0"
+                >
+                  <FolderSearch className="w-4 h-4" /> Browse
+                </button>
+              </div>
             )}
             <button
               type="submit"
@@ -185,6 +198,17 @@ export default function StartPage() {
           <p className="mt-4 text-sm text-emerald-400">Done — opening report…</p>
         )}
       </div>
+
+      {browsing && (
+        <FolderBrowser
+          initialPath={pathVal.trim() || undefined}
+          onClose={() => setBrowsing(false)}
+          onSelect={(p) => {
+            setPathVal(p);
+            setBrowsing(false);
+          }}
+        />
+      )}
     </div>
   );
 }

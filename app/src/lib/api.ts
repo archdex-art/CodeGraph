@@ -1,5 +1,5 @@
 // Client-side fetch helpers for the backend API.
-import type { AIContext, CodeSymbol, FsEntry, GitBranch, GitLogEntry, GitStatus, Job, RepoDetail, RepoSummary, SaveMode } from "./types";
+import type { AIContext, CodeSymbol, FsEntry, GitBranch, GitLogEntry, GitStatus, Job, RepoDetail, RepoSummary, SaveMode, TrashEntry } from "./types";
 import type { RemediationPlan } from "./agents/types";
 import type { FixResult } from "./agents/executor-types";
 
@@ -16,6 +16,29 @@ export async function startIndex(input: {
   if (!res.ok) throw new Error(data.error || "Failed to start indexing");
   return data;
 }
+
+export interface BrowseEntry {
+  name: string;
+  path: string;
+}
+
+export interface BrowseResult {
+  path: string;
+  parent: string | null;
+  home: string;
+  entries: BrowseEntry[];
+}
+
+export async function browseDir(path?: string): Promise<BrowseResult> {
+  const res = await fetch(`/api/browse${path ? `?path=${encodeURIComponent(path)}` : ""}`, { cache: "no-store" });
+  const data: unknown = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = data && typeof data === "object" && "error" in data && typeof data.error === "string" ? data.error : undefined;
+    throw new Error(msg || `Request failed (${res.status})`);
+  }
+  return data as BrowseResult;
+}
+
 export async function fetchJob(jobId: string): Promise<Job> {
   const res = await fetch(`/api/jobs/${jobId}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Job not found");
@@ -164,9 +187,39 @@ export function fsDownloadUrl(repoId: string, path: string): string {
   return `/api/repos/${repoId}/fs?op=download&path=${encodeURIComponent(path)}`;
 }
 
-export async function fsDelete(repoId: string, path: string): Promise<void> {
+export async function fsDelete(repoId: string, path: string): Promise<TrashEntry> {
   const res = await fetch(`/api/repos/${repoId}/fs?path=${encodeURIComponent(path)}`, { method: "DELETE" });
+  const d = await asJson<{ trash: TrashEntry }>(res);
+  return d.trash;
+}
+
+// --- Built-in editor: trash (restorable deletes) ---
+
+export async function trashList(repoId: string): Promise<TrashEntry[]> {
+  const res = await fetch(`/api/repos/${repoId}/trash`, { cache: "no-store" });
+  const d = await asJson<{ entries: TrashEntry[] }>(res);
+  return d.entries;
+}
+
+async function trashPost(repoId: string, body: Record<string, unknown>): Promise<void> {
+  const res = await fetch(`/api/repos/${repoId}/trash`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
   await asJson(res);
+}
+
+export async function trashRestore(repoId: string, trashId: string): Promise<void> {
+  await trashPost(repoId, { op: "restore", trashId });
+}
+
+export async function trashPurge(repoId: string, trashId: string): Promise<void> {
+  await trashPost(repoId, { op: "purge", trashId });
+}
+
+export async function trashEmpty(repoId: string): Promise<void> {
+  await trashPost(repoId, { op: "empty" });
 }
 
 export async function searchFiles(repoId: string, q: string): Promise<Array<{ file: string; line: number; text: string }>> {
