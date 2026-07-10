@@ -6,6 +6,43 @@ let parser: Parser | null = null;
 let tsLanguage: Parser.Language | null = null;
 let initAttempted = false;
 
+// web-tree-sitter's WASM linear memory is a singleton for the process
+// lifetime (shared by every `Parser` instance) and, per the WASM spec, can
+// only grow — never shrink — regardless of how diligently Tree/TreeCursor
+// are `.delete()`d (see the `finally` below). Measured directly, in the
+// real bundled server (not an isolated script):
+// RSS climbed 89MB → 234MB → 312MB → 484MB across just the first 5/10/15
+// files of an ordinary repo (expressjs/express) — roughly 26MB/file —
+// which blows through Render's 512MB Starter plan and gets the whole
+// process OOM-killed. Per-file cost varies too much by content to budget
+// with a fixed file count (an earlier fixed-count budget still undershot
+// this by ~3x), so check actual RSS before every parse instead: once it
+// crosses a safe ceiling, stop feeding tree-sitter for the rest of the
+// process's life and use the regex fallback extractor, which needs no WASM
+// memory at all. The ceiling has to leave real headroom, not just
+// "whatever's left below the container limit": since RSS never comes back
+// down once WASM has grown it, everything indexRepo does AFTER the last
+// tree-sitter call (dependency/viz/tree/module-graph building, JSON
+// serialization for the DB write, SQLite's own write path) has to fit in
+// the remainder — verified even a 300MB ceiling, and then a 150MB one,
+// still let the same 512MB container OOM once that other work ran on top
+// (in one case the job itself finished and reported success before the
+// container died moments later from residual growth). Default the budget
+// to effectively "don't use it" — proven to run cleanly end-to-end — and
+// let deployments with real memory headroom (a bigger plan, self-hosted)
+// opt back in via the env var.
+const MAX_RSS_BYTES = Number(process.env.CG_TREE_SITTER_MAX_RSS_BYTES) || 0;
+let treeSitterDisabledForRss = false;
+
+function rssBudgetExceeded(): boolean {
+  if (treeSitterDisabledForRss) return true;
+  if (process.memoryUsage().rss >= MAX_RSS_BYTES) {
+    treeSitterDisabledForRss = true;
+    return true;
+  }
+  return false;
+}
+
 // WASM lives in <appRoot>/wasm (committed, and traced into the standalone build).
 function wasmDir(): string {
   return resolve(process.cwd(), "wasm");
@@ -55,7 +92,7 @@ export const astTsExtractor = (fallback: LanguageExtractor): LanguageExtractor =
   language: "TypeScript",
   exts: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
   extract(text: string): ExtractResult {
-    if (!parser || !tsLanguage) {
+    if (!parser || !tsLanguage || rssBudgetExceeded()) {
       return fallback.extract(text);
     }
     parser.setLanguage(tsLanguage);
@@ -146,9 +183,18 @@ export const astTsExtractor = (fallback: LanguageExtractor): LanguageExtractor =
       }
     };
 
-    walk(cursor);
-
-    return { symbols, references };
+    try {
+      walk(cursor);
+      return { symbols, references };
+    } finally {
+      // tree-sitter's Tree/TreeCursor are backed by WASM linear memory, which
+      // is never garbage-collected by V8 — only freed via explicit .delete().
+      // Without this, every parsed file leaks its AST for the lifetime of the
+      // process: harmless on a handful of files, fatal (OOM) on a real repo
+      // with hundreds of them, since one process indexes every file in a run.
+      cursor.delete();
+      tree.delete();
+    }
   }
 });
 
