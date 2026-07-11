@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createIndexJob } from "@/lib/store";
 import { localAccessAllowed, LOCAL_ACCESS_DISABLED_MESSAGE } from "@/lib/localAccess";
 import { isPublicHttpUrl } from "@/lib/urlSafety";
+import { getSession } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      const { jobId, repoId } = createIndexJob(repoUrl, "git");
+      const { jobId, repoId } = createIndexJob(repoUrl, "git", getSession(req)?.accessToken);
       return NextResponse.json({ jobId, repoId }, { status: 202 });
     }
     return NextResponse.json({ error: "Provide repoUrl or localPath" }, { status: 400 });

@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, GitBranch, Loader2, FolderOpen, FolderSearch } from "lucide-react";
-import { startIndex, fetchJob, fetchHealth } from "@/lib/api";
+import { startIndex, fetchJob, fetchHealth, fetchMe, type AuthMe } from "@/lib/api";
 import { FolderBrowser } from "@/components/FolderBrowser";
+import { GithubReposPicker } from "@/components/GithubReposPicker";
+import { GithubMark } from "@/components/GithubMark";
 import type { Job } from "@/lib/types";
 
 const EXAMPLES = [
@@ -14,7 +16,7 @@ const EXAMPLES = [
   "https://github.com/pallets/flask",
 ];
 
-type Mode = "git" | "local";
+type Mode = "git" | "local" | "github";
 
 export default function StartPage() {
   const router = useRouter();
@@ -26,6 +28,7 @@ export default function StartPage() {
   const [repoId, setRepoId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [localAccessAllowed, setLocalAccessAllowed] = useState(true); // optimistic; corrected after the health check resolves
+  const [me, setMe] = useState<AuthMe | null>(null);
   const busy = job !== null && job.status !== "error";
   const value = mode === "git" ? url : pathVal;
 
@@ -36,20 +39,36 @@ export default function StartPage() {
         if (!h.localAccessAllowed) setMode((m) => (m === "local" ? "git" : m));
       })
       .catch(() => {}); // health check itself failing isn't this page's concern; leave the optimistic default
+
+    fetchMe()
+      .then(setMe)
+      .catch(() => {});
+
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get("authError");
+    if (authError) {
+      setError(authError);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("authError");
+      window.history.replaceState({}, "", url.toString());
+    }
   }, []);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function startWithInput(input: { repoUrl?: string; localPath?: string }) {
     setError(null);
     setJob(null);
     try {
-      const input = mode === "git" ? { repoUrl: url.trim() } : { localPath: pathVal.trim() };
       const { jobId, repoId } = await startIndex(input);
       setRepoId(repoId);
       poll(jobId, repoId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start");
     }
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await startWithInput(mode === "git" ? { repoUrl: url.trim() } : { localPath: pathVal.trim() });
   }
 
   function poll(jobId: string, rid: string) {
@@ -114,55 +133,85 @@ export default function StartPage() {
             >
               <FolderOpen className="w-4 h-4" /> Local folder
             </button>
+            {me?.githubAuthEnabled && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setMode("github")}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === "github" ? "bg-white text-black" : "text-gray-400 hover:text-white"}`}
+              >
+                <GithubMark className="w-4 h-4" /> My GitHub
+              </button>
+            )}
           </div>
 
-          <label className="block text-sm text-gray-400 mb-2">
-            {mode === "git" ? "Repository URL" : "Absolute folder path (on the server)"}
-          </label>
-          <div className="flex flex-col sm:flex-row gap-3">
-            {mode === "git" ? (
-              <input
-                type="url"
-                required
-                disabled={busy}
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://github.com/owner/repo"
-                className="flex-1 rounded-lg bg-[#0a0a0a] border border-white/10 px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 font-mono disabled:opacity-50"
-              />
-            ) : (
-              <div className="flex-1 flex gap-2">
-                <input
-                  type="text"
-                  required
-                  disabled={busy}
-                  value={pathVal}
-                  onChange={(e) => setPathVal(e.target.value)}
-                  placeholder="/Users/you/projects/my-app"
-                  className="flex-1 rounded-lg bg-[#0a0a0a] border border-white/10 px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 font-mono disabled:opacity-50"
-                />
+          {mode !== "github" && (
+            <>
+              <label className="block text-sm text-gray-400 mb-2">
+                {mode === "git" ? "Repository URL" : "Absolute folder path (on the server)"}
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                {mode === "git" ? (
+                  <input
+                    type="url"
+                    required
+                    disabled={busy}
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://github.com/owner/repo"
+                    className="flex-1 rounded-lg bg-[#0a0a0a] border border-white/10 px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 font-mono disabled:opacity-50"
+                  />
+                ) : (
+                  <div className="flex-1 flex gap-2">
+                    <input
+                      type="text"
+                      required
+                      disabled={busy}
+                      value={pathVal}
+                      onChange={(e) => setPathVal(e.target.value)}
+                      placeholder="/Users/you/projects/my-app"
+                      className="flex-1 rounded-lg bg-[#0a0a0a] border border-white/10 px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 font-mono disabled:opacity-50"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setBrowsing(true)}
+                      title="Browse for a folder"
+                      className="flex items-center gap-2 px-4 py-3 rounded-lg border border-white/10 bg-[#0a0a0a] text-sm text-gray-300 hover:text-white hover:border-purple-500/50 transition-colors disabled:opacity-50 shrink-0"
+                    >
+                      <FolderSearch className="w-4 h-4" /> Browse
+                    </button>
+                  </div>
+                )}
                 <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setBrowsing(true)}
-                  title="Browse for a folder"
-                  className="flex items-center gap-2 px-4 py-3 rounded-lg border border-white/10 bg-[#0a0a0a] text-sm text-gray-300 hover:text-white hover:border-purple-500/50 transition-colors disabled:opacity-50 shrink-0"
+                  type="submit"
+                  disabled={busy || !value.trim()}
+                  className="flex items-center justify-center gap-2 bg-white text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <FolderSearch className="w-4 h-4" /> Browse
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                  {busy ? "Indexing…" : "Index"}
                 </button>
               </div>
-            )}
-            <button
-              type="submit"
-              disabled={busy || !value.trim()}
-              className="flex items-center justify-center gap-2 bg-white text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-              {busy ? "Indexing…" : "Index"}
-            </button>
-          </div>
+            </>
+          )}
 
-          {mode === "git" ? (
+          {mode === "github" && (
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Your repositories</label>
+              {!me?.user ? (
+                <a
+                  href={`/api/auth/github?returnTo=${encodeURIComponent("/")}`}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-gray-300 hover:text-white hover:border-purple-500/50 transition-colors"
+                >
+                  <GithubMark className="w-4 h-4" /> Sign in with GitHub to browse your repositories
+                </a>
+              ) : (
+                <GithubReposPicker disabled={busy} onSelect={(htmlUrl) => startWithInput({ repoUrl: htmlUrl })} />
+              )}
+            </div>
+          )}
+
+          {mode === "git" && (
             <div className="mt-3 flex flex-wrap gap-2">
               {EXAMPLES.map((ex) => (
                 <button
@@ -176,7 +225,8 @@ export default function StartPage() {
                 </button>
               ))}
             </div>
-          ) : (
+          )}
+          {mode === "local" && (
             <p className="mt-3 text-xs text-gray-600">
               The path must exist on the machine running the app (self-hosted). Nothing is uploaded — it&apos;s read in place.
             </p>

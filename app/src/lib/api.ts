@@ -16,6 +16,40 @@ export async function fetchHealth(): Promise<HealthStatus> {
   return res.json();
 }
 
+export interface AuthMe {
+  githubAuthEnabled: boolean;
+  user: { login: string; name: string | null; avatarUrl: string } | null;
+}
+
+export async function fetchMe(): Promise<AuthMe> {
+  const res = await fetch("/api/auth/me", { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to check sign-in state");
+  return res.json();
+}
+
+export async function signOut(): Promise<void> {
+  const res = await fetch("/api/auth/logout", { method: "POST" });
+  if (!res.ok) throw new Error("Sign out failed");
+}
+
+export interface GithubRepoListing {
+  fullName: string;
+  private: boolean;
+  description: string | null;
+  updatedAt: string;
+  defaultBranch: string;
+  htmlUrl: string;
+  language: string | null;
+  stargazersCount: number;
+}
+
+export async function fetchGithubRepoPage(page: number): Promise<{ repos: GithubRepoListing[]; page: number; hasMore: boolean }> {
+  const res = await fetch(`/api/github/repos?page=${page}`, { cache: "no-store" });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to list GitHub repos");
+  return data;
+}
+
 export async function startIndex(input: {
   repoUrl?: string;
   localPath?: string;

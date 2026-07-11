@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { GitBranch } from "lucide-react";
+import { AuthNav } from "@/components/AuthNav";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <nav className="flex items-center gap-6 text-sm text-gray-400">
               <Link href="/" className="hover:text-white transition-colors">Index</Link>
               <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+              <AuthNav />
             </nav>
           </div>
         </header>

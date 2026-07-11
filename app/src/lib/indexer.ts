@@ -82,7 +82,10 @@ interface ScannedFile {
  * (bounded depth) to support real branch switching + history.
  */
 export async function cloneRepo(url: string, destDir?: string): Promise<string> {
-  if (!/^https?:\/\/[\w.-]+\/[\w./~-]+/.test(url)) {
+  // Allows an optional `user:token@` userinfo component — used for
+  // authenticated clones (see gitops.withToken); the token itself is never
+  // logged or persisted by this function, only passed through to `git clone`'s argv.
+  if (!/^https?:\/\/(?:[^@/]+@)?[\w.-]+\/[\w./~-]+/.test(url)) {
     throw new Error("Invalid repository URL. Use a public https git URL.");
   }
   const dir = destDir ?? mkdtempSync(path.join(tmpdir(), "cg-"));

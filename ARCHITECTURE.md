@@ -4,7 +4,7 @@
 
 ## What it is
 A single Next.js 16 (App Router) application at `app/` that:
-1. Clones a public git repo (or reads a local folder, gated — see Security) and builds a lightweight knowledge graph of its structure.
+1. Clones a public git repo — or a signed-in user's own private repo (see GitHub sign-in) — or reads a local folder (gated — see Security) and builds a lightweight knowledge graph of its structure.
 2. Computes a blast-radius-weighted, explainable 0–100 **Health Score**.
 3. Renders three interactive visualizations (Architecture flowchart, zoomable Circle-pack, force-directed Network).
 4. Exposes a symbol-level **Code Intelligence** layer (search, callers/callees, impact, circular-deps, dead-code, Graph-RAG context generation).
@@ -19,7 +19,7 @@ A single Next.js 16 (App Router) application at `app/` that:
 | Parsing | `web-tree-sitter` (WASM) for TS/JS when memory budget allows, regex-based extractors as the default/fallback (see Known Constraints) |
 | Editor | Monaco, loaded from a CDN at runtime (not bundled) |
 | Deployment | Docker (`node:24-slim`), single container, no queue/orchestrator/message bus |
-| Auth | None by default; optional HTTP Basic Auth gate (see Security) |
+| Auth | None by default; optional HTTP Basic Auth gate (app-wide) + optional GitHub OAuth (per-user, unlocks private-repo import) — see Security |
 
 No Postgres, no pgvector, no NATS, no Temporal, no runtime/OTel domain — all of that was scoped in the legacy design docs but never built. This app trades graph sophistication for "actually ships and runs on a single small container."
 
@@ -41,7 +41,9 @@ Backend lib (src/lib/*)
   ├─ gitops.ts          thin, argv-only wrapper over `git` (no shell interpolation)
   ├─ localAccess.ts     gates local-folder indexing / server-side folder browsing
   ├─ urlSafety.ts        SSRF guard for user-supplied git URLs
-  └─ basicAuth.ts         pure credential-check for the optional auth gate
+  ├─ basicAuth.ts         pure credential-check for the optional app-wide auth gate
+  ├─ session.ts            stateless, encrypted session cookie for GitHub sign-in
+  └─ githubOAuth.ts         GitHub OAuth client (authorize URL, token exchange, repo listing)
 ```
 
 Jobs are fire-and-forget within the same Node process (`void runJob(...)` in `store.ts`) — there's no external queue. This is simple and fine for single-instance deployment; it does mean an unhandled crash mid-job takes the whole server down with it (see `docs/postmortems/`).
@@ -52,6 +54,7 @@ Jobs are fire-and-forget within the same Node process (`void runJob(...)` in `st
 - **Git URLs are validated against SSRF** (`app/src/lib/urlSafety.ts`) — loopback/private/link-local hosts are rejected before `git clone` runs. This is a best-effort literal-IP check, not DNS-rebinding-proof.
 - **Filesystem path traversal is defended** within a workspace root (`resolveSafe` in `workspace.ts`), verified against `../../../etc/passwd`-style attempts.
 - Security headers (CSP, X-Frame-Options, etc.) are set in `app/next.config.ts`. The CSP allows Monaco's CDN (`cdn.jsdelivr.net`) and Next's inline hydration scripts — see the comment there for why it isn't a strict nonce-based policy.
+- **Optional GitHub sign-in** (`app/src/lib/session.ts`, `app/src/lib/githubOAuth.ts`, off unless `GITHUB_OAUTH_CLIENT_ID`/`GITHUB_OAUTH_CLIENT_SECRET`/`CG_SESSION_SECRET` are all set — see `DEPLOY.md`) lets a user browse and import their own repos, including private ones. No server-side session store: the GitHub access token lives only inside an AES-256-GCM-encrypted, `httpOnly` cookie — never persisted to SQLite, never returned by any API response (`/api/auth/me` echoes only login/name/avatar). When cloning, the token is only ever spliced into a URL whose host is verified to be exactly `github.com` (`store.ts`'s `runJob`), so a session can't be tricked into leaking its token to a third-party remote.
 - Full current status and remaining work: `PROGRESS_TRACKER.md`.
 
 ## Known constraints (learned the hard way — see `docs/postmortems/`)
