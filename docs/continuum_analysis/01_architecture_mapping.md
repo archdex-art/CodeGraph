@@ -16,7 +16,7 @@ The heavy-lifting backend that powers the AI, orchestration, and repository anal
 *   **Strengths:** Highly coherent subsystem. Excellent architectural direction utilizing shared retrieval, token budgeting, static pre-analysis, and caching to avoid "agent sprawl" and reduce LLM costs.
 
 ### 1.3 The Terminal (Node.js / TypeScript)
-A standalone CLI tool providing a "Claude Code-style" keyboard-driven session.
+A standalone CLI tool providing a keyboard-driven coding assistant session.
 *   **Responsibilities:** Chatting about a repository, running analysis agents directly from the command line, and providing real-time status streams.
 *   **Design Pattern:** A custom Read-Eval-Print Loop (REPL) built with pure dependency injection (no global state), ensuring high testability. It communicates with the Python engine over authenticated HTTP (`EngineClient`).
 
