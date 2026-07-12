@@ -17,7 +17,7 @@ Requires Node ≥ 22 (uses the built-in `node:sqlite`) and `git` on PATH. Full s
 |---|---|
 | [`app/`](./app) | **The actual product.** Next.js app — indexer, health score, visualizations, code intelligence, agent swarm, built-in editor. |
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Accurate, current system architecture — stack, request flow, security model, hard-won operational constraints. |
-| [`IMPROVEMENT_PLAN.md`](./IMPROVEMENT_PLAN.md) / [`PROGRESS_TRACKER.md`](./PROGRESS_TRACKER.md) | What's being worked on next, and live status against it. |
+| [`docs/IMPROVEMENT_PLAN.md`](./docs/IMPROVEMENT_PLAN.md) / [`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md) | What's being worked on next, and live status against it. |
 | [`docs/postmortems/`](./docs/postmortems) | Incident write-ups for production issues found and fixed. |
 | [`docs/archive/legacy-design/`](./docs/archive/legacy-design) | An earlier, more ambitious design (Python + Postgres + NATS + Temporal) that informed the current build but was never itself deployed. Historical reference only — see its own `README.md` before trusting anything in there as current. |
 

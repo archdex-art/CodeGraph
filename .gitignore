@@ -5,6 +5,8 @@ node_modules/
 # Next.js build output
 .next/
 out/
+next-env.d.ts
+*.tsbuildinfo
 
 # App runtime data (SQLite DB lives on the Render disk, not in git)
 app/data/*.sqlite
