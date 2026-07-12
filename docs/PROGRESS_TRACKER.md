@@ -79,6 +79,32 @@ No change from the plan — not attempted in this pass. Phases 0–3 were priori
 
 ---
 
+## Phase 6 — Agent & Analysis Accuracy
+**Status: ⬜ Not started · Plan added 2026-07-12**
+
+Added from a direct code-reading assessment of the actual swarm implementation (`orchestrator.ts`, `specialists.ts`, `codeintel/graph.ts`, `codeintel/query.ts`, `codeintel/ast-extractor.ts`) — not the UI. Recommend running 6.1–6.4 (root-cause: call-graph attribution + import-aware resolution) before Phase 4, since Phase 4 automates opening real PRs on top of these exact findings. See `IMPROVEMENT_PLAN.md` for the full 16-task breakdown and rationale.
+
+| # | Task | Status | Date | Notes |
+|---|---|---|---|---|
+| 6.1 | Position-aware `collectRefs` + line-range caller attribution | ⬜ Not started | — | — |
+| 6.2 | Per-file import-binding resolution before global name fallback | ⬜ Not started | — | — |
+| 6.3 | Iterative Tarjan SCC in `cycles()` | ⬜ Not started | — | — |
+| 6.4 | Bounded top-N per rule per file (was 1-hit cap) | ⬜ Not started | — | — |
+| 6.5 | Real AST extraction in production via TS Compiler API | ⬜ Not started | — | — |
+| 6.6 | Type-aware call resolution (`checker.getSymbolAtLocation`) | ⬜ Not started | — | — |
+| 6.7 | Evidence-derived confidence (replace flat per-agent constants) | ⬜ Not started | — | — |
+| 6.8 | Locus-only critic dedup (was exact title match) | ⬜ Not started | — | — |
+| 6.9 | Test agent: real fan-in ∩ untested-files intersection | ⬜ Not started | — | — |
+| 6.10 | Cyclomatic/branching complexity metric for Refactor agent | ⬜ Not started | — | — |
+| 6.11 | Git churn signal into judge scoring | ⬜ Not started | — | — |
+| 6.12 | Expand `fixers.ts` beyond `debugFixer` (4+ issue classes) | ⬜ Not started | — | — |
+| 6.13 | `orchestrator.test.ts` / `specialists.test.ts` unit coverage | ⬜ Not started | — | — |
+| 6.14 | Surface `truncated` (`MAX_SYMBOLS`) flag to the user | ⬜ Not started | — | — |
+| 6.15 | ESLint security-plugin detector layer | ⬜ Not started | — | — |
+| 6.16 | Shallow taint reachability for Security agent | ⬜ Not started | — | — |
+
+---
+
 ## Session log
 
 | Date | What happened |
@@ -94,3 +120,4 @@ No change from the plan — not attempted in this pass. Phases 0–3 were priori
 | 2026-07-10 | **Executed Phases 0–3 of the plan**: local-access + SSRF + dependency + auth-gate + security-header hardening; GitHub Actions CI with a real Docker smoke test under Render's exact constraints; smoke-test script; 4 incident postmortems; 54 new regression tests (one real pre-commit typecheck bug caught and fixed during review); legacy docs archived; new `ARCHITECTURE.md` and `README.md`. All verified end-to-end against the actual production Docker image before pushing. |
 | 2026-07-10 | Pushed Phases 0–3; CI passed on the first real run (both jobs green); branch protection applied and verified against the real, registered check names. |
 | 2026-07-12 | User asked whether two signed-in accounts could see each other's indexed repos — audit found a live cross-tenant leak (`repos` table had no owner column; every repo/workspace route was globally readable/writable regardless of session). Fixed same-session: `owner_id` column + `app/src/lib/authz.ts`, enforced on every `/api/repos/[id]/*` route and `/api/fleet`; product decision (user's call): anonymous-indexed repos stay in a shared public bucket, GitHub-account-indexed repos are private to that account. 14 new tests, full suite 96/96, build clean. See Phase 0.6. |
+| 2026-07-12 | Direct code-reading assessment of the agent swarm (not the UI) — read `orchestrator.ts`, `specialists.ts`, `codeintel/graph.ts`, `codeintel/query.ts`, `codeintel/ast-extractor.ts`, `indexer.ts`'s `RULES`, and `fixers.ts` end to end. Root finding: the orchestration logic (critic/judge) is sound; most agent inaccuracy traces to the call graph itself — `graph.ts` attributes every call in a file to "the file's first function" (no per-line reference data exists to do better), resolution is global name-matching with zero import awareness, and tree-sitter AST extraction is disabled by default in production (`MAX_RSS_BYTES` defaults to 0, so the RSS gate trips on the first check) — meaning the deployed system runs on the regex fallback extractor, not the AST path the code implies is primary. Also confirmed: zero unit tests for `orchestrator.ts`/`specialists.ts`, zero git-churn signal used anywhere, only 1 of 7 issue classes has an automated fixer. Wrote up as `IMPROVEMENT_PLAN.md` Phase 6 (16 tasks) — not executed yet, tracked here for a future pass. |
