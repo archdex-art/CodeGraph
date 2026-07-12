@@ -43,7 +43,8 @@ Backend lib (src/lib/*)
   ├─ urlSafety.ts        SSRF guard for user-supplied git URLs
   ├─ basicAuth.ts         pure credential-check for the optional app-wide auth gate
   ├─ session.ts            stateless, encrypted session cookie for GitHub sign-in
-  └─ githubOAuth.ts         GitHub OAuth client (authorize URL, token exchange, repo listing)
+  ├─ githubOAuth.ts         GitHub OAuth client (authorize URL, token exchange, repo listing)
+  └─ authz.ts               per-repo ownership check (repoAccessDenied/viewerId) enforced on every repos/[id]/* route
 ```
 
 Jobs are fire-and-forget within the same Node process (`void runJob(...)` in `store.ts`) — there's no external queue. This is simple and fine for single-instance deployment; it does mean an unhandled crash mid-job takes the whole server down with it (see `docs/postmortems/`).
@@ -55,6 +56,7 @@ Jobs are fire-and-forget within the same Node process (`void runJob(...)` in `st
 - **Filesystem path traversal is defended** within a workspace root (`resolveSafe` in `workspace.ts`), verified against `../../../etc/passwd`-style attempts.
 - Security headers (CSP, X-Frame-Options, etc.) are set in `app/next.config.ts`. The CSP allows Monaco's CDN (`cdn.jsdelivr.net`) and Next's inline hydration scripts — see the comment there for why it isn't a strict nonce-based policy.
 - **Optional GitHub sign-in** (`app/src/lib/session.ts`, `app/src/lib/githubOAuth.ts`, off unless `GITHUB_OAUTH_CLIENT_ID`/`GITHUB_OAUTH_CLIENT_SECRET`/`CG_SESSION_SECRET` are all set — see `DEPLOY.md`) lets a user browse and import their own repos, including private ones. No server-side session store: the GitHub access token lives only inside an AES-256-GCM-encrypted, `httpOnly` cookie — never persisted to SQLite, never returned by any API response (`/api/auth/me` echoes only login/name/avatar). When cloning, the token is only ever spliced into a URL whose host is verified to be exactly `github.com` (`store.ts`'s `runJob`), so a session can't be tricked into leaking its token to a third-party remote.
+- **Repos are tenant-scoped by `owner_id`** (`repos` table, `app/src/lib/authz.ts`). A repo indexed while signed out lands in a shared public bucket (`owner_id IS NULL`) — visible/mutable by anyone, matching the no-login "paste a URL" flow. A repo indexed while signed in with GitHub is private to that account's `userId`: `listRepos()` filters to the viewer's own rows plus the public bucket, and every `/api/repos/[id]/*` route (`fs`, `git`, `search`, `fix`, `agents`, `intel`, `trash`, delete) calls `repoAccessDenied()` first. A non-owner gets a 404 — identical to a nonexistent repo — never a 403, so a private repo's existence isn't leaked either. Regression tests: `app/tests/tenant-isolation.test.ts`.
 - Full current status and remaining work: `PROGRESS_TRACKER.md`.
 
 ## Known constraints (learned the hard way — see `docs/postmortems/`)

@@ -17,7 +17,8 @@ function gitName(url: string): string {
 export function createIndexJob(
   source: string,
   sourceType: SourceType,
-  githubToken?: string
+  githubToken?: string,
+  ownerId?: number | null
 ): { jobId: string; repoId: string } {
   const repoId = randomUUID();
   const jobId = randomUUID();
@@ -25,8 +26,8 @@ export function createIndexJob(
   const name = sourceType === "git" ? gitName(source) : path.basename(source.replace(/\/+$/, "")) || source;
   const d = db();
   d.prepare(
-    "INSERT INTO repos (id, url, name, source_type, status, created_at) VALUES (?, ?, ?, ?, 'queued', ?)"
-  ).run(repoId, source, name, sourceType, now);
+    "INSERT INTO repos (id, url, name, source_type, status, owner_id, created_at) VALUES (?, ?, ?, ?, 'queued', ?, ?)"
+  ).run(repoId, source, name, sourceType, ownerId ?? null, now);
   d.prepare(
     "INSERT INTO jobs (id, repo_id, status, progress, message) VALUES (?, ?, 'queued', 0, 'Queued')"
   ).run(jobId, repoId);
@@ -127,12 +128,18 @@ export function getJob(jobId: string): Job | null {
   return { id: r.id, repoId: r.repo_id, status: r.status, progress: r.progress, message: r.message, error: r.error };
 }
 
-export function listRepos(): RepoSummary[] {
+/** Repos visible to `viewerId`: anonymously-indexed repos (owner_id IS NULL,
+ *  the shared public bucket — unchanged legacy behavior) plus the viewer's
+ *  own privately-owned repos. Pass `null` for an anonymous/signed-out
+ *  viewer — they see only the public bucket. */
+export function listRepos(viewerId: number | null): RepoSummary[] {
   const rows = db()
     .prepare(
-      "SELECT id, url, name, source_type, status, score, created_at, finished_at FROM repos ORDER BY created_at DESC LIMIT 100"
+      `SELECT id, url, name, source_type, status, score, created_at, finished_at FROM repos
+       WHERE owner_id IS NULL OR owner_id = ?
+       ORDER BY created_at DESC LIMIT 100`
     )
-    .all() as Array<Record<string, unknown>>;
+    .all(viewerId ?? -1) as Array<Record<string, unknown>>;
   return rows.map((r) => ({
     id: r.id as string,
     url: r.url as string,
@@ -143,6 +150,15 @@ export function listRepos(): RepoSummary[] {
     createdAt: r.created_at as number,
     finishedAt: (r.finished_at as number | null) ?? null,
   }));
+}
+
+/** Lean ownership lookup for authz checks — avoids parsing the heavy JSON
+ *  blobs `getRepo` loads. Returns `undefined` if the repo doesn't exist,
+ *  `null` if it's in the public bucket (no owner), else the owning userId. */
+export function getRepoOwnerId(id: string): number | null | undefined {
+  const r = db().prepare("SELECT owner_id FROM repos WHERE id=?").get(id) as { owner_id: number | null } | undefined;
+  if (!r) return undefined;
+  return r.owner_id;
 }
 
 /** Delete a repo, its jobs, and its trash. Removes the on-disk workspace only

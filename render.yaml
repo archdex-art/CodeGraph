@@ -16,6 +16,14 @@ services:
       # set this to your live Render URL (e.g. https://codegraph.onrender.com).
       - key: NEXT_PUBLIC_APP_URL
         sync: false
+      # GitHub sign-in (optional). Unset = feature hidden, nothing else affected.
+      # See DEPLOY.md "GitHub sign-in setup" for the OAuth App registration steps.
+      - key: GITHUB_OAUTH_CLIENT_ID
+        sync: false
+      - key: GITHUB_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: CG_SESSION_SECRET
+        sync: false
     # The SQLite DB + WAL live here and MUST persist across deploys/restarts.
     disk:
       name: codegraph-data

@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceDir } from "@/lib/store";
+import { repoAccessDenied } from "@/lib/authz";
 import {
   listDir,
   readWorkspaceFile,
@@ -30,8 +31,10 @@ function err(e: unknown, fallback = 500) {
 // GET /api/repos/:id/fs?op=list&path=src         -> FsEntry[]
 // GET /api/repos/:id/fs?op=read&path=src/index.ts -> { content, truncated, size, binary }
 // GET /api/repos/:id/fs?op=download&path=a/b.png  -> raw file bytes (download)
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const denied = repoAccessDenied(req, id);
+  if (denied) return denied;
   const ws = workspaceOr404(id);
   if (!ws) return NextResponse.json({ error: "Workspace not ready" }, { status: 404 });
   const { searchParams } = new URL(req.url);
@@ -58,8 +61,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
 // POST /api/repos/:id/fs
 // { op: "write"|"create"|"rename"|"duplicate"|"upload", path, to?, type?, content?, contentBase64? }
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const denied = repoAccessDenied(req, id);
+  if (denied) return denied;
   const ws = workspaceOr404(id);
   if (!ws) return NextResponse.json({ error: "Workspace not ready" }, { status: 404 });
   const body = await req.json().catch(() => ({}));
@@ -100,8 +105,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
 // DELETE /api/repos/:id/fs?path=src/foo.ts  -> moves the entry to the repo's
 // trash (restorable via /api/repos/:id/trash) instead of erasing it.
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const denied = repoAccessDenied(req, id);
+  if (denied) return denied;
   const ws = workspaceOr404(id);
   if (!ws) return NextResponse.json({ error: "Workspace not ready" }, { status: 404 });
   const { searchParams } = new URL(req.url);

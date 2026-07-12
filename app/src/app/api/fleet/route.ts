@@ -1,12 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { listRepos, getRepo } from "@/lib/store";
+import { viewerId } from "@/lib/authz";
 import type { FleetGraph, FleetNode, FleetEdge } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const summaries = listRepos();
+export async function GET(req: NextRequest) {
+  const summaries = listRepos(viewerId(req));
   const nodes: FleetNode[] = [];
   const edges: FleetEdge[] = [];
   

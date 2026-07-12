@@ -17,13 +17,14 @@ export async function POST(req: NextRequest) {
 
   const repoUrl = (body.repoUrl || "").trim();
   const localPath = (body.localPath || "").trim();
+  const session = getSession(req);
 
   try {
     if (localPath) {
       if (!localAccessAllowed()) {
         return NextResponse.json({ error: LOCAL_ACCESS_DISABLED_MESSAGE }, { status: 403 });
       }
-      const { jobId, repoId } = createIndexJob(localPath, "local");
+      const { jobId, repoId } = createIndexJob(localPath, "local", undefined, session?.userId ?? null);
       return NextResponse.json({ jobId, repoId }, { status: 202 });
     }
     if (repoUrl) {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      const { jobId, repoId } = createIndexJob(repoUrl, "git", getSession(req)?.accessToken);
+      const { jobId, repoId } = createIndexJob(repoUrl, "git", session?.accessToken, session?.userId ?? null);
       return NextResponse.json({ jobId, repoId }, { status: 202 });
     }
     return NextResponse.json({ error: "Provide repoUrl or localPath" }, { status: 400 });

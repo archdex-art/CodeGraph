@@ -85,7 +85,7 @@
 | # | Task | Effort | Acceptance criterion |
 |---|---|---|---|
 | 5.1 | Second tree-sitter language extractor (Python), matching the precision the TS/JS path has (subject to the Phase-0-proven memory ceiling — budget accordingly) | L | Python repos get AST-grade symbols/references, not just regex |
-| 5.2 | Multi-tenant workspace isolation (real per-user auth + scoped repos) | XL | Two logged-in users cannot see each other's indexed repos |
+| 5.2 | ~~Multi-tenant workspace isolation~~ — **done 2026-07-12, out of sequence.** Turned out to be live-severity, not a stretch item: GitHub sign-in (Phase 0.4/DEPLOY.md) let users import private repos into a globally-visible, globally-writable `repos` table with zero ownership checks. Fixed with an `owner_id` column + `app/src/lib/authz.ts`, enforced on every `/api/repos/[id]/*` route. See `ARCHITECTURE.md`'s security model and `app/tests/tenant-isolation.test.ts`. | XL | ✅ Two logged-in users cannot see each other's private repos; anonymous-indexed repos remain a shared public bucket by design |
 | 5.3 | Runtime/observability domain (OTel ingestion) | XL | A "why is X slow" query can cite real production trace data |
 
 ---

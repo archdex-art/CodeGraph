@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRepo } from "@/lib/store";
+import { repoAccessDenied } from "@/lib/authz";
 import { QueryEngine } from "@/lib/codeintel/query";
 import { buildContext } from "@/lib/codeintel/context";
 
@@ -9,6 +10,8 @@ export const dynamic = "force-dynamic";
 // GET /api/repos/:id/intel?op=search&q=... | callers | callees | impact | context | cycles | deadcode | hubs
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const denied = repoAccessDenied(req, id);
+  if (denied) return denied;
   const repo = getRepo(id);
   if (!repo) return NextResponse.json({ error: "Repo not found" }, { status: 404 });
 

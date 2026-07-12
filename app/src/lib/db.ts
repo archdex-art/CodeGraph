@@ -34,6 +34,7 @@ function init(): DatabaseSync {
       tree TEXT DEFAULT '{}',
       modules TEXT DEFAULT '{"nodes":[],"edges":[]}',
       symbols TEXT DEFAULT '{"symbols":[],"edges":[],"truncated":false,"stats":{"symbols":0,"edges":0,"resolvedCalls":0}}',
+      owner_id INTEGER,
       created_at INTEGER NOT NULL,
       finished_at INTEGER
     );
@@ -55,6 +56,7 @@ function init(): DatabaseSync {
       deleted_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_trash_repo ON trash(repo_id, deleted_at);
+    CREATE INDEX IF NOT EXISTS idx_repos_owner ON repos(owner_id);
   `);
   // Migrate older installs: add columns introduced after first release.
   const cols = new Set(
@@ -68,6 +70,7 @@ function init(): DatabaseSync {
   if (!cols.has("symbols")) db.exec(`ALTER TABLE repos ADD COLUMN symbols TEXT DEFAULT '{"symbols":[],"edges":[],"truncated":false,"stats":{"symbols":0,"edges":0,"resolvedCalls":0}}'`);
   if (!cols.has("workspace_dir")) db.exec("ALTER TABLE repos ADD COLUMN workspace_dir TEXT");
   if (!cols.has("save_mode")) db.exec("ALTER TABLE repos ADD COLUMN save_mode TEXT NOT NULL DEFAULT 'local'");
+  if (!cols.has("owner_id")) db.exec("ALTER TABLE repos ADD COLUMN owner_id INTEGER");
   return db;
 }
 
