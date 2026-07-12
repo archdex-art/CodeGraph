@@ -1,217 +1,154 @@
-import Parser from "web-tree-sitter";
-import { resolve } from "node:path";
-import type { LanguageExtractor, ExtractResult, RawSymbol } from "./extractors";
+import ts from "typescript";
+import type { LanguageExtractor, ExtractResult, RawSymbol, RawReference, RawImport, ExtractContext } from "./extractors";
 
-let parser: Parser | null = null;
-let tsLanguage: Parser.Language | null = null;
-let initAttempted = false;
-
-// web-tree-sitter's WASM linear memory is a singleton for the process
-// lifetime (shared by every `Parser` instance) and, per the WASM spec, can
-// only grow — never shrink — regardless of how diligently Tree/TreeCursor
-// are `.delete()`d (see the `finally` below). Measured directly, in the
-// real bundled server (not an isolated script):
-// RSS climbed 89MB → 234MB → 312MB → 484MB across just the first 5/10/15
-// files of an ordinary repo (expressjs/express) — roughly 26MB/file —
-// which blows through Render's 512MB Starter plan and gets the whole
-// process OOM-killed. Per-file cost varies too much by content to budget
-// with a fixed file count (an earlier fixed-count budget still undershot
-// this by ~3x), so check actual RSS before every parse instead: once it
-// crosses a safe ceiling, stop feeding tree-sitter for the rest of the
-// process's life and use the regex fallback extractor, which needs no WASM
-// memory at all. The ceiling has to leave real headroom, not just
-// "whatever's left below the container limit": since RSS never comes back
-// down once WASM has grown it, everything indexRepo does AFTER the last
-// tree-sitter call (dependency/viz/tree/module-graph building, JSON
-// serialization for the DB write, SQLite's own write path) has to fit in
-// the remainder — verified even a 300MB ceiling, and then a 150MB one,
-// still let the same 512MB container OOM once that other work ran on top
-// (in one case the job itself finished and reported success before the
-// container died moments later from residual growth). Default the budget
-// to effectively "don't use it" — proven to run cleanly end-to-end — and
-// let deployments with real memory headroom (a bigger plan, self-hosted)
-// opt back in via the env var.
-const MAX_RSS_BYTES = Number(process.env.CG_TREE_SITTER_MAX_RSS_BYTES) || 0;
-let treeSitterDisabledForRss = false;
-
-function rssBudgetExceeded(): boolean {
-  if (treeSitterDisabledForRss) return true;
-  if (process.memoryUsage().rss >= MAX_RSS_BYTES) {
-    treeSitterDisabledForRss = true;
-    return true;
-  }
-  return false;
+export interface RawSymbolExtended extends RawSymbol {
+  complexity?: number;
 }
 
-// WASM lives in <appRoot>/wasm (committed, and traced into the standalone build).
-function wasmDir(): string {
-  return resolve(process.cwd(), "wasm");
-}
-
-// web-tree-sitter's Emscripten-generated loader can leave its init promise
-// permanently unresolved (neither resolved nor rejected) when the WASM
-// binary is missing/unreadable — verified: it throws inside an internal
-// `abort()` call that never reaches the promise chain, so a bare `await`
-// here hangs the whole indexing job forever instead of hitting the `catch`
-// below. Race against a hard timeout so any failure mode — missing file,
-// slow/starved compile, or this loader bug — degrades to the regex
-// fallback instead of stalling every job that follows.
-const INIT_TIMEOUT_MS = Number(process.env.CG_TREE_SITTER_INIT_TIMEOUT_MS) || 20_000;
-
-function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
-  ]);
-}
-
-export async function initTreeSitter(): Promise<void> {
-  if (initAttempted) return;
-  initAttempted = true;
-  try {
-    await withTimeout(
-      Parser.init({ locateFile: (name: string) => resolve(wasmDir(), name) }),
-      INIT_TIMEOUT_MS,
-      "Tree-sitter WASM init"
-    );
-    const p = new Parser();
-    tsLanguage = await withTimeout(
-      Parser.Language.load(resolve(wasmDir(), "tree-sitter-typescript.wasm")),
-      INIT_TIMEOUT_MS,
-      "Tree-sitter grammar load"
-    );
-    parser = p; // only mark ready once a grammar loaded
-  } catch {
-    // WASM unavailable/too slow in this environment → extractors fall back to regex.
-    parser = null;
-    tsLanguage = null;
-  }
+export function initTreeSitter(): Promise<void> {
+  return Promise.resolve();
 }
 
 export const astTsExtractor = (fallback: LanguageExtractor): LanguageExtractor => ({
   language: "TypeScript",
   exts: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
-  extract(text: string): ExtractResult {
-    if (!parser || !tsLanguage || rssBudgetExceeded()) {
-      return fallback.extract(text);
-    }
-    parser.setLanguage(tsLanguage);
-    const tree = parser.parse(text);
-    const symbols: RawSymbol[] = [];
-    const references = new Map<string, number>();
-
-    // LSP-lite: track EXACT imports so we resolve calls accurately
-    // e.g. import { foo as bar } from './baz' -> we know 'bar' maps to 'baz#foo'
-    // For now we just collect references to symbols to feed into graph.ts
+  extract(ctx: ExtractContext): ExtractResult {
+    const sourceFile = ctx.program ? ctx.program.getSourceFile(ctx.relPath) : ts.createSourceFile(ctx.relPath, ctx.text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const checker = ctx.program ? ctx.program.getTypeChecker() : null;
     
-    // Walk AST
-    const cursor = tree.walk();
-    const walk = (c: Parser.TreeCursor) => {
-      const type = c.nodeType;
-      
-      // Function / Method declarations
-      if (type === "function_declaration" || type === "method_definition" || type === "arrow_function") {
-        const node = c.currentNode;
-        // find name
-        const nameNode = node.childForFieldName("name") || (type === "arrow_function" ? getArrowName(node) : null);
-        if (nameNode) {
-          const isExported = node.parent?.type === "export_statement" || node.parent?.parent?.type === "export_statement";
-          const kind = type === "method_definition" ? "method" : "function";
-          // Find container (class)
-          let container = null;
-          let p = node.parent;
-          while (p) {
-            if (p.type === "class_declaration") {
-              container = p.childForFieldName("name")?.text || null;
-              break;
-            }
-            p = p.parent;
+    const symbols: RawSymbolExtended[] = [];
+    const references: RawReference[] = [];
+    const imports: RawImport[] = [];
+    
+    const lineOf = (node: ts.Node): number => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+    const endLineOf = (node: ts.Node): number => sourceFile.getLineAndCharacterOfPosition(node.getEnd()).line + 1;
+
+    let currentContainer: string | null = null;
+
+    function getDoc(node: ts.Node): string | null {
+      const ranges = ts.getLeadingCommentRanges(ctx.text, node.pos);
+      if (!ranges || ranges.length === 0) return null;
+      const last = ranges[ranges.length - 1];
+      const comment = ctx.text.slice(last.pos, last.end).trim();
+      return comment.replace(/^\/\*\*?|\*\/$|^\*\s?|^\/\/\s?/gm, "").trim().slice(0, 300);
+    }
+
+    function isExported(node: ts.Node): boolean {
+      return (ts.getCombinedModifierFlags(node as ts.Declaration) & ts.ModifierFlags.Export) !== 0;
+    }
+
+    function computeComplexity(node: ts.Node): number {
+      let complexity = 1;
+      function count(n: ts.Node) {
+        if (
+          ts.isIfStatement(n) || ts.isForStatement(n) || ts.isForInStatement(n) ||
+          ts.isForOfStatement(n) || ts.isWhileStatement(n) || ts.isDoStatement(n) ||
+          ts.isCatchClause(n) || ts.isCaseClause(n) || ts.isConditionalExpression(n)
+        ) {
+          complexity++;
+        } else if (ts.isBinaryExpression(n)) {
+          if (n.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken || n.operatorToken.kind === ts.SyntaxKind.BarBarToken) {
+            complexity++;
           }
-
-          symbols.push({
-            name: nameNode.text,
-            kind,
-            line: node.startPosition.row + 1,
-            endLine: node.endPosition.row + 1,
-            signature: node.text.split("\n")[0].slice(0, 100),
-            doc: getDoc(node),
-            exported: isExported,
-            container,
-          });
         }
+        ts.forEachChild(n, count);
       }
+      ts.forEachChild(node, count);
+      return complexity;
+    }
 
-      // Class declarations
-      if (type === "class_declaration" || type === "interface_declaration") {
-        const node = c.currentNode;
-        const nameNode = node.childForFieldName("name");
-        if (nameNode) {
-          const isExported = node.parent?.type === "export_statement";
+    function visit(node: ts.Node) {
+      if (ts.isClassDeclaration(node) || ts.isInterfaceDeclaration(node)) {
+        const name = node.name?.text;
+        if (name) {
           symbols.push({
-            name: nameNode.text,
-            kind: type === "class_declaration" ? "class" : "interface",
-            line: node.startPosition.row + 1,
-            endLine: node.endPosition.row + 1,
-            signature: node.text.split("\n")[0].slice(0, 100),
+            name,
+            kind: ts.isClassDeclaration(node) ? "class" : "interface",
+            line: lineOf(node),
+            endLine: endLineOf(node),
+            signature: ctx.text.slice(node.getStart(sourceFile), node.getStart(sourceFile) + 100).split(/[\n{]/)[0].trim(),
             doc: getDoc(node),
-            exported: isExported,
+            exported: isExported(node),
             container: null,
           });
+          const prevContainer = currentContainer;
+          currentContainer = name;
+          ts.forEachChild(node, visit);
+          currentContainer = prevContainer;
+          return;
         }
-      }
-
-      // Call expressions (References)
-      if (type === "call_expression") {
-        const node = c.currentNode;
-        const funcNode = node.childForFieldName("function");
-        if (funcNode) {
-          // just grab the identifier
-          let name = funcNode.text;
-          if (funcNode.type === "member_expression") {
-            const prop = funcNode.childForFieldName("property");
-            if (prop) name = prop.text;
+      } else if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node) || ts.isArrowFunction(node)) {
+        let name: string | null = null;
+        if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) {
+          name = node.name && ts.isIdentifier(node.name) ? node.name.text : null;
+        } else if (ts.isArrowFunction(node) && ts.isVariableDeclaration(node.parent) && ts.isIdentifier(node.parent.name)) {
+          name = node.parent.name.text;
+        }
+        
+        if (name) {
+          const kind = ts.isMethodDeclaration(node) ? "method" : /^[A-Z]/.test(name) && ctx.text.includes("react") ? "component" : "function";
+          symbols.push({
+            name,
+            kind,
+            line: lineOf(node),
+            endLine: endLineOf(node),
+            signature: ctx.text.slice(node.getStart(sourceFile), node.getStart(sourceFile) + 100).split(/[\n{]/)[0].trim(),
+            doc: getDoc(node),
+            exported: isExported(ts.isArrowFunction(node) ? node.parent.parent : node),
+            container: ts.isMethodDeclaration(node) ? currentContainer : null,
+            complexity: computeComplexity(node),
+          });
+        }
+      } else if (ts.isCallExpression(node)) {
+        const expr = node.expression;
+        let name = "";
+        let refNode: ts.Node = expr;
+        if (ts.isIdentifier(expr)) {
+          name = expr.text;
+        } else if (ts.isPropertyAccessExpression(expr)) {
+          name = expr.name.text;
+          refNode = expr.name;
+        }
+        if (name) {
+          let resolvedTargetId: string | undefined;
+          if (checker) {
+            const sym = checker.getSymbolAtLocation(refNode);
+            if (sym && sym.declarations && sym.declarations.length > 0) {
+              const decl = sym.declarations[0];
+              const targetFile = decl.getSourceFile();
+              const targetLine = targetFile.getLineAndCharacterOfPosition(decl.getStart(targetFile)).line + 1;
+              resolvedTargetId = `${targetFile.fileName}#${sym.name}@${targetLine}`;
+            }
           }
-          references.set(name, (references.get(name) || 0) + 1);
+          references.push({ name, line: lineOf(refNode), resolvedTargetId });
+        }
+      } else if (ts.isImportDeclaration(node)) {
+        const modulePath = ts.isStringLiteral(node.moduleSpecifier) ? node.moduleSpecifier.text : null;
+        if (modulePath && node.importClause) {
+          if (node.importClause.name) {
+            imports.push({ localName: node.importClause.name.text, importedName: "default", modulePath });
+          }
+          if (node.importClause.namedBindings) {
+            if (ts.isNamedImports(node.importClause.namedBindings)) {
+              for (const elem of node.importClause.namedBindings.elements) {
+                imports.push({
+                  localName: elem.name.text,
+                  importedName: elem.propertyName ? elem.propertyName.text : elem.name.text,
+                  modulePath,
+                });
+              }
+            } else if (ts.isNamespaceImport(node.importClause.namedBindings)) {
+              imports.push({ localName: node.importClause.namedBindings.name.text, importedName: "*", modulePath });
+            }
+          }
         }
       }
-
-      if (c.gotoFirstChild()) {
-        do {
-          walk(c);
-        } while (c.gotoNextSibling());
-        c.gotoParent();
-      }
-    };
-
-    try {
-      walk(cursor);
-      return { symbols, references };
-    } finally {
-      // tree-sitter's Tree/TreeCursor are backed by WASM linear memory, which
-      // is never garbage-collected by V8 — only freed via explicit .delete().
-      // Without this, every parsed file leaks its AST for the lifetime of the
-      // process: harmless on a handful of files, fatal (OOM) on a real repo
-      // with hundreds of them, since one process indexes every file in a run.
-      cursor.delete();
-      tree.delete();
+      
+      ts.forEachChild(node, visit);
     }
+
+    ts.forEachChild(sourceFile, visit);
+    
+    return { symbols, references, imports };
   }
 });
-
-function getArrowName(node: Parser.SyntaxNode) {
-  // const foo = () => {}
-  const parent = node.parent;
-  if (parent && parent.type === "variable_declarator") {
-    return parent.childForFieldName("name");
-  }
-  return null;
-}
-
-function getDoc(node: Parser.SyntaxNode) {
-  let prev = node.previousSibling;
-  if (node.parent?.type === "export_statement") prev = node.parent.previousSibling;
-  if (prev && prev.type === "comment") {
-    return prev.text.replace(/^\/\*\*?|\*\/$|^\*\s?|^\/\/\s?/g, "").trim().slice(0, 300);
-  }
-  return null;
-}

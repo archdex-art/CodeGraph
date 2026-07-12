@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Loader2, Gauge, Boxes, Network, FileWarning, Share2, LayoutGrid, CircleDot, BrainCircuit, Bot, Code2 } from "lucide-react";
+import { ArrowLeft, Loader2, Gauge, Boxes, Network, FileWarning, Share2, LayoutGrid, CircleDot, BrainCircuit, Bot, Code2, AlertTriangle } from "lucide-react";
 import { fetchRepo } from "@/lib/api";
 import type { RepoDetail, Dimension } from "@/lib/types";
 import { DIMENSION_META } from "@/lib/types";
@@ -102,16 +102,26 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
           className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-3"
         >
-          <Stat icon={<Network className="w-4 h-4 text-cyan-400" />} label="Graph nodes" value={repo.graph.nodes} />
-          <Stat icon={<Boxes className="w-4 h-4 text-purple-400" />} label="Graph edges" value={repo.graph.edges} />
-          <Stat label="Files" value={repo.graph.files} />
+          <Stat icon={<Network className="w-4 h-4 text-cyan-400" />} label="Graph nodes" value={repo.graphStats?.nodes || 0} />
+          <Stat icon={<Boxes className="w-4 h-4 text-purple-400" />} label="Graph edges" value={repo.graphStats?.edges || 0} />
+          <Stat label="Files" value={repo.graphStats?.files || 0} />
           <Stat label="Lines of code" value={repo.loc} />
-          <Stat label="Directories" value={repo.graph.dirs} />
-          <Stat label="Dependencies" value={repo.graph.dependencies} />
+          <Stat label="Directories" value={repo.graphStats?.dirs || 0} />
+          <Stat label="Dependencies" value={repo.graphStats?.dependencies || 0} />
           <Stat label="Issues found" value={repo.issues.length} />
-          <Stat label="Languages" value={repo.languages.length} />
+          <Stat label="Languages" value={repo.languages?.length || 0} />
         </motion.div>
       </div>
+
+      {repo.symbolGraph?.truncated && (
+        <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-200">
+            <span className="font-semibold">Partial results.</span> This repository has more symbols than the {repo.symbolGraph.stats.symbols.toLocaleString()}-symbol
+            analysis cap — the health score, agent findings, and code graph below only reflect the first {repo.symbolGraph.stats.symbols.toLocaleString()} symbols indexed, not the whole codebase.
+          </p>
+        </div>
+      )}
 
       {/* Codebase visualization (3 views) */}
       <div className="mb-6">
@@ -205,15 +215,20 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
           </div>
 
           {/* Languages */}
-          {repo.languages.length > 0 && (
+          {repo.languages && repo.languages.length > 0 && (
             <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 mb-6">
               <h2 className="text-sm font-semibold text-white mb-4">Languages</h2>
               <div className="flex flex-wrap gap-2">
-                {repo.languages.slice(0, 12).map((l) => (
+                {repo.languages.slice(0, 3).map((l: any) => (
                   <span key={l.language} className="text-xs px-3 py-1 rounded-full border border-white/10 text-gray-300">
                     {l.language} <span className="text-gray-600">· {l.loc.toLocaleString()} LOC</span>
                   </span>
                 ))}
+                {repo.languages.length > 3 && (
+                  <span className="text-xs px-3 py-1 rounded-full border border-white/5 text-gray-500">
+                    +{repo.languages.length - 3} more
+                  </span>
+                )}
               </div>
             </div>
           )}

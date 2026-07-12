@@ -39,11 +39,14 @@ function walkCode(root: string): string[] {
   return out;
 }
 
-// Deletion-aware unified diff (our fixers only delete lines → always correct).
-function buildDiff(file: string, before: string[], removed: Set<number>): string {
-  if (removed.size === 0) return "";
+// Diff builder: supports both deletions (after=null) and same-line
+// replacements (after=<new content>). Fixers only ever delete or replace a
+// whole line in place — never insert new lines or reorder existing ones —
+// so hunk line-count bookkeeping only has to account for pure deletions.
+function buildDiff(file: string, before: string[], edits: Map<number, string | null>): string {
+  if (edits.size === 0) return "";
   const ctx = 3;
-  const idxs = [...removed].sort((a, b) => a - b);
+  const idxs = [...edits.keys()].sort((a, b) => a - b);
   const groups: number[][] = [];
   for (const i of idxs) {
     const last = groups[groups.length - 1];
@@ -51,20 +54,29 @@ function buildDiff(file: string, before: string[], removed: Set<number>): string
     else groups.push([i]);
   }
   const lines: string[] = [`diff --git a/${file} b/${file}`, `--- a/${file}`, `+++ b/${file}`];
-  let removedSoFar = 0;
+  let lineDelta = 0; // cumulative (new - old) line count shift from prior hunks
   for (const g of groups) {
     const start = Math.max(0, g[0] - ctx);
     const end = Math.min(before.length - 1, g[g.length - 1] + ctx);
     const oldCount = end - start + 1;
-    const delInHunk = g.filter((i) => i >= start && i <= end).length;
-    const newCount = oldCount - delInHunk;
-    const oldStart = start + 1;
-    const newStart = start + 1 - removedSoFar;
-    lines.push(`@@ -${oldStart},${oldCount} +${newStart},${newCount} @@`);
+    let removedCount = 0;
+    const body: string[] = [];
     for (let i = start; i <= end; i++) {
-      lines.push((removed.has(i) ? "-" : " ") + before[i]);
+      if (!edits.has(i)) {
+        body.push(" " + before[i]);
+        continue;
+      }
+      const after = edits.get(i)!;
+      body.push("-" + before[i]);
+      if (after !== null) body.push("+" + after);
+      else removedCount++;
     }
-    removedSoFar += delInHunk;
+    const newCount = oldCount - removedCount;
+    const oldStart = start + 1;
+    const newStart = start + 1 + lineDelta;
+    lines.push(`@@ -${oldStart},${oldCount} +${newStart},${newCount} @@`);
+    lines.push(...body);
+    lineDelta += newCount - oldCount;
   }
   return lines.join("\n");
 }
@@ -108,24 +120,41 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
     t = now();
     const files = walkCode(work);
     const allEdits: FileEdit[] = [];
-    const changed = new Map<string, { before: string[]; removed: Set<number> }>();
+    const changed = new Map<string, { before: string[]; edits: Map<number, string | null> }>();
     for (const full of files) {
       const rel = path.relative(work, full).split(path.sep).join("/");
       const ext = path.extname(full).toLowerCase();
       let text: string;
       try { text = readFileSync(full, "utf8"); } catch { continue; }
       const original = text.split("\n");
-      let lines = original;
+
+      // Run every fixer independently against the pristine original lines
+      // (never chained) so each fixer's reported `line` stays valid against
+      // `original` for diffing — chaining would shift a later fixer's line
+      // numbers by however many lines an earlier fixer deleted.
+      const merged = new Map<number, string | null>(); // original line idx -> after (null = delete)
       const fileEdits: FileEdit[] = [];
       for (const fx of FIXERS) {
-        const res = fx.apply({ rel, ext, lines });
-        lines = res.lines;
-        fileEdits.push(...res.edits);
+        const res = fx.apply({ rel, ext, lines: original });
+        for (const e of res.edits) {
+          const idx = e.line - 1;
+          if (merged.has(idx)) continue; // another fixer already claimed this line this pass
+          merged.set(idx, e.after);
+          fileEdits.push(e);
+        }
       }
+
       if (fileEdits.length) {
-        writeFileSync(full, lines.join("\n"), "utf8");
+        const finalLines: string[] = [];
+        for (let i = 0; i < original.length; i++) {
+          if (!merged.has(i)) { finalLines.push(original[i]); continue; }
+          const after = merged.get(i)!;
+          if (after !== null) finalLines.push(after); // replacement
+          // else: deletion — line dropped entirely
+        }
+        writeFileSync(full, finalLines.join("\n"), "utf8");
         allEdits.push(...fileEdits);
-        changed.set(rel, { before: original, removed: new Set(fileEdits.map((e) => e.line - 1)) });
+        changed.set(rel, { before: original, edits: merged });
       }
     }
     rec("apply", `Applied ${allEdits.length} edit(s) across ${changed.size} file(s)`, true, t);
@@ -148,7 +177,7 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
     // 5. diff
     t = now();
     const diffParts: string[] = [];
-    for (const [rel, c] of changed) diffParts.push(buildDiff(rel, c.before, c.removed));
+    for (const [rel, c] of changed) diffParts.push(buildDiff(rel, c.before, c.edits));
     const diff = diffParts.filter(Boolean).join("\n");
     rec("diff", `Generated unified diff (${diff.split("\n").length} lines)`, true, t);
 

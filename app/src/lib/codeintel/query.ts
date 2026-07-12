@@ -95,6 +95,43 @@ export class QueryEngine {
     return out;
   }
 
+  /** Forward reachability: symbols reachable via outgoing calls within `depth`
+   * hops, with the shortest hop-count each was first reached at. Used for
+   * shallow taint-style analysis (does a "source" function's call chain reach
+   * a "sink" function within N hops), the mirror direction of `impact()`. */
+  reachableCallees(id: string, depth = 3): Array<{ symbol: CodeSymbol; hops: number }> {
+    const seen = new Set<string>([id]);
+    let frontier = [id];
+    const out: Array<{ symbol: CodeSymbol; hops: number }> = [];
+    for (let d = 1; d <= depth && frontier.length; d++) {
+      const next: string[] = [];
+      for (const cur of frontier) {
+        for (const c of this.callees(cur)) {
+          if (!seen.has(c.id)) {
+            seen.add(c.id);
+            out.push({ symbol: c, hops: d });
+            next.push(c.id);
+          }
+        }
+      }
+      frontier = next;
+    }
+    return out;
+  }
+
+  /** Smallest symbol (by line span) enclosing `line` in `file` — resolves an
+   * (file, line) locus (e.g. an issue's location) to the function/method that
+   * contains it, for graph-aware analyses like taint reachability. */
+  symbolAt(file: string, line: number): CodeSymbol | undefined {
+    let best: CodeSymbol | undefined;
+    for (const s of this.graph.symbols) {
+      if (s.file !== file) continue;
+      if (line < s.line || line > s.endLine) continue;
+      if (!best || s.endLine - s.line < best.endLine - best.line) best = s;
+    }
+    return best;
+  }
+
   /** Dead code: exported-or-not symbols with zero resolved callers and not entrypoints. */
   deadCode(): CodeSymbol[] {
     return this.graph.symbols.filter(
@@ -115,38 +152,79 @@ export class QueryEngine {
     let idx = 0;
     const sccs: string[][] = [];
 
-    const strongconnect = (v: string) => {
-      index.set(v, idx);
-      low.set(v, idx);
+    // Iterative Tarjan's SCC
+    // State: [nodeId, edgeIndex]
+    for (const s of this.graph.symbols) {
+      if (index.has(s.id)) continue;
+      if (sccs.length >= maxReport) break;
+      
+      const callStack: [string, number][] = [[s.id, 0]];
+      
+      // "enter" logic for the root
+      index.set(s.id, idx);
+      low.set(s.id, idx);
       idx++;
-      stack.push(v);
-      onStack.add(v);
-      for (const e of this.out.get(v) || []) {
-        if (e.kind !== "calls") continue;
-        const w = e.target;
-        if (!index.has(w)) {
-          strongconnect(w);
-          low.set(v, Math.min(low.get(v)!, low.get(w)!));
-        } else if (onStack.has(w)) {
-          low.set(v, Math.min(low.get(v)!, index.get(w)!));
+      stack.push(s.id);
+      onStack.add(s.id);
+
+      while (callStack.length > 0) {
+        const [v, i] = callStack[callStack.length - 1];
+        const edges = this.out.get(v) || [];
+        let advanced = false;
+
+        for (let j = i; j < edges.length; j++) {
+          const e = edges[j];
+          if (e.kind !== "calls") continue;
+          const w = e.target;
+
+          if (!index.has(w)) {
+            // Save current progress, we will resume after `w` is visited
+            callStack[callStack.length - 1][1] = j + 1;
+            
+            // "enter" logic for w
+            index.set(w, idx);
+            low.set(w, idx);
+            idx++;
+            stack.push(w);
+            onStack.add(w);
+            
+            callStack.push([w, 0]);
+            advanced = true;
+            break; // Dive into `w`
+          } else if (onStack.has(w)) {
+            low.set(v, Math.min(low.get(v)!, index.get(w)!));
+          }
+        }
+
+        if (advanced) continue; // we pushed something to stack, let it run
+
+        // We finished visiting all edges of `v`
+        callStack.pop();
+        
+        // Update parent's low-link value
+        if (callStack.length > 0) {
+          const parent = callStack[callStack.length - 1][0];
+          low.set(parent, Math.min(low.get(parent)!, low.get(v)!));
+        }
+
+        // Generate SCC if `v` is a root node
+        if (low.get(v) === index.get(v)) {
+          const comp: string[] = [];
+          let w: string;
+          do {
+            w = stack.pop()!;
+            onStack.delete(w);
+            comp.push(w);
+          } while (w !== v);
+          
+          if (comp.length > 1) {
+            sccs.push(comp);
+            if (sccs.length >= maxReport) break;
+          }
         }
       }
-      if (low.get(v) === index.get(v)) {
-        const comp: string[] = [];
-        let w: string;
-        do {
-          w = stack.pop()!;
-          onStack.delete(w);
-          comp.push(w);
-        } while (w !== v);
-        if (comp.length > 1) sccs.push(comp);
-      }
-    };
-
-    for (const s of this.graph.symbols) {
-      if (!index.has(s.id)) strongconnect(s.id);
-      if (sccs.length >= maxReport) break;
     }
+
     return sccs.slice(0, maxReport).map((c) => c.map((id) => this.byId.get(id)?.name || id));
   }
 

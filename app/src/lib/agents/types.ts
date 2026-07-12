@@ -22,6 +22,7 @@ export interface Finding {
   line: number;
   symbol: string | null;
   blastRadius: number; // >=1 (graph fan-in / usage)
+  churn?: number; // commit frequency multiplier
   suggestedFix: string;
   effort: "S" | "M" | "L"; // rough remediation size
   // computed by the judge:
@@ -46,4 +47,5 @@ export interface RemediationPlan {
   buckets: Record<Priority, Finding[]>;
   topFindings: Finding[]; // flat, ranked
   summary: string;
+  truncated: boolean; // true when the underlying symbol graph was capped (MAX_SYMBOLS) -- findings are partial
 }
