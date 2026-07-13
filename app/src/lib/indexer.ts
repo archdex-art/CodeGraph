@@ -1,27 +1,29 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtempSync, mkdirSync, rmSync, readFileSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { readdirSync, statSync } from "node:fs";
 import type {
   Dimension,
   DimensionScore,
   GraphStats,
   GraphNode,
   GraphEdge,
-  Issue,
   LanguageStat,
-  VizGraph,
   TreeNode,
+  VizGraph,
   ModuleGraph,
+  Issue,
+  IndexResult,
   ModuleNode,
   ModuleEdge,
-  SymbolGraph,
+  SymbolGraph
 } from "./types";
 import { DIMENSION_META } from "./types";
 import { buildSymbolGraph } from "./codeintel/graph";
 import { extractorFor } from "./codeintel/extractors";
+import { lintForSecurity } from "./eslintSecurity";
 
 const exec = promisify(execFile);
 
@@ -52,19 +54,6 @@ const SKIP_DIRS: Record<string, true> = {
 const MAX_FILES = Number(process.env.CG_MAX_FILES) || 4000;
 const MAX_FILE_BYTES = 400_000;
 
-export interface IndexResult {
-  loc: number;
-  languages: LanguageStat[];
-  graph: GraphStats;
-  dimensions: DimensionScore[];
-  issues: Issue[];
-  dependencies: string[];
-  score: number;
-  viz: VizGraph;
-  tree: TreeNode;
-  modules: ModuleGraph;
-  symbolGraph: SymbolGraph;
-}
 
 interface ScannedFile {
   rel: string;
@@ -314,28 +303,15 @@ function computeImportGraph(files: ScannedFile[]): ImportGraph {
   return { fanIn, importEdges };
 }
 
-let issueSeq = 0;
-function mkIssue(
-  dimension: Dimension,
-  severity: number,
-  title: string,
-  file: string,
-  line: number,
-  blastRadius: number
-): Issue {
-  return { id: `i${issueSeq++}`, dimension, severity, title, file, line, blastRadius };
-}
 
 interface Rule {
   re: RegExp;
   dimension: Dimension;
   severity: number;
+  confidence?: number;
   title: string;
   exts?: Record<string, true>;
-  /** Optional second-pass filter over the regex match to cut heuristic false
-   *  positives — e.g. the secret rule uses this to reject placeholder/example
-   *  values (`api_key="am_live_..."` in docs/marketing copy is not a live secret). */
-  validate?: (line: string, match: RegExpExecArray) => boolean;
+  validate?: (line: string, m: RegExpExecArray) => boolean;
 }
 
 // A real secret never contains a literal "..." ellipsis or matches a common
@@ -347,51 +323,79 @@ function isPlaceholderSecret(value: string): boolean {
 
 // Heuristic, language-agnostic-ish defect/risk rules.
 const RULES: Rule[] = [
-  { re: /\beval\s*\(/, dimension: "security", severity: 5, title: "Use of eval()" },
-  { re: /child_process|os\.system\(|subprocess\.(call|run|Popen)\(/, dimension: "security", severity: 3, title: "Shell/process execution" },
+  { re: /\beval\s*\(/, dimension: "security", severity: 5, confidence: 0.95, title: "Use of eval()" },
+  { re: /child_process|os\.system\(|subprocess\.(call|run|Popen)\(/, dimension: "security", severity: 3, confidence: 0.85, title: "Shell/process execution" },
   {
     re: /(password|secret|api[_-]?key|token)\s*[:=]\s*['"]([^'"]{6,})['"]/i,
-    dimension: "security", severity: 5, title: "Possible hardcoded secret",
+    dimension: "security", severity: 5, confidence: 0.8, title: "Possible hardcoded secret",
     validate: (_line, m) => !isPlaceholderSecret(m[2]),
   },
-  { re: /https?:\/\/[^"'\s]*(?<![\w.])(localhost|127\.0\.0\.1)/, dimension: "security", severity: 2, title: "Hardcoded local URL" },
-  { re: /\bdangerouslySetInnerHTML\b|innerHTML\s*=/, dimension: "security", severity: 3, title: "Raw HTML injection sink" },
-  { re: /SELECT\s+.+\+|query\(\s*['"`].*\$\{/i, dimension: "security", severity: 4, title: "Possible SQL string concatenation" },
+  { re: /https?:\/\/[^"'\s]*(?<![\w.])(localhost|127\.0\.0\.1)/, dimension: "security", severity: 2, confidence: 0.9, title: "Hardcoded local URL" },
+  { re: /\bdangerouslySetInnerHTML\b|innerHTML\s*=/, dimension: "security", severity: 3, confidence: 0.95, title: "Raw HTML injection sink" },
+  { re: /SELECT\s+.+\+|query\(\s*['"`].*\$\{/i, dimension: "security", severity: 4, confidence: 0.7, title: "Possible SQL string concatenation" },
 
-  { re: /\bconsole\.(log|debug)\b|^\s*print\(/m, dimension: "correctness", severity: 1, title: "Leftover debug output" },
-  { re: /\bdebugger\b/, dimension: "correctness", severity: 2, title: "debugger statement" },
-  { re: /catch\s*\([^)]*\)\s*\{\s*\}/, dimension: "correctness", severity: 3, title: "Empty catch block" },
-  { re: /\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b/, dimension: "maintainability", severity: 1, title: "TODO/FIXME marker" },
-  { re: /@ts-(ignore|nocheck)|# type: ignore|eslint-disable/, dimension: "maintainability", severity: 2, title: "Suppressed checker" },
-  { re: /:\s*any\b|\bas\s+any\b/, dimension: "correctness", severity: 1, title: "Untyped `any`", exts: { ".ts": true, ".tsx": true } },
+  { re: /\bconsole\.(log|debug)\b|^\s*print\(/m, dimension: "correctness", severity: 1, confidence: 1.0, title: "Leftover debug output" },
+  { re: /\bdebugger\b/, dimension: "correctness", severity: 2, confidence: 1.0, title: "debugger statement" },
+  { re: /catch\s*\([^)]*\)\s*\{\s*\}/, dimension: "correctness", severity: 3, confidence: 0.9, title: "Empty catch block" },
+  { re: /\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b/, dimension: "maintainability", severity: 1, confidence: 1.0, title: "TODO/FIXME marker" },
+  { re: /@ts-(ignore|nocheck)|# type: ignore|eslint-disable/, dimension: "maintainability", severity: 2, confidence: 1.0, title: "Suppressed checker" },
+  { re: /:\s*any\b|\bas\s+any\b/, dimension: "correctness", severity: 1, confidence: 1.0, title: "Untyped `any`", exts: { ".ts": true, ".tsx": true } },
 ];
 
-function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>): Issue[] {
+let _issueSeq = 0;
+function mkIssue(dim: Dimension, sev: number, title: string, file: string, line: number, br: number, conf?: number, churn?: number): Issue {
+  return { id: `iss_${_issueSeq++}`, dimension: dim, severity: sev, confidence: conf, title, file, line, blastRadius: br, churn: churn ?? 1 };
+}
+
+function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, churnByFile: Map<string, number>): Issue[] {
   const issues: Issue[] = [];
   for (const f of files) {
     if (!f.text) continue;
     const br = 1 + (fanIn.get(f.rel) || 0); // blast radius from graph fan-in
+    const ch = churnByFile.get(f.rel) || 1;
     const lines = f.text.split("\n");
-
     for (const rule of RULES) {
       if (rule.exts && !rule.exts[f.ext]) continue;
+      let hits = 0;
       for (let i = 0; i < lines.length; i++) {
         const m = rule.re.exec(lines[i]);
         if (m && (!rule.validate || rule.validate(lines[i], m))) {
-          issues.push(mkIssue(rule.dimension, rule.severity, rule.title, f.rel, i + 1, br));
-          break; // one hit per rule per file keeps signal clean
+          issues.push(mkIssue(rule.dimension, rule.severity, rule.title, f.rel, i + 1, br, rule.confidence, ch));
+          hits++;
+          if (hits >= 5) break; // bounded top-N (5) hits per rule per file
         }
       }
+    }
+    // AST-based security detector layer (eslint-plugin-security), catches
+    // vulnerability classes the line-regex RULES above are structurally blind
+    // to (ReDoS regex literals, dynamic fs/require paths, weak randomness, ...).
+    for (const f2 of lintForSecurity(f.text, f.ext)) {
+      issues.push(mkIssue("security", f2.severity, f2.title, f.rel, f2.line, br, f2.confidence, ch));
     }
 
     // God-file: very large source file → maintainability penalty scaled by fan-in.
     if (f.loc > 600) {
       issues.push(
-        mkIssue("maintainability", f.loc > 1200 ? 4 : 2, `Large file (${f.loc} LOC)`, f.rel, 1, br)
+        mkIssue("maintainability", f.loc > 1200 ? 4 : 2, `Large file (${f.loc} LOC)`, f.rel, 1, br, 0.9, ch)
       );
     }
   }
   return issues;
+}
+
+/** Extract recent commit counts per file. */
+function computeChurn(root: string): Map<string, number> {
+  const churn = new Map<string, number>();
+  try {
+    const out = execSync(`git log --since="6.months.ago" --name-only --format=""`, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    for (const line of out.split("\n")) {
+      const f = line.trim();
+      if (f) churn.set(f, (churn.get(f) || 0) + 1);
+    }
+  } catch {
+    // Not a git repo, or git not installed
+  }
+  return churn;
 }
 
 /** Dependency hygiene from manifests actually present in the repo. */
@@ -410,15 +414,15 @@ function analyzeDependencies(root: string): { issues: Issue[]; count: number; de
       for (const [name, range] of Object.entries(deps)) {
         const v = String(range);
         if (v === "*" || v === "latest" || v.startsWith("http") || v.startsWith("git")) {
-          issues.push(mkIssue("dependency_hygiene", 3, `Unpinned dependency: ${name} (${v})`, "package.json", 1, 2));
+          issues.push(mkIssue("dependency_hygiene", 3, `Unpinned dependency: ${name} (${v})`, "package.json", 1, 2, 1.0));
         } else if (/^[~^]?0\./.test(v)) {
-          issues.push(mkIssue("dependency_hygiene", 1, `Pre-1.0 dependency: ${name} (${v})`, "package.json", 1, 1));
+          issues.push(mkIssue("dependency_hygiene", 1, `Pre-1.0 dependency: ${name} (${v})`, "package.json", 1, 1, 1.0));
         }
       }
       if (!existsSync(path.join(root, "package-lock.json")) &&
           !existsSync(path.join(root, "pnpm-lock.yaml")) &&
           !existsSync(path.join(root, "yarn.lock"))) {
-        issues.push(mkIssue("dependency_hygiene", 2, "No lockfile committed", "package.json", 1, 2));
+        issues.push(mkIssue("dependency_hygiene", 2, "No lockfile committed", "package.json", 1, 2, 1.0));
       }
     } catch {
       /* ignore malformed */
@@ -434,7 +438,7 @@ function analyzeDependencies(root: string): { issues: Issue[]; count: number; de
         const m = l.match(/^([A-Za-z0-9_-]+)/);
         if (m) depsList.push(m[1]);
         if (!/[=<>~]/.test(l)) {
-          issues.push(mkIssue("dependency_hygiene", 2, `Unpinned dependency: ${l.trim()}`, "requirements.txt", 1, 1));
+          issues.push(mkIssue("dependency_hygiene", 2, `Unpinned dependency: ${l.trim()}`, "requirements.txt", 1, 1, 1.0));
         }
       }
     } catch {
@@ -453,9 +457,9 @@ function analyzeTests(files: ScannedFile[]): Issue[] {
   const ratio = tests.length / code.length;
   const issues: Issue[] = [];
   if (tests.length === 0) {
-    issues.push(mkIssue("test_integrity", 4, "No test files detected", ".", 1, 3));
+    issues.push(mkIssue("test_integrity", 4, "No test files detected", ".", 1, 3, 0.6));
   } else if (ratio < 0.1) {
-    issues.push(mkIssue("test_integrity", 2, `Low test coverage ratio (${(ratio * 100).toFixed(0)}% of code files)`, ".", 1, 2));
+    issues.push(mkIssue("test_integrity", 2, `Low test coverage ratio (${(ratio * 100).toFixed(0)}% of code files)`, ".", 1, 2, 0.75));
   }
   return issues;
 }
@@ -693,12 +697,13 @@ function buildModuleGraph(
 
 /** Full pipeline: scan a repo/folder dir → result (graph + score + viz). */
 export function indexRepo(root: string): IndexResult {
-  issueSeq = 0;
+  _issueSeq = 0;
+  const churnMap = computeChurn(root);
   const { files, languages, loc } = scan(root);
   const { fanIn, importEdges } = computeImportGraph(files);
-
-  const codeIssues = analyzeFiles(files, fanIn);
+  
   const dep = analyzeDependencies(root);
+  const codeIssues = analyzeFiles(files, fanIn, churnMap);
   const testIssues = analyzeTests(files);
   const issues = [...codeIssues, ...dep.issues, ...testIssues];
 
@@ -740,10 +745,11 @@ export function indexRepo(root: string): IndexResult {
   return {
     loc,
     languages,
-    graph: graphStats,
+    graphStats,
     dimensions,
     issues: issues.slice(0, 200),
     dependencies: dep.depsList,
+    churnByFile: Object.fromEntries(churnMap),
     score: overall,
     viz,
     tree,

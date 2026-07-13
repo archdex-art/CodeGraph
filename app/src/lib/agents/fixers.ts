@@ -100,7 +100,78 @@ const debugFixer: Fixer = {
   },
 };
 
-export const FIXERS: Fixer[] = [debugFixer];
+// Remove standalone TODO/FIXME/HACK/XXX marker comments (leftover from
+// development). Only matches whole-line, comment-only statements (line starts
+// with `//` or `#`) — never a code line that happens to mention one of these
+// words inside a string literal, which could be real, load-bearing text.
+// Comments are stripped before execution in every supported language, so
+// deleting one can never change runtime behavior.
+const todoFixer: Fixer = {
+  id: "remove-todo-marker",
+  label: "Remove stale TODO/FIXME marker",
+  apply({ rel, lines }) {
+    const markerRe = /\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b/;
+    const commentLineRe = /^(\/\/|#)/;
+    const candidateDelete = new Set<number>();
+    for (let i = 0; i < lines.length; i++) {
+      const t = lines[i].trim();
+      if (commentLineRe.test(t) && markerRe.test(t)) candidateDelete.add(i);
+    }
+
+    const edits: FileEdit[] = [];
+    const out: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (candidateDelete.has(i)) {
+        edits.push({
+          file: rel,
+          line: i + 1,
+          before: lines[i].trim().slice(0, 120),
+          after: null,
+          fixer: "remove-todo-marker",
+          reason: "Removed a stale TODO/FIXME/HACK/XXX comment (comment-only line; no behavior change).",
+        });
+        continue;
+      }
+      out.push(lines[i]);
+    }
+    return { lines: out, edits };
+  },
+};
+
+// Document (never silently drop) an empty catch block. A `catch (e) {}` swallows
+// errors with zero trace of intent — the standard, safe remediation is to make
+// the intent explicit, not to delete error handling (which could change control
+// flow if anything is later added to the block). A block comment has zero
+// runtime effect, so this can never change program behavior; it only stops
+// matching the indexer's "empty" regex because the braces are no longer empty.
+const JS_ONLY: Record<string, true> = { ".ts": true, ".tsx": true, ".js": true, ".jsx": true, ".mjs": true, ".cjs": true };
+const EMPTY_CATCH_RE = /catch\s*\([^)]*\)\s*\{\s*\}/;
+const emptyCatchFixer: Fixer = {
+  id: "annotate-empty-catch",
+  label: "Document empty catch blocks",
+  apply({ rel, ext, lines }) {
+    if (!JS_ONLY[ext]) return { lines, edits: [] };
+    const edits: FileEdit[] = [];
+    const out = lines.slice();
+    for (let i = 0; i < out.length; i++) {
+      if (!EMPTY_CATCH_RE.test(out[i])) continue;
+      const before = out[i];
+      const after = before.replace(/\{\s*\}/, "{ /* intentionally ignored */ }");
+      out[i] = after;
+      edits.push({
+        file: rel,
+        line: i + 1,
+        before: before.trim().slice(0, 120),
+        after: after.trim().slice(0, 120),
+        fixer: "annotate-empty-catch",
+        reason: "Documented an empty catch block's intent instead of silently swallowing the error (no behavior change).",
+      });
+    }
+    return { lines: out, edits };
+  },
+};
+
+export const FIXERS: Fixer[] = [debugFixer, todoFixer, emptyCatchFixer];
 
 export function fixerById(id: string): Fixer | null {
   return FIXERS.find((f) => f.id === id) ?? null;

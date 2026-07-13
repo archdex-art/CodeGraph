@@ -34,6 +34,7 @@ function init(): DatabaseSync {
       tree TEXT DEFAULT '{}',
       modules TEXT DEFAULT '{"nodes":[],"edges":[]}',
       symbols TEXT DEFAULT '{"symbols":[],"edges":[],"truncated":false,"stats":{"symbols":0,"edges":0,"resolvedCalls":0}}',
+      churn_by_file TEXT DEFAULT '{}',
       owner_id INTEGER,
       created_at INTEGER NOT NULL,
       finished_at INTEGER
@@ -71,6 +72,7 @@ function init(): DatabaseSync {
   if (!cols.has("workspace_dir")) db.exec("ALTER TABLE repos ADD COLUMN workspace_dir TEXT");
   if (!cols.has("save_mode")) db.exec("ALTER TABLE repos ADD COLUMN save_mode TEXT NOT NULL DEFAULT 'local'");
   if (!cols.has("owner_id")) db.exec("ALTER TABLE repos ADD COLUMN owner_id INTEGER");
+  if (!cols.has("churn_by_file")) db.exec(`ALTER TABLE repos ADD COLUMN churn_by_file TEXT DEFAULT '{}'`);
   return db;
 }
 

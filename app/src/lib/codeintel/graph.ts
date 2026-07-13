@@ -1,5 +1,7 @@
 import type { CodeSymbol, SymbolEdge, SymbolGraph, SymbolKind } from "../types";
-import { extractorFor } from "./extractors";
+import { posix } from "node:path";
+import ts from "typescript";
+import { extractorFor, type RawImport, type RawReference } from "./extractors";
 
 export interface FileInput {
   rel: string; // posix path relative to root
@@ -32,6 +34,38 @@ function tagsFor(name: string, signature: string, doc: string | null): string[] 
 
 const symId = (file: string, name: string, line: number) => `${file}#${name}@${line}`;
 
+// Extensions probed when resolving a relative import specifier to an actual
+// file (mirrors Node/bundler module resolution closely enough for repo-local
+// imports; bare specifiers like "react" are left unresolved on purpose --
+// they're external packages, not files in this graph).
+const RESOLVE_EXTS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py"];
+
+function resolveModulePath(fromFile: string, spec: string, knownFiles: Set<string>): string | null {
+  if (!spec.startsWith(".")) return null;
+  const dir = posix.dirname(fromFile);
+  const joined = posix.normalize(posix.join(dir, spec));
+  if (knownFiles.has(joined)) return joined;
+  for (const ext of RESOLVE_EXTS) if (knownFiles.has(joined + ext)) return joined + ext;
+  for (const ext of RESOLVE_EXTS) {
+    const idx = posix.join(joined, "index" + ext);
+    if (knownFiles.has(idx)) return idx;
+  }
+  return null;
+}
+
+// Smallest symbol (by line span) among candidates whose [line, endLine] range
+// contains `line` -- the innermost enclosing function/method for a call site,
+// replacing the old "attribute every call to the file's first function"
+// approximation now that references carry a line number.
+function findEnclosingCaller(candidates: CodeSymbol[], line: number, excludeId: string): CodeSymbol | null {
+  let best: CodeSymbol | null = null;
+  for (const s of candidates) {
+    if (s.id === excludeId) continue;
+    if (line < s.line || line > s.endLine) continue;
+    if (!best || s.endLine - s.line < best.endLine - best.line) best = s;
+  }
+  return best;
+}
 /**
  * Build the symbol-level knowledge graph across all files.
  * Pass 1: extract symbols + local refs per file.
@@ -42,18 +76,38 @@ export function buildSymbolGraph(files: FileInput[], issuesByFile: Map<string, n
   const edges: SymbolEdge[] = [];
   // name -> symbol ids (for cross-file resolution; multiple defs possible)
   const defsByName = new Map<string, string[]>();
-  // symbol id -> reference token counts (for pass 2)
-  const refsBySymbol = new Map<string, Map<string, number>>();
+  // Track symbols per file for import resolution
+  const byFile = new Map<string, Map<string, CodeSymbol>>();
+  const knownFiles = new Set<string>();
+
   // per-file: list of (symbol, localName) to resolve container + own refs
-  const fileRefs: Array<{ file: string; refs: Map<string, number>; symbolsInFile: CodeSymbol[] }> = [];
+  const fileRefs: Array<{ file: string; refs: RawReference[]; imports: RawImport[]; symbolsInFile: CodeSymbol[] }> = [];
+  // Optional: Build a TS program for type-aware resolution
+  const tsFiles = files.filter(f => /.(ts|tsx|js|jsx|cjs|mjs)$/.test(f.ext));
+  let program: ts.Program | undefined;
+  if (tsFiles.length > 0) {
+    const options: ts.CompilerOptions = { allowJs: true, target: ts.ScriptTarget.Latest, moduleResolution: ts.ModuleResolutionKind.Node10 };
+    const host = ts.createCompilerHost(options);
+    const fileMap = new Map(files.map(f => [f.rel, f.text]));
+    const origGetSourceFile = host.getSourceFile;
+    host.getSourceFile = (fileName, languageVersion, onError, shouldCreateNewSourceFile) => {
+      if (fileMap.has(fileName)) return ts.createSourceFile(fileName, fileMap.get(fileName)!, languageVersion);
+      return origGetSourceFile(fileName, languageVersion, onError, shouldCreateNewSourceFile);
+    };
+    host.readFile = (fileName) => fileMap.get(fileName) || ts.sys.readFile(fileName);
+    host.fileExists = (fileName) => fileMap.has(fileName) || ts.sys.fileExists(fileName);
+    program = ts.createProgram(tsFiles.map(f => f.rel), options, host);
+  }
 
   for (const f of files) {
+    knownFiles.add(f.rel);
     const ex = extractorFor(f.ext);
     if (!ex) continue;
-    const { symbols: raws, references } = ex.extract(f.text);
+    const { symbols: raws, references, imports } = ex.extract({ text: f.text, relPath: f.rel, program });
     const inFile: CodeSymbol[] = [];
     // container name -> id within this file
     const containerId = new Map<string, string>();
+    const localMap = new Map<string, CodeSymbol>();
 
     for (const r of raws) {
       if (symbols.length >= MAX_SYMBOLS) break;
@@ -70,6 +124,7 @@ export function buildSymbolGraph(files: FileInput[], issuesByFile: Map<string, n
         exported: r.exported,
         language: ex.language,
         loc: Math.max(1, r.endLine - r.line + 1),
+        complexity: (r as any).complexity,
         container: null,
         fanIn: 0,
         fanOut: 0,
@@ -78,13 +133,20 @@ export function buildSymbolGraph(files: FileInput[], issuesByFile: Map<string, n
       };
       symbols.push(sym);
       inFile.push(sym);
+      localMap.set(r.name, sym);
+
       if (r.kind === "class" || r.kind === "interface") containerId.set(r.name, id);
       const list = defsByName.get(r.name) || [];
-      list.push(id);
+      // Prefer exported symbols in the global fallback list
+      if (sym.exported) list.unshift(id);
+      else list.push(id);
       defsByName.set(r.name, list);
+      
       // stash local container name to link after
       (sym as CodeSymbol & { _container?: string })._container = r.container ?? undefined;
     }
+
+    byFile.set(f.rel, localMap);
 
     // CONTAINS edges (class -> method) within file
     for (const sym of inFile) {
@@ -97,7 +159,7 @@ export function buildSymbolGraph(files: FileInput[], issuesByFile: Map<string, n
       delete (sym as CodeSymbol & { _container?: string })._container;
     }
 
-    fileRefs.push({ file: f.rel, refs: references, symbolsInFile: inFile });
+    fileRefs.push({ file: f.rel, refs: references, imports: imports || [], symbolsInFile: inFile });
     // attribute file-level issue counts to the largest symbol spanning nothing precise: keep on file
   }
 
@@ -105,43 +167,79 @@ export function buildSymbolGraph(files: FileInput[], issuesByFile: Map<string, n
   void issuesByFile;
 
   // Pass 2: resolve references -> CALLS edges.
-  // A file's ref tokens resolve to defs (prefer same-file, then exported cross-file).
   let resolvedCalls = 0;
-  const seenEdge = new Set<string>();
-  for (const fr of fileRefs) {
-    const localNames = new Map<string, string>(); // name -> id (defs in this file)
-    for (const s of fr.symbolsInFile) localNames.set(s.name, s.id);
-    // The "caller" for a ref is the enclosing symbol; approximate by nearest preceding symbol.
-    const ordered = [...fr.symbolsInFile].sort((a, b) => a.line - b.line);
+  const edgeCounts = new Map<string, number>();
+  const symbolById = new Map<string, CodeSymbol>();
+  for (const s of symbols) symbolById.set(s.id, s);
 
-    for (const [name, count] of fr.refs) {
-      // resolve target
-      let targetId: string | null = null;
-      if (localNames.has(name) ) targetId = localNames.get(name)!;
-      else {
+  for (const fr of fileRefs) {
+    const localNames = byFile.get(fr.file) || new Map<string, CodeSymbol>();
+    
+    // Build import binding map for this file
+    const importBindings = new Map<string, { importedName: string; resolvedFile: string }>();
+    for (const imp of fr.imports) {
+      const resolvedFile = resolveModulePath(fr.file, imp.modulePath, knownFiles);
+      if (resolvedFile) {
+        importBindings.set(imp.localName, { importedName: imp.importedName, resolvedFile });
+      }
+    }
+    for (const ref of fr.refs) {
+      const name = ref.name;
+      let targetSym: CodeSymbol | null = null;
+
+      // 0. Type-aware resolution (bypasses heuristics if TS compiler found the exact target)
+      if (ref.resolvedTargetId) {
+        targetSym = symbolById.get(ref.resolvedTargetId) || null;
+      }
+
+      // 1. Same-file local
+      if (!targetSym && localNames.has(name)) {
+        targetSym = localNames.get(name)!;
+      } 
+      // 2. Import binding (exact file)
+      else if (importBindings.has(name)) {
+        const binding = importBindings.get(name)!;
+        const targetLocalMap = byFile.get(binding.resolvedFile);
+        if (targetLocalMap) {
+          if (binding.importedName === "default") {
+            // Try to find the default export, or fall back to any exported symbol
+            const targetSymbols = Array.from(targetLocalMap.values());
+            targetSym = targetSymbols.find(s => s.exported) || targetSymbols[0] || null;
+          } else if (binding.importedName !== "*") {
+            targetSym = targetLocalMap.get(binding.importedName) || null;
+          }
+        }
+      } 
+      
+      // 3. Global fallback
+      if (!targetSym) {
         const defs = defsByName.get(name);
         if (defs && defs.length) {
-          // prefer an exported def in another file
-          targetId = defs.find((id) => id !== undefined) || null;
+          targetSym = symbolById.get(defs[0]) || null;
         }
       }
-      if (!targetId) continue;
-      const target = symbols.find((s) => s.id === targetId);
-      if (!target) continue;
 
-      // pick caller = last symbol defined before... we don't have ref line; attribute to file's top exported symbol
-      // Better: attribute call to every symbol in file whose body could contain it is expensive; use file's primary symbol.
-      const caller = ordered.find((s) => s.id !== targetId && (s.kind === "function" || s.kind === "method" || s.kind === "component")) || ordered[0];
-      if (!caller || caller.id === targetId) continue;
+      if (!targetSym) continue;
 
-      const key = caller.id + "->" + targetId;
-      if (seenEdge.has(key)) continue;
-      seenEdge.add(key);
-      edges.push({ source: caller.id, target: targetId, kind: "calls" });
-      caller.fanOut += 1;
-      target.fanIn += Math.min(count, 5);
-      resolvedCalls++;
+      // Caller attribution: smallest enclosing function/method/component
+      const callerCandidates = fr.symbolsInFile.filter(s => s.kind === "function" || s.kind === "method" || s.kind === "component");
+      const caller = findEnclosingCaller(callerCandidates, ref.line, targetSym.id);
+      
+      if (!caller || caller.id === targetSym.id) continue;
+
+      const key = `${caller.id}->${targetSym.id}`;
+      edgeCounts.set(key, (edgeCounts.get(key) || 0) + 1);
     }
+  }
+
+  for (const [key, count] of edgeCounts.entries()) {
+    const [source, target] = key.split("->"); // safe because our IDs don't have "->"
+    edges.push({ source, target, kind: "calls" });
+    const s = symbolById.get(source)!;
+    const t = symbolById.get(target)!;
+    s.fanOut += 1;
+    t.fanIn += Math.min(count, 5); // cap at 5 per distinct caller to prevent massive spam from one file
+    resolvedCalls++;
   }
 
   const truncated = symbols.length >= MAX_SYMBOLS;

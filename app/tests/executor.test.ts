@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { execSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { FIXERS, fixerById } from "@/lib/agents/fixers";
+import { executeFixes } from "@/lib/agents/executor";
+import type { RepoDetail } from "@/lib/types";
 
 describe("fixers", () => {
   it("registry resolves the debug fixer", () => {
@@ -138,5 +140,98 @@ describe("fixers: python block-body protection", () => {
 
     expect(out.edits.length).toBe(1);
     expect(out.lines.some((l) => l.trim() === 'console.log("debug");')).toBe(false);
+  });
+});
+
+describe("fixers: TODO/FIXME marker removal", () => {
+  it("removes standalone TODO/FIXME/HACK/XXX comment lines only", () => {
+    const fx = fixerById("remove-todo-marker")!;
+    const lines = [
+      "// TODO: refactor this",
+      "const x = 1;",
+      "# FIXME later",
+      '  const s = "TODO.md has notes"; // not a comment-only line, must survive',
+    ];
+    const out = fx.apply({ rel: "a.ts", ext: ".ts", lines });
+    expect(out.edits.length).toBe(2);
+    expect(out.lines).not.toContain("// TODO: refactor this");
+    expect(out.lines).not.toContain("# FIXME later");
+    expect(out.lines).toContain("const x = 1;");
+    // A TODO mention inside a real code line's string literal is never touched.
+    expect(out.lines.some((l) => l.includes('"TODO.md has notes"'))).toBe(true);
+  });
+});
+
+describe("fixers: empty catch block annotation", () => {
+  it("documents an empty catch without deleting it, and stops matching the smell regex", () => {
+    const fx = fixerById("annotate-empty-catch")!;
+    const lines = ["try {", "  risky();", "} catch (e) {}", "done();"];
+    const out = fx.apply({ rel: "a.ts", ext: ".ts", lines });
+    expect(out.edits.length).toBe(1);
+    expect(out.edits[0].after).not.toBeNull();
+    expect(out.lines).toHaveLength(lines.length); // no line removed, only content replaced
+    expect(out.lines[2]).toContain("intentionally ignored");
+    // The exact regex indexer.ts uses to flag this smell must no longer match.
+    expect(/catch\s*\([^)]*\)\s*\{\s*\}/.test(out.lines[2])).toBe(false);
+  });
+
+  it("does not touch Python files (no curly-brace catch there)", () => {
+    const fx = fixerById("annotate-empty-catch")!;
+    const out = fx.apply({ rel: "a.py", ext: ".py", lines: ["except Exception:", "    pass"] });
+    expect(out.edits.length).toBe(0);
+  });
+});
+
+describe("executeFixes: end-to-end sandboxed remediation", () => {
+  it("fixes multiple independent issue classes in one pass and produces a correct diff", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "executor-e2e-"));
+    try {
+      writeFileSync(
+        path.join(dir, "app.ts"),
+        [
+          "export function run(x: number) {",
+          "  console.log('debug trace');",
+          "  // TODO: handle the zero case",
+          "  try {",
+          "    return 10 / x;",
+          "  } catch (e) {}",
+          "}",
+        ].join("\n"),
+        "utf8"
+      );
+      writeFileSync(path.join(dir, "package.json"), JSON.stringify({ name: "e2e-fixture", version: "1.0.0" }), "utf8");
+
+      const repo: RepoDetail = {
+        id: "e2e", url: dir, name: "e2e-fixture", status: "done", sourceType: "local",
+        score: 0, createdAt: 0, finishedAt: 0, hasWorkspace: false, error: null,
+        loc: 0, languages: [], graphStats: { nodes: 0, edges: 0, files: 0, dirs: 0, dependencies: 0 },
+        dimensions: [], issues: [], dependencies: [], churnByFile: {},
+        tree: { name: "/", path: ".", children: [] },
+        viz: { nodes: [], edges: [] } as any,
+        modules: { nodes: [], edges: [] },
+        symbolGraph: { symbols: [], edges: [], truncated: false, stats: { symbols: 0, edges: 0, resolvedCalls: 0 } },
+      };
+
+      const result = await executeFixes(repo);
+      expect(result.ok).toBe(true);
+      expect(result.verified).toBe(true);
+      // All 3 fixer classes fired in one pass: debug output, TODO marker, empty catch.
+      const fixerIds = new Set(result.edits.map((e) => e.fixer));
+      expect(fixerIds).toEqual(new Set(["remove-debug-output", "remove-todo-marker", "annotate-empty-catch"]));
+      expect(result.scoreAfter).toBeGreaterThanOrEqual(result.scoreBefore);
+      expect(result.issuesAfter).toBeLessThan(result.issuesBefore);
+
+      // Diff correctness: deletions show only a `-` line; the replacement (empty
+      // catch) shows a `-`/`+` pair with the new content, not a bare deletion.
+      expect(result.pr).not.toBeNull();
+      const diff = result.pr!.diff;
+      expect(diff).toContain("-  console.log('debug trace');");
+      expect(diff).not.toContain("+  console.log");
+      expect(diff).toContain("-  } catch (e) {}");
+      expect(diff).toContain("intentionally ignored");
+      expect(diff.split("\n").some((l) => l.startsWith("+") && l.includes("intentionally ignored"))).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

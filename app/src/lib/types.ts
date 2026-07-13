@@ -20,10 +20,12 @@ export interface Issue {
   id: string;
   dimension: Dimension;
   severity: number; // 1..5
+  confidence?: number; // 0..1
   title: string;
   file: string;
   line: number;
   blastRadius: number; // >=1, graph fan-in weighting
+  churn?: number; // commit count over last 6mo, for hotspot prioritization
 }
 
 export interface LanguageStat {
@@ -130,17 +132,32 @@ export interface RepoSummary {
 }
 
 export interface RepoDetail extends RepoSummary {
-  /** True once a persistent on-disk workspace exists for the built-in editor. */
   hasWorkspace: boolean;
   error: string | null;
   loc: number;
   languages: LanguageStat[];
-  graph: GraphStats;
+  graphStats: GraphStats;
   dimensions: DimensionScore[];
   issues: Issue[];
   dependencies: string[]; // actual package names this repo depends on
-  viz: VizGraph;
+  churnByFile: Record<string, number>;
   tree: TreeNode;
+  viz: VizGraph;
+  modules: ModuleGraph;
+  symbolGraph: SymbolGraph;
+}
+
+export interface IndexResult {
+  score: number;
+  loc: number;
+  languages: LanguageStat[];
+  graphStats: GraphStats;
+  dimensions: DimensionScore[];
+  issues: Issue[];
+  dependencies: string[]; // actual package names this repo depends on
+  churnByFile: Record<string, number>;
+  tree: TreeNode;
+  viz: VizGraph;
   modules: ModuleGraph;
   symbolGraph: SymbolGraph;
 }
@@ -167,8 +184,9 @@ export interface CodeSymbol {
   signature: string;
   doc: string | null; // leading doc comment, trimmed
   exported: boolean;
+  loc: number; // approximate lines of code for the symbol itself
+  complexity?: number; // cyclomatic/branching complexity (if computable)
   language: string;
-  loc: number;
   container: string | null; // enclosing symbol id (method -> class)
   fanIn: number; // resolved incoming references (callers)
   fanOut: number; // resolved outgoing references (callees)
@@ -244,8 +262,9 @@ export interface TrashEntry {
   deletedAt: number; // epoch ms
 }
 
-// --- Built-in editor: Git status/branches/log ---
 export type GitFileStatus = "modified" | "added" | "deleted" | "untracked" | "renamed" | "conflicted";
+
+// --- Built-in editor: Git status/branches/log ---
 
 export interface GitStatusEntry {
   path: string;

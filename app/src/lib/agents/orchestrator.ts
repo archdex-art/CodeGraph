@@ -62,37 +62,61 @@ export function runSwarm(repo: RepoDetail): RemediationPlan {
     agents: reports,
     buckets,
     topFindings: all.slice(0, 60),
-    summary: planSummary(all, buckets, repo.score ?? 0, projectedScore),
+    summary: planSummary(all, buckets, repo.score ?? 0, projectedScore, repo.symbolGraph.truncated),
+    truncated: repo.symbolGraph.truncated,
   };
 }
 
 function critique(findings: Finding[]): Finding[] {
-  const byLocus = new Map<string, Finding[]>();
+  const byFile = new Map<string, Finding[]>();
   for (const f of findings) {
-    const key = `${f.file}:${f.line}:${f.title}`;
-    const l = byLocus.get(key) || [];
+    const l = byFile.get(f.file) || [];
     l.push(f);
-    byLocus.set(key, l);
+    byFile.set(f.file, l);
   }
+
   const out: Finding[] = [];
-  for (const group of byLocus.values()) {
-    // merge exact dupes: keep highest severity, union corroborators
-    const primary = group.reduce((a, b) => (b.severity > a.severity ? b : a));
-    const others = group.filter((g) => g.agent !== primary.agent).map((g) => g.agent);
-    if (others.length) {
-      primary.corroboratedBy = [...new Set(others)];
-      primary.confidence = Math.min(1, primary.confidence + 0.15 * others.length);
+  for (const list of byFile.values()) {
+    list.sort((a, b) => a.line - b.line);
+    let currentGroup: Finding[] = [];
+
+    const flush = () => {
+      if (!currentGroup.length) return;
+      // merge dupes in group: keep highest severity, union corroborators
+      const primary = currentGroup.reduce((a, b) => (b.severity > a.severity ? b : a));
+      const others = currentGroup.filter((g) => g.agent !== primary.agent).map((g) => g.agent);
+      if (others.length) {
+        primary.corroboratedBy = [...new Set(others)];
+        primary.confidence = Math.min(1, primary.confidence + 0.15 * others.length);
+      }
+      out.push(primary);
+      currentGroup = [];
+    };
+
+    for (const f of list) {
+      if (!currentGroup.length) {
+        currentGroup.push(f);
+      } else {
+        const last = currentGroup[currentGroup.length - 1];
+        if (Math.abs(f.line - last.line) <= 2) {
+          currentGroup.push(f);
+        } else {
+          flush();
+          currentGroup.push(f);
+        }
+      }
     }
-    out.push(primary);
+    flush();
   }
   return out;
 }
 
 function judgeScore(f: Finding): number {
-  // Weighted by severity, graph blast radius (log-damped), and confidence.
+  // Weighted by severity, graph blast radius (log-damped), confidence, and churn.
   const blast = 1 + Math.log2(1 + f.blastRadius);
+  const churnMult = 1 + Math.log10(1 + (f.churn ?? 1)); // hotspots rank higher
   const effortBonus = f.effort === "S" ? 1.15 : f.effort === "M" ? 1.0 : 0.85; // quick wins ranked up
-  return Math.round(f.severity * blast * f.confidence * effortBonus * 10);
+  return Math.round(f.severity * blast * churnMult * f.confidence * effortBonus * 10);
 }
 
 function priorityOf(f: Finding): Priority {
@@ -117,8 +141,11 @@ function summarize(agent: string, findings: Finding[]): string {
   return `${findings.length} finding(s); worst: ${worst.title}.`;
 }
 
-function planSummary(all: Finding[], buckets: Record<Priority, Finding[]>, cur: number, proj: number): string {
-  if (!all.length) return "No actionable findings \u2014 the codebase is clean across all specialists.";
+function planSummary(all: Finding[], buckets: Record<Priority, Finding[]>, cur: number, proj: number, truncated: boolean): string {
+  const warn = truncated
+    ? "Partial analysis (workspace exceeds the symbol cap; findings only cover the indexed subset). "
+    : "";
+  if (!all.length) return warn + "No actionable findings \u2014 the codebase is clean across all specialists.";
   const parts = [
     `${all.length} findings across ${new Set(all.map((f) => f.agent)).size} specialists.`,
     `${buckets.P0.length} critical (P0), ${buckets.P1.length} high (P1).`,
@@ -126,5 +153,5 @@ function planSummary(all: Finding[], buckets: Record<Priority, Finding[]>, cur: 
   if (proj > cur) parts.push(`Addressing P0+P1 projects Health Score ${cur} \u2192 ${proj}.`);
   const top = all[0];
   if (top) parts.push(`Highest impact: "${top.title}" (${top.file || "arch"}).`);
-  return parts.join(" ");
+  return warn + parts.join(" ");
 }

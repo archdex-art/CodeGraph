@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { indexRepo } from "@/lib/indexer";
-import type { IndexResult } from "@/lib/indexer";
+import type { IndexResult, Issue, CodeSymbol } from "@/lib/types";
 
 // Builds a tiny real repo on disk, runs the real synchronous indexer once,
 // and asserts on the full result shape (no network, no git).
@@ -47,18 +47,18 @@ describe("indexRepo", () => {
   });
 
   it("detects TypeScript as a language", () => {
-    const langs = result.languages.map((l) => l.language);
+    const langs = result.languages.map((l: any) => l.language);
     expect(langs).toContain("TypeScript");
   });
 
   it("flags the eval() usage as an issue", () => {
-    const evalIssue = result.issues.find((i) => /eval/i.test(i.title));
+    const evalIssue = result.issues.find((i: Issue) => /eval/i.test(i.title));
     expect(evalIssue).toBeDefined();
     expect(evalIssue!.dimension).toBe("security");
   });
 
   it("extracts foo and bar into the symbol graph", () => {
-    const names = result.symbolGraph.symbols.map((s) => s.name);
+    const names = result.symbolGraph.symbols.map((s: CodeSymbol) => s.name);
     expect(names).toContain("foo");
     expect(names).toContain("bar");
     expect(result.symbolGraph.stats.symbols).toBeGreaterThanOrEqual(2);
@@ -153,7 +153,7 @@ describe("secret detection precision", () => {
 
   it("flags only the genuine hardcoded secret, not placeholder/example values", () => {
     const secretIssues = result.issues.filter(
-      (i) => i.title === "Possible hardcoded secret"
+      (i: Issue) => i.title === "Possible hardcoded secret"
     );
     expect(secretIssues).toHaveLength(1);
 

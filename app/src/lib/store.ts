@@ -89,17 +89,18 @@ async function runJob(jobId: string, repoId: string, source: string, sourceType:
     // local folders were never copied in the first place).
     db()
       .prepare(
-        `UPDATE repos SET status='done', score=?, loc=?, languages=?, graph=?, dimensions=?, issues=?, deps=?, viz=?, tree=?, modules=?, symbols=?, workspace_dir=?, finished_at=?
+        `UPDATE repos SET status='done', score=?, loc=?, languages=?, graph=?, dimensions=?, issues=?, deps=?, churn_by_file=?, viz=?, tree=?, modules=?, symbols=?, workspace_dir=?, finished_at=?
          WHERE id=?`
       )
       .run(
         result.score,
         result.loc,
         JSON.stringify(result.languages),
-        JSON.stringify(result.graph),
+        JSON.stringify(result.graphStats),
         JSON.stringify(result.dimensions),
         JSON.stringify(result.issues),
         JSON.stringify(result.dependencies),
+        JSON.stringify(result.churnByFile),
         JSON.stringify(result.viz),
         JSON.stringify(result.tree),
         JSON.stringify(result.modules),
@@ -191,10 +192,11 @@ export function getRepo(id: string): RepoDetail | null {
     error: (r.error as string | null) ?? null,
     loc: (r.loc as number) ?? 0,
     languages: JSON.parse((r.languages as string) || "[]"),
-    graph: JSON.parse((r.graph as string) || "{}"),
+    graphStats: JSON.parse((r.graph as string) || "{}"),
     dimensions: JSON.parse((r.dimensions as string) || "[]"),
     issues: JSON.parse((r.issues as string) || "[]"),
     dependencies: JSON.parse((r.deps as string) || "[]"),
+    churnByFile: JSON.parse((r.churn_by_file as string) || "{}"),
     viz: JSON.parse((r.viz as string) || "null") || EMPTY_VIZ,
     tree: JSON.parse((r.tree as string) || "null") || { name: "/", path: ".", children: [] },
     modules: JSON.parse((r.modules as string) || "null") || { nodes: [], edges: [] },
