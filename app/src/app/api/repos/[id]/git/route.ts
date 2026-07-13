@@ -13,6 +13,7 @@ import {
   diffFile,
   log,
   withToken,
+  isGithubHost,
 } from "@/lib/gitops";
 
 export const runtime = "nodejs";
@@ -86,8 +87,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     if (op === "push") {
       const repo = getRepo(id);
-      let remote: string | undefined;
-      if (githubToken && repo?.sourceType === "git") remote = withToken(repo.url, githubToken);
+      if (githubToken && repo?.sourceType === "git" && !isGithubHost(repo.url)) {
+        return NextResponse.json(
+          { error: "A GitHub PAT can only be used to push to a github.com-hosted repo." },
+          { status: 400 }
+        );
+      }
+      const remote = githubToken && repo?.sourceType === "git" ? withToken(repo.url, githubToken) : undefined;
       const out = await push(ws.dir, remote);
       return NextResponse.json({ ok: true, output: out });
     }

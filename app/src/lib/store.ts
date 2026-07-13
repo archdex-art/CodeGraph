@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { db, dataDir } from "./db";
 import { cloneRepo, indexRepo, cleanup, resolveLocalDir } from "./indexer";
-import { withToken } from "./gitops";
+import { withToken, isGithubHost } from "./gitops";
 import { emptyTrash } from "./trash";
 import type { Job, JobStatus, RepoDetail, RepoSummary, SaveMode, SourceType, VizGraph } from "./types";
 
@@ -59,14 +59,7 @@ async function runJob(jobId: string, repoId: string, source: string, sourceType:
       // Only ever hand the signed-in user's token to github.com itself —
       // never to whatever host is in `source`, so a signed-in session can't
       // be tricked into leaking its GitHub token to a third-party remote.
-      let cloneUrl = source;
-      if (githubToken) {
-        try {
-          if (new URL(source).hostname === "github.com") cloneUrl = withToken(source, githubToken);
-        } catch {
-          /* malformed URL — cloneRepo's own validation will reject it below */
-        }
-      }
+      const cloneUrl = githubToken && isGithubHost(source) ? withToken(source, githubToken) : source;
       root = await cloneRepo(cloneUrl, workspaceDir);
     } else {
       setJob(jobId, "cloning", 15, "Reading local folder…");

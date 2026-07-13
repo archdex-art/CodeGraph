@@ -12,6 +12,7 @@ import {
   renameSync,
   existsSync,
   cpSync,
+  realpathSync,
 } from "node:fs";
 import path from "node:path";
 import type { Dirent } from "node:fs";
@@ -42,6 +43,33 @@ export function resolveSafe(root: string, relPath: string): string {
   const rootResolved = path.resolve(root);
   if (full !== rootResolved && !full.startsWith(rootResolved + path.sep)) {
     throw new WorkspacePathError(`Path escapes workspace: ${relPath}`);
+  }
+  // Lexical check passed; now defeat symlink escapes. A symlinked ancestor
+  // (legitimately present in a cloned repo, or attacker-crafted) can make a
+  // lexically-safe path resolve outside root at the OS level. Walk up from
+  // `full` to the nearest existing ancestor (the target itself may not
+  // exist yet, e.g. a create/write of a new file) and verify ITS real path
+  // is still contained in root's real path.
+  let rootReal: string;
+  try {
+    rootReal = realpathSync(rootResolved);
+  } catch {
+    return full; // workspace root doesn't exist yet — nothing to escape into
+  }
+  let probe = full;
+  for (;;) {
+    try {
+      const real = realpathSync(probe);
+      if (real !== rootReal && !real.startsWith(rootReal + path.sep)) {
+        throw new WorkspacePathError(`Path escapes workspace: ${relPath}`);
+      }
+      break;
+    } catch (e) {
+      if (e instanceof WorkspacePathError) throw e;
+      const parent = path.dirname(probe);
+      if (parent === probe) break; // reached filesystem root without an existing ancestor
+      probe = parent;
+    }
   }
   return full;
 }

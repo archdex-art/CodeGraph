@@ -38,7 +38,6 @@ export const isColor = enabled;
 
 // Visible length (strip escape codes) — for padding/tables.
 export function visibleLen(s: string): number {
-  // eslint-disable-next-line no-control-regex
   return s.replace(/\x1b\[[0-9;]*m/g, "").length;
 }
 

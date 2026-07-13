@@ -52,3 +52,13 @@ export function isPublicHttpUrl(url: string): boolean {
 
   return true;
 }
+
+/** True if `path` is safe to use as a same-origin post-login redirect
+ *  target — a relative path starting with exactly one `/`. Rejects
+ *  absolute URLs (`https://evil.example`) and protocol-relative URLs
+ *  (`//evil.example`, which browsers resolve against `evil.example` as the
+ *  host using the current protocol) that would otherwise redirect a
+ *  freshly authenticated session to an attacker-controlled origin. */
+export function isSafeReturnPath(path: string): boolean {
+  return path.startsWith("/") && !path.startsWith("//") && !path.startsWith("/\\");
+}
