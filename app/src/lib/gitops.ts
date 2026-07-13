@@ -10,6 +10,19 @@ const exec = promisify(execFile);
 
 const GIT_ENV = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
 
+/** True iff `url`'s host is exactly `github.com` — the only host we ever
+ *  attach a GitHub OAuth/PAT token to. Every call site that embeds a token
+ *  into a remote URL (push, PR creation) MUST gate on this first, so a
+ *  session's or user-supplied token can never be sent to an attacker-
+ *  controlled remote (see docs/AUDIT_2026-07-12.md F006). */
+export function isGithubHost(url: string): boolean {
+  try {
+    return new URL(url).hostname === "github.com";
+  } catch {
+    return false;
+  }
+}
+
 async function git(cwd: string, args: string[]): Promise<string> {
   const { stdout } = await exec("git", args, { cwd, env: GIT_ENV, maxBuffer: 1024 * 1024 * 32 });
   return stdout;

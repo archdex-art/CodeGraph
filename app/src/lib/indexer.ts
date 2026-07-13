@@ -63,6 +63,10 @@ interface ScannedFile {
   imports: string[]; // resolved-ish relative targets
 }
 
+export function redactCredentials(s: string): string {
+  return s.replace(/:\/\/[^\s@/]+@/g, "://");
+}
+
 /**
  * Clone a public git repo. With no `destDir`, clones into a disposable temp
  * dir (single-branch, depth 1 — fastest path for one-shot indexing/fix
@@ -82,11 +86,21 @@ export async function cloneRepo(url: string, destDir?: string): Promise<string> 
   const args = destDir
     ? ["clone", "--depth", "50", url, dir]
     : ["clone", "--depth", "1", "--single-branch", url, dir];
-  await exec("git", args, {
-    timeout: Number(process.env.CG_CLONE_TIMEOUT_MS) || 90_000,
-    maxBuffer: 1024 * 1024 * 16,
-    env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
-  });
+  try {
+    await exec("git", args, {
+      timeout: Number(process.env.CG_CLONE_TIMEOUT_MS) || 90_000,
+      maxBuffer: 1024 * 1024 * 16,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+    });
+  } catch (e) {
+    if (e instanceof Error) {
+      e.message = redactCredentials(e.message);
+      const withCmd = e as Error & { cmd?: string; stderr?: string };
+      if (typeof withCmd.cmd === "string") withCmd.cmd = redactCredentials(withCmd.cmd);
+      if (typeof withCmd.stderr === "string") withCmd.stderr = redactCredentials(withCmd.stderr);
+    }
+    throw e;
+  }
   return dir;
 }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { githubOAuthConfigured, buildAuthorizeUrl, publicBaseUrl } from "@/lib/githubOAuth";
+import { isSafeReturnPath } from "@/lib/urlSafety";
 import { oauthTransitCookieOptions } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -17,7 +18,8 @@ export async function GET(req: NextRequest) {
 
   const state = randomBytes(16).toString("hex");
   const redirectUri = new URL("/api/auth/github/callback", publicBaseUrl(req.nextUrl.origin)).toString();
-  const returnTo = req.nextUrl.searchParams.get("returnTo") || "/";
+  const rawReturnTo = req.nextUrl.searchParams.get("returnTo") || "/";
+  const returnTo = isSafeReturnPath(rawReturnTo) ? rawReturnTo : "/";
 
   const res = NextResponse.redirect(buildAuthorizeUrl(state, redirectUri));
   const opts = oauthTransitCookieOptions();

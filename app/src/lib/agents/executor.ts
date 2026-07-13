@@ -1,4 +1,4 @@
-import { mkdtempSync, cpSync, readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import { mkdtempSync, cpSync, readFileSync, writeFileSync, readdirSync, lstatSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 const exec = promisify(execFile);
 import type { RepoDetail } from "../types";
 import { cloneRepo, resolveLocalDir, indexRepo, cleanup } from "../indexer";
+import { isGithubHost } from "../gitops";
 import { FIXERS } from "./fixers";
 import type { ExecutionStep, FileEdit, FixResult, PRDraft } from "./executor-types";
 
@@ -28,7 +29,8 @@ function walkCode(root: string): string[] {
     for (const name of entries) {
       const full = path.join(cur, name);
       let st;
-      try { st = statSync(full); } catch { continue; }
+      try { st = lstatSync(full); } catch { continue; }
+      if (st.isSymbolicLink()) continue; // never follow a symlink out of the disposable sandbox root
       if (st.isDirectory()) {
         if (!SKIP[name] && !name.startsWith(".")) stack.push(full);
       } else if (st.isFile() && CODE[path.extname(name).toLowerCase()] && st.size < 400_000) {
@@ -185,7 +187,7 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
     t = now();
     let pr = verified ? buildPR(repo, before.score, after.score, allEdits, changed.size, diff) : null;
     
-    if (pr && githubToken && repo.sourceType === "git" && work) {
+    if (pr && githubToken && repo.sourceType === "git" && isGithubHost(repo.url) && work) {
       try {
         const wd = work;
         const runGit = async (args: string[]) => exec("git", args, { cwd: wd });
