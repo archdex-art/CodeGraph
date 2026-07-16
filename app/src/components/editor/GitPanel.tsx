@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  GitBranch, GitCommit, ArrowUp, ArrowDown, Loader2, Plus, RefreshCw,
+  GitBranch, GitCommit, ArrowUp, ArrowDown, Loader2, Plus, RefreshCw, Undo2,
   FileEdit, FilePlus, FileMinus, FileQuestion, AlertTriangle, ChevronDown, ChevronRight,
 } from "lucide-react";
 import {
-  gitStatus, gitBranches, gitLog, gitDiff, gitCommit, gitPush, gitPull, gitCheckout, gitCreateBranch,
+  gitStatus, gitBranches, gitLog, gitDiff, gitCommit, gitPush, gitPull, gitCheckout, gitCreateBranch, gitRestoreFile,
 } from "@/lib/api";
 import type { GitBranch as Branch, GitLogEntry, GitStatus, GitStatusEntry, SaveMode } from "@/lib/types";
 
@@ -127,6 +127,15 @@ export function GitPanel({
     }
   }
 
+  async function revertFile(e: React.MouseEvent, path: string) {
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to revert changes to ${path}?`)) return;
+    await run("Reverting", async () => {
+      await gitRestoreFile(repoId, path);
+      onMutated();
+    });
+  }
+
   if (notARepo) {
     return (
       <div className="p-3 text-xs text-gray-500 space-y-2">
@@ -245,15 +254,22 @@ export function GitPanel({
           {status?.entries.map((e) => {
             const meta = STATUS_META[e.status];
             return (
-              <button
+              <div
                 key={e.path}
+                className="group flex items-center gap-2 w-full text-left px-1.5 py-1 rounded hover:bg-white/5 cursor-pointer"
                 onClick={() => showDiff(e)}
-                className="flex items-center gap-2 w-full text-left px-1.5 py-1 rounded hover:bg-white/5"
               >
                 <span className={meta.color}>{meta.icon}</span>
                 <span className="truncate flex-1 text-gray-300">{e.path}</span>
-                <span className={`${meta.color} font-mono`}>{meta.letter}</span>
-              </button>
+                <button
+                  onClick={(evt) => revertFile(evt, e.path)}
+                  title="Revert changes"
+                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/10 hover:text-white text-gray-500"
+                >
+                  <Undo2 className="w-3.5 h-3.5" />
+                </button>
+                <span className={`${meta.color} font-mono ml-1`}>{meta.letter}</span>
+              </div>
             );
           })}
         </div>

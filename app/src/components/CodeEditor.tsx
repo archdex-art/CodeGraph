@@ -4,11 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { OnMount } from "@monaco-editor/react";
 import {
-  FolderTree, Search as SearchIcon, GitBranch as GitBranchIcon, Trash2, X, Save, Circle,
+  FolderTree, Search as SearchIcon, GitBranch as GitBranchIcon, Trash2, X, Save, Circle, GitCompare,
 } from "lucide-react";
 import { FileExplorer } from "./editor/FileExplorer";
 import { GitPanel } from "./editor/GitPanel";
 import { SearchPanel } from "./editor/SearchPanel";
+import { AssistantPanel } from "./editor/AssistantPanel";
+import { fetchAssistantProviders } from "@/lib/api";
+import type { AssistantProviders } from "@/lib/types";
+import { Bot } from "lucide-react";
 import { TrashPanel } from "./editor/TrashPanel";
 import { StatusBar, type SaveState } from "./editor/StatusBar";
 import { fsRead, fsWrite, gitStatus as fetchGitStatus, gitCommit, gitPush, getSaveMode, setSaveMode as persistSaveMode, trashList } from "@/lib/api";
@@ -16,6 +20,7 @@ import { languageForPath } from "@/lib/editorLang";
 import type { GitStatus, RepoDetail, SaveMode } from "@/lib/types";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react").then((m) => m.Editor), { ssr: false });
+const MonacoDiffEditor = dynamic(() => import("@monaco-editor/react").then((m) => m.DiffEditor), { ssr: false });
 
 type Panel = "explorer" | "search" | "git" | "trash";
 
@@ -71,9 +76,30 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
   const [pushToken, setPushToken] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [cursor, setCursor] = useState<{ line: number; col: number } | null>(null);
-  const [refreshToken, setRefreshToken] = useState(0);
+  const [diffView, setDiffView] = useState(false);
   const [gitStat, setGitStat] = useState<GitStatus | null>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
   const [diffModal, setDiffModal] = useState<{ path: string; diff: string } | null>(null);
+  const tabsRef = useRef(tabs);
+  useEffect(() => { tabsRef.current = tabs; }, [tabs]);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantProviders, setAssistantProviders] = useState<AssistantProviders>({ claude: false, local: false });
+  
+  useEffect(() => {
+    fetchAssistantProviders(repoId).then(setAssistantProviders).catch(() => setAssistantProviders({ claude: false, local: false }));
+  }, [repoId]);
+
+  const refreshFileFromDisk = useCallback(async (path: string) => {
+    const tab = tabsRef.current.find((t) => t.path === path);
+    if (!tab || tab.dirty) return;
+    try {
+      const { content, binary } = await fsRead(repoId, path);
+      if (binary) return;
+      setTabs((prev) => prev.map((t) => (t.path === path && !t.dirty ? { ...t, content, dirty: t.original !== content } : t)));
+    } catch {
+      // Renamed/deleted by the assistant
+    }
+  }, [repoId]);
   const [trashCount, setTrashCount] = useState(0);
   const [pendingReveal, setPendingReveal] = useState<number | null>(null);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
@@ -277,7 +303,7 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
 
         {/* Side panel */}
         <div className="w-64 border-r border-white/10 overflow-y-auto shrink-0 bg-black/10">
-          {panel === "explorer" && (
+          <div className={panel === "explorer" ? "block h-full" : "hidden"}>
             <FileExplorer
               repoId={repoId}
               activePath={activePath}
@@ -286,23 +312,29 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
               onDeleted={onDeletedFromExplorer}
               refreshToken={refreshToken}
             />
+          </div>
+          <div className={panel === "search" ? "block h-full" : "hidden"}>
+            <SearchPanel repoId={repoId} onOpenResult={openAtLine} />
+          </div>
+          {hasGit && (
+            <div className={panel === "git" ? "block h-full" : "hidden"}>
+              <GitPanel
+                repoId={repoId}
+                saveMode={saveMode}
+                onSaveModeChange={handleSaveModeChange}
+                autoPush={autoPush}
+                onAutoPushChange={setAutoPush}
+                commitTemplate={commitTemplate}
+                onCommitTemplateChange={setCommitTemplate}
+                refreshToken={refreshToken}
+                onMutated={() => setRefreshToken((n) => n + 1)}
+                onOpenDiff={(path, diff) => setDiffModal({ path, diff })}
+              />
+            </div>
           )}
-          {panel === "search" && <SearchPanel repoId={repoId} onOpenResult={openAtLine} />}
-          {panel === "git" && hasGit && (
-            <GitPanel
-              repoId={repoId}
-              saveMode={saveMode}
-              onSaveModeChange={handleSaveModeChange}
-              autoPush={autoPush}
-              onAutoPushChange={setAutoPush}
-              commitTemplate={commitTemplate}
-              onCommitTemplateChange={setCommitTemplate}
-              refreshToken={refreshToken}
-              onMutated={() => setRefreshToken((n) => n + 1)}
-              onOpenDiff={(path, diff) => setDiffModal({ path, diff })}
-            />
-          )}
-          {panel === "trash" && <TrashPanel repoId={repoId} onMutated={() => setRefreshToken((n) => n + 1)} />}
+          <div className={panel === "trash" ? "block h-full" : "hidden"}>
+            <TrashPanel repoId={repoId} onMutated={() => setRefreshToken((n) => n + 1)} />
+          </div>
         </div>
 
         {/* Main editing area */}
@@ -338,6 +370,14 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
                 <input type="checkbox" checked={autoSave} onChange={(e) => setAutoSave(e.target.checked)} /> Auto-save
               </label>
               <button
+                onClick={() => setDiffView(!diffView)}
+                className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded border ${
+                  diffView ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-gray-300"
+                }`}
+              >
+                <GitCompare className="w-3.5 h-3.5" /> Diff
+              </button>
+              <button
                 onClick={() => activePath && saveTab(activePath)}
                 disabled={!activeTab?.dirty}
                 className="flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-white/10 text-gray-300 hover:bg-white/5 disabled:opacity-30"
@@ -345,38 +385,80 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
                 <Save className="w-3 h-3" /> Save
               </button>
             </div>
+            {(assistantProviders.claude || assistantProviders.local) && (
+              <button
+                onClick={() => setAssistantOpen(!assistantOpen)}
+                className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded border ${
+                  assistantOpen ? "border-purple-500/50 bg-purple-500/10 text-white" : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-gray-300"
+                }`}
+              >
+                <Bot className="w-3.5 h-3.5" /> AI Assistant
+              </button>
+            )}
           </div>
 
-          {/* Editor */}
-          <div className="flex-1 min-h-0 relative">
-            {!activeTab && (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-sm">
-                {loadingPath ? "Opening…" : "Select a file to start editing"}
+          {/* Editor Area */}
+          <div className="flex-1 min-h-0 relative flex">
+            <div className="flex-1 min-w-0 relative">
+              {!activeTab && (
+                <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-sm">
+                  {loadingPath ? "Opening…" : "Select a file to start editing"}
+                </div>
+              )}
+              {activeTab && (
+                diffView ? (
+                  <MonacoDiffEditor
+                    key={activeTab.path + "-diff"}
+                    original={activeTab.original}
+                    modified={activeTab.content}
+                    language={lang.id}
+                    theme={theme}
+                    options={{
+                      renderSideBySide: false,
+                      minimap: { enabled: false },
+                      readOnly: true,
+                      fontSize: 13,
+                      fontFamily: "var(--font-geist-mono), monospace",
+                      scrollBeyondLastLine: false,
+                    }}
+                  />
+                ) : (
+                  <MonacoEditor
+                    key={activeTab.path}
+                    path={activeTab.path}
+                    defaultLanguage={lang.id}
+                    language={lang.id}
+                    value={activeTab.content}
+                    theme={theme}
+                    onChange={(v) => updateContent(activeTab.path, v ?? "")}
+                    onMount={handleEditorMount}
+                    options={{
+                      minimap: { enabled: true },
+                      fontSize: 13,
+                      lineNumbers: "on",
+                      folding: true,
+                      matchBrackets: "always",
+                      automaticLayout: true,
+                      smoothScrolling: true,
+                      cursorSmoothCaretAnimation: "on",
+                      wordWrap: "off",
+                      scrollBeyondLastLine: false,
+                    }}
+                  />
+                )
+              )}
+            </div>
+            {/* Assistant Panel (Right) */}
+            {(assistantProviders.claude || assistantProviders.local) && (
+              <div className={`w-80 border-l border-white/10 flex flex-col bg-[#050505] shrink-0 ${assistantOpen ? "block" : "hidden"}`}>
+                <AssistantPanel
+                  repoId={repoId}
+                  providers={assistantProviders}
+                  onOpenFile={openFile}
+                  onFileTouched={refreshFileFromDisk}
+                  onMutated={() => setRefreshToken((n) => n + 1)}
+                />
               </div>
-            )}
-            {activeTab && (
-              <MonacoEditor
-                key={activeTab.path}
-                path={activeTab.path}
-                defaultLanguage={lang.id}
-                language={lang.id}
-                value={activeTab.content}
-                theme={theme}
-                onChange={(v) => updateContent(activeTab.path, v ?? "")}
-                onMount={handleEditorMount}
-                options={{
-                  minimap: { enabled: true },
-                  fontSize: 13,
-                  lineNumbers: "on",
-                  folding: true,
-                  matchBrackets: "always",
-                  automaticLayout: true,
-                  smoothScrolling: true,
-                  cursorSmoothCaretAnimation: "on",
-                  wordWrap: "off",
-                  scrollBeyondLastLine: false,
-                }}
-              />
             )}
           </div>
         </div>

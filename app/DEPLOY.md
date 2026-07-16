@@ -45,6 +45,10 @@ docker compose up --build          # http://localhost:4000
 | `CG_BASIC_AUTH_PASSWORD` | app runtime | unset (= off) | Gate the whole app behind HTTP Basic Auth. Pairs with `CG_BASIC_AUTH_USER` (default `codegraph`). |
 | `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` | app runtime | unset (= GitHub sign-in hidden) | From a GitHub OAuth App — see below. |
 | `CG_SESSION_SECRET` | app runtime | unset (= GitHub sign-in disabled) | Encrypts the GitHub session cookie (AES-256-GCM). Required alongside the two vars above for GitHub sign-in to activate. Any long random string; rotating it signs everyone out. |
+| `ANTHROPIC_API_KEY` | app runtime | unset (= Claude AI Assistant hidden) | Enables the Editor tab's AI Assistant using Claude (Claude Agent SDK) — see below. Core product features never need this. |
+| `CG_LOCAL_LLM_BASE_URL` | app runtime | unset (= local-model AI Assistant hidden) | Base URL of an OpenAI-compatible chat-completions endpoint (Ollama, LM Studio, llama.cpp `server`, vLLM, …), e.g. `http://localhost:11434/v1`. Required alongside `CG_LOCAL_LLM_MODEL` — see below. |
+| `CG_LOCAL_LLM_MODEL` | app runtime | unset | Model name/tag to request from that endpoint, e.g. `qwen2.5-coder:7b`. Required alongside `CG_LOCAL_LLM_BASE_URL`. |
+| `CG_LOCAL_LLM_API_KEY` | app runtime | unset (sends `local`) | Optional bearer token if your local server's endpoint requires one; most (Ollama, LM Studio) don't. |
 
 ## GitHub sign-in setup (optional)
 Lets a signed-in user browse and one-click import their own repos — including private ones — instead of pasting a URL. Fully optional and off by default; skip this section if you don't need it.
@@ -65,6 +69,27 @@ Lets a signed-in user browse and one-click import their own repos — including 
 
 **What this grants**: the OAuth scope requested is `repo read:user` — GitHub's classic OAuth has no finer-grained read-only scope, so this is full read/write access to the signed-in user's repos (needed to clone private ones at all) plus their public profile. The token is held only in an encrypted, `httpOnly` session cookie — never written to disk, never returned in any API response, and only ever sent back to `github.com` itself (see `lib/session.ts` and the `runJob` host check in `lib/store.ts`).
 
+## AI Assistant setup (optional — two independent backends)
+Adds a chat panel to the Editor tab. Either backend, both, or neither may be configured; if both are, a small selector in the panel lets you switch (starting a fresh conversation with the new backend). Fully optional and off by default; skip this section if you don't need either.
+
+### Claude (Claude Agent SDK)
+Runs in-process against the repo's live workspace directory.
+
+1. Set `ANTHROPIC_API_KEY=<your key>` on the deployment (and/or in a local `.env.local` for dev). Restart/redeploy.
+2. `npm install` already pulls the correct platform binary via `@anthropic-ai/claude-agent-sdk`'s `optionalDependencies` (Linux glibc/musl x64+arm64, macOS, Windows), so this works in the Docker image with no extra install step.
+
+### Local model (any OpenAI-compatible server)
+Talks over plain HTTP to a model server running on your own hardware — no data leaves the machine running CodeGraph. Tested against the OpenAI-compatible `/v1/chat/completions` shape that Ollama, LM Studio, llama.cpp's `server`, vLLM, and text-generation-webui all implement; tool-calling quality (and therefore how well the assistant can actually edit files) depends entirely on the model you pick — recent tool-calling-tuned models (e.g. Qwen2.5-Coder, Llama 3.1+) work noticeably better than older/small ones.
+
+1. Start your model server and note its OpenAI-compatible base URL, e.g. `http://localhost:11434/v1` for Ollama, `http://localhost:1234/v1` for LM Studio.
+2. Set `CG_LOCAL_LLM_BASE_URL` and `CG_LOCAL_LLM_MODEL` on the deployment (and/or in a local `.env.local` for dev). Restart/redeploy.
+3. If running CodeGraph itself in Docker while the model server runs on the host, point `CG_LOCAL_LLM_BASE_URL` at the host (e.g. `http://host.docker.internal:11434/v1` on Docker Desktop) rather than `localhost`, which inside the container means the container itself.
+
+### Both backends
+An "AI Assistant" icon appears in the Editor tab's activity bar automatically once at least one backend is configured — no other config needed, and nothing changes for anyone if you leave both unset.
+
+**What this grants**: nothing beyond the app's own workspace tools, for either backend. The assistant gets zero built-in Claude Code tools (`tools: []`, `strictMcpConfig: true`, `settingSources: []` in `lib/agents/assistant.ts`) and the local-model path has no built-in tools to begin with — no Bash, no raw filesystem access, no project settings/hooks/plugins, for either. Both backends' only capabilities are the same nine tools (`lib/agents/workspaceToolImpls.ts`), thin wrappers over the exact path-safe helpers the human-facing Editor already uses (`lib/workspace.ts`'s `resolveSafe`-guarded fs ops, `lib/gitops.ts`'s argv-only git wrapper) — the same traversal/injection guarantees apply regardless of which model is driving the chat. Sessions are per-repo, in-process, and never written to disk (`persistSession: false` for Claude; the local backend never had a disk-persistence path to begin with); a server restart drops all AI Assistant conversation history with no cleanup required.
+
 ## Health & observability
 - `GET /api/health` → `{ status: "ok", uptime, ts }` (200). Use for LB/Docker/K8s probes.
 - Jobs are persisted in SQLite; a crashed indexing job is retriable by re-submitting.
@@ -74,7 +99,7 @@ Lets a signed-in user browse and one-click import their own repos — including 
 - Anonymous git URLs must be public; `GIT_TERMINAL_PROMPT=0` prevents credential prompts. A signed-in GitHub user (see above) can additionally clone their own private repos, authenticated with their own OAuth token — never anyone else's.
 - Repo URL is validated (`^https?://…`) and SSRF-guarded (rejects loopback/private/link-local hosts, see `lib/urlSafety.ts`) before use; clone runs with a timeout + output cap.
 - Local-folder indexing is **off by default on a public deployment** (`CG_ALLOW_LOCAL_ACCESS`) — self-hosted/trusted-host use only; never turn it on for untrusted visitors on a shared host.
-- No secrets are required for the core product — the agent swarm is deterministic and needs **no LLM API key**. GitHub sign-in is the one optional feature that needs secrets (see above); everything else runs with zero credentials.
+- No secrets are required for the core product — the agent swarm is deterministic and needs **no LLM API key**. GitHub sign-in (needs a secret) and the two optional AI Assistant backends (Claude needs a secret; the local-model backend needs no secret at all — it's just an HTTP call to hardware you already control) are the only opt-in extras; everything else runs with zero credentials.
 
 ## Scaling path (documented, not yet implemented)
 1. Move indexing to a worker queue (Redis/BullMQ) — API stays; `store.createIndexJob` enqueues.

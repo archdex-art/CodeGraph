@@ -11,6 +11,7 @@ import {
   push,
   commit,
   diffFile,
+  restoreFile,
   log,
   withToken,
   isGithubHost,
@@ -109,6 +110,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (op === "createBranch") {
       if (!name) return NextResponse.json({ error: "Missing branch name" }, { status: 400 });
       await createBranch(ws.dir, name, from);
+      return NextResponse.json({ ok: true });
+    }
+    if (op === "restore") {
+      const p = body.path as string | undefined;
+      if (!p) return NextResponse.json({ error: "Missing path" }, { status: 400 });
+      await restoreFile(ws.dir, p);
       return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: "Unknown op" }, { status: 400 });

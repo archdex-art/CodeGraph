@@ -27,6 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <nav className="flex items-center gap-6 text-sm text-gray-400">
               <Link href="/" className="hover:text-white transition-colors">Index</Link>
               <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+              <Link href="/settings" className="hover:text-white transition-colors">Settings</Link>
               <AuthNav />
             </nav>
           </div>
