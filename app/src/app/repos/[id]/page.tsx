@@ -181,7 +181,7 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
         {visited.has("editor") && (
           <div className={view === "editor" ? "" : "hidden"}>
             {repo.hasWorkspace
-              ? <CodeEditor repo={repo} visible={view === "editor"} />
+              ? <CodeEditor key={repo.id} repo={repo} visible={view === "editor"} />
               : <Empty msg="No live workspace for this repository yet — re-index it to enable the built-in editor." />}
           </div>
         )}

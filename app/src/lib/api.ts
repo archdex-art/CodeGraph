@@ -1,5 +1,5 @@
 // Client-side fetch helpers for the backend API.
-import type { AIContext, CodeSymbol, FsEntry, GitBranch, GitLogEntry, GitStatus, Job, RepoDetail, RepoSummary, SaveMode, TrashEntry } from "./types";
+import type { AIContext, AssistantEvent, AssistantProvider, AssistantProviders, CodeSymbol, FsEntry, GitBranch, GitLogEntry, GitStatus, Job, RepoDetail, RepoSummary, SaveMode, TrashEntry } from "./types";
 import type { RemediationPlan } from "./agents/types";
 import type { FixResult } from "./agents/executor-types";
 
@@ -300,6 +300,10 @@ export async function gitDiff(repoId: string, path: string): Promise<string> {
   return d.diff;
 }
 
+export async function gitRestoreFile(repoId: string, path: string): Promise<void> {
+  await gitPost(repoId, { op: "restore", path });
+}
+
 async function gitPost<T>(repoId: string, body: Record<string, unknown>): Promise<T> {
   const res = await fetch(`/api/repos/${repoId}/git`, {
     method: "POST",
@@ -337,4 +341,75 @@ export async function getSaveMode(repoId: string): Promise<SaveMode> {
 
 export async function setSaveMode(repoId: string, mode: SaveMode): Promise<void> {
   await gitPost(repoId, { op: "setSaveMode", saveMode: mode });
+}
+
+// --- Built-in editor: AI Assistant (opt-in — Claude needs ANTHROPIC_API_KEY,
+// local models need CG_LOCAL_LLM_BASE_URL + CG_LOCAL_LLM_MODEL) ---
+
+export async function fetchAssistantProviders(repoId: string): Promise<AssistantProviders> {
+  const res = await fetch(`/api/repos/${repoId}/assistant`, { cache: "no-store" });
+  const d = await asJson<{ providers: AssistantProviders }>(res);
+  return d.providers;
+}
+
+export async function resetAssistant(repoId: string): Promise<void> {
+  await asJson(await fetch(`/api/repos/${repoId}/assistant`, { method: "DELETE" }));
+}
+
+/** Sends one chat message and streams the reply as `AssistantEvent`s via
+ *  SSE, invoking `onEvent` for each as it arrives. Resolves once the
+ *  response stream ends (after a terminal `done`/`error` event). */
+export async function streamAssistantChat(
+  repoId: string,
+  message: string,
+  provider: AssistantProvider,
+  onEvent: (event: AssistantEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch(`/api/repos/${repoId}/assistant`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, provider }),
+    signal,
+  });
+  if (!res.ok || !res.body) {
+    const data: unknown = await res.json().catch(() => ({}));
+    throw new Error(errorMessage(data) || `Assistant request failed (${res.status})`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let frameEnd: number;
+    while ((frameEnd = buffer.indexOf("\n\n")) !== -1) {
+      const frame = buffer.slice(0, frameEnd);
+      buffer = buffer.slice(frameEnd + 2);
+      const dataLine = frame.split("\n").find((l) => l.startsWith("data: "));
+      if (!dataLine) continue;
+      try {
+        onEvent(JSON.parse(dataLine.slice(6)) as AssistantEvent);
+      } catch {
+        // malformed frame — drop it rather than crashing the chat stream
+      }
+    }
+  }
+}
+
+import type { AssistantSettingsView } from "./settings";
+
+export async function fetchAssistantSettingsView(): Promise<AssistantSettingsView> {
+  const res = await fetch("/api/settings/assistant", { cache: "no-store" });
+  return asJson<AssistantSettingsView>(res);
+}
+
+export async function updateAssistantSettings(patch: { anthropicApiKey?: string | null; localBaseUrl?: string | null; localModel?: string | null; localApiKey?: string | null }): Promise<AssistantSettingsView> {
+  const res = await fetch("/api/settings/assistant", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  return asJson<AssistantSettingsView>(res);
 }

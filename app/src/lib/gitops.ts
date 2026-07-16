@@ -142,6 +142,20 @@ export async function diffFile(dir: string, relPath: string): Promise<string> {
   }
 }
 
+export async function restoreFile(dir: string, relPath: string): Promise<void> {
+  try {
+    // use checkout instead of restore for maximum compatibility with older git versions
+    await git(dir, ["checkout", "HEAD", "--", relPath]);
+  } catch (e) {
+    // If it's an untracked file, checkout HEAD -- file fails. We fall back to cleaning it.
+    try {
+      await git(dir, ["clean", "-f", "--", relPath]);
+    } catch {
+      throw new Error(`Failed to revert file: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+}
+
 export async function log(dir: string, limit = 30): Promise<GitLogEntry[]> {
   const sep = "\u0001";
   const raw = await git(dir, ["log", `-${limit}`, `--pretty=format:%H${sep}%an${sep}%ad${sep}%s`, "--date=iso-strict"]);

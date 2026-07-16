@@ -295,3 +295,27 @@ export interface GitLogEntry {
 }
 
 export type SaveMode = "local" | "git-manual" | "git-auto";
+
+// --- Built-in editor: AI Assistant — two opt-in backends: Claude (Claude
+// Agent SDK, needs ANTHROPIC_API_KEY) and any OpenAI-compatible local model
+// server (Ollama/LM Studio/llama.cpp/vLLM, needs CG_LOCAL_LLM_BASE_URL +
+// CG_LOCAL_LLM_MODEL). Either, both, or neither may be configured.
+// Events streamed server -> client (SSE) for one assistant turn. `tool_call`/
+// `tool_result` come from our own workspace-tool wrappers (see
+// src/lib/agents/assistant.ts), not raw SDK internals, so the shape here is
+// intentionally small and stable regardless of upstream SDK churn.
+export type AssistantEvent =
+  | { kind: "text"; text: string }
+  | { kind: "tool_call"; tool: string; input: Record<string, unknown> }
+  | { kind: "tool_result"; tool: string; ok: boolean; summary: string }
+  | { kind: "done"; costUsd: number; turns: number }
+  | { kind: "error"; message: string };
+
+export type AssistantProvider = "claude" | "local";
+
+export interface AssistantProviders {
+  claude: boolean;
+  local: boolean;
+  localModel?: string | null;
+  localBaseUrl?: string | null;
+}

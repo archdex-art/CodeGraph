@@ -105,3 +105,33 @@ Cloned `octocat/Hello-World`, then over the real API: wrote/created/duplicated/r
 
 ### Known limitations (by design, not started)
 No integrated terminal, no LSP-backed cross-file IntelliSense (Monaco's built-in per-language service only), no OAuth device flow (PAT-only auth, entered per-session and never persisted), no 3-way merge conflict editor (conflicts are surfaced, not auto-resolved), find/replace-across-files is plain-text (no regex).
+
+## M7 — AI Assistant (opt-in, two backends, BUILT)
+
+A chat panel in the Editor tab (`src/components/editor/AssistantPanel.tsx`) with **two independent, swappable backends**. Off by default — the activity-bar icon only appears once at least one is configured. Unlike the deterministic swarm above, this one feature calls an LLM (either a hosted one or one running on your own hardware).
+
+```
+GET  /api/repos/:id/assistant            -> { providers: { claude: boolean, local: boolean } }
+POST /api/repos/:id/assistant  { message, provider? }
+  -> text/event-stream of AssistantEvent frames: tool_call/tool_result (interleaved),
+     text (assistant reply), done (cost/turns) | error
+```
+`provider` defaults to Claude if configured, else the local model. If both are configured, `AssistantPanel` shows a small selector; switching starts a fresh conversation (a Claude history and a local-model history are unrelated — never merged).
+
+### Backend 1 — Claude (`src/lib/agents/assistant.ts`)
+Runs `@anthropic-ai/claude-agent-sdk` **in-process** against the repo's live workspace directory. Gated on `ANTHROPIC_API_KEY` (`aiAssistantConfigured()`), exactly like GitHub sign-in. One live `Query` per repo, kept open across chat turns via the SDK's streaming-input mode (same "no external queue, in-process state" model `store.ts` uses for jobs) — multi-turn memory without ever writing a transcript to disk (`persistSession: false`). Capped at `maxTurns: 40` / `maxBudgetUsd: 5` per session.
+
+### Backend 2 — any OpenAI-compatible local model (`src/lib/agents/localAssistant.ts`)
+No vendor SDK exists for arbitrary local models, so this hand-rolls the same shape of agent loop directly against a plain HTTP `/chat/completions` endpoint: send messages + tool schemas, execute any requested tool calls, feed results back as `role: "tool"` messages, repeat until the model returns plain text. Speaks the OpenAI-compatible wire format that Ollama, LM Studio, llama.cpp's `server`, vLLM, and text-generation-webui all implement. Gated on **both** `CG_LOCAL_LLM_BASE_URL` and `CG_LOCAL_LLM_MODEL` being set (`localLlmConfigured()`). Conversation history lives in an in-process `Map<repoId, ChatMessage[]>` (mirroring the Claude session map, but hand-built instead of SDK-managed). Capped at `MAX_TOOL_TURNS = 20` to bound a buggy/adversarial local model's loop; a local model's function-call JSON is validated defensively per-argument before any tool runs (unlike the Claude SDK's own zod-validated `tool_use`, nothing upstream guarantees a local model's tool-call JSON is well-formed).
+
+**Tool surface (the whole security story, shared by both backends):** the Claude backend gets `tools: []` (every built-in Claude Code tool disabled — no Bash, no raw Read/Write/WebFetch), `strictMcpConfig: true`, and `settingSources: []` (no CLAUDE.md, hooks, or plugins); the local backend never had a built-in toolset to disable in the first place. Both backends' only capabilities are the same nine tools — `list_directory`, `read_file`, `write_file`, `create_entry`, `rename_entry`, `search_workspace`, and (git workspaces only) `git_status`/`git_diff`/`git_commit` — whose actual implementation lives once in `src/lib/agents/workspaceToolImpls.ts` (`buildWorkspaceToolImpls`/`buildGitToolImpls`) and is merely wired up two different ways: as zod-schema `tool()` defs for the Claude Agent SDK's MCP transport, and as OpenAI-style JSON-schema function defs + a name-dispatched runner for the local loop. Every implementation is a thin wrapper over the same path-safe helpers the human-facing Editor already uses (`workspace.ts`'s `resolveSafe`-guarded fs ops, `gitops.ts`'s argv-only git wrapper) — a prompt-injected or hallucinated path can't escape the workspace root any more than a malicious click in the FileExplorer could, regardless of which model is driving the chat.
+
+**Editor integration:** a successful `write_file`/`create_entry`/`rename_entry` triggers `onFileTouched` → `CodeEditor` silently reloads any open, **non-dirty** tab for that path from disk (never clobbers unsaved user edits) and bumps `refreshToken` to refresh the FileExplorer/Git panel. Provider-agnostic — works the same regardless of which backend produced the edit.
+
+### Verified
+**Claude:** indexed `octocat/Hello-World` (git workspace) with `ANTHROPIC_API_KEY` set, then over the real API/UI: confirmed the AI Assistant icon is hidden with no provider configured and appears once one is set, sent a live chat message that round-tripped through a real spawned Claude Code subprocess + our MCP tool registration + SSE streaming, and confirmed an upstream auth failure surfaces as a normal in-chat message rather than crashing the request or the server.
+**Local model:** ran a minimal mock OpenAI-compatible server and pointed `CG_LOCAL_LLM_BASE_URL`/`CG_LOCAL_LLM_MODEL` at it (no `ANTHROPIC_API_KEY` set) — confirmed `GET .../assistant` reports `{claude:false, local:true}`, a chat POST with no explicit `provider` auto-selected local, executed a real `list_directory` tool call against the live workspace, fed the result back, and returned final text through the actual Next.js SSE route (not a unit-test bypass).
+Path-traversal rejection, the exact hasGit-gated tool set, and the shared tool implementations are locked by `tests/assistant.test.ts` (Claude-side tool wrappers). The local agent loop itself — multi-turn tool-calling, malformed-tool-call-JSON handling, the `MAX_TOOL_TURNS` safety cap, HTTP-error graceful degradation, and conversation persistence across turns — is locked by `tests/localAssistant.test.ts`, driven against a real in-process HTTP mock server (no network, no external model server required).
+
+### Known limitations (by design, not started)
+No inline diff/approval UI for assistant edits (writes land immediately, same trust level as the human editor); no per-user rate limiting beyond Claude's per-session budget cap (the local backend has no cost to cap); conversation history is in-memory only (lost on restart); local-model tool-calling reliability depends entirely on the chosen model — small or non-tool-tuned models may narrate a "tool call" in prose instead of actually invoking one, which this app cannot detect or correct.

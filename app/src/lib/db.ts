@@ -57,6 +57,10 @@ function init(): DatabaseSync {
       deleted_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_trash_repo ON trash(repo_id, deleted_at);
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_repos_owner ON repos(owner_id);
   `);
   // Migrate older installs: add columns introduced after first release.

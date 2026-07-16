@@ -104,7 +104,7 @@ Open `http://localhost:4000`, paste a public repo URL — e.g. `https://github.c
 - Three visualizations: **Architecture** flowchart, zoomable **Circle-pack**, force-directed **Network**
 - A **Code Intelligence** tab: symbol search, callers/callees, impact analysis, circular-dependency detection, dead-code, Graph-RAG context generation
 - An **Agents** tab: run the swarm, get a ranked remediation plan, click **Generate verified fix PR** on any finding
-- An **Editor** tab: full Git-integrated file browser + Monaco editor, commit/push, restorable trash
+- An **Editor** tab: full Git-integrated file browser + Monaco editor, commit/push, restorable trash, optional AI Assistant chat panel (Claude or your own local model)
 
 No sign-up, no API key, nothing to configure for this path.
 
@@ -117,9 +117,10 @@ No sign-up, no API key, nothing to configure for this path.
 | **Docker (recommended for prod)** | `cd app && docker compose up --build` | Multi-stage `node:24-slim` build; runs as root deliberately (see [`docs/postmortems/`](./docs/postmortems) for why) |
 | **Render** | `render.yaml` at repo root | Blueprint deploy; persistent disk for SQLite + editor workspaces |
 
-Optional features (both off by default, zero config needed if you don't want them):
+Optional features (all off by default, zero config needed if you don't want them):
 - **HTTP Basic Auth gate** — set `CG_BASIC_AUTH_PASSWORD` to lock the whole app behind a shared password.
 - **GitHub sign-in** — set `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` / `CG_SESSION_SECRET` to let users one-click import their own repos, including private ones.
+- **AI Assistant in the Editor** — set `ANTHROPIC_API_KEY` for a Claude-powered chat panel, and/or `CG_LOCAL_LLM_BASE_URL` + `CG_LOCAL_LLM_MODEL` to point it at your own OpenAI-compatible local model server (Ollama, LM Studio, llama.cpp, vLLM, ...) instead — no data leaves your machine either way you choose the local backend. Either backend gets read/write/search/git on the open repo's workspace, no shell access — see `app/AGENTS.md`. Claude is the only piece of CodeGraph that calls a hosted LLM; everything else, including the agent swarm above and the local-model backend, needs none.
 
 Full env-var reference, OAuth App setup walkthrough, backup/restore, and scaling notes: **[`app/DEPLOY.md`](./app/DEPLOY.md)**.
 
