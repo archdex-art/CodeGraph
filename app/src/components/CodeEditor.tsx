@@ -385,16 +385,14 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
                 <Save className="w-3 h-3" /> Save
               </button>
             </div>
-            {(assistantProviders.claude || assistantProviders.local) && (
-              <button
-                onClick={() => setAssistantOpen(!assistantOpen)}
-                className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded border ${
-                  assistantOpen ? "border-purple-500/50 bg-purple-500/10 text-white" : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-gray-300"
-                }`}
-              >
-                <Bot className="w-3.5 h-3.5" /> AI Assistant
-              </button>
-            )}
+            <button
+              onClick={() => setAssistantOpen(!assistantOpen)}
+              className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded border ${
+                assistantOpen ? "border-purple-500/50 bg-purple-500/10 text-white" : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-gray-300"
+              }`}
+            >
+              <Bot className="w-3.5 h-3.5" /> AI Assistant
+            </button>
           </div>
 
           {/* Editor Area */}
@@ -449,17 +447,16 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
               )}
             </div>
             {/* Assistant Panel (Right) */}
-            {(assistantProviders.claude || assistantProviders.local) && (
-              <div className={`w-80 border-l border-white/10 flex flex-col bg-[#050505] shrink-0 ${assistantOpen ? "block" : "hidden"}`}>
-                <AssistantPanel
-                  repoId={repoId}
-                  providers={assistantProviders}
-                  onOpenFile={openFile}
-                  onFileTouched={refreshFileFromDisk}
-                  onMutated={() => setRefreshToken((n) => n + 1)}
-                />
-              </div>
-            )}
+            <div className={`w-80 border-l border-white/10 flex flex-col bg-[#050505] shrink-0 ${assistantOpen ? "block" : "hidden"}`}>
+              <AssistantPanel
+                repoId={repoId}
+                providers={assistantProviders}
+                onOpenFile={openFile}
+                onFileTouched={refreshFileFromDisk}
+                onMutated={() => setRefreshToken((n) => n + 1)}
+                onClose={() => setAssistantOpen(false)}
+              />
+            </div>
           </div>
         </div>
       </div>

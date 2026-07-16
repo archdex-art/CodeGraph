@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bot, CheckCircle2, Loader2, RotateCcw, Send, XCircle, Square } from "lucide-react";
+import { Bot, CheckCircle2, Loader2, RotateCcw, Send, XCircle, Square, PanelRightClose, Settings } from "lucide-react";
 import { resetAssistant, streamAssistantChat, updateAssistantSettings } from "@/lib/api";
 import type { AssistantEvent, AssistantProvider, AssistantProviders } from "@/lib/types";
 
@@ -37,12 +37,14 @@ export function AssistantPanel({
   onOpenFile,
   onFileTouched,
   onMutated,
+  onClose,
 }: {
   repoId: string;
   providers: AssistantProviders;
   onOpenFile: (path: string) => void;
   onFileTouched: (path: string) => void;
   onMutated: () => void;
+  onClose?: () => void;
 }) {
   const [provider, setProvider] = useState<AssistantProvider>(providers.claude ? "claude" : "local");
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -178,10 +180,37 @@ export function AssistantPanel({
     <div className="flex flex-col h-full text-xs">
       <div className="flex items-center justify-between px-3 pt-3 pb-2 shrink-0">
         <div className="text-[11px] uppercase tracking-wide text-gray-500">AI Assistant</div>
-        <button onClick={newChat} title="New chat" className="text-gray-500 hover:text-white">
-          <RotateCcw className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={newChat} title="New chat" className="text-gray-500 hover:text-white">
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+          {onClose && (
+            <button onClick={onClose} title="Collapse panel" className="text-gray-500 hover:text-white">
+              <PanelRightClose className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
+
+      {!providers.claude && !providers.local && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+          <Bot className="w-8 h-8 text-gray-700" />
+          <p className="text-gray-500 leading-relaxed">
+            No AI provider is configured yet. Add a Claude API key or point at your own local model to start chatting.
+          </p>
+          <a
+            href="/settings"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20"
+          >
+            <Settings className="w-3.5 h-3.5" /> Open Settings
+          </a>
+        </div>
+      )}
+
+      {(providers.claude || providers.local) && (
+        <>
 
       {providers.claude && providers.local && (
         <div className="flex items-center gap-1 px-3 pb-2 shrink-0">
@@ -310,6 +339,8 @@ export function AssistantPanel({
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
