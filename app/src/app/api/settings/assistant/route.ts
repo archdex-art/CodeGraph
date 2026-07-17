@@ -39,6 +39,9 @@ export async function POST(req: NextRequest) {
   if (typeof body.claudeModel === "string" || body.claudeModel === null) {
     patch.claudeModel = body.claudeModel;
   }
+  if (typeof body.useClaudeSubscription === "boolean") {
+    patch.useClaudeSubscription = body.useClaudeSubscription ? "true" : null;
+  }
   if (typeof body.localBaseUrl === "string" || body.localBaseUrl === null) {
     patch.localBaseUrl = body.localBaseUrl;
   }

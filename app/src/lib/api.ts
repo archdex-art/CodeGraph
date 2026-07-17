@@ -408,6 +408,7 @@ export async function fetchAssistantSettingsView(): Promise<AssistantSettingsVie
 export async function updateAssistantSettings(patch: {
   anthropicApiKey?: string | null;
   claudeModel?: string | null;
+  useClaudeSubscription?: boolean;
   localBaseUrl?: string | null;
   localModel?: string | null;
   localApiKey?: string | null;

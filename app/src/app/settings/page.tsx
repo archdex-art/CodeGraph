@@ -17,6 +17,8 @@ export default function SettingsPage() {
   const [localBaseUrl, setLocalBaseUrl] = useState("");
   const [localModel, setLocalModel] = useState("");
   const [claudeModel, setClaudeModel] = useState("sonnet");
+  const [useSubscription, setUseSubscription] = useState(false);
+  const [subscriptionBusy, setSubscriptionBusy] = useState(false);
   const [localApiKey, setLocalApiKey] = useState("");
   const [modelList, setModelList] = useState<string[]>([]);
   const [newModelInput, setNewModelInput] = useState("");
@@ -34,6 +36,7 @@ export default function SettingsPage() {
         setLocalBaseUrl(data.localBaseUrl || "");
         setLocalModel(data.localModel || "");
         setClaudeModel(data.claudeModel || "sonnet");
+        setUseSubscription(data.useClaudeSubscription);
         setModelList(data.localModelList || []);
         setLoading(false);
       })
@@ -126,6 +129,21 @@ export default function SettingsPage() {
       setProviderError(err instanceof Error ? err.message : "Failed to save profile");
     } finally {
       setProviderBusy(null);
+    }
+  }
+
+  async function handleToggleSubscription() {
+    setSubscriptionBusy(true);
+    setError(null);
+    try {
+      const next = !useSubscription;
+      const updated = await updateAssistantSettings({ useClaudeSubscription: next });
+      setSettings(updated);
+      setUseSubscription(updated.useClaudeSubscription);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update subscription setting");
+    } finally {
+      setSubscriptionBusy(false);
     }
   }
 
@@ -241,6 +259,29 @@ export default function SettingsPage() {
               {settings?.anthropicApiKeySet && !settings.anthropicApiKeySavedInDb && (
                 <p className="text-xs text-gray-500 mt-1">Currently loaded from ANTHROPIC_API_KEY environment variable.</p>
               )}
+            </div>
+
+            <div className="pt-2 border-t border-white/10">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useSubscription}
+                  onChange={handleToggleSubscription}
+                  disabled={subscriptionBusy}
+                  className="mt-0.5"
+                />
+                <span className="text-sm text-gray-300">
+                  Use my Claude Pro/Max/Team subscription instead of an API key
+                  {subscriptionBusy && <Loader2 className="inline w-3.5 h-3.5 animate-spin ml-2" />}
+                </span>
+              </label>
+              <p className="text-xs text-gray-500 mt-1.5 ml-6">
+                Only works if the machine running CodeGraph already has Claude Code logged in
+                (run <code className="text-gray-400">claude login</code> in a terminal there once), or has{" "}
+                <code className="text-gray-400">CLAUDE_CODE_OAUTH_TOKEN</code> set in its environment.
+                Uses your subscription&apos;s included usage instead of per-token API billing.
+                An API Key above, if set, always takes priority over this.
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">

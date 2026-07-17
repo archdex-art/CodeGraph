@@ -22,11 +22,11 @@ import { createSdkMcpServer, query, tool, type Options, type Query, type SdkMcpT
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { buildGitToolImpls, buildWorkspaceToolImpls } from "./workspaceToolImpls";
-import { effectiveAnthropicApiKey, effectiveClaudeModel } from "../settings";
+import { effectiveAnthropicApiKey, effectiveClaudeModel, effectiveUseClaudeSubscription } from "../settings";
 import type { AssistantEvent } from "../types";
 
 export function aiAssistantConfigured(): boolean {
-  return !!effectiveAnthropicApiKey();
+  return !!effectiveAnthropicApiKey() || effectiveUseClaudeSubscription();
 }
 
 const SYSTEM_PROMPT = (hasGit: boolean) =>
@@ -190,6 +190,7 @@ interface AssistantSession {
   toolEvents: AssistantEvent[];
   workspaceDir: string;
   apiKey: string;
+  useSubscription: boolean;
   model: string | undefined;
 }
 
@@ -203,9 +204,13 @@ const sessions = new Map<string, AssistantSession>();
 
 function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolean): AssistantSession {
   const apiKey = effectiveAnthropicApiKey() ?? "";
+  const useSubscription = !apiKey && effectiveUseClaudeSubscription();
   const model = effectiveClaudeModel();
   const existing = sessions.get(repoId);
-  if (existing && existing.workspaceDir === workspaceDir && existing.apiKey === apiKey && existing.model === model) return existing;
+  if (
+    existing && existing.workspaceDir === workspaceDir && existing.apiKey === apiKey
+    && existing.useSubscription === useSubscription && existing.model === model
+  ) return existing;
   if (existing) {
     try {
       existing.query.close();
@@ -239,13 +244,18 @@ function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolea
     // env var (e.g. "opus", "sonnet", "haiku"); omitted lets the SDK use its
     // own CLI default.
     ...(model ? { model } : {}),
-    // Explicit key resolved from the Settings page (DB) or ANTHROPIC_API_KEY
-    // env var — replaces the subprocess env entirely, so spread process.env.
-    env: { ...process.env, ANTHROPIC_API_KEY: apiKey },
+    // Auth: an explicit key from the Settings page/ANTHROPIC_API_KEY always
+    // wins. Otherwise, if "use my Claude subscription" is enabled, leave
+    // ANTHROPIC_API_KEY unset entirely (don't even pass an empty string) so
+    // the bundled Claude Code executable falls back to its own stored login
+    // (`claude login`) or CLAUDE_CODE_OAUTH_TOKEN already present in this
+    // process's environment -- billed against the Pro/Max/Team subscription
+    // instead of per-token API usage. CodeGraph never sees those credentials.
+    env: apiKey ? { ...process.env, ANTHROPIC_API_KEY: apiKey } : { ...process.env },
   };
 
   const q = query({ prompt: input, options });
-  const session: AssistantSession = { query: q, input, toolEvents, workspaceDir, apiKey, model };
+  const session: AssistantSession = { query: q, input, toolEvents, workspaceDir, apiKey, useSubscription, model };
   sessions.set(repoId, session);
   return session;
 
