@@ -22,11 +22,11 @@ import { createSdkMcpServer, query, tool, type Options, type Query, type SdkMcpT
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { buildGitToolImpls, buildWorkspaceToolImpls } from "./workspaceToolImpls";
-import { effectiveAnthropicApiKey, effectiveClaudeModel, effectiveUseClaudeSubscription } from "../settings";
+import { effectiveAnthropicApiKey, effectiveClaudeModel, effectiveUseClaudeSubscription, ANONYMOUS_USER_ID } from "../settings";
 import type { AssistantEvent } from "../types";
 
-export function aiAssistantConfigured(): boolean {
-  return !!effectiveAnthropicApiKey() || effectiveUseClaudeSubscription();
+export function aiAssistantConfigured(userId: number = ANONYMOUS_USER_ID): boolean {
+  return !!effectiveAnthropicApiKey(userId) || effectiveUseClaudeSubscription(userId);
 }
 
 const SYSTEM_PROMPT = (hasGit: boolean) =>
@@ -194,19 +194,27 @@ interface AssistantSession {
   model: string | undefined;
 }
 
-// One conversation per repo, kept alive in-process for the life of the Node
-// server (same "no external queue, fire-and-forget in-process state" model
-// `store.ts` already uses for jobs). Resets on server restart, deploy, an
-// explicit `resetAssistantSession` call, or a changed API key from the
-// Settings page — no transcript is ever written to disk (`persistSession:
-// false` below), so there is nothing to clean up.
+// One conversation per (repo, account), kept alive in-process for the life
+// of the Node server (same "no external queue, fire-and-forget in-process
+// state" model `store.ts` already uses for jobs). Keyed by account, not
+// just repo: a shared public-bucket repo can be open in two different
+// signed-in accounts' editors at once, each with their own saved API
+// key/model — sessions must never cross that boundary. Resets on server
+// restart, deploy, an explicit `resetAssistantSession` call, or a changed
+// API key from the Settings page — no transcript is ever written to disk
+// (`persistSession: false` below), so there is nothing to clean up.
 const sessions = new Map<string, AssistantSession>();
 
-function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolean): AssistantSession {
-  const apiKey = effectiveAnthropicApiKey() ?? "";
-  const useSubscription = !apiKey && effectiveUseClaudeSubscription();
-  const model = effectiveClaudeModel();
-  const existing = sessions.get(repoId);
+function sessionKey(repoId: string, userId: number): string {
+  return `${repoId}:${userId}`;
+}
+
+function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolean, userId: number): AssistantSession {
+  const key = sessionKey(repoId, userId);
+  const apiKey = effectiveAnthropicApiKey(userId) ?? "";
+  const useSubscription = !apiKey && effectiveUseClaudeSubscription(userId);
+  const model = effectiveClaudeModel(userId);
+  const existing = sessions.get(key);
   if (
     existing && existing.workspaceDir === workspaceDir && existing.apiKey === apiKey
     && existing.useSubscription === useSubscription && existing.model === model
@@ -217,7 +225,7 @@ function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolea
     } catch {
       /* already gone */
     }
-    sessions.delete(repoId);
+    sessions.delete(key);
   }
 
   const toolEvents: AssistantEvent[] = [];
@@ -234,8 +242,21 @@ function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolea
     mcpServers: { workspace: mcpServer },
     strictMcpConfig: true, // ignore project .mcp.json / user settings — only the server above exists
     settingSources: [], // no CLAUDE.md, no user/project/local settings, no hooks, no plugins
-    permissionMode: "bypassPermissions", // headless: no human to click "allow" per tool call
-    allowDangerouslySkipPermissions: true,
+    // Headless auto-approval via `canUseTool` instead of `permissionMode:
+    // "bypassPermissions"` + `allowDangerouslySkipPermissions`: the CLI
+    // refuses `--dangerously-skip-permissions` outright when running as
+    // root ("cannot be used with root/sudo privileges for security
+    // reasons") — and this app's Docker runtime deliberately runs as root
+    // (see Dockerfile's comment / docs/postmortems), so that flag crashed
+    // every assistant turn in production. `canUseTool` grants the exact
+    // same effective privilege through the SDK's structured per-call path
+    // instead of a blanket CLI bypass: since `tools: []` above already
+    // strips every built-in Claude Code tool, the only things that can
+    // ever reach this callback are the nine already-safe custom MCP tools
+    // in `workspaceToolImpls.ts` — auto-allowing them is a no-op change in
+    // actual capability, just a different (root-safe) code path to get there.
+    permissionMode: "default",
+    canUseTool: async (_toolName, input) => ({ behavior: "allow", updatedInput: input }),
     persistSession: false, // never write this repo's transcript to disk on a shared host
     maxTurns: 40,
     maxBudgetUsd: 5, // safety cap for the whole (possibly multi-turn) session
@@ -256,7 +277,7 @@ function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolea
 
   const q = query({ prompt: input, options });
   const session: AssistantSession = { query: q, input, toolEvents, workspaceDir, apiKey, useSubscription, model };
-  sessions.set(repoId, session);
+  sessions.set(key, session);
   return session;
 
 }
@@ -271,16 +292,18 @@ export async function* sendMessage(
   workspaceDir: string,
   hasGit: boolean,
   text: string,
+  userId: number = ANONYMOUS_USER_ID,
   signal?: AbortSignal,
 ): AsyncGenerator<AssistantEvent> {
-  const session = getOrCreateSession(repoId, workspaceDir, hasGit);
-  
+  const key = sessionKey(repoId, userId);
+  const session = getOrCreateSession(repoId, workspaceDir, hasGit, userId);
+
   let aborted = false;
   if (signal) {
     const onAbort = () => {
       aborted = true;
       try { session.query.close(); } catch {}
-      sessions.delete(repoId);
+      sessions.delete(key);
     };
     if (signal.aborted) {
       onAbort();
@@ -302,7 +325,7 @@ export async function* sendMessage(
       while (session.toolEvents.length > 0) yield session.toolEvents.shift()!;
 
       if (done || !msg) {
-        sessions.delete(repoId);
+        sessions.delete(key);
         yield { kind: "error", message: "Assistant session ended unexpectedly." };
         return;
       }
@@ -325,19 +348,20 @@ export async function* sendMessage(
       // lifecycle, etc.) carry nothing the chat panel needs to render.
     }
   } catch (e) {
-    sessions.delete(repoId);
+    sessions.delete(key);
     yield { kind: "error", message: e instanceof Error ? e.message : String(e) };
   }
 }
 
 /** Closes and discards a repo's assistant session ("New chat"). */
-export function resetAssistantSession(repoId: string): void {
-  const session = sessions.get(repoId);
+export function resetAssistantSession(repoId: string, userId: number = ANONYMOUS_USER_ID): void {
+  const key = sessionKey(repoId, userId);
+  const session = sessions.get(key);
   if (!session) return;
   try {
     session.query.close();
   } catch {
     /* already gone */
   }
-  sessions.delete(repoId);
+  sessions.delete(key);
 }

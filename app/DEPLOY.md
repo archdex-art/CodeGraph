@@ -84,6 +84,8 @@ By default, once GitHub sign-in is configured, repos indexed anonymously still l
 ## AI Assistant setup (optional — two independent backends)
 Adds a chat panel to the Editor tab. Either backend, both, or neither may be configured; if both are, a small selector in the panel lets you switch (starting a fresh conversation with the new backend). Fully optional and off by default; skip this section if you don't need either.
 
+Configuration lives in two places that stack: env vars (`ANTHROPIC_API_KEY`, `CG_LOCAL_LLM_BASE_URL`/`CG_LOCAL_LLM_MODEL`/`CG_LOCAL_LLM_API_KEY`, `CG_CLAUDE_MODEL`) set a deployment-wide default, and the in-app **Settings page** (`/settings`) lets any signed-in user override them for themselves without touching the deployment's environment. **A value saved through the Settings page is scoped to the GitHub account that saved it** (`settings` table's `PRIMARY KEY (key, user_id)`) — never visible to, or overwritable by, a different signed-in account, and never falls back to another account's saved value. If GitHub sign-in (above) isn't configured at all, or a visitor isn't signed in, Settings changes go to a single shared "no account" bucket instead — the same single-shared-config behavior as before this scoping existed, appropriate for a self-hosted single-operator instance.
+
 ### Claude (Claude Agent SDK)
 Runs in-process against the repo's live workspace directory.
 

@@ -135,3 +135,25 @@ describe("workspaceTools — path safety (the actual security boundary)", () => 
     expect(events[3]).toMatchObject({ kind: "tool_result", tool: "read_file", ok: false });
   });
 });
+
+// Regression guard: the SDK's CLI refuses `--dangerously-skip-permissions`
+// outright when the process runs as root ("cannot be used with root/sudo
+// privileges for security reasons") — and this app's Docker runtime
+// deliberately runs as root, so `permissionMode: "bypassPermissions"` +
+// `allowDangerouslySkipPermissions: true` crashed every real assistant
+// turn in production. `getOrCreateSession`'s `Options` object isn't
+// exported (it's only ever constructed in-process around a live SDK
+// `query()` call, which needs a real API key/subprocess to exercise), so
+// this locks in the fix the same way db.test.ts locks in schema/SQL
+// wiring: by asserting the actual source no longer contains the
+// root-incompatible flags, and does use the `canUseTool` auto-allow
+// callback in their place.
+describe("assistant.ts session Options — root-container permission mode", () => {
+  it("never re-introduces bypassPermissions/allowDangerouslySkipPermissions, and does use canUseTool", () => {
+    const src = readFileSync(path.join(__dirname, "..", "src", "lib", "agents", "assistant.ts"), "utf8");
+    expect(src).not.toContain('permissionMode: "bypassPermissions"');
+    expect(src).not.toContain("allowDangerouslySkipPermissions:"); // actual Options key, not the explanatory comment above
+    expect(src).toContain("canUseTool:");
+    expect(src).toContain('behavior: "allow"');
+  });
+});

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { effectiveLocalLlmConfig, effectiveLocalModelList } from "@/lib/settings";
+import { getSession } from "@/lib/session";
+import { githubOAuthConfigured } from "@/lib/githubOAuth";
+import { effectiveLocalLlmConfig, effectiveLocalModelList, ANONYMOUS_USER_ID } from "@/lib/settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,13 +13,19 @@ export const dynamic = "force-dynamic";
 // /v1/models list instead -- used by the "Discover from server" picker on
 // the Settings page when the user wants to browse what's actually available.
 export async function GET(req: NextRequest) {
-  const curated = effectiveLocalModelList();
+  // Same account-scoping as /api/settings/assistant: this reads the
+  // caller's own saved local-model config, so it needs the same gate.
+  if (githubOAuthConfigured() && !getSession(req)?.userId) {
+    return NextResponse.json({ error: "Unauthorized. Please sign in." }, { status: 401 });
+  }
+  const userId = getSession(req)?.userId ?? ANONYMOUS_USER_ID;
+  const curated = effectiveLocalModelList(userId);
   const discover = req.nextUrl.searchParams.get("discover") === "true";
   if (curated.length > 0 && !discover) {
     return NextResponse.json({ models: curated, curated: true });
   }
 
-  const config = effectiveLocalLlmConfig();
+  const config = effectiveLocalLlmConfig(userId);
   if (!config) return NextResponse.json({ models: curated, curated: curated.length > 0 });
 
   try {

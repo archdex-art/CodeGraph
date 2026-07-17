@@ -12,11 +12,11 @@
 // else in the app uses. Off by default: inert unless both
 // `CG_LOCAL_LLM_BASE_URL` and `CG_LOCAL_LLM_MODEL` are set.
 import { buildGitToolImpls, buildWorkspaceToolImpls, type GitToolImpls, type WorkspaceToolImpls } from "./workspaceToolImpls";
-import { effectiveLocalLlmConfig, type EffectiveLocalLlmConfig } from "../settings";
+import { effectiveLocalLlmConfig, type EffectiveLocalLlmConfig, ANONYMOUS_USER_ID } from "../settings";
 import type { AssistantEvent } from "../types";
 
-export function localLlmConfigured(): boolean {
-  return effectiveLocalLlmConfig() !== null;
+export function localLlmConfigured(userId: number = ANONYMOUS_USER_ID): boolean {
+  return effectiveLocalLlmConfig(userId) !== null;
 }
 
 const MAX_TOOL_TURNS = 20;
@@ -197,16 +197,22 @@ interface LocalSession {
   configKey: string;
 }
 
-// Mirrors the per-repo in-process session map in `assistant.ts` — separate
-// Map because a Claude conversation and a local-model conversation for the
-// same repo are unrelated histories, never merged.
+// Mirrors the per-(repo,account) in-process session map in `assistant.ts`
+// — separate Map because a Claude conversation and a local-model
+// conversation for the same repo are unrelated histories, never merged.
+// Keyed by account too: a shared public-bucket repo open in two different
+// signed-in accounts' editors must never share one local-model session.
 const sessions = new Map<string, LocalSession>();
 
-function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolean, configKey: string): LocalSession {
-  const existing = sessions.get(repoId);
+function sessionKey(repoId: string, userId: number): string {
+  return `${repoId}:${userId}`;
+}
+
+function getOrCreateSession(key: string, workspaceDir: string, hasGit: boolean, configKey: string): LocalSession {
+  const existing = sessions.get(key);
   if (existing && existing.workspaceDir === workspaceDir && existing.configKey === configKey) return existing;
   const session: LocalSession = { messages: [{ role: "system", content: SYSTEM_PROMPT(hasGit) }], workspaceDir, configKey };
-  sessions.set(repoId, session);
+  sessions.set(key, session);
   return session;
 }
 
@@ -218,12 +224,13 @@ export async function* sendLocalMessage(
   workspaceDir: string,
   hasGit: boolean,
   text: string,
+  userId: number = ANONYMOUS_USER_ID,
   signal?: AbortSignal,
 ): AsyncGenerator<AssistantEvent> {
-  const config = effectiveLocalLlmConfig();
+  const config = effectiveLocalLlmConfig(userId);
   if (!config) throw new Error("Local LLM is not configured");
   const configKey = `${config.baseUrl}|${config.model}|${config.apiKey}`;
-  const session = getOrCreateSession(repoId, workspaceDir, hasGit, configKey);
+  const session = getOrCreateSession(sessionKey(repoId, userId), workspaceDir, hasGit, configKey);
   session.messages.push({ role: "user", content: text });
   const runTool = buildToolRunner(repoId, workspaceDir, hasGit);
   const tools = toolDefs(hasGit);
@@ -271,6 +278,6 @@ export async function* sendLocalMessage(
 }
 
 /** Closes and discards a repo's local-model session ("New chat"). */
-export function resetLocalAssistantSession(repoId: string): void {
-  sessions.delete(repoId);
+export function resetLocalAssistantSession(repoId: string, userId: number = ANONYMOUS_USER_ID): void {
+  sessions.delete(sessionKey(repoId, userId));
 }
