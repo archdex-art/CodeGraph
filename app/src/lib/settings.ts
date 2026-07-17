@@ -15,6 +15,8 @@ export interface AssistantSettings {
   localBaseUrl: string | null;
   localModel: string | null;
   localApiKey: string | null;
+  /** JSON-encoded string[] of curated model ids for the local-model dropdown. */
+  localModelList: string | null;
 }
 
 const KEYS = {
@@ -23,6 +25,7 @@ const KEYS = {
   localBaseUrl: "assistant.localBaseUrl",
   localModel: "assistant.localModel",
   localApiKey: "assistant.localApiKey",
+  localModelList: "assistant.localModelList",
 } as const;
 
 function getRaw(key: string): string | null {
@@ -48,6 +51,7 @@ export function getAssistantSettings(): AssistantSettings {
     localBaseUrl: getRaw(KEYS.localBaseUrl),
     localModel: getRaw(KEYS.localModel),
     localApiKey: getRaw(KEYS.localApiKey),
+    localModelList: getRaw(KEYS.localModelList),
   };
 }
 
@@ -58,6 +62,21 @@ export function setAssistantSettings(patch: Partial<AssistantSettings>): void {
   if ("localBaseUrl" in patch) setRaw(KEYS.localBaseUrl, patch.localBaseUrl ?? null);
   if ("localModel" in patch) setRaw(KEYS.localModel, patch.localModel ?? null);
   if ("localApiKey" in patch) setRaw(KEYS.localApiKey, patch.localApiKey ?? null);
+  if ("localModelList" in patch) setRaw(KEYS.localModelList, patch.localModelList ?? null);
+}
+
+/** The curated list of local model ids the user has explicitly added via
+ *  Settings, or `[]` if they haven't curated one yet (falls back to
+ *  auto-discovery from the provider's /v1/models in that case). */
+export function effectiveLocalModelList(): string[] {
+  const raw = getAssistantSettings().localModelList;
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((m): m is string => typeof m === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 /** The Anthropic API key to actually use: DB-saved value, else `ANTHROPIC_API_KEY` env var. */
@@ -101,6 +120,7 @@ export interface AssistantSettingsView {
   claudeModel: string | null;
   localBaseUrl: string | null;
   localModel: string | null;
+  localModelList: string[];
   localApiKeySet: boolean;
   localApiKeyMasked: string | null;
   localSavedInDb: boolean;
@@ -117,6 +137,7 @@ export function viewAssistantSettings(): AssistantSettingsView {
     claudeModel: s.claudeModel || process.env.CG_CLAUDE_MODEL || null,
     localBaseUrl: s.localBaseUrl || process.env.CG_LOCAL_LLM_BASE_URL || null,
     localModel: s.localModel || process.env.CG_LOCAL_LLM_MODEL || null,
+    localModelList: effectiveLocalModelList(),
     localApiKeySet: !!localApiKey,
     localApiKeyMasked: mask(localApiKey),
     localSavedInDb: !!(s.localBaseUrl || s.localModel),

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { githubOAuthConfigured } from "@/lib/githubOAuth";
-import { getAssistantSettings, setAssistantSettings, viewAssistantSettings } from "@/lib/settings";
+import { setAssistantSettings, viewAssistantSettings } from "@/lib/settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +46,12 @@ export async function POST(req: NextRequest) {
   }
   if (typeof body.localApiKey === "string" || body.localApiKey === null) {
     patch.localApiKey = body.localApiKey;
+  }
+  if (Array.isArray(body.localModelList)) {
+    const cleaned = body.localModelList.filter((m): m is string => typeof m === "string" && m.trim().length > 0);
+    patch.localModelList = cleaned.length > 0 ? JSON.stringify(cleaned) : null;
+  } else if (body.localModelList === null) {
+    patch.localModelList = null;
   }
 
   setAssistantSettings(patch);
