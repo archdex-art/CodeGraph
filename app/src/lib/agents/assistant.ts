@@ -22,7 +22,7 @@ import { createSdkMcpServer, query, tool, type Options, type Query, type SdkMcpT
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { buildGitToolImpls, buildWorkspaceToolImpls } from "./workspaceToolImpls";
-import { effectiveAnthropicApiKey } from "../settings";
+import { effectiveAnthropicApiKey, effectiveClaudeModel } from "../settings";
 import type { AssistantEvent } from "../types";
 
 export function aiAssistantConfigured(): boolean {
@@ -190,6 +190,7 @@ interface AssistantSession {
   toolEvents: AssistantEvent[];
   workspaceDir: string;
   apiKey: string;
+  model: string | undefined;
 }
 
 // One conversation per repo, kept alive in-process for the life of the Node
@@ -202,8 +203,9 @@ const sessions = new Map<string, AssistantSession>();
 
 function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolean): AssistantSession {
   const apiKey = effectiveAnthropicApiKey() ?? "";
+  const model = effectiveClaudeModel();
   const existing = sessions.get(repoId);
-  if (existing && existing.workspaceDir === workspaceDir && existing.apiKey === apiKey) return existing;
+  if (existing && existing.workspaceDir === workspaceDir && existing.apiKey === apiKey && existing.model === model) return existing;
   if (existing) {
     try {
       existing.query.close();
@@ -233,13 +235,17 @@ function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolea
     maxTurns: 40,
     maxBudgetUsd: 5, // safety cap for the whole (possibly multi-turn) session
     systemPrompt: SYSTEM_PROMPT(hasGit),
+    // Model alias/id resolved from the Settings page (DB) or CG_CLAUDE_MODEL
+    // env var (e.g. "opus", "sonnet", "haiku"); omitted lets the SDK use its
+    // own CLI default.
+    ...(model ? { model } : {}),
     // Explicit key resolved from the Settings page (DB) or ANTHROPIC_API_KEY
     // env var — replaces the subprocess env entirely, so spread process.env.
     env: { ...process.env, ANTHROPIC_API_KEY: apiKey },
   };
 
   const q = query({ prompt: input, options });
-  const session: AssistantSession = { query: q, input, toolEvents, workspaceDir, apiKey };
+  const session: AssistantSession = { query: q, input, toolEvents, workspaceDir, apiKey, model };
   sessions.set(repoId, session);
   return session;
 

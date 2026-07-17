@@ -3,7 +3,7 @@ import { getWorkspaceDir } from "@/lib/store";
 import { repoAccessDenied } from "@/lib/authz";
 import { aiAssistantConfigured, resetAssistantSession, sendMessage } from "@/lib/agents/assistant";
 import { localLlmConfigured, resetLocalAssistantSession, sendLocalMessage } from "@/lib/agents/localAssistant";
-import { effectiveLocalLlmConfig } from "@/lib/settings";
+import { effectiveLocalLlmConfig, effectiveClaudeModel } from "@/lib/settings";
 import type { AssistantProvider, AssistantProviders } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -16,6 +16,7 @@ function providers(): AssistantProviders {
   return { 
     claude: aiAssistantConfigured(), 
     local: local !== null,
+    claudeModel: effectiveClaudeModel() || null,
     localModel: local?.model || null,
     localBaseUrl: local?.baseUrl || null,
   };

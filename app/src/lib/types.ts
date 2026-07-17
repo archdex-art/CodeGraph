@@ -316,6 +316,7 @@ export type AssistantProvider = "claude" | "local";
 export interface AssistantProviders {
   claude: boolean;
   local: boolean;
+  claudeModel?: string | null;
   localModel?: string | null;
   localBaseUrl?: string | null;
 }

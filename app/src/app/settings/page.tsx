@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { fetchAssistantSettingsView, updateAssistantSettings } from "@/lib/api";
 import type { AssistantSettingsView } from "@/lib/settings";
-import { Loader2, Save, CheckCircle2 } from "lucide-react";
+import { Loader2, Save, CheckCircle2, Plus, X, RefreshCw } from "lucide-react";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AssistantSettingsView | null>(null);
@@ -16,7 +16,13 @@ export default function SettingsPage() {
   const [anthropicKey, setAnthropicKey] = useState("");
   const [localBaseUrl, setLocalBaseUrl] = useState("");
   const [localModel, setLocalModel] = useState("");
+  const [claudeModel, setClaudeModel] = useState("sonnet");
   const [localApiKey, setLocalApiKey] = useState("");
+  const [modelList, setModelList] = useState<string[]>([]);
+  const [newModelInput, setNewModelInput] = useState("");
+  const [discovering, setDiscovering] = useState(false);
+  const [discovered, setDiscovered] = useState<string[]>([]);
+  const [modelListError, setModelListError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAssistantSettingsView()
@@ -24,6 +30,8 @@ export default function SettingsPage() {
         setSettings(data);
         setLocalBaseUrl(data.localBaseUrl || "");
         setLocalModel(data.localModel || "");
+        setClaudeModel(data.claudeModel || "sonnet");
+        setModelList(data.localModelList || []);
         setLoading(false);
       })
       .catch((err) => {
@@ -32,15 +40,52 @@ export default function SettingsPage() {
       });
   }, []);
 
+  async function persistModelList(next: string[]) {
+    setModelListError(null);
+    try {
+      const updated = await updateAssistantSettings({ localModelList: next.length > 0 ? next : null });
+      setSettings(updated);
+      setModelList(updated.localModelList || []);
+    } catch (err) {
+      setModelListError(err instanceof Error ? err.message : "Failed to update model list");
+    }
+  }
+
+  function handleAddModel() {
+    const trimmed = newModelInput.trim();
+    if (!trimmed || modelList.includes(trimmed)) { setNewModelInput(""); return; }
+    setNewModelInput("");
+    persistModelList([...modelList, trimmed]);
+  }
+
+  function handleRemoveModel(m: string) {
+    persistModelList(modelList.filter((x) => x !== m));
+  }
+
+  async function handleDiscover() {
+    setDiscovering(true);
+    setModelListError(null);
+    try {
+      const res = await fetch("/api/settings/models?discover=true");
+      const data = await res.json() as { models?: string[] };
+      setDiscovered((data.models || []).filter((m) => !modelList.includes(m)));
+    } catch (err) {
+      setModelListError(err instanceof Error ? err.message : "Failed to reach the local model server");
+    } finally {
+      setDiscovering(false);
+    }
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setSaved(false);
     setError(null);
     try {
-      const patch: { anthropicApiKey?: string | null; localBaseUrl?: string | null; localModel?: string | null; localApiKey?: string | null } = {
+      const patch: { anthropicApiKey?: string | null; claudeModel?: string | null; localBaseUrl?: string | null; localModel?: string | null; localApiKey?: string | null } = {
         localBaseUrl: localBaseUrl || null,
         localModel: localModel || null,
+        claudeModel: claudeModel || null,
       };
       
       if (anthropicKey) patch.anthropicApiKey = anthropicKey;
@@ -144,6 +189,20 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-500 mt-1">Currently loaded from ANTHROPIC_API_KEY environment variable.</p>
               )}
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Model
+              </label>
+              <select
+                value={claudeModel}
+                onChange={(e) => setClaudeModel(e.target.value)}
+                className="w-full bg-[#1a1a1a] border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+              >
+                <option value="opus">Claude Opus (most capable)</option>
+                <option value="sonnet">Claude Sonnet (balanced)</option>
+                <option value="haiku">Claude Haiku (fastest)</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -197,6 +256,78 @@ export default function SettingsPage() {
                  </button>
                 )}
               </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-300">
+                  Manage Models <span className="text-gray-500 font-normal">(shown in the chat panel&apos;s dropdown)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleDiscover}
+                  disabled={discovering}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-white disabled:opacity-50"
+                >
+                  {discovering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  Discover from server
+                </button>
+              </div>
+
+              {modelList.length === 0 && (
+                <p className="text-xs text-gray-500 mb-2">
+                  No curated models yet — the chat dropdown will auto-fetch the server&apos;s full live list until you add at least one here.
+                </p>
+              )}
+
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {modelList.map((m) => (
+                  <span key={m} className="flex items-center gap-1 bg-[#1a1a1a] border border-white/10 rounded-full pl-2.5 pr-1 py-1 text-xs text-gray-300">
+                    {m}
+                    <button type="button" onClick={() => handleRemoveModel(m)} className="p-0.5 rounded-full hover:bg-white/10 hover:text-white text-gray-500">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newModelInput}
+                  onChange={(e) => setNewModelInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddModel(); } }}
+                  placeholder="e.g. llama-3.3-70b-versatile"
+                  className="flex-1 bg-[#1a1a1a] border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddModel}
+                  className="flex items-center gap-1 px-3 py-2 border border-white/10 rounded-md text-sm text-gray-300 hover:bg-white/5"
+                >
+                  <Plus className="w-4 h-4" /> Add
+                </button>
+              </div>
+
+              {discovered.length > 0 && (
+                <div className="mt-3 border border-white/10 rounded-md p-3 bg-black/20">
+                  <p className="text-xs text-gray-500 mb-2">Found on the server — click to add:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {discovered.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => { persistModelList([...modelList, m]); setDiscovered((prev) => prev.filter((x) => x !== m)); }}
+                        className="flex items-center gap-1 bg-[#1a1a1a] border border-white/10 rounded-full pl-2.5 pr-2 py-1 text-xs text-gray-300 hover:border-purple-500/50 hover:text-white"
+                      >
+                        <Plus className="w-3 h-3" /> {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {modelListError && <p className="text-xs text-red-400 mt-2">{modelListError}</p>}
             </div>
           </div>
         </div>

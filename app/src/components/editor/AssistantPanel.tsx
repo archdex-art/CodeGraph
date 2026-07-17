@@ -22,6 +22,14 @@ const WRITE_TOOLS: Record<string, "path" | "from-to"> = {
   delete_entry: "path",
 };
 
+// Stable Claude model aliases the Claude Agent SDK resolves to the latest
+// snapshot of each tier (see Options.model in @anthropic-ai/claude-agent-sdk).
+const CLAUDE_MODELS: Array<{ value: string; label: string }> = [
+  { value: "opus", label: "Claude Opus (most capable)" },
+  { value: "sonnet", label: "Claude Sonnet (balanced)" },
+  { value: "haiku", label: "Claude Haiku (fastest)" },
+];
+
 function pathsTouchedBy(tool: string, input: Record<string, unknown>): string[] {
   const kind = WRITE_TOOLS[tool];
   if (!kind) return [];
@@ -57,7 +65,8 @@ export function AssistantPanel({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [localModels, setLocalModels] = useState<string[]>([]);
   const [currentLocalModel, setCurrentLocalModel] = useState<string | null>(providers.localModel || null);
-  
+  const [currentClaudeModel, setCurrentClaudeModel] = useState<string>(providers.claudeModel || "sonnet");
+
   useEffect(() => {
     if (providers.local) {
       fetch('/api/settings/models').then(r => r.json()).then(d => {
@@ -72,6 +81,10 @@ export function AssistantPanel({
     if (provider === "local") {
       setCurrentLocalModel(m);
       await updateAssistantSettings({ localModel: m });
+      newChat();
+    } else {
+      setCurrentClaudeModel(m);
+      await updateAssistantSettings({ claudeModel: m });
       newChat();
     }
   }
@@ -244,9 +257,13 @@ export function AssistantPanel({
             </div>
           )
         ) : (
-          <div className="w-full bg-[#1a1a1a] border border-white/10 rounded px-2 py-1 text-[11px] text-gray-500 cursor-not-allowed">
-            Claude 3.5 Sonnet
-          </div>
+          <select
+            value={currentClaudeModel}
+            onChange={(e) => handleModelChange(e.target.value)}
+            className="w-full bg-[#1a1a1a] border border-white/10 rounded px-2 py-1 text-[11px] text-gray-300 focus:outline-none focus:border-purple-500/50"
+          >
+            {CLAUDE_MODELS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
         )}
       </div>
 
