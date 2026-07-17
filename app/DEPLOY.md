@@ -50,6 +50,8 @@ docker compose up --build          # http://localhost:4000
 | `CG_LOCAL_LLM_BASE_URL` | app runtime | unset (= local-model AI Assistant hidden) | Base URL of an OpenAI-compatible chat-completions endpoint (Ollama, LM Studio, llama.cpp `server`, vLLM, …), e.g. `http://localhost:11434/v1`. Required alongside `CG_LOCAL_LLM_MODEL` — see below. |
 | `CG_LOCAL_LLM_MODEL` | app runtime | unset | Model name/tag to request from that endpoint, e.g. `qwen2.5-coder:7b`. Required alongside `CG_LOCAL_LLM_BASE_URL`. |
 | `CG_LOCAL_LLM_API_KEY` | app runtime | unset (sends `local`) | Optional bearer token if your local server's endpoint requires one; most (Ollama, LM Studio) don't. |
+| `CG_LOCAL_ACCESS_ROOT` | app runtime | unset (= unrestricted once `CG_ALLOW_LOCAL_ACCESS` is on) | Defense-in-depth: when set, confines `/api/browse` and local-folder indexing to descendants of this directory even if `CG_ALLOW_LOCAL_ACCESS=true`, so a local-access misconfiguration can't expose the whole filesystem. |
+| `CG_FORCE_SECURE_COOKIES` | app runtime | unset (= derived from the request) | Override the session/OAuth cookies' `Secure` flag. Normally derived from `x-forwarded-proto`/the request's own scheme, not `NODE_ENV` — only set this if your proxy doesn't forward that header reliably. |
 
 ## GitHub sign-in setup (optional)
 Lets a signed-in user browse and one-click import their own repos — including private ones — instead of pasting a URL. Fully optional and off by default; skip this section if you don't need it.
@@ -102,8 +104,7 @@ An "AI Assistant" icon appears in the Editor tab's activity bar automatically on
 
 **What this grants**: nothing beyond the app's own workspace tools, for either backend. The assistant gets zero built-in Claude Code tools (`tools: []`, `strictMcpConfig: true`, `settingSources: []` in `lib/agents/assistant.ts`) and the local-model path has no built-in tools to begin with — no Bash, no raw filesystem access, no project settings/hooks/plugins, for either. Both backends' only capabilities are the same nine tools (`lib/agents/workspaceToolImpls.ts`), thin wrappers over the exact path-safe helpers the human-facing Editor already uses (`lib/workspace.ts`'s `resolveSafe`-guarded fs ops, `lib/gitops.ts`'s argv-only git wrapper) — the same traversal/injection guarantees apply regardless of which model is driving the chat. Sessions are per-repo, in-process, and never written to disk (`persistSession: false` for Claude; the local backend never had a disk-persistence path to begin with); a server restart drops all AI Assistant conversation history with no cleanup required.
 
-## Health & observability
-- `GET /api/health` → `{ status: "ok", uptime, ts }` (200). Use for LB/Docker/K8s probes.
+- `GET /api/health` → `{ status: "ok", localAccessAllowed }` (200). Use for LB/Docker/K8s probes. Deliberately excludes `uptime`/timestamps — unauthenticated reconnaissance value with no legitimate client use.
 - Jobs are persisted in SQLite; a crashed indexing job is retriable by re-submitting.
 - Indexing runs in-process (fire-and-forget). For high throughput, front with a queue (future work).
 

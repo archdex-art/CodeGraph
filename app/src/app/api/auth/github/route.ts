@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const returnTo = isSafeReturnPath(rawReturnTo) ? rawReturnTo : "/";
 
   const res = NextResponse.redirect(buildAuthorizeUrl(state, redirectUri));
-  const opts = oauthTransitCookieOptions();
+  const opts = oauthTransitCookieOptions(req);
   res.cookies.set("cg_oauth_state", state, opts);
   res.cookies.set("cg_oauth_return", returnTo, opts);
   return res;

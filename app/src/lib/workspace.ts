@@ -19,6 +19,10 @@ import type { Dirent } from "node:fs";
 import type { FsEntry } from "./types";
 
 export const MAX_EDITABLE_BYTES = 4_000_000; // 4MB — above this, treat as binary/too-large to edit
+export const MAX_WRITE_BYTES = 8_000_000; // 8MB — F011: hard cap on a single editor write/upload/create,
+// independent of MAX_EDITABLE_BYTES (which only governs reads/search truncation). No cap existed on
+// writes at all before this: any request (including anonymous, on the public bucket) could write
+// unbounded-size files repeatedly with no per-repo/global quota on a disk shared with the SQLite DB.
 
 const SKIP_DIRS: Record<string, true> = {
   ".git": true,
@@ -128,6 +132,9 @@ export function readWorkspaceFile(root: string, relPath: string): ReadFileResult
 }
 
 export function writeWorkspaceFile(root: string, relPath: string, content: string): void {
+  if (Buffer.byteLength(content, "utf8") > MAX_WRITE_BYTES) {
+    throw new WorkspacePathError(`File exceeds the ${MAX_WRITE_BYTES.toLocaleString()}-byte write limit`);
+  }
   const full = resolveSafe(root, relPath);
   mkdirSync(path.dirname(full), { recursive: true });
   writeFileSync(full, content, "utf8");
