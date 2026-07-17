@@ -17,6 +17,9 @@
 // env and still let a user override it (or vice versa: leave env unset and
 // configure everything from the UI on a self-hosted instance). Secrets are
 // never echoed back in full over the API — only a masked preview.
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import path from "node:path";
 import { db } from "./db";
 
 /** Sentinel `user_id` for "no account" — self-hosted/no sign-in, or an
@@ -190,6 +193,30 @@ export function effectiveUseClaudeSubscription(userId: number = ANONYMOUS_USER_I
   return getAssistantSettings(userId).useClaudeSubscription === "true" || process.env.CG_CLAUDE_USE_SUBSCRIPTION === "true";
 }
 
+// The Claude Code CLI persists a subscription login to `~/.claude/.credentials.json`
+// (verified by reading the strings in the actual bundled `claude` binary --
+// `@anthropic-ai/claude-agent-sdk-<platform>-<arch>/claude`), or accepts a
+// long-lived `CLAUDE_CODE_OAUTH_TOKEN` env var. On this app's Docker
+// deployment (Render), the home directory is NOT on the persistent
+// `CG_DATA_DIR` volume and there is no interactive TTY to ever run
+// `claude login` in the first place -- so a subscription login can only
+// ever exist here via `CLAUDE_CODE_OAUTH_TOKEN`. Self-hosted operators with
+// real shell access to the host running CodeGraph can still get a
+// persistent login via the credentials file.
+const CLAUDE_CREDENTIALS_PATH = path.join(homedir(), ".claude", ".credentials.json");
+
+/** Whether this exact server process has ANY real evidence a Claude
+ *  subscription login would actually work -- not just that a user checked
+ *  the "use my subscription" box. Toggling the box alone previously let
+ *  `aiAssistantConfigured()` report Claude as available even when the
+ *  server has never been authenticated, so the very first chat turn failed
+ *  deep inside the CLI with "Not logged in - Please run /login", followed
+ *  by "/login isn't available in this environment" (this SDK session is
+ *  headless/non-interactive, so the CLI can't even prompt for it). */
+export function claudeSubscriptionCredentialsAvailable(): boolean {
+  return !!process.env.CLAUDE_CODE_OAUTH_TOKEN || existsSync(CLAUDE_CREDENTIALS_PATH);
+}
+
 export interface EffectiveLocalLlmConfig {
   baseUrl: string;
   model: string;
@@ -218,6 +245,12 @@ export interface AssistantSettingsView {
   claudeModel: string | null;
   claudeModelSavedInDb: boolean;
   useClaudeSubscription: boolean;
+  /** True only when this server process has actual evidence a subscription
+   *  login would work (CLAUDE_CODE_OAUTH_TOKEN set, or a local `claude
+   *  login` credentials file) -- independent of whether the user has
+   *  toggled the checkbox on. Lets the Settings page warn when the toggle
+   *  is checked but will not actually work on this deployment. */
+  claudeSubscriptionUsable: boolean;
   localBaseUrl: string | null;
   localModel: string | null;
   localModelList: string[];
@@ -238,6 +271,7 @@ export function viewAssistantSettings(userId: number = ANONYMOUS_USER_ID): Assis
     claudeModel: s.claudeModel || process.env.CG_CLAUDE_MODEL || null,
     claudeModelSavedInDb: !!s.claudeModel,
     useClaudeSubscription: effectiveUseClaudeSubscription(userId),
+    claudeSubscriptionUsable: claudeSubscriptionCredentialsAvailable(),
     localBaseUrl: s.localBaseUrl || process.env.CG_LOCAL_LLM_BASE_URL || null,
     localModel: s.localModel || process.env.CG_LOCAL_LLM_MODEL || null,
     localModelList: effectiveLocalModelList(userId),

@@ -320,6 +320,14 @@ export default function SettingsPage() {
                 Uses your subscription&apos;s included usage instead of per-token API billing.
                 An API Key above, if set, always takes priority over this.
               </p>
+              {useSubscription && settings && !settings.claudeSubscriptionUsable && (
+                <p className="text-xs text-amber-400 mt-1.5 ml-6">
+                  ⚠ This server has no usable Claude Code login right now (no <code className="text-amber-300">CLAUDE_CODE_OAUTH_TOKEN</code>{" "}
+                  and no local <code className="text-amber-300">claude login</code> session) — starting a chat with this toggle on and no
+                  API Key set above will fail. Set an Anthropic API Key above instead, or ask the site operator to configure{" "}
+                  <code className="text-amber-300">CLAUDE_CODE_OAUTH_TOKEN</code>.
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">

@@ -43,10 +43,21 @@ describe("aiAssistantConfigured", () => {
     expect(aiAssistantConfigured()).toBe(true);
   });
 
-  it("is true with no API key when CG_CLAUDE_USE_SUBSCRIPTION=true (Claude Pro/Max login)", () => {
+  it("is still false with CG_CLAUDE_USE_SUBSCRIPTION=true alone -- toggling the box is not evidence the server can actually authenticate (this is the exact bug that produced 'Not logged in - Please run /login')", () => {
     delete process.env.ANTHROPIC_API_KEY;
     process.env.CG_CLAUDE_USE_SUBSCRIPTION = "true";
-    expect(aiAssistantConfigured()).toBe(true);
+    expect(aiAssistantConfigured()).toBe(false);
+  });
+
+  it("is true with CG_CLAUDE_USE_SUBSCRIPTION=true once CLAUDE_CODE_OAUTH_TOKEN gives real evidence of a usable login", () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    process.env.CG_CLAUDE_USE_SUBSCRIPTION = "true";
+    process.env.CLAUDE_CODE_OAUTH_TOKEN = "test-oauth-token";
+    try {
+      expect(aiAssistantConfigured()).toBe(true);
+    } finally {
+      delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
+    }
   });
 });
 
@@ -155,5 +166,21 @@ describe("assistant.ts session Options — root-container permission mode", () =
     expect(src).not.toContain("allowDangerouslySkipPermissions:"); // actual Options key, not the explanatory comment above
     expect(src).toContain("canUseTool:");
     expect(src).toContain('behavior: "allow"');
+  });
+});
+
+// Regression guard for the "Not logged in" defense-in-depth net in
+// sendMessage: a CLAUDE_CODE_OAUTH_TOKEN present at process start could
+// still be revoked mid-runtime, or a `claude login` credentials file could
+// be removed out from under a long-lived server. Without this detection,
+// the CLI's own auth-failure onboarding text ("Not logged in - Please run
+// /login", "/login isn't available in this environment") comes back as an
+// ordinary assistant text block and renders as if Claude itself said it.
+describe("assistant.ts sendMessage — CLI auth-failure text detection", () => {
+  it("still detects and redirects the exact known CLI onboarding strings to a clear error", () => {
+    const src = readFileSync(path.join(__dirname, "..", "src", "lib", "agents", "assistant.ts"), "utf8");
+    expect(src).toContain("Not logged in");
+    expect(src).toContain("isn't available in this environment");
+    expect(src).toContain("This server's Claude subscription login isn't available right now");
   });
 });
