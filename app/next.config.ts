@@ -7,9 +7,19 @@ const nextConfig: NextConfig = {
   // .next/standalone/server.js even when a parent-repo lockfile is present.
   turbopack: { root: import.meta.dirname },
   outputFileTracingRoot: import.meta.dirname,
-  // Ensure Tree-sitter WASM grammars are copied into the standalone bundle.
+  // Ensure Tree-sitter WASM grammars AND the Claude Agent SDK's platform-
+  // specific native binary package are copied into the standalone bundle.
+  // Both are resolved dynamically at runtime (tree-sitter's WASM loader,
+  // the SDK's own process.platform/arch detection) rather than through a
+  // statically-analyzable `require`, so webpack/turbopack's file tracer
+  // can't see the reference and silently drops them from `.next/standalone`
+  // — reproduced locally: without this, `.next/standalone/node_modules/
+  // @anthropic-ai/` contains only the base `claude-agent-sdk` package, no
+  // `claude-agent-sdk-<platform>-<arch>` subpackage, so the SDK's `query()`
+  // throws "Native CLI binary for <platform> not found" the moment the AI
+  // Assistant is used on ANY deployed (non-dev) instance.
   outputFileTracingIncludes: {
-    "/api/**": ["./wasm/**"],
+    "/api/**": ["./wasm/**", "./node_modules/@anthropic-ai/claude-agent-sdk-*/**"],
   },
   // node:sqlite + child_process git run only in Node route handlers.
   serverExternalPackages: ["web-tree-sitter"],
