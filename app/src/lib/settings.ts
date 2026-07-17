@@ -17,6 +17,9 @@ export interface AssistantSettings {
   localApiKey: string | null;
   /** JSON-encoded string[] of curated model ids for the local-model dropdown. */
   localModelList: string | null;
+  /** JSON-encoded LocalProviderProfile[] -- saved presets the user can switch
+   *  between with one click instead of re-typing base URL/key each time. */
+  localProviders: string | null;
 }
 
 const KEYS = {
@@ -26,6 +29,7 @@ const KEYS = {
   localModel: "assistant.localModel",
   localApiKey: "assistant.localApiKey",
   localModelList: "assistant.localModelList",
+  localProviders: "assistant.localProviders",
 } as const;
 
 function getRaw(key: string): string | null {
@@ -52,6 +56,7 @@ export function getAssistantSettings(): AssistantSettings {
     localModel: getRaw(KEYS.localModel),
     localApiKey: getRaw(KEYS.localApiKey),
     localModelList: getRaw(KEYS.localModelList),
+    localProviders: getRaw(KEYS.localProviders),
   };
 }
 
@@ -63,6 +68,68 @@ export function setAssistantSettings(patch: Partial<AssistantSettings>): void {
   if ("localModel" in patch) setRaw(KEYS.localModel, patch.localModel ?? null);
   if ("localApiKey" in patch) setRaw(KEYS.localApiKey, patch.localApiKey ?? null);
   if ("localModelList" in patch) setRaw(KEYS.localModelList, patch.localModelList ?? null);
+  if ("localProviders" in patch) setRaw(KEYS.localProviders, patch.localProviders ?? null);
+}
+
+/** A saved local-model provider preset -- name + base URL + key + curated
+ *  model list, applied to the active local-model config in one click via
+ *  `applyLocalProvider()` instead of retyping everything each time you switch. */
+export interface LocalProviderProfile {
+  id: string;
+  name: string;
+  baseUrl: string;
+  apiKey: string | null;
+  models: string[];
+}
+
+function isLocalProviderProfile(v: unknown): v is LocalProviderProfile {
+  if (!v || typeof v !== "object") return false;
+  const p = v as Record<string, unknown>;
+  return typeof p.id === "string" && typeof p.name === "string" && typeof p.baseUrl === "string"
+    && (p.apiKey === null || typeof p.apiKey === "string")
+    && Array.isArray(p.models) && p.models.every((m) => typeof m === "string");
+}
+
+/** All saved provider profiles, raw (including their API keys) -- server-side
+ *  use only. The client-facing view strips keys down to a `hasApiKey` flag. */
+export function getLocalProviders(): LocalProviderProfile[] {
+  const raw = getAssistantSettings().localProviders;
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(isLocalProviderProfile) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Creates or updates (by `id`) a saved provider profile. */
+export function saveLocalProvider(profile: LocalProviderProfile): void {
+  const list = getLocalProviders();
+  const idx = list.findIndex((p) => p.id === profile.id);
+  if (idx >= 0) list[idx] = profile;
+  else list.push(profile);
+  setAssistantSettings({ localProviders: JSON.stringify(list) });
+}
+
+export function deleteLocalProvider(id: string): void {
+  const list = getLocalProviders().filter((p) => p.id !== id);
+  setAssistantSettings({ localProviders: list.length > 0 ? JSON.stringify(list) : null });
+}
+
+/** Copies a saved profile's base URL/key/models into the active local-model
+ *  config -- the one-click "switch provider" action. Returns `false` if no
+ *  profile with that id exists. */
+export function applyLocalProvider(id: string): boolean {
+  const profile = getLocalProviders().find((p) => p.id === id);
+  if (!profile) return false;
+  setAssistantSettings({
+    localBaseUrl: profile.baseUrl,
+    localApiKey: profile.apiKey,
+    localModelList: profile.models.length > 0 ? JSON.stringify(profile.models) : null,
+    localModel: profile.models[0] ?? null,
+  });
+  return true;
 }
 
 /** The curated list of local model ids the user has explicitly added via
@@ -124,6 +191,7 @@ export interface AssistantSettingsView {
   localApiKeySet: boolean;
   localApiKeyMasked: string | null;
   localSavedInDb: boolean;
+  localProviders: Array<{ id: string; name: string; baseUrl: string; hasApiKey: boolean; models: string[] }>;
 }
 
 export function viewAssistantSettings(): AssistantSettingsView {
@@ -141,5 +209,8 @@ export function viewAssistantSettings(): AssistantSettingsView {
     localApiKeySet: !!localApiKey,
     localApiKeyMasked: mask(localApiKey),
     localSavedInDb: !!(s.localBaseUrl || s.localModel),
+    localProviders: getLocalProviders().map((p) => ({
+      id: p.id, name: p.name, baseUrl: p.baseUrl, hasApiKey: !!p.apiKey, models: p.models,
+    })),
   };
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { fetchAssistantSettingsView, updateAssistantSettings } from "@/lib/api";
 import type { AssistantSettingsView } from "@/lib/settings";
-import { Loader2, Save, CheckCircle2, Plus, X, RefreshCw } from "lucide-react";
+import { Loader2, Save, CheckCircle2, Plus, X, RefreshCw, Zap, Trash2 } from "lucide-react";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AssistantSettingsView | null>(null);
@@ -23,6 +23,9 @@ export default function SettingsPage() {
   const [discovering, setDiscovering] = useState(false);
   const [discovered, setDiscovered] = useState<string[]>([]);
   const [modelListError, setModelListError] = useState<string | null>(null);
+  const [providerName, setProviderName] = useState("");
+  const [providerBusy, setProviderBusy] = useState<string | null>(null);
+  const [providerError, setProviderError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAssistantSettingsView()
@@ -73,6 +76,56 @@ export default function SettingsPage() {
       setModelListError(err instanceof Error ? err.message : "Failed to reach the local model server");
     } finally {
       setDiscovering(false);
+    }
+  }
+
+  async function handleUseProvider(id: string) {
+    setProviderBusy(id);
+    setProviderError(null);
+    try {
+      const updated = await updateAssistantSettings({ useProviderId: id });
+      setSettings(updated);
+      setLocalBaseUrl(updated.localBaseUrl || "");
+      setLocalModel(updated.localModel || "");
+      setModelList(updated.localModelList || []);
+      setLocalApiKey("");
+    } catch (err) {
+      setProviderError(err instanceof Error ? err.message : "Failed to switch provider");
+    } finally {
+      setProviderBusy(null);
+    }
+  }
+
+  async function handleDeleteProvider(id: string) {
+    if (!confirm("Delete this saved provider profile?")) return;
+    setProviderBusy(id);
+    setProviderError(null);
+    try {
+      const updated = await updateAssistantSettings({ deleteProviderId: id });
+      setSettings(updated);
+    } catch (err) {
+      setProviderError(err instanceof Error ? err.message : "Failed to delete profile");
+    } finally {
+      setProviderBusy(null);
+    }
+  }
+
+  async function handleSaveProvider() {
+    const name = providerName.trim();
+    if (!name) { setProviderError("Enter a name for this profile"); return; }
+    if (!localBaseUrl.trim()) { setProviderError("Set a Base URL above before saving a profile"); return; }
+    setProviderBusy("__new__");
+    setProviderError(null);
+    try {
+      const updated = await updateAssistantSettings({
+        saveProvider: { name, baseUrl: localBaseUrl.trim(), apiKey: localApiKey || undefined, models: modelList },
+      });
+      setSettings(updated);
+      setProviderName("");
+    } catch (err) {
+      setProviderError(err instanceof Error ? err.message : "Failed to save profile");
+    } finally {
+      setProviderBusy(null);
     }
   }
 
@@ -212,6 +265,40 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-400 mb-6">
             Point the AI Assistant at your own local model server (Ollama, LM Studio, vLLM, etc).
           </p>
+
+          {settings && settings.localProviders.length > 0 && (
+            <div className="mb-6 space-y-2">
+              <p className="text-sm font-medium text-gray-300">Saved Providers</p>
+              {settings.localProviders.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-3 bg-[#1a1a1a] border border-white/10 rounded-md px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="text-sm text-white truncate">{p.name}</div>
+                    <div className="text-xs text-gray-500 truncate font-mono">{p.baseUrl}{p.hasApiKey ? " · has key" : ""}{p.models.length ? ` · ${p.models.length} model${p.models.length === 1 ? "" : "s"}` : ""}</div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleUseProvider(p.id)}
+                      disabled={providerBusy === p.id}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs border border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 disabled:opacity-50"
+                    >
+                      {providerBusy === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                      Use
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteProvider(p.id)}
+                      disabled={providerBusy === p.id}
+                      className="p-1.5 rounded-md border border-white/10 text-gray-500 hover:text-red-400 hover:border-red-500/30 disabled:opacity-50"
+                      title="Delete profile"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           
           <div className="space-y-4">
             <div>
@@ -328,6 +415,33 @@ export default function SettingsPage() {
               )}
 
               {modelListError && <p className="text-xs text-red-400 mt-2">{modelListError}</p>}
+            </div>
+
+            <div className="pt-2 border-t border-white/10">
+              <label className="block text-sm font-medium text-gray-300 mb-1">Save current config as a profile</label>
+              <p className="text-xs text-gray-500 mb-2">
+                Names this Base URL + API key + model list so you can switch back to it with one click, instead of retyping it.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={providerName}
+                  onChange={(e) => setProviderName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveProvider(); } }}
+                  placeholder="e.g. Groq"
+                  className="flex-1 bg-[#1a1a1a] border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveProvider}
+                  disabled={providerBusy === "__new__"}
+                  className="flex items-center gap-1 px-3 py-2 border border-white/10 rounded-md text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50"
+                >
+                  {providerBusy === "__new__" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Profile
+                </button>
+              </div>
+              {providerError && <p className="text-xs text-red-400 mt-2">{providerError}</p>}
             </div>
           </div>
         </div>
