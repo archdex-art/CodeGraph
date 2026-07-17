@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const [anthropicKey, setAnthropicKey] = useState("");
   const [localBaseUrl, setLocalBaseUrl] = useState("");
   const [localModel, setLocalModel] = useState("");
+  const [claudeModel, setClaudeModel] = useState("sonnet");
   const [localApiKey, setLocalApiKey] = useState("");
 
   useEffect(() => {
@@ -24,6 +25,7 @@ export default function SettingsPage() {
         setSettings(data);
         setLocalBaseUrl(data.localBaseUrl || "");
         setLocalModel(data.localModel || "");
+        setClaudeModel(data.claudeModel || "sonnet");
         setLoading(false);
       })
       .catch((err) => {
@@ -38,9 +40,10 @@ export default function SettingsPage() {
     setSaved(false);
     setError(null);
     try {
-      const patch: { anthropicApiKey?: string | null; localBaseUrl?: string | null; localModel?: string | null; localApiKey?: string | null } = {
+      const patch: { anthropicApiKey?: string | null; claudeModel?: string | null; localBaseUrl?: string | null; localModel?: string | null; localApiKey?: string | null } = {
         localBaseUrl: localBaseUrl || null,
         localModel: localModel || null,
+        claudeModel: claudeModel || null,
       };
       
       if (anthropicKey) patch.anthropicApiKey = anthropicKey;
@@ -143,6 +146,20 @@ export default function SettingsPage() {
               {settings?.anthropicApiKeySet && !settings.anthropicApiKeySavedInDb && (
                 <p className="text-xs text-gray-500 mt-1">Currently loaded from ANTHROPIC_API_KEY environment variable.</p>
               )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Model
+              </label>
+              <select
+                value={claudeModel}
+                onChange={(e) => setClaudeModel(e.target.value)}
+                className="w-full bg-[#1a1a1a] border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+              >
+                <option value="opus">Claude Opus (most capable)</option>
+                <option value="sonnet">Claude Sonnet (balanced)</option>
+                <option value="haiku">Claude Haiku (fastest)</option>
+              </select>
             </div>
           </div>
         </div>

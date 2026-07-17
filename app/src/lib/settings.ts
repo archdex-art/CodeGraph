@@ -11,6 +11,7 @@ import { db } from "./db";
 
 export interface AssistantSettings {
   anthropicApiKey: string | null;
+  claudeModel: string | null;
   localBaseUrl: string | null;
   localModel: string | null;
   localApiKey: string | null;
@@ -18,6 +19,7 @@ export interface AssistantSettings {
 
 const KEYS = {
   anthropicApiKey: "assistant.anthropicApiKey",
+  claudeModel: "assistant.claudeModel",
   localBaseUrl: "assistant.localBaseUrl",
   localModel: "assistant.localModel",
   localApiKey: "assistant.localApiKey",
@@ -42,6 +44,7 @@ function setRaw(key: string, value: string | null): void {
 export function getAssistantSettings(): AssistantSettings {
   return {
     anthropicApiKey: getRaw(KEYS.anthropicApiKey),
+    claudeModel: getRaw(KEYS.claudeModel),
     localBaseUrl: getRaw(KEYS.localBaseUrl),
     localModel: getRaw(KEYS.localModel),
     localApiKey: getRaw(KEYS.localApiKey),
@@ -51,6 +54,7 @@ export function getAssistantSettings(): AssistantSettings {
 /** Only touches the keys present in `patch`; pass `null`/`""` to clear one. */
 export function setAssistantSettings(patch: Partial<AssistantSettings>): void {
   if ("anthropicApiKey" in patch) setRaw(KEYS.anthropicApiKey, patch.anthropicApiKey ?? null);
+  if ("claudeModel" in patch) setRaw(KEYS.claudeModel, patch.claudeModel ?? null);
   if ("localBaseUrl" in patch) setRaw(KEYS.localBaseUrl, patch.localBaseUrl ?? null);
   if ("localModel" in patch) setRaw(KEYS.localModel, patch.localModel ?? null);
   if ("localApiKey" in patch) setRaw(KEYS.localApiKey, patch.localApiKey ?? null);
@@ -59,6 +63,12 @@ export function setAssistantSettings(patch: Partial<AssistantSettings>): void {
 /** The Anthropic API key to actually use: DB-saved value, else `ANTHROPIC_API_KEY` env var. */
 export function effectiveAnthropicApiKey(): string | undefined {
   return getAssistantSettings().anthropicApiKey || process.env.ANTHROPIC_API_KEY || undefined;
+}
+
+/** The Claude model alias/id to use (e.g. "sonnet", "opus", "haiku"), or
+ *  `undefined` to let the Claude Agent SDK fall back to its own default. */
+export function effectiveClaudeModel(): string | undefined {
+  return getAssistantSettings().claudeModel || process.env.CG_CLAUDE_MODEL || undefined;
 }
 
 export interface EffectiveLocalLlmConfig {
@@ -88,6 +98,7 @@ export interface AssistantSettingsView {
   anthropicApiKeySet: boolean;
   anthropicApiKeyMasked: string | null;
   anthropicApiKeySavedInDb: boolean;
+  claudeModel: string | null;
   localBaseUrl: string | null;
   localModel: string | null;
   localApiKeySet: boolean;
@@ -103,6 +114,7 @@ export function viewAssistantSettings(): AssistantSettingsView {
     anthropicApiKeySet: !!anthropicKey,
     anthropicApiKeyMasked: mask(anthropicKey),
     anthropicApiKeySavedInDb: !!s.anthropicApiKey,
+    claudeModel: s.claudeModel || process.env.CG_CLAUDE_MODEL || null,
     localBaseUrl: s.localBaseUrl || process.env.CG_LOCAL_LLM_BASE_URL || null,
     localModel: s.localModel || process.env.CG_LOCAL_LLM_MODEL || null,
     localApiKeySet: !!localApiKey,

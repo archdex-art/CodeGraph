@@ -35,6 +35,9 @@ export async function POST(req: NextRequest) {
   if (typeof body.anthropicApiKey === "string" || body.anthropicApiKey === null) {
     patch.anthropicApiKey = body.anthropicApiKey;
   }
+  if (typeof body.claudeModel === "string" || body.claudeModel === null) {
+    patch.claudeModel = body.claudeModel;
+  }
   if (typeof body.localBaseUrl === "string" || body.localBaseUrl === null) {
     patch.localBaseUrl = body.localBaseUrl;
   }

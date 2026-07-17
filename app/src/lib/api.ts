@@ -405,7 +405,7 @@ export async function fetchAssistantSettingsView(): Promise<AssistantSettingsVie
   return asJson<AssistantSettingsView>(res);
 }
 
-export async function updateAssistantSettings(patch: { anthropicApiKey?: string | null; localBaseUrl?: string | null; localModel?: string | null; localApiKey?: string | null }): Promise<AssistantSettingsView> {
+export async function updateAssistantSettings(patch: { anthropicApiKey?: string | null; claudeModel?: string | null; localBaseUrl?: string | null; localModel?: string | null; localApiKey?: string | null }): Promise<AssistantSettingsView> {
   const res = await fetch("/api/settings/assistant", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
