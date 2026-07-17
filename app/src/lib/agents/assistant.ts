@@ -22,7 +22,7 @@ import { createSdkMcpServer, query, tool, type Options, type Query, type SdkMcpT
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { buildGitToolImpls, buildWorkspaceToolImpls } from "./workspaceToolImpls";
-import { effectiveAnthropicApiKey, effectiveClaudeModel, effectiveUseClaudeSubscription, claudeSubscriptionCredentialsAvailable, ANONYMOUS_USER_ID } from "../settings";
+import { effectiveAnthropicApiKey, effectiveClaudeModel, effectiveUseClaudeSubscription, claudeSubscriptionCredentialsAvailable, deploymentWideCredentialsAllowed, ANONYMOUS_USER_ID } from "../settings";
 import type { AssistantEvent } from "../types";
 
 // Requires actual evidence the subscription path can work (a real
@@ -33,8 +33,17 @@ import type { AssistantEvent } from "../types";
 // never actually authenticate, and the very first turn would fail deep
 // inside the CLI ("Not logged in - Please run /login", then "/login isn't
 // available in this environment" since this is a headless SDK session).
+//
+// Also requires `deploymentWideCredentialsAllowed()`: a single
+// CLAUDE_CODE_OAUTH_TOKEN is inherently ONE Claude.ai account shared by
+// the whole server process. Without this check, on an open multi-tenant
+// deployment (GitHub sign-in configured, no owner-lock) any signed-in
+// stranger who toggled the subscription checkbox would silently chat
+// through the operator's own personal subscription -- every real account
+// must bring its own credentials there; this gate is what enforces it.
 export function aiAssistantConfigured(userId: number = ANONYMOUS_USER_ID): boolean {
-  return !!effectiveAnthropicApiKey(userId) || (effectiveUseClaudeSubscription(userId) && claudeSubscriptionCredentialsAvailable());
+  return !!effectiveAnthropicApiKey(userId)
+    || (effectiveUseClaudeSubscription(userId) && claudeSubscriptionCredentialsAvailable() && deploymentWideCredentialsAllowed());
 }
 
 const SYSTEM_PROMPT = (hasGit: boolean) =>
@@ -220,7 +229,7 @@ function sessionKey(repoId: string, userId: number): string {
 function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolean, userId: number): AssistantSession {
   const key = sessionKey(repoId, userId);
   const apiKey = effectiveAnthropicApiKey(userId) ?? "";
-  const useSubscription = !apiKey && effectiveUseClaudeSubscription(userId) && claudeSubscriptionCredentialsAvailable();
+  const useSubscription = !apiKey && effectiveUseClaudeSubscription(userId) && claudeSubscriptionCredentialsAvailable() && deploymentWideCredentialsAllowed();
   const model = effectiveClaudeModel(userId);
   const existing = sessions.get(key);
   if (

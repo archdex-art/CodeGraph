@@ -13,14 +13,37 @@
 // NULL`'s "shared public bucket" convention elsewhere in this app).
 //
 // Precedence: a value saved through the Settings UI always wins over the
-// matching env var, so an operator can ship a deployment-default key via
-// env and still let a user override it (or vice versa: leave env unset and
-// configure everything from the UI on a self-hosted instance). Secrets are
-// never echoed back in full over the API — only a masked preview.
+// matching env var. The env var itself is a CREDENTIAL-bearing fallback
+// (ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, CG_LOCAL_LLM_API_KEY/
+// BASE_URL) and is gated by `deploymentWideCredentialsAllowed()` below:
+// it's only usable on a genuinely single-operator/trusted-team deployment,
+// never as a silent shared default for arbitrary signed-in strangers or
+// anonymous visitors on an open multi-tenant deployment (every real
+// account must bring its own Claude account/key there — see that
+// function's own comment). Secrets are never echoed back in full over the
+// API — only a masked preview.
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { db } from "./db";
+import { githubOAuthConfigured, ownerLoginAllowlist } from "./githubOAuth";
+
+// Whether a deployment-wide credential (ANTHROPIC_API_KEY,
+// CLAUDE_CODE_OAUTH_TOKEN, CG_LOCAL_LLM_API_KEY/BASE_URL) may be used as a
+// fallback for a user who hasn't configured their own. True only for a
+// genuinely single-operator/trusted-team deployment: GitHub sign-in isn't
+// configured at all (nobody but the operator meaningfully uses this
+// instance), or an owner-lock allowlist is active (proxy.ts already
+// restricts the ENTIRE app to those exact accounts, so anyone who can
+// reach this code is already a trusted account, not a random stranger).
+// False on an open multi-tenant deployment (GitHub sign-in configured, no
+// owner-lock) — there, ANY signed-in or anonymous visitor could otherwise
+// silently ride on the operator's personal Claude account/API billing.
+// Every real account must bring its own credentials in that mode; see
+// each `effective*` function below for where this is enforced.
+export function deploymentWideCredentialsAllowed(): boolean {
+  return !githubOAuthConfigured() || ownerLoginAllowlist() !== null;
+}
 
 /** Sentinel `user_id` for "no account" — self-hosted/no sign-in, or an
  *  anonymous visitor. Never a real GitHub user id (those are positive). */
@@ -170,13 +193,21 @@ export function effectiveLocalModelList(userId: number = ANONYMOUS_USER_ID): str
   }
 }
 
-/** The Anthropic API key to actually use: this account's DB-saved value, else `ANTHROPIC_API_KEY` env var. */
+/** The Anthropic API key to actually use: this account's DB-saved value,
+ *  else the deployment's `ANTHROPIC_API_KEY` env var -- but ONLY when
+ *  `deploymentWideCredentialsAllowed()`. On an open multi-tenant
+ *  deployment, a user who hasn't saved their own key gets `undefined`
+ *  here, never the operator's key. */
 export function effectiveAnthropicApiKey(userId: number = ANONYMOUS_USER_ID): string | undefined {
-  return getAssistantSettings(userId).anthropicApiKey || process.env.ANTHROPIC_API_KEY || undefined;
+  const saved = getAssistantSettings(userId).anthropicApiKey;
+  if (saved) return saved;
+  return deploymentWideCredentialsAllowed() ? process.env.ANTHROPIC_API_KEY || undefined : undefined;
 }
 
 /** The Claude model alias/id to use (e.g. "sonnet", "opus", "haiku"), or
- *  `undefined` to let the Claude Agent SDK fall back to its own default. */
+ *  `undefined` to let the Claude Agent SDK fall back to its own default.
+ *  Not a credential -- a shared deployment-default model *preference* is
+ *  harmless to expose to every user, so this one is never gated. */
 export function effectiveClaudeModel(userId: number = ANONYMOUS_USER_ID): string | undefined {
   return getAssistantSettings(userId).claudeModel || process.env.CG_CLAUDE_MODEL || undefined;
 }
@@ -188,7 +219,13 @@ export function effectiveClaudeModel(userId: number = ANONYMOUS_USER_ID): string
  *  `CLAUDE_CODE_OAUTH_TOKEN` is set in its environment. CodeGraph itself
  *  never stores or sees the subscription credentials; it just skips
  *  overriding ANTHROPIC_API_KEY so the bundled Claude Code executable falls
- *  back to whatever auth it already has. */
+ *  back to whatever auth it already has. Pure user preference (the toggle
+ *  itself) -- callers that actually attempt subscription auth MUST also
+ *  check `claudeSubscriptionCredentialsAvailable() &&
+ *  deploymentWideCredentialsAllowed()`, since a `CLAUDE_CODE_OAUTH_TOKEN`
+ *  is inherently one single Claude.ai account shared by the whole server
+ *  process -- offering it to arbitrary users would mean they're all
+ *  silently chatting through the operator's own subscription. */
 export function effectiveUseClaudeSubscription(userId: number = ANONYMOUS_USER_ID): boolean {
   return getAssistantSettings(userId).useClaudeSubscription === "true" || process.env.CG_CLAUDE_USE_SUBSCRIPTION === "true";
 }
@@ -212,7 +249,15 @@ const CLAUDE_CREDENTIALS_PATH = path.join(homedir(), ".claude", ".credentials.js
  *  server has never been authenticated, so the very first chat turn failed
  *  deep inside the CLI with "Not logged in - Please run /login", followed
  *  by "/login isn't available in this environment" (this SDK session is
- *  headless/non-interactive, so the CLI can't even prompt for it). */
+ *  headless/non-interactive, so the CLI can't even prompt for it).
+ *
+ *  This is deliberately NOT gated by `deploymentWideCredentialsAllowed()`
+ *  itself -- it's a pure "does credential material exist at all" fact,
+ *  used by the Settings page's own diagnostic display regardless of who's
+ *  asking. Callers deciding whether to actually GRANT subscription auth to
+ *  a request (`aiAssistantConfigured`, session creation) apply the
+ *  multi-tenant gate on top of this, since a `CLAUDE_CODE_OAUTH_TOKEN`
+ *  represents one shared Claude.ai account for the whole process. */
 export function claudeSubscriptionCredentialsAvailable(): boolean {
   return !!process.env.CLAUDE_CODE_OAUTH_TOKEN || existsSync(CLAUDE_CREDENTIALS_PATH);
 }
@@ -223,15 +268,29 @@ export interface EffectiveLocalLlmConfig {
   apiKey: string;
 }
 
-/** The local-model endpoint to actually use, or `null` if neither the DB nor env has both a base URL and model. */
+/** The local-model endpoint to actually use, or `null` if this account has
+ *  no usable config. A deployment-wide `CG_LOCAL_LLM_BASE_URL`/`MODEL`/
+ *  `API_KEY` is the operator's own hardware/compute (or a paid API-
+ *  compatible provider) -- same sharing risk as ANTHROPIC_API_KEY, so it's
+ *  gated by `deploymentWideCredentialsAllowed()` identically. On an open
+ *  multi-tenant deployment, a user with no local-model config of their own
+ *  gets `null` here, never a silent ride on the operator's server/quota. */
 export function effectiveLocalLlmConfig(userId: number = ANONYMOUS_USER_ID): EffectiveLocalLlmConfig | null {
   const s = getAssistantSettings(userId);
-  const baseUrl = s.localBaseUrl || process.env.CG_LOCAL_LLM_BASE_URL;
-  const model = s.localModel || process.env.CG_LOCAL_LLM_MODEL;
+  const allowEnv = deploymentWideCredentialsAllowed();
+  const baseUrl = s.localBaseUrl || (allowEnv ? process.env.CG_LOCAL_LLM_BASE_URL : undefined);
+  const model = s.localModel || (allowEnv ? process.env.CG_LOCAL_LLM_MODEL : undefined);
   if (!baseUrl || !model) return null;
-  const apiKey = s.localApiKey || process.env.CG_LOCAL_LLM_API_KEY || "local";
+  const apiKey = s.localApiKey || (allowEnv ? process.env.CG_LOCAL_LLM_API_KEY : undefined) || "local";
   return { baseUrl, model, apiKey };
 }
+
+export interface EffectiveLocalLlmConfig {
+  baseUrl: string;
+  model: string;
+  apiKey: string;
+}
+
 
 function mask(secret: string | null | undefined): string | null {
   if (!secret) return null;
@@ -262,8 +321,9 @@ export interface AssistantSettingsView {
 
 export function viewAssistantSettings(userId: number = ANONYMOUS_USER_ID): AssistantSettingsView {
   const s = getAssistantSettings(userId);
-  const anthropicKey = s.anthropicApiKey || process.env.ANTHROPIC_API_KEY || null;
-  const localApiKey = s.localApiKey || process.env.CG_LOCAL_LLM_API_KEY || null;
+  const allowEnv = deploymentWideCredentialsAllowed();
+  const anthropicKey = s.anthropicApiKey || (allowEnv ? process.env.ANTHROPIC_API_KEY : undefined) || null;
+  const localApiKey = s.localApiKey || (allowEnv ? process.env.CG_LOCAL_LLM_API_KEY : undefined) || null;
   return {
     anthropicApiKeySet: !!anthropicKey,
     anthropicApiKeyMasked: mask(anthropicKey),
@@ -271,9 +331,9 @@ export function viewAssistantSettings(userId: number = ANONYMOUS_USER_ID): Assis
     claudeModel: s.claudeModel || process.env.CG_CLAUDE_MODEL || null,
     claudeModelSavedInDb: !!s.claudeModel,
     useClaudeSubscription: effectiveUseClaudeSubscription(userId),
-    claudeSubscriptionUsable: claudeSubscriptionCredentialsAvailable(),
-    localBaseUrl: s.localBaseUrl || process.env.CG_LOCAL_LLM_BASE_URL || null,
-    localModel: s.localModel || process.env.CG_LOCAL_LLM_MODEL || null,
+    claudeSubscriptionUsable: claudeSubscriptionCredentialsAvailable() && allowEnv,
+    localBaseUrl: s.localBaseUrl || (allowEnv ? process.env.CG_LOCAL_LLM_BASE_URL : undefined) || null,
+    localModel: s.localModel || (allowEnv ? process.env.CG_LOCAL_LLM_MODEL : undefined) || null,
     localModelList: effectiveLocalModelList(userId),
     localApiKeySet: !!localApiKey,
     localApiKeyMasked: mask(localApiKey),
