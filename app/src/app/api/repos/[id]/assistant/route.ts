@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceDir } from "@/lib/store";
 import { repoAccessDenied } from "@/lib/authz";
+import { getSession } from "@/lib/session";
 import { aiAssistantConfigured, resetAssistantSession, sendMessage } from "@/lib/agents/assistant";
 import { localLlmConfigured, resetLocalAssistantSession, sendLocalMessage } from "@/lib/agents/localAssistant";
-import { effectiveLocalLlmConfig, effectiveClaudeModel } from "@/lib/settings";
+import { effectiveLocalLlmConfig, effectiveClaudeModel, ANONYMOUS_USER_ID } from "@/lib/settings";
 import type { AssistantProvider, AssistantProviders } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -11,14 +12,17 @@ export const dynamic = "force-dynamic";
 
 const MAX_MESSAGE_LENGTH = 8000;
 
-function providers(): AssistantProviders {
-  const local = effectiveLocalLlmConfig();
-  return { 
-    claude: aiAssistantConfigured(), 
-    local: local !== null,
-    claudeModel: effectiveClaudeModel() || null,
-    localModel: local?.model || null,
-    localBaseUrl: local?.baseUrl || null,
+function userIdFrom(req: NextRequest): number {
+  return getSession(req)?.userId ?? ANONYMOUS_USER_ID;
+}
+
+function providers(userId: number): AssistantProviders {
+  const local = effectiveLocalLlmConfig(userId);
+  return {
+    claude: aiAssistantConfigured(userId),
+    local: !!local,
+    claudeModel: effectiveClaudeModel(userId),
+    localModel: local?.model,
   };
 }
 
@@ -28,7 +32,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const denied = repoAccessDenied(req, id);
   if (denied) return denied;
-  return NextResponse.json({ providers: providers() });
+  return NextResponse.json({ providers: providers(userIdFrom(req)) });
 }
 
 // POST /api/repos/:id/assistant  { message: string, provider?: "claude" | "local" }
@@ -55,7 +59,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: `message is too long (max ${MAX_MESSAGE_LENGTH} characters)` }, { status: 400 });
   }
 
-  const available = providers();
+  const userId = userIdFrom(req);
+  const available = providers(userId);
   const requested = body.provider === "claude" || body.provider === "local" ? body.provider : undefined;
   const provider: AssistantProvider | undefined = requested ?? (available.claude ? "claude" : available.local ? "local" : undefined);
   if (!provider || !available[provider]) {
@@ -70,7 +75,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const hasGit = ws.sourceType === "git";
-  const events = provider === "claude" ? sendMessage(id, ws.dir, hasGit, message, req.signal) : sendLocalMessage(id, ws.dir, hasGit, message, req.signal);
+  const events = provider === "claude"
+    ? sendMessage(id, ws.dir, hasGit, message, userId, req.signal)
+    : sendLocalMessage(id, ws.dir, hasGit, message, userId, req.signal);
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -103,7 +110,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params;
   const denied = repoAccessDenied(req, id);
   if (denied) return denied;
-  resetAssistantSession(id);
-  resetLocalAssistantSession(id);
+  const userId = userIdFrom(req);
+  resetAssistantSession(id, userId);
+  resetLocalAssistantSession(id, userId);
   return NextResponse.json({ ok: true });
 }

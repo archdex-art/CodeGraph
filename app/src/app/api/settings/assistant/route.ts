@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { githubOAuthConfigured } from "@/lib/githubOAuth";
-import { deleteLocalProvider, saveLocalProvider, setAssistantSettings, applyLocalProvider, viewAssistantSettings } from "@/lib/settings";
+import { deleteLocalProvider, saveLocalProvider, setAssistantSettings, applyLocalProvider, viewAssistantSettings, ANONYMOUS_USER_ID } from "@/lib/settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,16 +14,26 @@ function unauthorized(req: NextRequest): NextResponse | null {
   return null;
 }
 
+// Every value here is scoped to the calling account: `userId` derives from
+// the signed-in session (falling back to the shared ANONYMOUS_USER_ID
+// bucket only when GitHub sign-in isn't configured at all, or the
+// deployment is genuinely unauthenticated). A saved key/model/profile is
+// therefore visible and editable only from the GitHub account that saved
+// it -- never a different signed-in user, never overwritten by one.
+function userIdFrom(req: NextRequest): number {
+  return getSession(req)?.userId ?? ANONYMOUS_USER_ID;
+}
+
 export async function GET(req: NextRequest) {
   const denied = unauthorized(req);
   if (denied) return denied;
-  return NextResponse.json(viewAssistantSettings());
+  return NextResponse.json(viewAssistantSettings(userIdFrom(req)));
 }
 
 export async function POST(req: NextRequest) {
   const denied = unauthorized(req);
   if (denied) return denied;
-
+  const userId = userIdFrom(req);
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -75,19 +85,19 @@ export async function POST(req: NextRequest) {
       baseUrl,
       apiKey: typeof p.apiKey === "string" && p.apiKey ? p.apiKey : null,
       models,
-    });
+    }, userId);
   }
   if (typeof body.deleteProviderId === "string") {
-    deleteLocalProvider(body.deleteProviderId);
+    deleteLocalProvider(body.deleteProviderId, userId);
   }
   if (typeof body.useProviderId === "string") {
-    if (!applyLocalProvider(body.useProviderId)) {
+    if (!applyLocalProvider(body.useProviderId, userId)) {
       return NextResponse.json({ error: "Provider profile not found" }, { status: 404 });
     }
   }
 
-  setAssistantSettings(patch);
+  setAssistantSettings(patch, userId);
 
   // Return updated view
-  return NextResponse.json(viewAssistantSettings());
+  return NextResponse.json(viewAssistantSettings(userId));
 }

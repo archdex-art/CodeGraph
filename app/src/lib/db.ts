@@ -58,8 +58,10 @@ function init(): DatabaseSync {
     );
     CREATE INDEX IF NOT EXISTS idx_trash_repo ON trash(repo_id, deleted_at);
     CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
+      key TEXT NOT NULL,
+      user_id INTEGER NOT NULL DEFAULT 0,
+      value TEXT NOT NULL,
+      PRIMARY KEY (key, user_id)
     );
     CREATE INDEX IF NOT EXISTS idx_repos_owner ON repos(owner_id);
   `);
@@ -77,6 +79,30 @@ function init(): DatabaseSync {
   if (!cols.has("save_mode")) db.exec("ALTER TABLE repos ADD COLUMN save_mode TEXT NOT NULL DEFAULT 'local'");
   if (!cols.has("owner_id")) db.exec("ALTER TABLE repos ADD COLUMN owner_id INTEGER");
   if (!cols.has("churn_by_file")) db.exec(`ALTER TABLE repos ADD COLUMN churn_by_file TEXT DEFAULT '{}'`);
+  // Migrate the settings table from a single global row-per-key (shared by
+  // every visitor) to per-account rows keyed by (key, user_id) — user_id=0
+  // is the "no account" bucket (self-hosted/no GitHub sign-in, or an
+  // anonymous visitor on a deployment with sign-in configured), matching
+  // the same owner_id=NULL "shared public bucket" convention used for
+  // repos elsewhere. SQLite can't ALTER a PRIMARY KEY in place, so rebuild:
+  // pre-existing rows (all implicitly global before this migration) become
+  // user_id=0 rows, preserving today's config for whoever relied on it.
+  const settingsCols = new Set(
+    (db.prepare("PRAGMA table_info(settings)").all() as Array<{ name: string }>).map((c) => c.name)
+  );
+  if (!settingsCols.has("user_id")) {
+    db.exec(`
+      ALTER TABLE settings RENAME TO settings_pre_peruser;
+      CREATE TABLE settings (
+        key TEXT NOT NULL,
+        user_id INTEGER NOT NULL DEFAULT 0,
+        value TEXT NOT NULL,
+        PRIMARY KEY (key, user_id)
+      );
+      INSERT INTO settings (key, user_id, value) SELECT key, 0, value FROM settings_pre_peruser;
+      DROP TABLE settings_pre_peruser;
+    `);
+  }
   return db;
 }
 

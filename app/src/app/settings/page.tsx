@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchAssistantSettingsView, updateAssistantSettings } from "@/lib/api";
+import { fetchAssistantSettingsView, updateAssistantSettings, fetchMe, type AuthMe } from "@/lib/api";
 import type { AssistantSettingsView } from "@/lib/settings";
-import { Loader2, Save, CheckCircle2, Plus, X, RefreshCw, Zap, Trash2 } from "lucide-react";
+import { Loader2, Save, CheckCircle2, Plus, X, RefreshCw, Zap, Trash2, User, LogIn } from "lucide-react";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AssistantSettingsView | null>(null);
+  const [me, setMe] = useState<AuthMe | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -44,6 +45,7 @@ export default function SettingsPage() {
         setError(err.message || "Failed to load settings");
         setLoading(false);
       });
+    fetchMe().then(setMe).catch(() => {});
   }, []);
 
   async function persistModelList(next: string[]) {
@@ -201,6 +203,19 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleClearClaudeModel() {
+    setSaving(true);
+    try {
+      const updated = await updateAssistantSettings({ claudeModel: null });
+      setSettings(updated);
+      setClaudeModel(updated.claudeModel || "sonnet");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto p-8 flex items-center justify-center">
@@ -221,8 +236,31 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-8 pb-24">
-      <h1 className="text-2xl font-semibold text-white mb-6">Settings</h1>
-      
+      <h1 className="text-2xl font-semibold text-white mb-2">Settings</h1>
+
+      {me?.githubAuthEnabled && (
+        <div className={`mb-6 flex items-start gap-2.5 rounded-md border px-3 py-2.5 text-xs ${
+          me.user ? "border-purple-500/20 bg-purple-500/5 text-purple-300" : "border-amber-500/20 bg-amber-500/5 text-amber-300"
+        }`}>
+          {me.user ? <User className="w-3.5 h-3.5 shrink-0 mt-0.5" /> : <LogIn className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
+          {me.user ? (
+            <span>
+              Signed in as <strong>{me.user.login}</strong> — everything below is saved to your account only, never
+              shared with or visible to any other GitHub account on this deployment.
+            </span>
+          ) : (
+            <span>
+              You&apos;re not signed in with GitHub. Settings saved now go to a shared configuration anyone using this
+              deployment can see and overwrite.{" "}
+              <a href="/api/auth/github?returnTo=/settings" className="underline hover:text-amber-200">
+                Sign in with GitHub
+              </a>{" "}
+              first to keep your API key and model choices private to your own account.
+            </span>
+          )}
+        </div>
+      )}
+
       <form onSubmit={handleSave} className="space-y-8">
         
         {/* Claude Section */}
@@ -287,15 +325,31 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-300 mb-1">
                 Model
               </label>
-              <select
-                value={claudeModel}
-                onChange={(e) => setClaudeModel(e.target.value)}
-                className="w-full bg-[#1a1a1a] border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
-              >
-                <option value="opus">Claude Opus (most capable)</option>
-                <option value="sonnet">Claude Sonnet (balanced)</option>
-                <option value="haiku">Claude Haiku (fastest)</option>
-              </select>
+              <div className="flex gap-2">
+                <select
+                  value={claudeModel}
+                  onChange={(e) => setClaudeModel(e.target.value)}
+                  className="flex-1 bg-[#1a1a1a] border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                >
+                  <option value="opus">Claude Opus (most capable)</option>
+                  <option value="sonnet">Claude Sonnet (balanced)</option>
+                  <option value="haiku">Claude Haiku (fastest)</option>
+                </select>
+                {settings?.claudeModelSavedInDb && (
+                  <button
+                    type="button"
+                    onClick={handleClearClaudeModel}
+                    className="px-3 py-2 border border-white/10 rounded-md text-sm text-gray-400 hover:text-white hover:bg-white/5"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {settings?.claudeModelSavedInDb
+                  ? "Saved to your account — click Save Settings below after changing it, or Clear to fall back to the deployment default."
+                  : "Using the deployment default. Pick a model and click Save Settings below to save it to your account."}
+              </p>
             </div>
           </div>
         </div>
