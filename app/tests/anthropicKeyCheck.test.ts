@@ -1,8 +1,17 @@
 // Regression tests for verifyAnthropicApiKey (closes the "Invalid API key"
 // gap: previously any string was accepted and persisted with zero
 // validation, only failing deep inside a real chat turn against Anthropic).
-// Also proves the /api/settings/assistant route actually rejects a
-// confirmed-bad key BEFORE ever writing it to the settings table.
+//
+// Also locks in the fix for a real, shipped regression: the first version
+// of this check verified against GET /v1/models (a metadata/listing
+// endpoint). Anthropic supports scoped/restricted API keys that can work
+// perfectly for chat completions while lacking permission to list models --
+// so a fully valid, working key could get a false 403 there and be
+// silently rejected at save time, meaning a real key could no longer be
+// saved at all. This file now verifies the check calls POST /v1/messages
+// (the exact endpoint the real chat feature uses) and only ever blocks a
+// save on a confirmed 401 -- everything else, including 403, is treated as
+// "not evidence the key is bad".
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -27,19 +36,27 @@ describe("verifyAnthropicApiKey", () => {
     global.fetch = originalFetch;
   });
 
-  it("reports ok:true when Anthropic accepts the key (200)", async () => {
+  it("calls POST /v1/messages (NOT /v1/models) with the exact same auth headers the real chat feature sends", async () => {
     global.fetch = vi.fn(async (url: string, init?: RequestInit) => {
-      expect(url).toBe("https://api.anthropic.com/v1/models?limit=1");
+      expect(url).toBe("https://api.anthropic.com/v1/messages");
+      expect(init?.method).toBe("POST");
       expect((init?.headers as Record<string, string>)["x-api-key"]).toBe("sk-ant-real-key");
       expect((init?.headers as Record<string, string>)["anthropic-version"]).toBe("2023-06-01");
-      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+      return new Response(JSON.stringify({ type: "error", error: { type: "invalid_request_error", message: "model: Field required" } }), { status: 400 });
     }) as unknown as typeof fetch;
 
     const result = await verifyAnthropicApiKey("sk-ant-real-key");
     expect(result.ok).toBe(true);
   });
 
-  it("reports ok:false reason:invalid when Anthropic returns 401 (this IS the 'Invalid API key' case)", async () => {
+  it("reports ok:true when Anthropic returns the expected 400 for the deliberately-empty body (proves auth passed)", async () => {
+    global.fetch = vi.fn(async () =>
+      new Response(JSON.stringify({ error: { message: "model: Field required" } }), { status: 400 })
+    ) as unknown as typeof fetch;
+    expect((await verifyAnthropicApiKey("sk-ant-real-working-key")).ok).toBe(true);
+  });
+
+  it("reports ok:false reason:invalid ONLY on a confirmed 401 (this IS the 'Invalid API key' case)", async () => {
     global.fetch = vi.fn(async () =>
       new Response(JSON.stringify({ error: { message: "invalid x-api-key" } }), { status: 401 })
     ) as unknown as typeof fetch;
@@ -52,11 +69,10 @@ describe("verifyAnthropicApiKey", () => {
     }
   });
 
-  it("reports ok:false reason:invalid on 403 too", async () => {
+  it("does NOT reject on 403 -- a scoped/restricted key can legitimately lack unrelated permissions without being broken for chat (this is the exact false-positive the /v1/models version had)", async () => {
     global.fetch = vi.fn(async () => new Response(JSON.stringify({}), { status: 403 })) as unknown as typeof fetch;
-    const result = await verifyAnthropicApiKey("sk-ant-forbidden");
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toBe("invalid");
+    const result = await verifyAnthropicApiKey("sk-ant-scoped-but-working-key");
+    expect(result.ok).toBe(true);
   });
 
   it("does NOT treat a rate-limit (429) or server error (500) as an invalid key", async () => {
@@ -77,7 +93,6 @@ describe("verifyAnthropicApiKey", () => {
 
 describe("POST /api/settings/assistant rejects a confirmed-invalid key before persisting it", () => {
   const originalFetch = global.fetch;
-  const USER_ID = 9001;
   afterEach(() => {
     global.fetch = originalFetch;
   });
@@ -90,13 +105,6 @@ describe("POST /api/settings/assistant rejects a confirmed-invalid key before pe
     });
   }
 
-  beforeEach(() => {
-    // GitHub OAuth isn't configured in this test env, so unauthorized() is a
-    // no-op and every request lands in the ANONYMOUS_USER_ID bucket via
-    // userIdFrom(req) -- fine, this suite tests the verification gate, not
-    // the account-scoping gate (already covered by settings.test.ts).
-  });
-
   it("rejects a key Anthropic returns 401 for, and never writes it to the DB", async () => {
     global.fetch = vi.fn(async () =>
       new Response(JSON.stringify({ error: { message: "invalid x-api-key" } }), { status: 401 })
@@ -107,12 +115,19 @@ describe("POST /api/settings/assistant rejects a confirmed-invalid key before pe
     const data = await res.json();
     expect(data.error).toContain("invalid x-api-key");
 
-    // The anonymous bucket must not have picked up the rejected key.
     expect(getAssistantSettings(0).anthropicApiKey).toBeNull();
   });
 
-  it("accepts and persists a key Anthropic returns 200 for", async () => {
-    global.fetch = vi.fn(async () => new Response(JSON.stringify({ data: [] }), { status: 200 })) as unknown as typeof fetch;
+  it("accepts and persists a real key even when Anthropic returns 403 on this check (the exact regression that used to silently break saving)", async () => {
+    global.fetch = vi.fn(async () => new Response(JSON.stringify({}), { status: 403 })) as unknown as typeof fetch;
+
+    const res = await settingsPost(postRequest({ anthropicApiKey: "sk-ant-SCOPED-BUT-VALID-KEY" }));
+    expect(res.status).toBe(200);
+    expect(getAssistantSettings(0).anthropicApiKey).toBe("sk-ant-SCOPED-BUT-VALID-KEY");
+  });
+
+  it("accepts and persists a key Anthropic's expected 400 (empty-body validation error) confirms is authenticated", async () => {
+    global.fetch = vi.fn(async () => new Response(JSON.stringify({ error: { message: "model: Field required" } }), { status: 400 })) as unknown as typeof fetch;
 
     const res = await settingsPost(postRequest({ anthropicApiKey: "sk-ant-GOOD-KEY" }));
     expect(res.status).toBe(200);
