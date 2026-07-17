@@ -54,7 +54,8 @@ export function AssistantPanel({
   onMutated: () => void;
   onClose?: () => void;
 }) {
-  const [provider, setProvider] = useState<AssistantProvider>(providers.claude ? "claude" : "local");
+  const [providerOverride, setProviderOverride] = useState<AssistantProvider | null>(null);
+  const provider: AssistantProvider = providerOverride ?? (providers.claude ? "claude" : "local");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -64,8 +65,14 @@ export function AssistantPanel({
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [localModels, setLocalModels] = useState<string[]>([]);
-  const [currentLocalModel, setCurrentLocalModel] = useState<string | null>(providers.localModel || null);
-  const [currentClaudeModel, setCurrentClaudeModel] = useState<string>(providers.claudeModel || "sonnet");
+  // Model selection follows whatever the server currently reports until the
+  // user explicitly picks one in this session -- avoids ever needing to
+  // "correct" stale local state once `providers` (fetched asynchronously by
+  // the parent, after this panel's own first render) resolves.
+  const [localModelOverride, setLocalModelOverride] = useState<string | null>(null);
+  const currentLocalModel = localModelOverride ?? providers.localModel ?? null;
+  const [claudeModelOverride, setClaudeModelOverride] = useState<string | null>(null);
+  const currentClaudeModel = claudeModelOverride ?? providers.claudeModel ?? "sonnet";
 
   useEffect(() => {
     if (providers.local) {
@@ -79,11 +86,11 @@ export function AssistantPanel({
 
   async function handleModelChange(m: string) {
     if (provider === "local") {
-      setCurrentLocalModel(m);
+      setLocalModelOverride(m);
       await updateAssistantSettings({ localModel: m });
       newChat();
     } else {
-      setCurrentClaudeModel(m);
+      setClaudeModelOverride(m);
       await updateAssistantSettings({ claudeModel: m });
       newChat();
     }
@@ -185,7 +192,7 @@ export function AssistantPanel({
 
   function switchProvider(next: AssistantProvider) {
     if (next === provider) return;
-    setProvider(next);
+    setProviderOverride(next);
     newChat(); // a Claude and a local-model conversation are unrelated histories
   }
 
