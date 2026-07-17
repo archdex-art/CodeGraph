@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { githubOAuthConfigured } from "@/lib/githubOAuth";
 import { deleteLocalProvider, saveLocalProvider, setAssistantSettings, applyLocalProvider, viewAssistantSettings, ANONYMOUS_USER_ID } from "@/lib/settings";
+import { verifyAnthropicApiKey } from "@/lib/anthropicKeyCheck";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +46,18 @@ export async function POST(req: NextRequest) {
   
   if (typeof body.anthropicApiKey === "string" || body.anthropicApiKey === null) {
     patch.anthropicApiKey = body.anthropicApiKey;
+  }
+  // Verify a newly pasted Anthropic key against Anthropic's own API before
+  // ever persisting it -- previously any string was accepted silently and
+  // only failed deep inside a real chat turn ("Invalid API key"), with no
+  // way to tell a CodeGraph bug from a bad paste. A confirmed-invalid key
+  // (401/403) is rejected here with Anthropic's own error text; a network
+  // failure verifying it is NOT evidence the key is bad, so it still saves.
+  if (typeof patch.anthropicApiKey === "string" && patch.anthropicApiKey.trim()) {
+    const check = await verifyAnthropicApiKey(patch.anthropicApiKey.trim());
+    if (!check.ok && check.reason === "invalid") {
+      return NextResponse.json({ error: `Anthropic rejected this API key: ${check.message}` }, { status: 400 });
+    }
   }
   if (typeof body.claudeModel === "string" || body.claudeModel === null) {
     patch.claudeModel = body.claudeModel;
