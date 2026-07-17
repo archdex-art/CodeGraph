@@ -10,6 +10,7 @@ import {
   duplicateEntry,
   resolveSafe,
   WorkspacePathError,
+  MAX_WRITE_BYTES,
 } from "@/lib/workspace";
 import { moveToTrash } from "@/lib/trash";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -77,12 +78,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ ok: true });
     }
     if (op === "upload") {
-          if (typeof contentBase64 !== "string") return NextResponse.json({ error: "Missing contentBase64" }, { status: 400 });
-          const full = resolveSafe(ws.dir, relPath);
-          mkdirSync(path.dirname(full), { recursive: true });
-          writeFileSync(full, Buffer.from(contentBase64, "base64"));
-          return NextResponse.json({ ok: true });
-        }
+      if (typeof contentBase64 !== "string") return NextResponse.json({ error: "Missing contentBase64" }, { status: 400 });
+      // F011: base64 is ~4/3 the size of the decoded bytes; cap the encoded
+      // length first so we reject oversized payloads before the (cheaper
+      // but still allocating) decode step.
+      if (contentBase64.length > Math.ceil((MAX_WRITE_BYTES * 4) / 3)) {
+        return NextResponse.json({ error: `File exceeds the ${MAX_WRITE_BYTES.toLocaleString()}-byte write limit` }, { status: 400 });
+      }
+      const full = resolveSafe(ws.dir, relPath);
+      const bytes = Buffer.from(contentBase64, "base64");
+      if (bytes.length > MAX_WRITE_BYTES) {
+        return NextResponse.json({ error: `File exceeds the ${MAX_WRITE_BYTES.toLocaleString()}-byte write limit` }, { status: 400 });
+      }
+      mkdirSync(path.dirname(full), { recursive: true });
+      writeFileSync(full, bytes);
+      return NextResponse.json({ ok: true });
+    }
     if (op === "create") {
       createEntry(ws.dir, relPath, type === "dir" ? "dir" : "file");
       return NextResponse.json({ ok: true });

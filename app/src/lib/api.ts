@@ -5,8 +5,6 @@ import type { FixResult } from "./agents/executor-types";
 
 export interface HealthStatus {
   status: string;
-  uptime: number;
-  ts: number;
   localAccessAllowed: boolean;
 }
 

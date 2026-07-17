@@ -5,7 +5,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 const exec = promisify(execFile);
 import type { RepoDetail } from "../types";
-import { cloneRepo, resolveLocalDir, indexRepo, cleanup } from "../indexer";
+import { cloneRepo, resolveLocalDir, indexRepo, cleanup, redactCredentials } from "../indexer";
 import { isGithubHost } from "../gitops";
 import { FIXERS } from "./fixers";
 import type { ExecutionStep, FileEdit, FixResult, PRDraft } from "./executor-types";
@@ -227,7 +227,11 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
         }
         rec("record", "Pushed branch and opened GitHub PR", true, t);
       } catch (err) {
-        console.warn("Failed to open PR:", err);
+        // F017: execFile rejections embed the full argv — including the
+        // token-bearing remoteUrl set via `git remote set-url` above — in
+        // `.message`/`.cmd`. Redact before it ever reaches a log line.
+        const safeErr = err instanceof Error ? redactCredentials(err.message) : redactCredentials(String(err));
+        console.warn("Failed to open PR:", safeErr);
         rec("record", "Failed to push or open PR", false, t);
       }
     } else {
@@ -251,7 +255,7 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
         : "Fixes applied but verification failed (score regressed) — PR withheld.",
     };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = redactCredentials(e instanceof Error ? e.message : String(e));
     rec("record", `Executor error: ${msg}`, false, now());
     return {
       ok: false, applied: 0, filesChanged: 0, edits: [], scoreBefore: repo.score ?? 0, scoreAfter: repo.score ?? 0,

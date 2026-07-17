@@ -13,21 +13,28 @@ const nextConfig: NextConfig = {
   },
   // node:sqlite + child_process git run only in Node route handlers.
   serverExternalPackages: ["web-tree-sitter"],
-  // Baseline security headers. CSP is intentionally permissive on
-  // script/style/worker sources — Monaco's editor loads from a CDN at
+  // Baseline security headers. script/style/worker-src stay permissive on
+  // 'unsafe-inline'/'unsafe-eval' — Monaco's editor loads from a CDN at
   // runtime (see CodeEditor.tsx) and Next.js injects inline hydration
-  // scripts, so a strict nonce-based policy isn't safe to ship blind here.
+  // scripts, so a strict nonce-based policy isn't safe to ship blind here
+  // (see docs/AUDIT_2026-07-12.md F020, deliberately deferred — needs a
+  // dedicated migration + telemetry pass, not a blind tightening).
   // What this DOES lock down for real: clickjacking (frame-ancestors),
-  // arbitrary plugin/object embeds, and MIME-sniffing.
+  // arbitrary plugin/object embeds, MIME-sniffing, and (F021) the CDN
+  // trust boundary — jsdelivr is a public CDN serving arbitrary npm/GitHub
+  // packages, so each allowance is scoped to the one path prefix
+  // (`/npm/monaco-editor/`) `@monaco-editor/react`'s default loader
+  // actually fetches from, not jsdelivr's entire catalog.
   async headers() {
+    const MONACO_CDN = "https://cdn.jsdelivr.net/npm/monaco-editor/";
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net",
-      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-      "font-src 'self' https://cdn.jsdelivr.net data:",
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${MONACO_CDN}`,
+      `style-src 'self' 'unsafe-inline' ${MONACO_CDN}`,
+      `font-src 'self' ${MONACO_CDN} data:`,
       "worker-src 'self' blob:",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://cdn.jsdelivr.net",
+      `connect-src 'self' ${MONACO_CDN}`,
       "object-src 'none'",
       "base-uri 'self'",
       "frame-ancestors 'none'",
