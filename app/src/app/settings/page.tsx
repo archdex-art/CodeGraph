@@ -314,19 +314,26 @@ export default function SettingsPage() {
                 </span>
               </label>
               <p className="text-xs text-gray-500 mt-1.5 ml-6">
-                Only works if the machine running CodeGraph already has Claude Code logged in
-                (run <code className="text-gray-400">claude login</code> in a terminal there once), or has{" "}
-                <code className="text-gray-400">CLAUDE_CODE_OAUTH_TOKEN</code> set in its environment.
-                Uses your subscription&apos;s included usage instead of per-token API billing.
-                An API Key above, if set, always takes priority over this.
+                Uses your subscription&apos;s included usage instead of per-token API billing. An API Key above, if set, always
+                takes priority over this.
               </p>
               {useSubscription && settings && !settings.claudeSubscriptionUsable && (
-                <p className="text-xs text-amber-400 mt-1.5 ml-6">
-                  ⚠ This server has no usable Claude Code login right now (no <code className="text-amber-300">CLAUDE_CODE_OAUTH_TOKEN</code>{" "}
-                  and no local <code className="text-amber-300">claude login</code> session) — starting a chat with this toggle on and no
-                  API Key set above will fail. Set an Anthropic API Key above instead, or ask the site operator to configure{" "}
-                  <code className="text-amber-300">CLAUDE_CODE_OAUTH_TOKEN</code>.
-                </p>
+                <div className="text-xs text-amber-400 mt-1.5 ml-6 space-y-1.5">
+                  <p>⚠ This server has no usable Claude Code login right now — starting a chat with this toggle on and no API Key set above will fail.</p>
+                  <p className="text-gray-400">
+                    To actually use your subscription instead of an API key, on <strong className="text-gray-300">your own computer</strong>{" "}
+                    (not this server) run:
+                  </p>
+                  <pre className="bg-black/40 border border-white/10 rounded px-2 py-1.5 text-amber-300 font-mono overflow-x-auto">
+                    npx @anthropic-ai/claude-code setup-token
+                  </pre>
+                  <p className="text-gray-400">
+                    This opens a browser to sign in with your Claude Pro/Max/Team account and prints a long-lived (1 year)
+                    token. Set that as <code className="text-amber-300">CLAUDE_CODE_OAUTH_TOKEN</code> in this deployment&apos;s
+                    environment (e.g. the Render dashboard&apos;s Environment tab) and redeploy — the server itself never needs
+                    an interactive login, only that one token.
+                  </p>
+                </div>
               )}
             </div>
             <div>
