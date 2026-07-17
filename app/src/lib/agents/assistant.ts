@@ -22,11 +22,19 @@ import { createSdkMcpServer, query, tool, type Options, type Query, type SdkMcpT
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { buildGitToolImpls, buildWorkspaceToolImpls } from "./workspaceToolImpls";
-import { effectiveAnthropicApiKey, effectiveClaudeModel, effectiveUseClaudeSubscription, ANONYMOUS_USER_ID } from "../settings";
+import { effectiveAnthropicApiKey, effectiveClaudeModel, effectiveUseClaudeSubscription, claudeSubscriptionCredentialsAvailable, ANONYMOUS_USER_ID } from "../settings";
 import type { AssistantEvent } from "../types";
 
+// Requires actual evidence the subscription path can work (a real
+// CLAUDE_CODE_OAUTH_TOKEN or `claude login` credentials file), not just
+// that the user checked "use my subscription" -- see
+// `claudeSubscriptionCredentialsAvailable()` in settings.ts. Otherwise the
+// Claude tab would silently appear "configured" for a session that can
+// never actually authenticate, and the very first turn would fail deep
+// inside the CLI ("Not logged in - Please run /login", then "/login isn't
+// available in this environment" since this is a headless SDK session).
 export function aiAssistantConfigured(userId: number = ANONYMOUS_USER_ID): boolean {
-  return !!effectiveAnthropicApiKey(userId) || effectiveUseClaudeSubscription(userId);
+  return !!effectiveAnthropicApiKey(userId) || (effectiveUseClaudeSubscription(userId) && claudeSubscriptionCredentialsAvailable());
 }
 
 const SYSTEM_PROMPT = (hasGit: boolean) =>
@@ -212,7 +220,7 @@ function sessionKey(repoId: string, userId: number): string {
 function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolean, userId: number): AssistantSession {
   const key = sessionKey(repoId, userId);
   const apiKey = effectiveAnthropicApiKey(userId) ?? "";
-  const useSubscription = !apiKey && effectiveUseClaudeSubscription(userId);
+  const useSubscription = !apiKey && effectiveUseClaudeSubscription(userId) && claudeSubscriptionCredentialsAvailable();
   const model = effectiveClaudeModel(userId);
   const existing = sessions.get(key);
   if (
@@ -333,7 +341,25 @@ export async function* sendMessage(
       if (msg.type === "assistant") {
         const blocks = (msg.message.content ?? []) as Array<{ type: string; text?: string }>;
         for (const block of blocks) {
-          if (block.type === "text" && block.text) yield { kind: "text", text: block.text };
+          if (block.type !== "text" || !block.text) continue;
+          // Defense-in-depth against a credential going bad mid-runtime
+          // (e.g. a CLAUDE_CODE_OAUTH_TOKEN revoked after this process
+          // started, or a `claude login` file removed): the CLI's own
+          // onboarding/auth-failure banners ("Not logged in", "/login
+          // isn't available in this environment") come back as ordinary
+          // assistant text blocks, not thrown errors -- without this they'd
+          // render as if Claude actually replied that to the user's
+          // message. `aiAssistantConfigured()`'s credential gate prevents
+          // this in the normal case; this catches the rest.
+          if (/^Not logged in\b/.test(block.text) || /isn't available in this environment\.?$/.test(block.text)) {
+            sessions.delete(key);
+            yield {
+              kind: "error",
+              message: "This server's Claude subscription login isn't available right now. Set an Anthropic API key in Settings instead.",
+            };
+            return;
+          }
+          yield { kind: "text", text: block.text };
         }
       } else if (msg.type === "result") {
         if (msg.subtype === "success") {
