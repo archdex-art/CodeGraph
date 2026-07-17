@@ -12,6 +12,10 @@ import { db } from "./db";
 export interface AssistantSettings {
   anthropicApiKey: string | null;
   claudeModel: string | null;
+  /** "true" to authenticate the Claude backend via a Claude Pro/Max/Team
+   *  subscription login (`claude login` / CLAUDE_CODE_OAUTH_TOKEN on the
+   *  server) instead of a pay-per-token Anthropic API key. */
+  useClaudeSubscription: string | null;
   localBaseUrl: string | null;
   localModel: string | null;
   localApiKey: string | null;
@@ -25,6 +29,7 @@ export interface AssistantSettings {
 const KEYS = {
   anthropicApiKey: "assistant.anthropicApiKey",
   claudeModel: "assistant.claudeModel",
+  useClaudeSubscription: "assistant.useClaudeSubscription",
   localBaseUrl: "assistant.localBaseUrl",
   localModel: "assistant.localModel",
   localApiKey: "assistant.localApiKey",
@@ -52,6 +57,7 @@ export function getAssistantSettings(): AssistantSettings {
   return {
     anthropicApiKey: getRaw(KEYS.anthropicApiKey),
     claudeModel: getRaw(KEYS.claudeModel),
+    useClaudeSubscription: getRaw(KEYS.useClaudeSubscription),
     localBaseUrl: getRaw(KEYS.localBaseUrl),
     localModel: getRaw(KEYS.localModel),
     localApiKey: getRaw(KEYS.localApiKey),
@@ -64,6 +70,7 @@ export function getAssistantSettings(): AssistantSettings {
 export function setAssistantSettings(patch: Partial<AssistantSettings>): void {
   if ("anthropicApiKey" in patch) setRaw(KEYS.anthropicApiKey, patch.anthropicApiKey ?? null);
   if ("claudeModel" in patch) setRaw(KEYS.claudeModel, patch.claudeModel ?? null);
+  if ("useClaudeSubscription" in patch) setRaw(KEYS.useClaudeSubscription, patch.useClaudeSubscription ?? null);
   if ("localBaseUrl" in patch) setRaw(KEYS.localBaseUrl, patch.localBaseUrl ?? null);
   if ("localModel" in patch) setRaw(KEYS.localModel, patch.localModel ?? null);
   if ("localApiKey" in patch) setRaw(KEYS.localApiKey, patch.localApiKey ?? null);
@@ -157,6 +164,18 @@ export function effectiveClaudeModel(): string | undefined {
   return getAssistantSettings().claudeModel || process.env.CG_CLAUDE_MODEL || undefined;
 }
 
+/** Whether the Claude backend should authenticate via a Claude Pro/Max/Team
+ *  subscription login instead of an Anthropic API key. This only works if
+ *  the machine running this Node process already has valid Claude Code
+ *  credentials -- either `claude login` was run there, or
+ *  `CLAUDE_CODE_OAUTH_TOKEN` is set in its environment. CodeGraph itself
+ *  never stores or sees the subscription credentials; it just skips
+ *  overriding ANTHROPIC_API_KEY so the bundled Claude Code executable falls
+ *  back to whatever auth it already has. */
+export function effectiveUseClaudeSubscription(): boolean {
+  return getAssistantSettings().useClaudeSubscription === "true" || process.env.CG_CLAUDE_USE_SUBSCRIPTION === "true";
+}
+
 export interface EffectiveLocalLlmConfig {
   baseUrl: string;
   model: string;
@@ -178,13 +197,12 @@ function mask(secret: string | null | undefined): string | null {
   return secret.length <= 8 ? "••••••••" : `${secret.slice(0, 4)}${"•".repeat(8)}${secret.slice(-4)}`;
 }
 
-/** What the Settings page renders: never the raw secret, only whether one is
- *  set (and from where) plus a masked preview so the user can recognize it. */
 export interface AssistantSettingsView {
   anthropicApiKeySet: boolean;
   anthropicApiKeyMasked: string | null;
   anthropicApiKeySavedInDb: boolean;
   claudeModel: string | null;
+  useClaudeSubscription: boolean;
   localBaseUrl: string | null;
   localModel: string | null;
   localModelList: string[];
@@ -203,6 +221,7 @@ export function viewAssistantSettings(): AssistantSettingsView {
     anthropicApiKeyMasked: mask(anthropicKey),
     anthropicApiKeySavedInDb: !!s.anthropicApiKey,
     claudeModel: s.claudeModel || process.env.CG_CLAUDE_MODEL || null,
+    useClaudeSubscription: effectiveUseClaudeSubscription(),
     localBaseUrl: s.localBaseUrl || process.env.CG_LOCAL_LLM_BASE_URL || null,
     localModel: s.localModel || process.env.CG_LOCAL_LLM_MODEL || null,
     localModelList: effectiveLocalModelList(),

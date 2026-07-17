@@ -115,7 +115,7 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
 
     // 2. analyze (before)
     t = now();
-    const before = indexRepo(work);
+    const before = await indexRepo(work);
     rec("analyze", `Baseline Health Score ${before.score}, ${before.issues.length} issues`, true, t);
 
     // 3. apply fixers
@@ -172,7 +172,7 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
 
     // 4. verify (re-index the patched sandbox)
     t = now();
-    const after = indexRepo(work);
+    const after = await indexRepo(work);
     const verified = after.score >= before.score && after.issues.length <= before.issues.length;
     rec("verify", `Post-fix Health Score ${after.score}, ${after.issues.length} issues — ${verified ? "no regression" : "REGRESSION"}`, verified, t);
 

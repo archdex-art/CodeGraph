@@ -47,7 +47,7 @@ describe("lintForSecurity (Task 6.15)", () => {
 });
 
 describe("indexRepo: ESLint security layer wired into the real pipeline", () => {
-  it("surfaces a ReDoS finding end-to-end through indexRepo, alongside the existing regex-rule findings", () => {
+  it("surfaces a ReDoS finding end-to-end through indexRepo, alongside the existing regex-rule findings", async () => {
     const dir = mkdtempSync(path.join(tmpdir(), "eslint-sec-e2e-"));
     try {
       writeFileSync(
@@ -61,7 +61,7 @@ describe("indexRepo: ESLint security layer wired into the real pipeline", () => 
         ].join("\n"),
         "utf8"
       );
-      const result = indexRepo(dir);
+      const result = await indexRepo(dir);
       const titles = result.issues.map((i) => i.title);
       expect(titles.some((t) => /ReDoS/i.test(t))).toBe(true);
       expect(titles).toContain("Use of eval()");

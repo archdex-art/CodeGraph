@@ -27,7 +27,7 @@ const FILES: FileInput[] = [
   },
 ];
 
-const graph: SymbolGraph = buildSymbolGraph(FILES, new Map());
+const graph: SymbolGraph = await buildSymbolGraph(FILES, new Map());
 const idOf = (name: string): string => {
   const s = graph.symbols.find((x) => x.name === name);
   if (!s) throw new Error(`symbol ${name} not found`);

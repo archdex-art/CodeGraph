@@ -24,18 +24,28 @@ function findTool(tools: WorkspaceTool[], name: string): WorkspaceTool {
 
 describe("aiAssistantConfigured", () => {
   const original = process.env.ANTHROPIC_API_KEY;
+  const originalSub = process.env.CG_CLAUDE_USE_SUBSCRIPTION;
   afterEach(() => {
     if (original === undefined) delete process.env.ANTHROPIC_API_KEY;
     else process.env.ANTHROPIC_API_KEY = original;
+    if (originalSub === undefined) delete process.env.CG_CLAUDE_USE_SUBSCRIPTION;
+    else process.env.CG_CLAUDE_USE_SUBSCRIPTION = originalSub;
   });
 
-  it("is false when ANTHROPIC_API_KEY is unset", () => {
+  it("is false when ANTHROPIC_API_KEY is unset and subscription mode is off", () => {
     delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.CG_CLAUDE_USE_SUBSCRIPTION;
     expect(aiAssistantConfigured()).toBe(false);
   });
 
   it("is true once ANTHROPIC_API_KEY is set", () => {
     process.env.ANTHROPIC_API_KEY = "sk-test-key";
+    expect(aiAssistantConfigured()).toBe(true);
+  });
+
+  it("is true with no API key when CG_CLAUDE_USE_SUBSCRIPTION=true (Claude Pro/Max login)", () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    process.env.CG_CLAUDE_USE_SUBSCRIPTION = "true";
     expect(aiAssistantConfigured()).toBe(true);
   });
 });

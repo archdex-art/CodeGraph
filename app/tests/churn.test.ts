@@ -6,7 +6,7 @@ import type { RepoDetail } from "@/lib/types";
 // Acceptance test for Phase 6.11: "A high-fan-in, frequently-committed file
 // ranks above an equally-high-fan-in, untouched-in-a-year file, all else equal."
 describe("git churn feeds judge scoring (Task 6.11)", () => {
-  it("ranks the hotspot (high fan-in + high churn) above an equally-connected but untouched file", () => {
+  it("ranks the hotspot (high fan-in + high churn) above an equally-connected but untouched file", async () => {
     // Two files, each defining a function called from 5 sites elsewhere — identical
     // fan-in — so any score difference must come from churn, not blast radius.
     const callSites = Array.from({ length: 5 }, (_, i) => `caller${i}.ts`);
@@ -20,7 +20,7 @@ describe("git churn feeds judge scoring (Task 6.11)", () => {
         text: `import { hot } from "./hot";\nimport { cold } from "./cold";\nexport function run() { hot(); cold(); }`,
       })),
     ];
-    const symbolGraph = buildSymbolGraph(files, new Map());
+    const symbolGraph = await buildSymbolGraph(files, new Map());
 
     const repo: RepoDetail = {
       id: "r", url: "", name: "test", status: "done", sourceType: "git",
