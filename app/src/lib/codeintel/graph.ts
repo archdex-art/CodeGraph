@@ -71,7 +71,14 @@ function findEnclosingCaller(candidates: CodeSymbol[], line: number, excludeId: 
  * Pass 1: extract symbols + local refs per file.
  * Pass 2: resolve references to definitions -> CALLS edges + fan-in/out.
  */
-export function buildSymbolGraph(files: FileInput[], issuesByFile: Map<string, number>): SymbolGraph {
+const YIELD_EVERY = 15;
+function yieldToEventLoop(): Promise<void> {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  setImmediate(resolve);
+  return promise;
+}
+
+export async function buildSymbolGraph(files: FileInput[], issuesByFile: Map<string, number>): Promise<SymbolGraph> {
   const symbols: CodeSymbol[] = [];
   const edges: SymbolEdge[] = [];
   // name -> symbol ids (for cross-file resolution; multiple defs possible)
@@ -99,7 +106,9 @@ export function buildSymbolGraph(files: FileInput[], issuesByFile: Map<string, n
     program = ts.createProgram(tsFiles.map(f => f.rel), options, host);
   }
 
-  for (const f of files) {
+  for (let idx = 0; idx < files.length; idx++) {
+    if (idx > 0 && idx % YIELD_EVERY === 0) await yieldToEventLoop();
+    const f = files[idx];
     knownFiles.add(f.rel);
     const ex = extractorFor(f.ext);
     if (!ex) continue;
@@ -172,7 +181,9 @@ export function buildSymbolGraph(files: FileInput[], issuesByFile: Map<string, n
   const symbolById = new Map<string, CodeSymbol>();
   for (const s of symbols) symbolById.set(s.id, s);
 
-  for (const fr of fileRefs) {
+  for (let idx = 0; idx < fileRefs.length; idx++) {
+    if (idx > 0 && idx % YIELD_EVERY === 0) await yieldToEventLoop();
+    const fr = fileRefs[idx];
     const localNames = byFile.get(fr.file) || new Map<string, CodeSymbol>();
     
     // Build import binding map for this file

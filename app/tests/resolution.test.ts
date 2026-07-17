@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { buildSymbolGraph } from "@/lib/codeintel/graph";
 
 describe("graph resolution accuracy (Tasks 6.1/6.2)", () => {
-  it("attributes calls to enclosing function by line, and resolves imports accurately", () => {
-    const graph = buildSymbolGraph([
+  it("attributes calls to enclosing function by line, and resolves imports accurately", async () => {
+    const graph = await buildSymbolGraph([
       {
         rel: "utils/parse.ts", ext: ".ts", language: "TypeScript",
         text: `export function parse() { return 1; }`

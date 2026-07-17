@@ -72,7 +72,7 @@ async function runJob(jobId: string, repoId: string, source: string, sourceType:
 
     setJob(jobId, "indexing", 55, "Building knowledge graph…");
     setRepoStatus(repoId, "indexing");
-    const result = indexRepo(root);
+    const result = await indexRepo(root);
 
     setJob(jobId, "scoring", 85, "Computing Health Score…");
     setRepoStatus(repoId, "scoring");

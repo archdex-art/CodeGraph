@@ -11,7 +11,7 @@ describe("indexRepo", () => {
   let dir: string;
   let result: IndexResult;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     dir = mkdtempSync(path.join(tmpdir(), "cg-idx-"));
     writeFileSync(
       path.join(dir, "a.ts"),
@@ -32,7 +32,7 @@ describe("indexRepo", () => {
       path.join(dir, "package.json"),
       JSON.stringify({ name: "fixture", version: "1.0.0" }, null, 2)
     );
-    result = indexRepo(dir);
+    result = await indexRepo(dir);
   });
 
   afterAll(() => {
@@ -92,7 +92,7 @@ describe("secret detection precision", () => {
   const CHANGEME_FILE = "env_example.py";
   const CHANGEME_LINE = 2;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     dir = mkdtempSync(path.join(tmpdir(), "cg-secret-idx-"));
 
     // A genuine-looking hardcoded secret - the one finding this fixture
@@ -144,7 +144,7 @@ describe("secret detection precision", () => {
       ].join("\n")
     );
 
-    result = indexRepo(dir);
+    result = await indexRepo(dir);
   });
 
   afterAll(() => {
