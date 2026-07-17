@@ -30,13 +30,28 @@ const nextConfig: NextConfig = {
   // (see docs/AUDIT_2026-07-12.md F020, deliberately deferred — needs a
   // dedicated migration + telemetry pass, not a blind tightening).
   // What this DOES lock down for real: clickjacking (frame-ancestors),
-  // arbitrary plugin/object embeds, MIME-sniffing, and (F021) the CDN
-  // trust boundary — jsdelivr is a public CDN serving arbitrary npm/GitHub
-  // packages, so each allowance is scoped to the one path prefix
-  // (`/npm/monaco-editor/`) `@monaco-editor/react`'s default loader
-  // actually fetches from, not jsdelivr's entire catalog.
+  // arbitrary plugin/object embeds, and MIME-sniffing.
+  //
+  // jsdelivr trust: an earlier revision scoped the `cdn.jsdelivr.net`
+  // allowance to a path prefix (`/npm/monaco-editor/`) intended to match
+  // only the one package this app needs, not jsdelivr's entire catalog
+  // (docs/AUDIT_2026-07-12.md F021). That was a REAL, LIVE-BREAKING BUG:
+  // jsdelivr's package-URL convention glues the version directly onto the
+  // package name with no separating slash --
+  // `https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js`
+  // (confirmed by reading `@monaco-editor/loader`'s actual default config)
+  // -- so the path-prefix `/npm/monaco-editor/` (which requires a `/`
+  // immediately after "monaco-editor") never matched the real request
+  // path, and CSP silently blocked Monaco outright. Every file in the
+  // Editor got stuck on Monaco's own indefinite "Loading..." placeholder
+  // with no console error, because a CSP violation is a silent network
+  // block, not a JS exception the app's own error handling could catch.
+  // CSP host-source syntax has no way to wildcard mid-path-segment (only
+  // the host portion supports `*`), so there is no path expression that
+  // both matches every future monaco-editor version AND excludes the rest
+  // of jsdelivr's catalog. Trust the origin instead, as before.
   async headers() {
-    const MONACO_CDN = "https://cdn.jsdelivr.net/npm/monaco-editor/";
+    const MONACO_CDN = "https://cdn.jsdelivr.net";
     const csp = [
       "default-src 'self'",
       `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${MONACO_CDN}`,
