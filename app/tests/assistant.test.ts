@@ -184,3 +184,35 @@ describe("assistant.ts sendMessage — CLI auth-failure text detection", () => {
     expect(src).toContain("This server's Claude subscription login isn't available right now");
   });
 });
+
+// Regression guard for a real, live-reproduced bug: AssistantPanel.tsx's
+// `applyEvent` used to mutate `pathsToTouch`/`shouldMutate` *inside* the
+// `setTurns` state-updater callback, then read those same variables
+// immediately after calling `setTurns()`. React does not guarantee an
+// updater function has actually run by the time `setState()` returns
+// (especially here, since every event arrives from an async stream-reader
+// loop, not a synchronous React event handler) — so `onMutated()` was
+// silently skipped on every real successful write. Reproduced live end-
+// to-end (real browser, real SSE stream, a fake OpenAI-compatible server
+// standing in for the LLM): a `write_file` call genuinely succeeded (the
+// file landed on disk, the assistant correctly reported success), but the
+// file explorer never refreshed to show it. No React Testing Library/jsdom
+// harness exists in this project to drive AssistantPanel directly (see the
+// permission-mode and CLI-auth-detection guards above for the same
+// convention), so this locks in the fix at the source level: the mutation
+// flags must be computed from a synchronous ref BEFORE `setTurns` is
+// called, never read from variables a state updater was responsible for
+// setting.
+describe("AssistantPanel.tsx applyEvent — no setState-timing hazard on file-mutation detection", () => {
+  it("computes pathsToTouch/shouldMutate before calling setTurns, via a ref, not by reading variables a state updater sets", () => {
+    const src = readFileSync(path.join(__dirname, "..", "src", "components", "editor", "AssistantPanel.tsx"), "utf8");
+    const setTurnsIdx = src.indexOf("setTurns((prev) => {\n        const next = [...prev];\n        const last = next[next.length - 1];\n        if (!last || last.role !== \"assistant\")");
+    const pathsIdx = src.indexOf("let pathsToTouch");
+    expect(setTurnsIdx).toBeGreaterThan(-1);
+    expect(pathsIdx).toBeGreaterThan(-1);
+    // The mutation-flag computation must appear BEFORE the setTurns call in
+    // source order -- i.e. it no longer depends on that updater having run.
+    expect(pathsIdx).toBeLessThan(setTurnsIdx);
+    expect(src).toContain("runningToolInputRef");
+  });
+});

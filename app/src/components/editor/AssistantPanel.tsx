@@ -102,10 +102,34 @@ export function AssistantPanel({
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // Tracks the input of whichever tool call is currently "running", keyed by
+  // tool name, so a matching `tool_result` can compute pathsToTouch/
+  // shouldMutate synchronously -- a ref, not React state. The previous
+  // version derived these from *inside* the `setTurns` state-updater
+  // callback and read them immediately after calling `setTurns()`; React
+  // does not guarantee that updater has actually run by then (especially
+  // here, since every event arrives from an async stream-reader loop, not
+  // a synchronous React event handler), so `onMutated()` was silently
+  // skipped on every real write -- confirmed live: a real write_file call
+  // succeeded (file landed on disk, Claude correctly reported success) but
+  // the Explorer never refreshed, because `shouldMutate` was still read as
+  // `false` at the point `onMutated()` was gated on it.
+  const runningToolInputRef = useRef<Map<string, Record<string, unknown>>>(new Map());
+
   const applyEvent = useCallback(
     (event: AssistantEvent) => {
+      if (event.kind === "tool_call") runningToolInputRef.current.set(event.tool, event.input);
+
       let pathsToTouch: string[] = [];
       let shouldMutate = false;
+      if (event.kind === "tool_result" && event.ok) {
+        const input = runningToolInputRef.current.get(event.tool);
+        if (input) {
+          pathsToTouch = pathsTouchedBy(event.tool, input);
+          shouldMutate = true;
+        }
+      }
+      if (event.kind === "tool_result") runningToolInputRef.current.delete(event.tool);
 
       setTurns((prev) => {
         const next = [...prev];
@@ -129,10 +153,6 @@ export function AssistantPanel({
             const b = blocks[i];
             if (b.kind === "tool" && b.tool === event.tool && b.status === "running") {
               blocks[i] = { ...b, status: event.ok ? "ok" : "error", summary: event.summary };
-              if (event.ok) {
-                pathsToTouch = pathsTouchedBy(b.tool, b.input);
-                shouldMutate = true;
-              }
               break;
             }
           }
