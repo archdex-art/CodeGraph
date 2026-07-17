@@ -45,6 +45,7 @@ docker compose up --build          # http://localhost:4000
 | `CG_BASIC_AUTH_PASSWORD` | app runtime | unset (= off) | Gate the whole app behind HTTP Basic Auth. Pairs with `CG_BASIC_AUTH_USER` (default `codegraph`). |
 | `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` | app runtime | unset (= GitHub sign-in hidden) | From a GitHub OAuth App — see below. |
 | `CG_SESSION_SECRET` | app runtime | unset (= GitHub sign-in disabled) | Encrypts the GitHub session cookie (AES-256-GCM). Required alongside the two vars above for GitHub sign-in to activate. Any long random string; rotating it signs everyone out. |
+| `CG_OWNER_GITHUB_LOGIN` | app runtime | unset (= no owner-lock) | Restrict the **entire app** — every page and API route, including the normally-anonymous public bucket — to one or more GitHub logins (comma-separated, case-insensitive). Requires GitHub sign-in to be fully configured too (fails closed with a 500 otherwise). See below. |
 | `ANTHROPIC_API_KEY` | app runtime | unset (= Claude AI Assistant hidden) | Enables the Editor tab's AI Assistant using Claude (Claude Agent SDK) — see below. Core product features never need this. |
 | `CG_LOCAL_LLM_BASE_URL` | app runtime | unset (= local-model AI Assistant hidden) | Base URL of an OpenAI-compatible chat-completions endpoint (Ollama, LM Studio, llama.cpp `server`, vLLM, …), e.g. `http://localhost:11434/v1`. Required alongside `CG_LOCAL_LLM_MODEL` — see below. |
 | `CG_LOCAL_LLM_MODEL` | app runtime | unset | Model name/tag to request from that endpoint, e.g. `qwen2.5-coder:7b`. Required alongside `CG_LOCAL_LLM_BASE_URL`. |
@@ -66,6 +67,17 @@ Lets a signed-in user browse and one-click import their own repos — including 
    NEXT_PUBLIC_APP_URL=<your deployment's public URL, no trailing slash>
    ```
 4. Restart/redeploy. A "Sign in with GitHub" link appears in the header and a "My GitHub" tab appears on the Start Indexing page automatically once all three of `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` / `CG_SESSION_SECRET` are set — no other config needed, and nothing changes for anyone if you leave them unset.
+
+### Locking the whole app to your account (`CG_OWNER_GITHUB_LOGIN`)
+By default, once GitHub sign-in is configured, repos indexed anonymously still land in a shared public bucket anyone can see/index into — sign-in only makes *your own* repos private. To instead make the **entire deployment** (every page, every API route) usable only by you:
+
+1. Complete the GitHub sign-in setup above first (`CG_OWNER_GITHUB_LOGIN` fails closed with a 500 if OAuth isn't fully configured — it never silently opens the app back up).
+2. Set `CG_OWNER_GITHUB_LOGIN=<your-github-username>` (comma-separate multiple logins for a small team, e.g. `alice,bob`).
+3. Restart/redeploy. Now:
+   - An anonymous visitor hitting any page is redirected to GitHub sign-in; any API route returns `401`.
+   - A visitor signed in with a GitHub account **not** on the allowlist gets a static "Access Restricted" page (pages) or a `403` (API) — never a redirect loop.
+   - `GET /api/health` and the GitHub OAuth routes themselves (`/api/auth/github*`) always stay reachable, so health checks and the sign-in flow that satisfies this very check never get blocked by it.
+4. This is enforced once, in `src/proxy.ts` (Next.js's middleware entry point) — no individual route needed changes, and it applies uniformly to pages, `/api/repos`, `/api/index`, `/api/settings/*`, the AI Assistant routes, everything.
 
 **What this grants**: the OAuth scope requested is `repo read:user` — GitHub's classic OAuth has no finer-grained read-only scope, so this is full read/write access to the signed-in user's repos (needed to clone private ones at all) plus their public profile. The token is held only in an encrypted, `httpOnly` session cookie — never written to disk, never returned in any API response, and only ever sent back to `github.com` itself (see `lib/session.ts` and the `runJob` host check in `lib/store.ts`).
 

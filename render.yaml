@@ -24,6 +24,11 @@ services:
         sync: false
       - key: CG_SESSION_SECRET
         sync: false
+      # Optional: restrict the whole app to your GitHub account (or a small
+      # team) once sign-in above is configured. See DEPLOY.md "Locking the
+      # whole app to your account".
+      - key: CG_OWNER_GITHUB_LOGIN
+        sync: false
     # The SQLite DB + WAL live here and MUST persist across deploys/restarts.
     disk:
       name: codegraph-data
