@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { localAccessAllowed, LOCAL_ACCESS_DISABLED_MESSAGE } from "@/lib/localAccess";
 import { isPublicHttpUrl } from "@/lib/urlSafety";
 import { checkBasicAuth } from "@/lib/basicAuth";
+import { isAllowedOwnerLogin, ownerLoginAllowlist } from "@/lib/githubOAuth";
 
 // Snapshot the real env once, before any test mutates it, so every test can
 // freely stomp on CG_ALLOW_LOCAL_ACCESS / NODE_ENV and afterEach puts things
@@ -196,5 +197,56 @@ describe("checkBasicAuth", () => {
     expect(checkBasicAuth(header, USER, passwordWithColon)).toBe(true);
     // A truncated expectation (split on every colon) must NOT match.
     expect(checkBasicAuth(header, USER, "pa")).toBe(false);
+  });
+});
+
+describe("ownerLoginAllowlist / isAllowedOwnerLogin", () => {
+  const ORIGINAL_OWNER_LOGIN = env.CG_OWNER_GITHUB_LOGIN;
+  afterEach(() => {
+    if (ORIGINAL_OWNER_LOGIN === undefined) delete env.CG_OWNER_GITHUB_LOGIN;
+    else env.CG_OWNER_GITHUB_LOGIN = ORIGINAL_OWNER_LOGIN;
+  });
+
+  it("returns null (owner-lock off) when CG_OWNER_GITHUB_LOGIN is unset", () => {
+    delete env.CG_OWNER_GITHUB_LOGIN;
+    expect(ownerLoginAllowlist()).toBeNull();
+  });
+
+  it("returns null for a blank/whitespace-only value", () => {
+    env.CG_OWNER_GITHUB_LOGIN = "   ";
+    expect(ownerLoginAllowlist()).toBeNull();
+  });
+
+  it("parses a single login into a one-element lowercased list", () => {
+    env.CG_OWNER_GITHUB_LOGIN = "SomeUser";
+    expect(ownerLoginAllowlist()).toEqual(["someuser"]);
+  });
+
+  it("parses a comma-separated list, trimming whitespace and lowercasing", () => {
+    env.CG_OWNER_GITHUB_LOGIN = " Alice ,BOB, carol ";
+    expect(ownerLoginAllowlist()).toEqual(["alice", "bob", "carol"]);
+  });
+
+  it("isAllowedOwnerLogin defaults to true (no restriction) when owner-lock is off", () => {
+    delete env.CG_OWNER_GITHUB_LOGIN;
+    expect(isAllowedOwnerLogin("anyone")).toBe(true);
+  });
+
+  it("isAllowedOwnerLogin matches case-insensitively against the allowlist", () => {
+    env.CG_OWNER_GITHUB_LOGIN = "octocat";
+    expect(isAllowedOwnerLogin("OctoCat")).toBe(true);
+    expect(isAllowedOwnerLogin("octocat")).toBe(true);
+  });
+
+  it("isAllowedOwnerLogin rejects a login not on the allowlist", () => {
+    env.CG_OWNER_GITHUB_LOGIN = "octocat";
+    expect(isAllowedOwnerLogin("intruder")).toBe(false);
+  });
+
+  it("isAllowedOwnerLogin supports a multi-login allowlist", () => {
+    env.CG_OWNER_GITHUB_LOGIN = "alice,bob";
+    expect(isAllowedOwnerLogin("alice")).toBe(true);
+    expect(isAllowedOwnerLogin("bob")).toBe(true);
+    expect(isAllowedOwnerLogin("carol")).toBe(false);
   });
 });

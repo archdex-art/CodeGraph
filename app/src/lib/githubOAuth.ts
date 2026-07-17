@@ -8,6 +8,27 @@ export function githubOAuthConfigured(): boolean {
   return !!(process.env.GITHUB_OAUTH_CLIENT_ID && process.env.GITHUB_OAUTH_CLIENT_SECRET && process.env.CG_SESSION_SECRET);
 }
 
+/** Parses CG_OWNER_GITHUB_LOGIN into a lowercased allowlist, or `null` if
+ *  unset (= no owner-lock; the app's existing "anonymous public bucket,
+ *  GitHub accounts private" model applies unchanged). Comma-separated so an
+ *  operator can allow a small team, not just a single account. */
+export function ownerLoginAllowlist(): string[] | null {
+  const raw = process.env.CG_OWNER_GITHUB_LOGIN;
+  if (!raw?.trim()) return null;
+  const logins = raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return logins.length > 0 ? logins : null;
+}
+
+/** Whether `login` (case-insensitive) is allowed when owner-lock is active.
+ *  Returns `true` if owner-lock isn't configured at all — callers that need
+ *  the "is owner-lock even on" question should check `ownerLoginAllowlist()`
+ *  directly instead of relying on this default. */
+export function isAllowedOwnerLogin(login: string): boolean {
+  const allowlist = ownerLoginAllowlist();
+  if (!allowlist) return true;
+  return allowlist.includes(login.toLowerCase());
+}
+
 // Prefer an explicitly configured public URL (needed behind a proxy like
 // Render, where the request's own Host header may not be trustworthy/final
 // for building an OAuth redirect_uri that must exactly match what's
