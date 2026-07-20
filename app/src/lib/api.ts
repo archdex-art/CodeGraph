@@ -57,9 +57,10 @@ export async function startIndex(input: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to start indexing");
-  return data;
+  // Use asJson so a bodyless error response (e.g. a route that 500s at module
+  // load) surfaces "Request failed (500)" instead of a cryptic
+  // "Unexpected end of JSON input" from calling .json() on an empty body.
+  return asJson<{ jobId: string; repoId: string }>(res);
 }
 
 export interface BrowseEntry {
@@ -421,4 +422,40 @@ export async function updateAssistantSettings(patch: {
     body: JSON.stringify(patch),
   });
   return asJson<AssistantSettingsView>(res);
+}
+
+// --- Timeline Engine ---
+import type { TimelineSnapshot, ArchitectureSnapshot, SnapshotMetrics, GraphDiff, ArchitectureEvolution } from "./gitops/timelineApi";
+
+export async function timelineMetadata(repoId: string, strategy: string = "monthly"): Promise<TimelineSnapshot[]> {
+  const res = await fetch(`/api/repos/${repoId}/timeline?op=metadata&strategy=${encodeURIComponent(strategy)}`, { cache: "no-store" });
+  const d = await asJson<{ timeline: TimelineSnapshot[] }>(res);
+  return d.timeline;
+}
+
+export async function timelineTrends(repoId: string): Promise<Array<{ hash: string; timestamp: number; metrics: SnapshotMetrics }>> {
+  const res = await fetch(`/api/repos/${repoId}/timeline?op=trends`, { cache: "no-store" });
+  const d = await asJson<{ trends: Array<{ hash: string; timestamp: number; metrics: SnapshotMetrics }> }>(res);
+  return d.trends;
+}
+
+export async function timelineSnapshot(repoId: string, hash: string): Promise<ArchitectureSnapshot> {
+  const res = await fetch(`/api/repos/${repoId}/timeline?op=snapshot&hash=${encodeURIComponent(hash)}`, { cache: "no-store" });
+  const d = await asJson<{ snapshot: ArchitectureSnapshot }>(res);
+  return d.snapshot;
+}
+export async function timelineCompare(repoId: string, base: string, head: string): Promise<ArchitectureEvolution> {
+  const res = await fetch(`/api/repos/${repoId}/timeline?op=compare&base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`, { cache: "no-store" });
+  const d = await asJson<{ evolution: ArchitectureEvolution }>(res);
+  return d.evolution;
+}
+
+
+export async function timelineBuild(repoId: string, strategy: string = "monthly"): Promise<void> {
+  const res = await fetch(`/api/repos/${repoId}/timeline`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ op: "build", strategy }),
+  });
+  await asJson(res);
 }
