@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Loader2, Gauge, Boxes, Network, FileWarning, Share2, LayoutGrid, CircleDot, BrainCircuit, Bot, Code2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, Gauge, Boxes, Network, FileWarning, Share2, LayoutGrid, CircleDot, BrainCircuit, Bot, Code2, AlertTriangle, History } from "lucide-react";
 import { fetchRepo } from "@/lib/api";
 import type { RepoDetail, Dimension } from "@/lib/types";
 import { DIMENSION_META } from "@/lib/types";
@@ -13,8 +13,9 @@ import { ArchitectureView } from "@/components/ArchitectureView";
 import { CodeIntelPanel } from "@/components/CodeIntelPanel";
 import { AgentSwarm } from "@/components/AgentSwarm";
 import { CodeEditor } from "@/components/CodeEditor";
+import { TimelineView } from "@/components/TimelineView";
 
-type ViewMode = "architecture" | "pack" | "network" | "intel" | "agents" | "editor";
+type ViewMode = "architecture" | "pack" | "network" | "intel" | "agents" | "editor" | "timeline";
 
 const SEV_COLOR: Record<number, string> = {
   5: "text-rose-400 bg-rose-500/10 border-rose-500/20",
@@ -136,6 +137,7 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
             <ViewTab active={view === "intel"} onClick={() => selectView("intel")} icon={<BrainCircuit className="w-4 h-4" />} label="Code Intel" />
             <ViewTab active={view === "agents"} onClick={() => selectView("agents")} icon={<Bot className="w-4 h-4" />} label="Agents" />
             <ViewTab active={view === "editor"} onClick={() => selectView("editor")} icon={<Code2 className="w-4 h-4" />} label="Editor" />
+            <ViewTab active={view === "timeline"} onClick={() => selectView("timeline")} icon={<History className="w-4 h-4" />} label="Timeline" />
           </div>
         </div>
 
@@ -183,6 +185,12 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
             {repo.hasWorkspace
               ? <CodeEditor key={repo.id} repo={repo} visible={view === "editor"} />
               : <Empty msg="No live workspace for this repository yet — re-index it to enable the built-in editor." />}
+          </div>
+        )}
+
+        {visited.has("timeline") && (
+          <div className={view === "timeline" ? "" : "hidden"}>
+            <TimelineView repoId={repo.id} />
           </div>
         )}
       </div>
