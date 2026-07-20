@@ -1,7 +1,7 @@
 import type { ArchitectureSnapshot } from "./historicalAnalysis";
 import { generateNarrative } from "../agents/narrativeAgent";
 import { diffSnapshots, type GraphDiff } from "./graphDiff";
-import type { CodeSymbol, GraphNode, ModuleNode } from "../types";
+import type { CodeSymbol, GraphNode, ModuleNode, Issue } from "../types";
 
 export type EvolutionCategory =
   | "FEATURE_INTRODUCED"
@@ -68,10 +68,16 @@ export interface FeatureEvolution {
   currentStatus: string;
 }
 
+export interface IssueDiff {
+  introduced: Issue[];
+  resolved: Issue[];
+}
+
 export interface ArchitectureEvolution {
   metrics: ArchitectureMetrics;
   baselineMetrics?: ArchitectureMetrics;
   events: EvolutionEvent[];
+  issueDiff: IssueDiff;
   moduleHealth: Record<string, ModuleHealth>;
   featureEvolution: Record<string, FeatureEvolution>;
   aiNarrative?: {
@@ -117,16 +123,31 @@ export async function analyzeEvolution(
     aiNarrative = await generateNarrative(oldMetrics, metrics, events);
   }
 
-  // 4. Compute Module Health
+  // 4. Compute Module Health & Issue Diff
+  const issueDiff = computeIssueDiff(older, newer);
   const moduleHealth = computeModuleHealth(older, newer, diff);
 
   return {
     metrics,
+    issueDiff,
     baselineMetrics,
     events,
     moduleHealth,
     featureEvolution: {}, // To be populated across timelines
     aiNarrative
+  };
+}
+
+function computeIssueDiff(older: ArchitectureSnapshot | null, newer: ArchitectureSnapshot): IssueDiff {
+  if (!older) return { introduced: newer.result.issues, resolved: [] };
+
+  const issueKey = (i: Issue) => `${i.file}::${i.title}`;
+  const oldKeys = new Set(older.result.issues.map(issueKey));
+  const newKeys = new Set(newer.result.issues.map(issueKey));
+
+  return {
+    introduced: newer.result.issues.filter(i => !oldKeys.has(issueKey(i))),
+    resolved: older.result.issues.filter(i => !newKeys.has(issueKey(i)))
   };
 }
 
