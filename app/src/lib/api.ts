@@ -298,6 +298,18 @@ export async function gitDiff(repoId: string, path: string): Promise<string> {
   const d = await asJson<{ diff: string }>(res);
   return d.diff;
 }
+export async function gitDiffFiles(repoId: string, base: string, head: string): Promise<Array<{ status: string, path: string }>> {
+  const res = await fetch(`/api/repos/${repoId}/git?op=diffFiles&base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`, { cache: "no-store" });
+  const d = await asJson<{ files: Array<{ status: string, path: string }> }>(res);
+  return d.files;
+}
+
+export async function gitDiffCommits(repoId: string, base: string, head: string, path: string): Promise<string> {
+  const res = await fetch(`/api/repos/${repoId}/git?op=diffCommits&base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}&path=${encodeURIComponent(path)}`, { cache: "no-store" });
+  const d = await asJson<{ diff: string }>(res);
+  return d.diff;
+}
+
 
 export async function gitRestoreFile(repoId: string, path: string): Promise<void> {
   await gitPost(repoId, { op: "restore", path });

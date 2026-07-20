@@ -11,11 +11,14 @@ import {
   push,
   commit,
   diffFile,
+  diffCommitsFile,
+  getCommitDiffFiles,
   restoreFile,
   log,
   withToken,
   isGithubHost,
 } from "@/lib/gitops";
+import { redactCredentials } from "@/lib/indexer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +29,10 @@ function hasStderr(e: unknown): e is { stderr: string } {
 function err(e: unknown, status = 500) {
   let msg = e instanceof Error ? e.message : String(e);
   if (hasStderr(e) && e.stderr.trim()) msg = e.stderr.trim();
-  return NextResponse.json({ error: msg }, { status });
+  // A failed push/clone-adjacent op embeds the token-bearing remote URL
+  // (https://x-access-token:<PAT>@github.com/...) in execFile's error message
+  // and stderr; strip it before it reaches the client (matches F004/F017).
+  return NextResponse.json({ error: redactCredentials(msg) }, { status });
 }
 
 // GET /api/repos/:id/git?op=status|branches|log|diff&path=&limit=
@@ -48,6 +54,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const p = searchParams.get("path");
       if (!p) return NextResponse.json({ error: "Missing path" }, { status: 400 });
       return NextResponse.json({ diff: await diffFile(ws.dir, p) });
+    }
+    if (op === "diffFiles") {
+      const base = searchParams.get("base");
+      const head = searchParams.get("head");
+      if (!base || !head) return NextResponse.json({ error: "Missing base or head" }, { status: 400 });
+      return NextResponse.json({ files: await getCommitDiffFiles(ws.dir, base, head) });
+    }
+    if (op === "diffCommits") {
+      const base = searchParams.get("base");
+      const head = searchParams.get("head");
+      const p = searchParams.get("path");
+      if (!base || !head || !p) return NextResponse.json({ error: "Missing base, head, or path" }, { status: 400 });
+      return NextResponse.json({ diff: await diffCommitsFile(ws.dir, base, head, p) });
     }
     if (op === "saveMode") return NextResponse.json({ saveMode: getSaveMode(id) });
     return NextResponse.json({ error: "Unknown op" }, { status: 400 });

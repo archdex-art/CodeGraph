@@ -142,6 +142,31 @@ export async function diffFile(dir: string, relPath: string): Promise<string> {
   }
 }
 
+export async function diffCommitsFile(dir: string, base: string, head: string, relPath: string): Promise<string> {
+  try {
+    return await git(dir, ["diff", `${base}..${head}`, "--", relPath]);
+  } catch {
+    return "";
+  }
+}
+
+export async function getCommitDiffFiles(dir: string, base: string, head: string): Promise<Array<{ status: string, path: string }>> {
+  try {
+    const out = await git(dir, ["diff", "--name-status", `${base}..${head}`]);
+    if (!out.trim()) return [];
+    return out.trim().split("\n").map(line => {
+      const [status, ...pathParts] = line.split("\t");
+      return { status: status.trim()[0], path: pathParts.join("\t").trim() }; // Handle tab-separated rename paths if necessary by just taking the last or keeping it raw. Actually name-status with renames is `R100 \t old \t new`.
+      // To be safe:
+    }).map(item => {
+      const parts = item.path.split("\t");
+      return { status: item.status, path: parts[parts.length - 1] };
+    });
+  } catch {
+    return [];
+  }
+}
+
 export async function restoreFile(dir: string, relPath: string): Promise<void> {
   try {
     // use checkout instead of restore for maximum compatibility with older git versions
