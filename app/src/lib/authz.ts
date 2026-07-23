@@ -10,7 +10,8 @@
 //     a private repo's mere existence isn't leaked to anyone but its owner.
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "./session";
-import { getRepoOwnerId } from "./store";
+import { getRepoOwnerId, getWorkspaceDir } from "./store";
+import type { SourceType } from "./types";
 
 /** Current viewer's userId for scoping list queries, or `null` if signed out. */
 export function viewerId(req: NextRequest): number | null {
@@ -27,4 +28,21 @@ export function repoAccessDenied(req: NextRequest, id: string): NextResponse | n
   if (ownerId === undefined) return NextResponse.json({ error: "Repo not found" }, { status: 404 });
   if (ownerId === null) return null; // public bucket — open to everyone
   return viewerId(req) === ownerId ? null : NextResponse.json({ error: "Repo not found" }, { status: 404 });
+}
+
+/**
+ * Combines the ownership check with workspace-directory resolution — every
+ * route that touches a repo's on-disk workspace (fs, git, search, timeline)
+ * needs both, in this order. `denied` is a `NextResponse` to return
+ * immediately when set; otherwise `ws` is the resolved workspace.
+ */
+export function requireWorkspace(
+  req: NextRequest,
+  id: string
+): { denied: NextResponse; ws?: undefined } | { denied?: undefined; ws: { dir: string; sourceType: SourceType } } {
+  const denied = repoAccessDenied(req, id);
+  if (denied) return { denied };
+  const ws = getWorkspaceDir(id);
+  if (!ws) return { denied: NextResponse.json({ error: "Workspace not ready" }, { status: 404 }) };
+  return { ws };
 }
