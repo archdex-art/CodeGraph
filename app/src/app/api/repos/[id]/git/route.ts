@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRepo, getWorkspaceDir, getSaveMode, setSaveMode } from "@/lib/store";
-import { repoAccessDenied } from "@/lib/authz";
+import { getRepo, getSaveMode, setSaveMode } from "@/lib/store";
+import { requireWorkspace } from "@/lib/authz";
 import {
   isGitRepo,
   getStatus,
@@ -38,10 +38,8 @@ function err(e: unknown, status = 500) {
 // GET /api/repos/:id/git?op=status|branches|log|diff&path=&limit=
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const denied = repoAccessDenied(req, id);
+  const { denied, ws } = requireWorkspace(req, id);
   if (denied) return denied;
-  const ws = getWorkspaceDir(id);
-  if (!ws) return NextResponse.json({ error: "Workspace not ready" }, { status: 404 });
   if (!(await isGitRepo(ws.dir))) return NextResponse.json({ error: "Not a git workspace" }, { status: 409 });
 
   const { searchParams } = new URL(req.url);
@@ -79,10 +77,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 // { op: "commit"|"push"|"pull"|"checkout"|"createBranch"|"setSaveMode", message?, name?, from?, githubToken?, saveMode? }
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const denied = repoAccessDenied(req, id);
+  const { denied, ws } = requireWorkspace(req, id);
   if (denied) return denied;
-  const ws = getWorkspaceDir(id);
-  if (!ws) return NextResponse.json({ error: "Workspace not ready" }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
   const { op, message, name, from, githubToken, saveMode } = body as {
