@@ -245,12 +245,12 @@ export const DIMENSION_META: Record<
 };
 
 // --- Built-in editor: file tree entries (lazy, one level at a time) ---
-export interface FsEntry {
-  name: string;
-  path: string; // workspace-relative, posix separators
-  type: "file" | "dir";
-  size?: number; // bytes, files only
-}
+// Defined in core-domain so `fsx` (which produces it) and the editor UI (which
+// renders it) can share one declaration without the UI importing a module that
+// touches node:fs. Re-exported here so existing importers are unaffected; the
+// import is type-only and therefore erased, adding no runtime dependency to the
+// client bundle.
+export type { FsEntry } from "@codegraph/core-domain";
 
 // --- Built-in editor: soft-deleted entries (restorable) ---
 export interface TrashEntry {

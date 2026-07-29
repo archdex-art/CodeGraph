@@ -4,17 +4,16 @@ import { repoAccessDenied } from "@/lib/authz";
 import {
   listDir,
   readWorkspaceFile,
+  readWorkspaceBytes,
   writeWorkspaceFile,
+  writeWorkspaceBytes,
   createEntry,
   renameEntry,
   duplicateEntry,
-  resolveSafe,
   WorkspacePathError,
   MAX_WRITE_BYTES,
-} from "@/lib/workspace";
+} from "@codegraph/fsx";
 import { moveToTrash } from "@/lib/trash";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import path from "node:path";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,12 +44,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (op === "list") return NextResponse.json({ entries: listDir(ws.dir, relPath) });
     if (op === "read") return NextResponse.json(readWorkspaceFile(ws.dir, relPath));
     if (op === "download") {
-      const full = resolveSafe(ws.dir, relPath);
-      const buf = readFileSync(full);
-      return new NextResponse(new Uint8Array(buf), {
+      const { bytes, name } = readWorkspaceBytes(ws.dir, relPath);
+      return new NextResponse(bytes, {
         headers: {
           "Content-Type": "application/octet-stream",
-          "Content-Disposition": `attachment; filename="${path.basename(full)}"`,
+          "Content-Disposition": `attachment; filename="${name}"`,
         },
       });
     }
@@ -85,13 +83,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       if (contentBase64.length > Math.ceil((MAX_WRITE_BYTES * 4) / 3)) {
         return NextResponse.json({ error: `File exceeds the ${MAX_WRITE_BYTES.toLocaleString()}-byte write limit` }, { status: 400 });
       }
-      const full = resolveSafe(ws.dir, relPath);
       const bytes = Buffer.from(contentBase64, "base64");
       if (bytes.length > MAX_WRITE_BYTES) {
         return NextResponse.json({ error: `File exceeds the ${MAX_WRITE_BYTES.toLocaleString()}-byte write limit` }, { status: 400 });
       }
-      mkdirSync(path.dirname(full), { recursive: true });
-      writeFileSync(full, bytes);
+      writeWorkspaceBytes(ws.dir, relPath, bytes);
       return NextResponse.json({ ok: true });
     }
     if (op === "create") {

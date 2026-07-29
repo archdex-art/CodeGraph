@@ -42,5 +42,7 @@ export type {
   StageTiming,
 } from "./run";
 
+export type { FsEntry } from "./files";
+
 export type { FingerprintInput } from "./fingerprint";
 export { fingerprint, normalizeSnippet } from "./fingerprint";

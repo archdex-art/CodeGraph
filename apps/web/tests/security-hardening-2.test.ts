@@ -15,7 +15,7 @@ import {
   createEntry,
   MAX_WRITE_BYTES,
   WorkspacePathError,
-} from "@/lib/workspace";
+} from "@codegraph/fsx";
 import {
   encryptSession,
   decryptSession,

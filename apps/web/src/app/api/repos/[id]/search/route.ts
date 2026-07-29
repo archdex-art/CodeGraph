@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceDir } from "@/lib/store";
 import { repoAccessDenied } from "@/lib/authz";
-import { searchWorkspace } from "@/lib/workspace";
+import { searchWorkspace } from "@codegraph/fsx";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -8,7 +8,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, renameSync, rmSync, statSync, lstatSync, cpSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { db, dataDir } from "./db";
-import { resolveSafe, WorkspacePathError } from "./workspace";
+import { resolveSafe, WorkspacePathError } from "@codegraph/fsx";
 import type { TrashEntry } from "./types";
 
 // Cap retained trash entries per repo; oldest beyond this are purged

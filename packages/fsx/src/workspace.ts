@@ -3,6 +3,9 @@
 // rejects anything that would escape the workspace root (symlink or `..`
 // traversal), so a malicious repoId/path combination can never touch the
 // host filesystem outside the workspace.
+//
+// This is the ONLY module in the workspace permitted to import node:fs
+// (LLD §10.1), enforced by .dependency-cruiser.cjs.
 import {
   readdirSync,
   statSync,
@@ -16,7 +19,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import type { Dirent } from "node:fs";
-import type { FsEntry } from "./types";
+import type { FsEntry } from "@codegraph/core-domain";
 
 export const MAX_EDITABLE_BYTES = 4_000_000; // 4MB — above this, treat as binary/too-large to edit
 export const MAX_WRITE_BYTES = 8_000_000; // 8MB — F011: hard cap on a single editor write/upload/create,
@@ -140,6 +143,52 @@ export function writeWorkspaceFile(root: string, relPath: string, content: strin
   writeFileSync(full, content, "utf8");
 }
 
+export interface ReadBytesResult {
+  /**
+   * Explicitly `ArrayBuffer`-backed, not the default `ArrayBufferLike`.
+   * `BodyInit` (what a Response constructor accepts) excludes
+   * SharedArrayBuffer-backed views, so a plain `Uint8Array` here fails to type
+   * check at the one call site that exists.
+   */
+  readonly bytes: Uint8Array<ArrayBuffer>;
+  /** Basename of the resolved file, for a Content-Disposition header. */
+  readonly name: string;
+}
+
+/**
+ * Read a file as raw bytes (the editor's download path).
+ *
+ * Exists so the route handler does not have to call `resolveSafe` and then
+ * `readFileSync` itself. That pattern hands a raw absolute path to a caller and
+ * makes containment something the caller can forget — LLD §10.1's "no raw path
+ * strings escape this module". Returning the basename too removes the last
+ * reason the route had to touch `node:path`.
+ */
+export function readWorkspaceBytes(root: string, relPath: string): ReadBytesResult {
+  const full = resolveSafe(root, relPath);
+  const st = statSync(full);
+  if (!st.isFile()) throw new WorkspacePathError("Not a file");
+  return { bytes: new Uint8Array(readFileSync(full)), name: path.basename(full) };
+}
+
+/**
+ * Write raw bytes (the editor's upload path), under the same size cap as a text
+ * write.
+ *
+ * The cap is enforced here rather than only at the route so it cannot be
+ * bypassed by a second caller. The route additionally rejects an oversized
+ * base64 payload before decoding it, which is a cheaper pre-filter, not a
+ * substitute for this.
+ */
+export function writeWorkspaceBytes(root: string, relPath: string, bytes: Uint8Array): void {
+  if (bytes.byteLength > MAX_WRITE_BYTES) {
+    throw new WorkspacePathError(`File exceeds the ${MAX_WRITE_BYTES.toLocaleString()}-byte write limit`);
+  }
+  const full = resolveSafe(root, relPath);
+  mkdirSync(path.dirname(full), { recursive: true });
+  writeFileSync(full, bytes);
+}
+
 export function createEntry(root: string, relPath: string, type: "file" | "dir"): void {
   const full = resolveSafe(root, relPath);
   if (existsSync(full)) throw new Error("Already exists");
@@ -200,9 +249,15 @@ export function searchWorkspace(root: string, query: string, maxResults = 200): 
       const text = buf.toString("utf8");
       if (!text.toLowerCase().includes(needle)) continue;
       const lines = text.split("\n");
-      for (let i = 0; i < lines.length && results.length < maxResults; i++) {
-        if (lines[i].toLowerCase().includes(needle)) {
-          results.push({ file: toRel(root, full), line: i + 1, text: lines[i].trim().slice(0, 240) });
+      // Iterated by value rather than by index: `lines[i]` is only provably
+      // defined to a human, and `noUncheckedIndexedAccess` is right to object.
+      // `entries()` yields a non-optional string, so the guard disappears
+      // instead of being suppressed with `!` — which is the class of bug that
+      // suppression hides elsewhere in this codebase (REVIEW B1).
+      for (const [index, line] of lines.entries()) {
+        if (results.length >= maxResults) break;
+        if (line.toLowerCase().includes(needle)) {
+          results.push({ file: toRel(root, full), line: index + 1, text: line.trim().slice(0, 240) });
         }
       }
     }

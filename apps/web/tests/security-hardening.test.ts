@@ -11,7 +11,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { isGithubHost } from "@/lib/gitops";
-import { resolveSafe, WorkspacePathError } from "@/lib/workspace";
+import { resolveSafe, WorkspacePathError } from "@codegraph/fsx";
 import { redactCredentials, cloneRepo } from "@/lib/indexer";
 import { isSafeReturnPath } from "@/lib/urlSafety";
 import { executeFixes } from "@/lib/agents/executor";

@@ -10,7 +10,7 @@
 // is pure "given validated arguments, do the thing, return text or throw."
 // Each backend owns its own tool-declaration format (zod for the Claude
 // Agent SDK, JSON Schema for OpenAI-style function calling).
-import { createEntry, listDir, readWorkspaceFile, renameEntry, searchWorkspace, writeWorkspaceFile } from "../workspace";
+import { createEntry, listDir, readWorkspaceFile, renameEntry, searchWorkspace, writeWorkspaceFile } from "@codegraph/fsx";
 import { commit, diffFile, getStatus } from "../gitops";
 import { moveToTrash } from "../trash";
 
