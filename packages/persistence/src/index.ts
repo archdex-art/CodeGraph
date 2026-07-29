@@ -48,8 +48,23 @@ export {
   setSaveMode,
 } from "./repos";
 
-export type { JobRow } from "./jobs";
-export { findJob, insertJob, updateJob } from "./jobs";
+export type { JobRow, QueuedJobRow, NewJob } from "./jobs";
+export {
+  findJob,
+  insertJob,
+  updateJob,
+  TERMINAL_JOB_STATUSES,
+  enqueueJob,
+  claimJob,
+  heartbeatJob,
+  updateJobProgress,
+  succeedJob,
+  failJob,
+  cancelJob,
+  isJobCancelled,
+  findQueuedJob,
+  findLiveJobForRepo,
+} from "./jobs";
 
 export { readSetting, writeSetting } from "./settings";
 

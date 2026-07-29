@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { fingerprint, normalizeSnippet } from "@codegraph/core-domain";
-import { DatabaseSync, runMigrations, schemaVersions, type SqliteDatabase } from "../src/index";
+import { DatabaseSync, MIGRATIONS, runMigrations, schemaVersions, type SqliteDatabase } from "../src/index";
 
 /**
  * The findings blob → rows migration, run against a COPY of a v1-shaped database
@@ -115,7 +115,24 @@ describe("migrating a v1 database copy forward", () => {
 
     runMigrations(db);
 
-    expect(schemaVersions(db)).toEqual([1, 2, 3]);
+    // Derived from MIGRATIONS, not a literal: the claim is "every version is
+    // applied and recorded", and hardcoding the list turned that into a
+    // maintenance tax that every future migration has to pay by editing a test
+    // it did not break. Sorted because the assertion is about the set applied,
+    // while ordering is `runMigrations`' own concern and asserted below.
+    const expected = [...MIGRATIONS].map((m) => m.version).sort((a, b) => a - b);
+    expect(schemaVersions(db)).toEqual(expected);
+  });
+
+  it("records versions in ascending order", () => {
+    const dbPath = seedLegacyDatabaseCopy({ repo1: [legacyIssue()] });
+    const db = new DatabaseSync(dbPath);
+
+    runMigrations(db);
+
+    const applied = schemaVersions(db);
+    expect(applied).toEqual([...applied].sort((a, b) => a - b));
+    expect(applied.length).toBeGreaterThanOrEqual(4);
   });
 
   it("creates one historical run per repo that had findings", () => {
