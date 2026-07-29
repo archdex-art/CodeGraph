@@ -149,8 +149,12 @@ jobs:
   desktop:
     name: Desktop (Electron app)
     runs-on: ubuntu-latest
-    # desktop/ was moved to apps/desktop and is now part of the root monorepo
-    # workspaces. It depends on the web build to test its standalone server integration.
+    # apps/desktop (moved from desktop/ per LLD §13) is now a root workspace
+    # member, so it installs from the root lockfile rather than its own. That
+    # move is what fixed C6's original finding: the standalone desktop
+    # package-lock.json had never been in sync with its package.json
+    # (esbuild@0.28.1 vs ^0.20.1), so `npm ci` failed from the commit that
+    # introduced it. There is now one lockfile and it cannot drift.
     defaults:
       run:
         working-directory: apps/desktop
@@ -163,17 +167,15 @@ jobs:
           cache: "npm"
           cache-dependency-path: package-lock.json
 
+      # No ELECTRON_SKIP_BINARY_DOWNLOAD: the e2e step below launches a real
+      # Electron process, so the ~90MB binary is now load-bearing rather than
+      # dead weight.
       - name: Install dependencies
         run: npm ci
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
-
-      # Build the web standalone server first, since desktop needs it
-      - name: Build Web Standalone
-        run: npm run build --workspace @codegraph/web
         working-directory: .
+
       # Widened past tsconfig.json's emit scope to also cover e2e/ and
-      # scripts/ — see the comment in desktop/tsconfig.typecheck.json.
+      # scripts/ — see the comment in apps/desktop/tsconfig.typecheck.json.
       - name: Typecheck
         run: npm run typecheck
 
@@ -185,31 +187,35 @@ jobs:
       - name: Build (tsc + preload bundle)
         run: npm run build
 
-      # The Playwright/Electron e2e suite (desktop/e2e/smoke.test.ts) is
-      # deliberately NOT wired in. `xvfb-run` would solve the missing display,
-      # but the display is not the blocker — the suite cannot reach a passing
-      # state at all right now:
-      #
-      #  1. It launches dist/src/main/index.js, whose ConfigManager.serverPath
-      #     resolves to desktop/build/standalone/server.js. That tree is
-      #     produced by `npm run build:orchestrate`, which currently dies with
-      #     ENOENT: desktop/scripts/build/manifest.json still points its
-      #     `sourceRoot` at "../../../app", a path the P1 monorepo move deleted
-      #     (the app is now apps/web).
-      #  2. Repointing sourceRoot is not sufficient. With
-      #     `outputFileTracingRoot` at the monorepo root the standalone tree is
-      #     nested one level deeper — server.js is at
-      #     .next/standalone/apps/web/server.js and the tree-sitter grammars at
-      #     .next/standalone/apps/web/wasm — so the manifest's
-      #     `standalone-server` and `tree-sitter-wasm` artifacts and
-      #     ConfigManager.serverPath all disagree with reality. Fixing that is a
-      #     packaging change, not a CI change.
-      #  3. Even once it boots, the suite spawns the real Next standalone server
-      #     and indexes against it, and playwright.config.ts already sets
-      #     `retries: 2` under CI. A retry-masked job here would report green
-      #     while proving nothing.
-      #
-      # To enable it: fix the manifest + serverPath for the nested standalone
-      # layout, have this job build apps/web (or consume the test-and-build
-      # artifact), install the Electron binary (drop the env var above), run
-      # under `xvfb-run -a`, and set `retries: 0` so flakes fail loudly.
+      # The e2e suite launches dist/src/main/index.js, which spawns the real
+      # Next standalone server from build/standalone/apps/web/server.js. That
+      # tree does not exist until apps/web is built and build:orchestrate has
+      # assembled it, so both are prerequisites, in this order.
+      - name: Build web standalone (e2e prerequisite)
+        run: npm run build --workspace @codegraph/web
+        working-directory: .
+
+      # Also the gate that fails the build if operator runtime state (SQLite
+      # database, cloned repositories under apps/web/data/) reached the bundle.
+      # Those paths are gitignored, so CI cannot reproduce the leak — this runs
+      # here to keep the check itself honest, not because CI is where it fires.
+      - name: Assemble Electron bundle
+        run: npm run build:orchestrate
+
+      # xvfb-run supplies the display Electron needs on a headless runner.
+      # playwright.config.ts pins retries to 0 on purpose: this suite boots a
+      # real server, so a retry would hide a boot/health-check race behind a
+      # green tick.
+      - name: E2E (Playwright + Electron)
+        run: xvfb-run -a npx playwright test e2e/smoke.test.ts
+
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-e2e-artifacts
+          path: |
+            apps/desktop/test-results/
+            apps/desktop/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

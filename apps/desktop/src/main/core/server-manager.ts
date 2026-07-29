@@ -53,13 +53,7 @@ export class ServerManager {
     const serverPath = this.config.serverPath;
     this.logger.info("ServerManager", `Spawning background server at ${serverPath} on port ${this.currentPort}`);
     this.serverProcess = spawn(process.execPath, [serverPath], {
-      env: {
-        ...process.env,
-        ELECTRON_RUN_AS_NODE: "1",
-        NODE_ENV: this.config.isDevelopment ? "development" : "production",
-        PORT: this.currentPort.toString(),
-        HOSTNAME: "127.0.0.1",
-      },
+      env: this.config.childEnv(this.currentPort),
       stdio: ["ignore", "pipe", "pipe"],
     });
 

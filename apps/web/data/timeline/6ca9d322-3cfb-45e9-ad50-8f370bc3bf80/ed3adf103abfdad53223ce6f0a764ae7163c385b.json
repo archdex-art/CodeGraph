@@ -1,0 +1,2612 @@
+{
+  "timeline": {
+    "hash": "ed3adf103abfdad53223ce6f0a764ae7163c385b",
+    "timestamp": 1758836066,
+    "author": "Marvin Häuser",
+    "refs": [
+      "HEAD -> main",
+      "origin/main",
+      "origin/HEAD"
+    ],
+    "message": "Defensive programming against failing event APIs"
+  },
+  "result": {
+    "score": 99,
+    "loc": 5743,
+    "languages": [
+      {
+        "language": "Swift",
+        "files": 48,
+        "loc": 5190
+      },
+      {
+        "language": "C",
+        "files": 8,
+        "loc": 282
+      },
+      {
+        "language": "Markdown",
+        "files": 1,
+        "loc": 131
+      },
+      {
+        "language": "JSON",
+        "files": 4,
+        "loc": 116
+      },
+      {
+        "language": "Shell",
+        "files": 1,
+        "loc": 24
+      }
+    ],
+    "graphStats": {
+      "files": 62,
+      "dirs": 22,
+      "dependencies": 0,
+      "nodes": 84,
+      "edges": 62
+    },
+    "dimensions": [
+      {
+        "dimension": "correctness",
+        "score": 100,
+        "penalty": 0,
+        "issueCount": 0
+      },
+      {
+        "dimension": "security",
+        "score": 100,
+        "penalty": 0,
+        "issueCount": 0
+      },
+      {
+        "dimension": "maintainability",
+        "score": 100,
+        "penalty": 0,
+        "issueCount": 0
+      },
+      {
+        "dimension": "dependency_hygiene",
+        "score": 100,
+        "penalty": 0,
+        "issueCount": 0
+      },
+      {
+        "dimension": "test_integrity",
+        "score": 95,
+        "penalty": 12,
+        "issueCount": 1
+      }
+    ],
+    "issues": [
+      {
+        "id": "iss_0",
+        "dimension": "test_integrity",
+        "severity": 4,
+        "confidence": 0.6,
+        "title": "No test files detected",
+        "file": ".",
+        "line": 1,
+        "blastRadius": 3,
+        "churn": 1
+      }
+    ],
+    "dependencies": [],
+    "churnByFile": {},
+    "viz": {
+      "nodes": [
+        {
+          "id": "README.md",
+          "label": "README.md",
+          "kind": "file",
+          "language": "Markdown",
+          "loc": 131,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": ".",
+          "label": "/",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "uninstall.sh",
+          "label": "uninstall.sh",
+          "kind": "file",
+          "language": "Shell",
+          "loc": 24,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "me.mhaeuser.batterytoolkitd/BTDaemon.swift",
+          "label": "BTDaemon.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 161,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "me.mhaeuser.batterytoolkitd",
+          "label": "me.mhaeuser.batterytoolkitd",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "me.mhaeuser.batterytoolkitd/BTDaemonComm.swift",
+          "label": "BTDaemonComm.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 238,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "me.mhaeuser.batterytoolkitd/BTDaemonManagement.swift",
+          "label": "BTDaemonManagement.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 49,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "me.mhaeuser.batterytoolkitd/BTDaemonXPCServer.swift",
+          "label": "BTDaemonXPCServer.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 49,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "me.mhaeuser.batterytoolkitd/BTDispatcher.swift",
+          "label": "BTDispatcher.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 109,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "me.mhaeuser.batterytoolkitd/BTPowerEvents.swift",
+          "label": "BTPowerEvents.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 348,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "me.mhaeuser.batterytoolkitd/BTPowerState.swift",
+          "label": "BTPowerState.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 232,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "me.mhaeuser.batterytoolkitd/BTSettings.swift",
+          "label": "BTSettings.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 194,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/SecCodeEx/SecCodeEx.c",
+          "label": "SecCodeEx.c",
+          "kind": "file",
+          "language": "C",
+          "loc": 18,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/SecCodeEx",
+          "label": "SecCodeEx",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules",
+          "label": "Modules",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/SecCodeEx/SecCodeEx.h",
+          "label": "SecCodeEx.h",
+          "kind": "file",
+          "language": "C",
+          "loc": 26,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/SMCParamStruct/SMCParamStruct.h",
+          "label": "SMCParamStruct.h",
+          "kind": "file",
+          "language": "C",
+          "loc": 99,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/SMCParamStruct",
+          "label": "SMCParamStruct",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/NSXPCConnection+AuditToken/NSXPCConnection+AuditToken.h",
+          "label": "NSXPCConnection+AuditToken.h",
+          "kind": "file",
+          "language": "C",
+          "loc": 17,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/NSXPCConnection+AuditToken",
+          "label": "NSXPCConnection+AuditToken",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/MachTaskSelf/MachTaskSelf.c",
+          "label": "MachTaskSelf.c",
+          "kind": "file",
+          "language": "C",
+          "loc": 13,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/MachTaskSelf",
+          "label": "MachTaskSelf",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/MachTaskSelf/MachTaskSelf.h",
+          "label": "MachTaskSelf.h",
+          "kind": "file",
+          "language": "C",
+          "loc": 18,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/IOPMPrivate/IOPMLibPrivate.h",
+          "label": "IOPMLibPrivate.h",
+          "kind": "file",
+          "language": "C",
+          "loc": 57,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/IOPMPrivate",
+          "label": "IOPMPrivate",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/BTPreprocessor/BTPreprocessor.h",
+          "label": "BTPreprocessor.h",
+          "kind": "file",
+          "language": "C",
+          "loc": 34,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Modules/BTPreprocessor",
+          "label": "BTPreprocessor",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Libraries/CSIdentification.swift",
+          "label": "CSIdentification.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 69,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Libraries",
+          "label": "Libraries",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Libraries/GlobalSleep.swift",
+          "label": "GlobalSleep.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 127,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Libraries/IOPSPrivate.swift",
+          "label": "IOPSPrivate.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 58,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Libraries/PowerEvents.swift",
+          "label": "PowerEvents.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 66,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Libraries/SMCComm+MagSafe.swift",
+          "label": "SMCComm+MagSafe.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 68,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Libraries/SMCComm+Power.swift",
+          "label": "SMCComm+Power.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 162,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Libraries/SMCComm.swift",
+          "label": "SMCComm.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 264,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Libraries/SimpleAuth.swift",
+          "label": "SimpleAuth.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 178,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Common/BTAuthorizationRights.swift",
+          "label": "BTAuthorizationRights.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 13,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Common",
+          "label": "Common",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Common/BTDaemonCommProtocol.swift",
+          "label": "BTDaemonCommProtocol.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 48,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Common/BTError.swift",
+          "label": "BTError.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 20,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Common/BTLegacyHelperInfo.swift",
+          "label": "BTLegacyHelperInfo.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 22,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Common/BTSettingsInfo.swift",
+          "label": "BTSettingsInfo.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 38,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Common/BTStateInfo.swift",
+          "label": "BTStateInfo.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 31,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "Common/BTXPCValidation.swift",
+          "label": "BTXPCValidation.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 168,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkitService/BTService.swift",
+          "label": "BTService.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 14,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkitService",
+          "label": "BatteryToolkitService",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkitService/BTServiceComm.swift",
+          "label": "BTServiceComm.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 77,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkitService/BTServiceCommProtocol.swift",
+          "label": "BTServiceCommProtocol.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 21,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkitService/BTServiceXPCServer.swift",
+          "label": "BTServiceXPCServer.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 43,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/AppCommProtocol.swift",
+          "label": "AppCommProtocol.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 6,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit",
+          "label": "BatteryToolkit",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/BTActions.swift",
+          "label": "BTActions.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 70,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/BTAppXPCClient.swift",
+          "label": "BTAppXPCClient.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 116,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/BTBackgroundActor.swift",
+          "label": "BTBackgroundActor.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 11,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/BTDaemonXPCClient.swift",
+          "label": "BTDaemonXPCClient.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 279,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/BTLocalization.swift",
+          "label": "BTLocalization.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 133,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/BTLoginItem.swift",
+          "label": "BTLoginItem.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 90,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/BTAccessoryMode.swift",
+          "label": "BTAccessoryMode.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 67,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views",
+          "label": "Views",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/BTAppPrompts.swift",
+          "label": "BTAppPrompts.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 224,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/BTErrorHandler.swift",
+          "label": "BTErrorHandler.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 33,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/Upgrading/BTUpgradingViewController.swift",
+          "label": "BTUpgradingViewController.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 17,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/Upgrading",
+          "label": "Upgrading",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/Settings/BTSettingsMenuItem.swift",
+          "label": "BTSettingsMenuItem.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 27,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/Settings",
+          "label": "Settings",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/Settings/BTSettingsViewController.swift",
+          "label": "BTSettingsViewController.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 253,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/Settings/BTSettingsWindowController.swift",
+          "label": "BTSettingsWindowController.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 72,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/Main/BTAppDelegate.swift",
+          "label": "BTAppDelegate.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 126,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/Main",
+          "label": "Main",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Views/Main/BTCommandsMenuDelegate.swift",
+          "label": "BTCommandsMenuDelegate.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 364,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/DaemonManagement/BTDaemonManagement+Legacy.swift",
+          "label": "BTDaemonManagement+Legacy.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 103,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/DaemonManagement",
+          "label": "DaemonManagement",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/DaemonManagement/BTDaemonManagement+Service.swift",
+          "label": "BTDaemonManagement+Service.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 174,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/DaemonManagement/BTDaemonManagement+Status.swift",
+          "label": "BTDaemonManagement+Status.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 16,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/DaemonManagement/BTDaemonManagement.swift",
+          "label": "BTDaemonManagement.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 81,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Assets.xcassets/Contents.json",
+          "label": "Contents.json",
+          "kind": "file",
+          "language": "JSON",
+          "loc": 7,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Assets.xcassets",
+          "label": "Assets.xcassets",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Assets.xcassets/ExtraItemIcon.imageset/Contents.json",
+          "label": "Contents.json",
+          "kind": "file",
+          "language": "JSON",
+          "loc": 19,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Assets.xcassets/ExtraItemIcon.imageset",
+          "label": "ExtraItemIcon.imageset",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Assets.xcassets/AppIcon.appiconset/Contents.json",
+          "label": "Contents.json",
+          "kind": "file",
+          "language": "JSON",
+          "loc": 69,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Assets.xcassets/AppIcon.appiconset",
+          "label": "AppIcon.appiconset",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Assets.xcassets/AccentColor.colorset/Contents.json",
+          "label": "Contents.json",
+          "kind": "file",
+          "language": "JSON",
+          "loc": 21,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "BatteryToolkit/Assets.xcassets/AccentColor.colorset",
+          "label": "AccentColor.colorset",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "AutostartHelper/AutostartHelper.swift",
+          "label": "AutostartHelper.swift",
+          "kind": "file",
+          "language": "Swift",
+          "loc": 61,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        },
+        {
+          "id": "AutostartHelper",
+          "label": "AutostartHelper",
+          "kind": "dir",
+          "language": null,
+          "loc": 0,
+          "fanIn": 0,
+          "issues": 0,
+          "worstSeverity": 0
+        }
+      ],
+      "edges": [
+        {
+          "source": ".",
+          "target": "README.md",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "uninstall.sh",
+          "kind": "contains"
+        },
+        {
+          "source": "me.mhaeuser.batterytoolkitd",
+          "target": "me.mhaeuser.batterytoolkitd/BTDaemon.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "me.mhaeuser.batterytoolkitd",
+          "kind": "contains"
+        },
+        {
+          "source": "me.mhaeuser.batterytoolkitd",
+          "target": "me.mhaeuser.batterytoolkitd/BTDaemonComm.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "me.mhaeuser.batterytoolkitd",
+          "kind": "contains"
+        },
+        {
+          "source": "me.mhaeuser.batterytoolkitd",
+          "target": "me.mhaeuser.batterytoolkitd/BTDaemonManagement.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "me.mhaeuser.batterytoolkitd",
+          "kind": "contains"
+        },
+        {
+          "source": "me.mhaeuser.batterytoolkitd",
+          "target": "me.mhaeuser.batterytoolkitd/BTDaemonXPCServer.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "me.mhaeuser.batterytoolkitd",
+          "kind": "contains"
+        },
+        {
+          "source": "me.mhaeuser.batterytoolkitd",
+          "target": "me.mhaeuser.batterytoolkitd/BTDispatcher.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "me.mhaeuser.batterytoolkitd",
+          "kind": "contains"
+        },
+        {
+          "source": "me.mhaeuser.batterytoolkitd",
+          "target": "me.mhaeuser.batterytoolkitd/BTPowerEvents.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "me.mhaeuser.batterytoolkitd",
+          "kind": "contains"
+        },
+        {
+          "source": "me.mhaeuser.batterytoolkitd",
+          "target": "me.mhaeuser.batterytoolkitd/BTPowerState.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "me.mhaeuser.batterytoolkitd",
+          "kind": "contains"
+        },
+        {
+          "source": "me.mhaeuser.batterytoolkitd",
+          "target": "me.mhaeuser.batterytoolkitd/BTSettings.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "me.mhaeuser.batterytoolkitd",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules/SecCodeEx",
+          "target": "Modules/SecCodeEx/SecCodeEx.c",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules",
+          "target": "Modules/SecCodeEx",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Modules",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules/SecCodeEx",
+          "target": "Modules/SecCodeEx/SecCodeEx.h",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules",
+          "target": "Modules/SecCodeEx",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Modules",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules/SMCParamStruct",
+          "target": "Modules/SMCParamStruct/SMCParamStruct.h",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules",
+          "target": "Modules/SMCParamStruct",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Modules",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules/NSXPCConnection+AuditToken",
+          "target": "Modules/NSXPCConnection+AuditToken/NSXPCConnection+AuditToken.h",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules",
+          "target": "Modules/NSXPCConnection+AuditToken",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Modules",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules/MachTaskSelf",
+          "target": "Modules/MachTaskSelf/MachTaskSelf.c",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules",
+          "target": "Modules/MachTaskSelf",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Modules",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules/MachTaskSelf",
+          "target": "Modules/MachTaskSelf/MachTaskSelf.h",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules",
+          "target": "Modules/MachTaskSelf",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Modules",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules/IOPMPrivate",
+          "target": "Modules/IOPMPrivate/IOPMLibPrivate.h",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules",
+          "target": "Modules/IOPMPrivate",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Modules",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules/BTPreprocessor",
+          "target": "Modules/BTPreprocessor/BTPreprocessor.h",
+          "kind": "contains"
+        },
+        {
+          "source": "Modules",
+          "target": "Modules/BTPreprocessor",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Modules",
+          "kind": "contains"
+        },
+        {
+          "source": "Libraries",
+          "target": "Libraries/CSIdentification.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Libraries",
+          "kind": "contains"
+        },
+        {
+          "source": "Libraries",
+          "target": "Libraries/GlobalSleep.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Libraries",
+          "kind": "contains"
+        },
+        {
+          "source": "Libraries",
+          "target": "Libraries/IOPSPrivate.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Libraries",
+          "kind": "contains"
+        },
+        {
+          "source": "Libraries",
+          "target": "Libraries/PowerEvents.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Libraries",
+          "kind": "contains"
+        },
+        {
+          "source": "Libraries",
+          "target": "Libraries/SMCComm+MagSafe.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Libraries",
+          "kind": "contains"
+        },
+        {
+          "source": "Libraries",
+          "target": "Libraries/SMCComm+Power.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Libraries",
+          "kind": "contains"
+        },
+        {
+          "source": "Libraries",
+          "target": "Libraries/SMCComm.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Libraries",
+          "kind": "contains"
+        },
+        {
+          "source": "Libraries",
+          "target": "Libraries/SimpleAuth.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Libraries",
+          "kind": "contains"
+        },
+        {
+          "source": "Common",
+          "target": "Common/BTAuthorizationRights.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Common",
+          "kind": "contains"
+        },
+        {
+          "source": "Common",
+          "target": "Common/BTDaemonCommProtocol.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Common",
+          "kind": "contains"
+        },
+        {
+          "source": "Common",
+          "target": "Common/BTError.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Common",
+          "kind": "contains"
+        },
+        {
+          "source": "Common",
+          "target": "Common/BTLegacyHelperInfo.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Common",
+          "kind": "contains"
+        },
+        {
+          "source": "Common",
+          "target": "Common/BTSettingsInfo.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Common",
+          "kind": "contains"
+        },
+        {
+          "source": "Common",
+          "target": "Common/BTStateInfo.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Common",
+          "kind": "contains"
+        },
+        {
+          "source": "Common",
+          "target": "Common/BTXPCValidation.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "Common",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkitService",
+          "target": "BatteryToolkitService/BTService.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkitService",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkitService",
+          "target": "BatteryToolkitService/BTServiceComm.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkitService",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkitService",
+          "target": "BatteryToolkitService/BTServiceCommProtocol.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkitService",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkitService",
+          "target": "BatteryToolkitService/BTServiceXPCServer.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkitService",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/AppCommProtocol.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/BTActions.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/BTAppXPCClient.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/BTBackgroundActor.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/BTDaemonXPCClient.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/BTLocalization.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/BTLoginItem.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views",
+          "target": "BatteryToolkit/Views/BTAccessoryMode.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Views",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views",
+          "target": "BatteryToolkit/Views/BTAppPrompts.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Views",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views",
+          "target": "BatteryToolkit/Views/BTErrorHandler.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Views",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views/Upgrading",
+          "target": "BatteryToolkit/Views/Upgrading/BTUpgradingViewController.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views",
+          "target": "BatteryToolkit/Views/Upgrading",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Views",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views/Settings",
+          "target": "BatteryToolkit/Views/Settings/BTSettingsMenuItem.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views",
+          "target": "BatteryToolkit/Views/Settings",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Views",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views/Settings",
+          "target": "BatteryToolkit/Views/Settings/BTSettingsViewController.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views",
+          "target": "BatteryToolkit/Views/Settings",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Views",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views/Settings",
+          "target": "BatteryToolkit/Views/Settings/BTSettingsWindowController.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views",
+          "target": "BatteryToolkit/Views/Settings",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Views",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views/Main",
+          "target": "BatteryToolkit/Views/Main/BTAppDelegate.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views",
+          "target": "BatteryToolkit/Views/Main",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Views",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views/Main",
+          "target": "BatteryToolkit/Views/Main/BTCommandsMenuDelegate.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Views",
+          "target": "BatteryToolkit/Views/Main",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Views",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/DaemonManagement",
+          "target": "BatteryToolkit/DaemonManagement/BTDaemonManagement+Legacy.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/DaemonManagement",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/DaemonManagement",
+          "target": "BatteryToolkit/DaemonManagement/BTDaemonManagement+Service.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/DaemonManagement",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/DaemonManagement",
+          "target": "BatteryToolkit/DaemonManagement/BTDaemonManagement+Status.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/DaemonManagement",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/DaemonManagement",
+          "target": "BatteryToolkit/DaemonManagement/BTDaemonManagement.swift",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/DaemonManagement",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Assets.xcassets",
+          "target": "BatteryToolkit/Assets.xcassets/Contents.json",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Assets.xcassets",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Assets.xcassets/ExtraItemIcon.imageset",
+          "target": "BatteryToolkit/Assets.xcassets/ExtraItemIcon.imageset/Contents.json",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Assets.xcassets",
+          "target": "BatteryToolkit/Assets.xcassets/ExtraItemIcon.imageset",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Assets.xcassets",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Assets.xcassets/AppIcon.appiconset",
+          "target": "BatteryToolkit/Assets.xcassets/AppIcon.appiconset/Contents.json",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Assets.xcassets",
+          "target": "BatteryToolkit/Assets.xcassets/AppIcon.appiconset",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Assets.xcassets",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Assets.xcassets/AccentColor.colorset",
+          "target": "BatteryToolkit/Assets.xcassets/AccentColor.colorset/Contents.json",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit/Assets.xcassets",
+          "target": "BatteryToolkit/Assets.xcassets/AccentColor.colorset",
+          "kind": "contains"
+        },
+        {
+          "source": "BatteryToolkit",
+          "target": "BatteryToolkit/Assets.xcassets",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "BatteryToolkit",
+          "kind": "contains"
+        },
+        {
+          "source": "AutostartHelper",
+          "target": "AutostartHelper/AutostartHelper.swift",
+          "kind": "contains"
+        },
+        {
+          "source": ".",
+          "target": "AutostartHelper",
+          "kind": "contains"
+        }
+      ],
+      "truncated": false
+    },
+    "tree": {
+      "name": "/",
+      "path": ".",
+      "children": [
+        {
+          "name": "README.md",
+          "path": "README.md",
+          "ext": ".md",
+          "loc": 131,
+          "issues": 0
+        },
+        {
+          "name": "uninstall.sh",
+          "path": "uninstall.sh",
+          "ext": ".sh",
+          "loc": 24,
+          "issues": 0
+        },
+        {
+          "name": "me.mhaeuser.batterytoolkitd",
+          "path": "me.mhaeuser.batterytoolkitd",
+          "children": [
+            {
+              "name": "BTDaemon.swift",
+              "path": "me.mhaeuser.batterytoolkitd/BTDaemon.swift",
+              "ext": ".swift",
+              "loc": 161,
+              "issues": 0
+            },
+            {
+              "name": "BTDaemonComm.swift",
+              "path": "me.mhaeuser.batterytoolkitd/BTDaemonComm.swift",
+              "ext": ".swift",
+              "loc": 238,
+              "issues": 0
+            },
+            {
+              "name": "BTDaemonManagement.swift",
+              "path": "me.mhaeuser.batterytoolkitd/BTDaemonManagement.swift",
+              "ext": ".swift",
+              "loc": 49,
+              "issues": 0
+            },
+            {
+              "name": "BTDaemonXPCServer.swift",
+              "path": "me.mhaeuser.batterytoolkitd/BTDaemonXPCServer.swift",
+              "ext": ".swift",
+              "loc": 49,
+              "issues": 0
+            },
+            {
+              "name": "BTDispatcher.swift",
+              "path": "me.mhaeuser.batterytoolkitd/BTDispatcher.swift",
+              "ext": ".swift",
+              "loc": 109,
+              "issues": 0
+            },
+            {
+              "name": "BTPowerEvents.swift",
+              "path": "me.mhaeuser.batterytoolkitd/BTPowerEvents.swift",
+              "ext": ".swift",
+              "loc": 348,
+              "issues": 0
+            },
+            {
+              "name": "BTPowerState.swift",
+              "path": "me.mhaeuser.batterytoolkitd/BTPowerState.swift",
+              "ext": ".swift",
+              "loc": 232,
+              "issues": 0
+            },
+            {
+              "name": "BTSettings.swift",
+              "path": "me.mhaeuser.batterytoolkitd/BTSettings.swift",
+              "ext": ".swift",
+              "loc": 194,
+              "issues": 0
+            }
+          ]
+        },
+        {
+          "name": "Modules",
+          "path": "Modules",
+          "children": [
+            {
+              "name": "SecCodeEx",
+              "path": "Modules/SecCodeEx",
+              "children": [
+                {
+                  "name": "SecCodeEx.c",
+                  "path": "Modules/SecCodeEx/SecCodeEx.c",
+                  "ext": ".c",
+                  "loc": 18,
+                  "issues": 0
+                },
+                {
+                  "name": "SecCodeEx.h",
+                  "path": "Modules/SecCodeEx/SecCodeEx.h",
+                  "ext": ".h",
+                  "loc": 26,
+                  "issues": 0
+                }
+              ]
+            },
+            {
+              "name": "SMCParamStruct",
+              "path": "Modules/SMCParamStruct",
+              "children": [
+                {
+                  "name": "SMCParamStruct.h",
+                  "path": "Modules/SMCParamStruct/SMCParamStruct.h",
+                  "ext": ".h",
+                  "loc": 99,
+                  "issues": 0
+                }
+              ]
+            },
+            {
+              "name": "NSXPCConnection+AuditToken",
+              "path": "Modules/NSXPCConnection+AuditToken",
+              "children": [
+                {
+                  "name": "NSXPCConnection+AuditToken.h",
+                  "path": "Modules/NSXPCConnection+AuditToken/NSXPCConnection+AuditToken.h",
+                  "ext": ".h",
+                  "loc": 17,
+                  "issues": 0
+                }
+              ]
+            },
+            {
+              "name": "MachTaskSelf",
+              "path": "Modules/MachTaskSelf",
+              "children": [
+                {
+                  "name": "MachTaskSelf.c",
+                  "path": "Modules/MachTaskSelf/MachTaskSelf.c",
+                  "ext": ".c",
+                  "loc": 13,
+                  "issues": 0
+                },
+                {
+                  "name": "MachTaskSelf.h",
+                  "path": "Modules/MachTaskSelf/MachTaskSelf.h",
+                  "ext": ".h",
+                  "loc": 18,
+                  "issues": 0
+                }
+              ]
+            },
+            {
+              "name": "IOPMPrivate",
+              "path": "Modules/IOPMPrivate",
+              "children": [
+                {
+                  "name": "IOPMLibPrivate.h",
+                  "path": "Modules/IOPMPrivate/IOPMLibPrivate.h",
+                  "ext": ".h",
+                  "loc": 57,
+                  "issues": 0
+                }
+              ]
+            },
+            {
+              "name": "BTPreprocessor",
+              "path": "Modules/BTPreprocessor",
+              "children": [
+                {
+                  "name": "BTPreprocessor.h",
+                  "path": "Modules/BTPreprocessor/BTPreprocessor.h",
+                  "ext": ".h",
+                  "loc": 34,
+                  "issues": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Libraries",
+          "path": "Libraries",
+          "children": [
+            {
+              "name": "CSIdentification.swift",
+              "path": "Libraries/CSIdentification.swift",
+              "ext": ".swift",
+              "loc": 69,
+              "issues": 0
+            },
+            {
+              "name": "GlobalSleep.swift",
+              "path": "Libraries/GlobalSleep.swift",
+              "ext": ".swift",
+              "loc": 127,
+              "issues": 0
+            },
+            {
+              "name": "IOPSPrivate.swift",
+              "path": "Libraries/IOPSPrivate.swift",
+              "ext": ".swift",
+              "loc": 58,
+              "issues": 0
+            },
+            {
+              "name": "PowerEvents.swift",
+              "path": "Libraries/PowerEvents.swift",
+              "ext": ".swift",
+              "loc": 66,
+              "issues": 0
+            },
+            {
+              "name": "SMCComm+MagSafe.swift",
+              "path": "Libraries/SMCComm+MagSafe.swift",
+              "ext": ".swift",
+              "loc": 68,
+              "issues": 0
+            },
+            {
+              "name": "SMCComm+Power.swift",
+              "path": "Libraries/SMCComm+Power.swift",
+              "ext": ".swift",
+              "loc": 162,
+              "issues": 0
+            },
+            {
+              "name": "SMCComm.swift",
+              "path": "Libraries/SMCComm.swift",
+              "ext": ".swift",
+              "loc": 264,
+              "issues": 0
+            },
+            {
+              "name": "SimpleAuth.swift",
+              "path": "Libraries/SimpleAuth.swift",
+              "ext": ".swift",
+              "loc": 178,
+              "issues": 0
+            }
+          ]
+        },
+        {
+          "name": "Common",
+          "path": "Common",
+          "children": [
+            {
+              "name": "BTAuthorizationRights.swift",
+              "path": "Common/BTAuthorizationRights.swift",
+              "ext": ".swift",
+              "loc": 13,
+              "issues": 0
+            },
+            {
+              "name": "BTDaemonCommProtocol.swift",
+              "path": "Common/BTDaemonCommProtocol.swift",
+              "ext": ".swift",
+              "loc": 48,
+              "issues": 0
+            },
+            {
+              "name": "BTError.swift",
+              "path": "Common/BTError.swift",
+              "ext": ".swift",
+              "loc": 20,
+              "issues": 0
+            },
+            {
+              "name": "BTLegacyHelperInfo.swift",
+              "path": "Common/BTLegacyHelperInfo.swift",
+              "ext": ".swift",
+              "loc": 22,
+              "issues": 0
+            },
+            {
+              "name": "BTSettingsInfo.swift",
+              "path": "Common/BTSettingsInfo.swift",
+              "ext": ".swift",
+              "loc": 38,
+              "issues": 0
+            },
+            {
+              "name": "BTStateInfo.swift",
+              "path": "Common/BTStateInfo.swift",
+              "ext": ".swift",
+              "loc": 31,
+              "issues": 0
+            },
+            {
+              "name": "BTXPCValidation.swift",
+              "path": "Common/BTXPCValidation.swift",
+              "ext": ".swift",
+              "loc": 168,
+              "issues": 0
+            }
+          ]
+        },
+        {
+          "name": "BatteryToolkitService",
+          "path": "BatteryToolkitService",
+          "children": [
+            {
+              "name": "BTService.swift",
+              "path": "BatteryToolkitService/BTService.swift",
+              "ext": ".swift",
+              "loc": 14,
+              "issues": 0
+            },
+            {
+              "name": "BTServiceComm.swift",
+              "path": "BatteryToolkitService/BTServiceComm.swift",
+              "ext": ".swift",
+              "loc": 77,
+              "issues": 0
+            },
+            {
+              "name": "BTServiceCommProtocol.swift",
+              "path": "BatteryToolkitService/BTServiceCommProtocol.swift",
+              "ext": ".swift",
+              "loc": 21,
+              "issues": 0
+            },
+            {
+              "name": "BTServiceXPCServer.swift",
+              "path": "BatteryToolkitService/BTServiceXPCServer.swift",
+              "ext": ".swift",
+              "loc": 43,
+              "issues": 0
+            }
+          ]
+        },
+        {
+          "name": "BatteryToolkit",
+          "path": "BatteryToolkit",
+          "children": [
+            {
+              "name": "AppCommProtocol.swift",
+              "path": "BatteryToolkit/AppCommProtocol.swift",
+              "ext": ".swift",
+              "loc": 6,
+              "issues": 0
+            },
+            {
+              "name": "BTActions.swift",
+              "path": "BatteryToolkit/BTActions.swift",
+              "ext": ".swift",
+              "loc": 70,
+              "issues": 0
+            },
+            {
+              "name": "BTAppXPCClient.swift",
+              "path": "BatteryToolkit/BTAppXPCClient.swift",
+              "ext": ".swift",
+              "loc": 116,
+              "issues": 0
+            },
+            {
+              "name": "BTBackgroundActor.swift",
+              "path": "BatteryToolkit/BTBackgroundActor.swift",
+              "ext": ".swift",
+              "loc": 11,
+              "issues": 0
+            },
+            {
+              "name": "BTDaemonXPCClient.swift",
+              "path": "BatteryToolkit/BTDaemonXPCClient.swift",
+              "ext": ".swift",
+              "loc": 279,
+              "issues": 0
+            },
+            {
+              "name": "BTLocalization.swift",
+              "path": "BatteryToolkit/BTLocalization.swift",
+              "ext": ".swift",
+              "loc": 133,
+              "issues": 0
+            },
+            {
+              "name": "BTLoginItem.swift",
+              "path": "BatteryToolkit/BTLoginItem.swift",
+              "ext": ".swift",
+              "loc": 90,
+              "issues": 0
+            },
+            {
+              "name": "Views",
+              "path": "BatteryToolkit/Views",
+              "children": [
+                {
+                  "name": "BTAccessoryMode.swift",
+                  "path": "BatteryToolkit/Views/BTAccessoryMode.swift",
+                  "ext": ".swift",
+                  "loc": 67,
+                  "issues": 0
+                },
+                {
+                  "name": "BTAppPrompts.swift",
+                  "path": "BatteryToolkit/Views/BTAppPrompts.swift",
+                  "ext": ".swift",
+                  "loc": 224,
+                  "issues": 0
+                },
+                {
+                  "name": "BTErrorHandler.swift",
+                  "path": "BatteryToolkit/Views/BTErrorHandler.swift",
+                  "ext": ".swift",
+                  "loc": 33,
+                  "issues": 0
+                },
+                {
+                  "name": "Upgrading",
+                  "path": "BatteryToolkit/Views/Upgrading",
+                  "children": [
+                    {
+                      "name": "BTUpgradingViewController.swift",
+                      "path": "BatteryToolkit/Views/Upgrading/BTUpgradingViewController.swift",
+                      "ext": ".swift",
+                      "loc": 17,
+                      "issues": 0
+                    }
+                  ]
+                },
+                {
+                  "name": "Settings",
+                  "path": "BatteryToolkit/Views/Settings",
+                  "children": [
+                    {
+                      "name": "BTSettingsMenuItem.swift",
+                      "path": "BatteryToolkit/Views/Settings/BTSettingsMenuItem.swift",
+                      "ext": ".swift",
+                      "loc": 27,
+                      "issues": 0
+                    },
+                    {
+                      "name": "BTSettingsViewController.swift",
+                      "path": "BatteryToolkit/Views/Settings/BTSettingsViewController.swift",
+                      "ext": ".swift",
+                      "loc": 253,
+                      "issues": 0
+                    },
+                    {
+                      "name": "BTSettingsWindowController.swift",
+                      "path": "BatteryToolkit/Views/Settings/BTSettingsWindowController.swift",
+                      "ext": ".swift",
+                      "loc": 72,
+                      "issues": 0
+                    }
+                  ]
+                },
+                {
+                  "name": "Main",
+                  "path": "BatteryToolkit/Views/Main",
+                  "children": [
+                    {
+                      "name": "BTAppDelegate.swift",
+                      "path": "BatteryToolkit/Views/Main/BTAppDelegate.swift",
+                      "ext": ".swift",
+                      "loc": 126,
+                      "issues": 0
+                    },
+                    {
+                      "name": "BTCommandsMenuDelegate.swift",
+                      "path": "BatteryToolkit/Views/Main/BTCommandsMenuDelegate.swift",
+                      "ext": ".swift",
+                      "loc": 364,
+                      "issues": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "DaemonManagement",
+              "path": "BatteryToolkit/DaemonManagement",
+              "children": [
+                {
+                  "name": "BTDaemonManagement+Legacy.swift",
+                  "path": "BatteryToolkit/DaemonManagement/BTDaemonManagement+Legacy.swift",
+                  "ext": ".swift",
+                  "loc": 103,
+                  "issues": 0
+                },
+                {
+                  "name": "BTDaemonManagement+Service.swift",
+                  "path": "BatteryToolkit/DaemonManagement/BTDaemonManagement+Service.swift",
+                  "ext": ".swift",
+                  "loc": 174,
+                  "issues": 0
+                },
+                {
+                  "name": "BTDaemonManagement+Status.swift",
+                  "path": "BatteryToolkit/DaemonManagement/BTDaemonManagement+Status.swift",
+                  "ext": ".swift",
+                  "loc": 16,
+                  "issues": 0
+                },
+                {
+                  "name": "BTDaemonManagement.swift",
+                  "path": "BatteryToolkit/DaemonManagement/BTDaemonManagement.swift",
+                  "ext": ".swift",
+                  "loc": 81,
+                  "issues": 0
+                }
+              ]
+            },
+            {
+              "name": "Assets.xcassets",
+              "path": "BatteryToolkit/Assets.xcassets",
+              "children": [
+                {
+                  "name": "Contents.json",
+                  "path": "BatteryToolkit/Assets.xcassets/Contents.json",
+                  "ext": ".json",
+                  "loc": 7,
+                  "issues": 0
+                },
+                {
+                  "name": "ExtraItemIcon.imageset",
+                  "path": "BatteryToolkit/Assets.xcassets/ExtraItemIcon.imageset",
+                  "children": [
+                    {
+                      "name": "Contents.json",
+                      "path": "BatteryToolkit/Assets.xcassets/ExtraItemIcon.imageset/Contents.json",
+                      "ext": ".json",
+                      "loc": 19,
+                      "issues": 0
+                    }
+                  ]
+                },
+                {
+                  "name": "AppIcon.appiconset",
+                  "path": "BatteryToolkit/Assets.xcassets/AppIcon.appiconset",
+                  "children": [
+                    {
+                      "name": "Contents.json",
+                      "path": "BatteryToolkit/Assets.xcassets/AppIcon.appiconset/Contents.json",
+                      "ext": ".json",
+                      "loc": 69,
+                      "issues": 0
+                    }
+                  ]
+                },
+                {
+                  "name": "AccentColor.colorset",
+                  "path": "BatteryToolkit/Assets.xcassets/AccentColor.colorset",
+                  "children": [
+                    {
+                      "name": "Contents.json",
+                      "path": "BatteryToolkit/Assets.xcassets/AccentColor.colorset/Contents.json",
+                      "ext": ".json",
+                      "loc": 21,
+                      "issues": 0
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "AutostartHelper",
+          "path": "AutostartHelper",
+          "children": [
+            {
+              "name": "AutostartHelper.swift",
+              "path": "AutostartHelper/AutostartHelper.swift",
+              "ext": ".swift",
+              "loc": 61,
+              "issues": 0
+            }
+          ]
+        }
+      ]
+    },
+    "modules": {
+      "nodes": [
+        {
+          "id": "me.mhaeuser.batterytoolkitd",
+          "label": "me.mhaeuser.batterytoolkitd",
+          "files": 8,
+          "loc": 1380,
+          "issues": 0,
+          "language": "Swift",
+          "tier": 0
+        },
+        {
+          "id": "BatteryToolkit/Views",
+          "label": "BatteryToolkit/Views",
+          "files": 9,
+          "loc": 1183,
+          "issues": 0,
+          "language": "Swift",
+          "tier": 0
+        },
+        {
+          "id": "Libraries",
+          "label": "Libraries",
+          "files": 8,
+          "loc": 992,
+          "issues": 0,
+          "language": "Swift",
+          "tier": 0
+        },
+        {
+          "id": "BatteryToolkit",
+          "label": "BatteryToolkit",
+          "files": 7,
+          "loc": 705,
+          "issues": 0,
+          "language": "Swift",
+          "tier": 0
+        },
+        {
+          "id": "BatteryToolkit/DaemonManagement",
+          "label": "BatteryToolkit/DaemonManagement",
+          "files": 4,
+          "loc": 374,
+          "issues": 0,
+          "language": "Swift",
+          "tier": 0
+        },
+        {
+          "id": "Common",
+          "label": "Common",
+          "files": 7,
+          "loc": 340,
+          "issues": 0,
+          "language": "Swift",
+          "tier": 0
+        },
+        {
+          "id": "Modules",
+          "label": "Modules",
+          "files": 8,
+          "loc": 282,
+          "issues": 0,
+          "language": "C",
+          "tier": 0
+        },
+        {
+          "id": "(root)",
+          "label": "(root)",
+          "files": 2,
+          "loc": 155,
+          "issues": 0,
+          "language": "Markdown",
+          "tier": 0
+        },
+        {
+          "id": "BatteryToolkitService",
+          "label": "BatteryToolkitService",
+          "files": 4,
+          "loc": 155,
+          "issues": 0,
+          "language": "Swift",
+          "tier": 0
+        },
+        {
+          "id": "BatteryToolkit/Assets.xcassets",
+          "label": "BatteryToolkit/Assets.xcassets",
+          "files": 4,
+          "loc": 116,
+          "issues": 0,
+          "language": "JSON",
+          "tier": 0
+        },
+        {
+          "id": "AutostartHelper",
+          "label": "AutostartHelper",
+          "files": 1,
+          "loc": 61,
+          "issues": 0,
+          "language": "Swift",
+          "tier": 0
+        }
+      ],
+      "edges": []
+    },
+    "symbolGraph": {
+      "symbols": [],
+      "edges": [],
+      "truncated": false,
+      "stats": {
+        "symbols": 0,
+        "edges": 0,
+        "resolvedCalls": 0
+      }
+    }
+  },
+  "metrics": {
+    "loc": 5743,
+    "fileCount": 62,
+    "dirCount": 22,
+    "dependencies": 0,
+    "classes": 0,
+    "functions": 0,
+    "interfaces": 0,
+    "averageComplexity": 0,
+    "maxComplexity": 0,
+    "averageFanIn": 0,
+    "averageFanOut": 0,
+    "orphanModules": 62
+  },
+  "evolution": {
+    "metrics": {
+      "coupling": 0,
+      "cohesion": 1,
+      "dependencyDensity": 0.021591695501730103,
+      "circularDependencies": 0,
+      "averageModuleSize": 522.0909090909091,
+      "largestModule": "me.mhaeuser.batterytoolkitd",
+      "hotspots": [],
+      "averageFanIn": 0,
+      "averageFanOut": 1.8352941176470587,
+      "layerViolations": 0,
+      "architectureScore": 99
+    },
+    "issueDiff": {
+      "introduced": [
+        {
+          "id": "iss_0",
+          "dimension": "test_integrity",
+          "severity": 4,
+          "confidence": 0.6,
+          "title": "No test files detected",
+          "file": ".",
+          "line": 1,
+          "blastRadius": 3,
+          "churn": 1
+        }
+      ],
+      "resolved": []
+    },
+    "events": [
+      {
+        "category": "FEATURE_INTRODUCED",
+        "title": "Initial Architecture Analyzed",
+        "description": "First architectural snapshot recorded.",
+        "impact": [
+          "Baseline established"
+        ],
+        "affectedNodes": []
+      }
+    ],
+    "moduleHealth": {
+      "me.mhaeuser.batterytoolkitd": {
+        "moduleId": "me.mhaeuser.batterytoolkitd",
+        "created": 1758836066,
+        "lastModified": 1758836066,
+        "growthLoc": 0,
+        "dependencies": 0,
+        "complexity": 0,
+        "stability": 100,
+        "mostChangedFiles": [],
+        "owner": "Marvin Häuser",
+        "healthScore": 100
+      },
+      "BatteryToolkit/Views": {
+        "moduleId": "BatteryToolkit/Views",
+        "created": 1758836066,
+        "lastModified": 1758836066,
+        "growthLoc": 0,
+        "dependencies": 0,
+        "complexity": 0,
+        "stability": 100,
+        "mostChangedFiles": [],
+        "owner": "Marvin Häuser",
+        "healthScore": 100
+      },
+      "Libraries": {
+        "moduleId": "Libraries",
+        "created": 1758836066,
+        "lastModified": 1758836066,
+        "growthLoc": 0,
+        "dependencies": 0,
+        "complexity": 0,
+        "stability": 100,
+        "mostChangedFiles": [],
+        "owner": "Marvin Häuser",
+        "healthScore": 100
+      },
+      "BatteryToolkit": {
+        "moduleId": "BatteryToolkit",
+        "created": 1758836066,
+        "lastModified": 1758836066,
+        "growthLoc": 0,
+        "dependencies": 0,
+        "complexity": 0,
+        "stability": 100,
+        "mostChangedFiles": [],
+        "owner": "Marvin Häuser",
+        "healthScore": 100
+      },
+      "BatteryToolkit/DaemonManagement": {
+        "moduleId": "BatteryToolkit/DaemonManagement",
+        "created": 1758836066,
+        "lastModified": 1758836066,
+        "growthLoc": 0,
+        "dependencies": 0,
+        "complexity": 0,
+        "stability": 100,
+        "mostChangedFiles": [],
+        "owner": "Marvin Häuser",
+        "healthScore": 100
+      },
+      "Common": {
+        "moduleId": "Common",
+        "created": 1758836066,
+        "lastModified": 1758836066,
+        "growthLoc": 0,
+        "dependencies": 0,
+        "complexity": 0,
+        "stability": 100,
+        "mostChangedFiles": [],
+        "owner": "Marvin Häuser",
+        "healthScore": 100
+      },
+      "Modules": {
+        "moduleId": "Modules",
+        "created": 1758836066,
+        "lastModified": 1758836066,
+        "growthLoc": 0,
+        "dependencies": 0,
+        "complexity": 0,
+        "stability": 100,
+        "mostChangedFiles": [],
+        "owner": "Marvin Häuser",
+        "healthScore": 100
+      },
+      "(root)": {
+        "moduleId": "(root)",
+        "created": 1758836066,
+        "lastModified": 1758836066,
+        "growthLoc": 0,
+        "dependencies": 0,
+        "complexity": 0,
+        "stability": 100,
+        "mostChangedFiles": [],
+        "owner": "Marvin Häuser",
+        "healthScore": 100
+      },
+      "BatteryToolkitService": {
+        "moduleId": "BatteryToolkitService",
+        "created": 1758836066,
+        "lastModified": 1758836066,
+        "growthLoc": 0,
+        "dependencies": 0,
+        "complexity": 0,
+        "stability": 100,
+        "mostChangedFiles": [],
+        "owner": "Marvin Häuser",
+        "healthScore": 100
+      },
+      "BatteryToolkit/Assets.xcassets": {
+        "moduleId": "BatteryToolkit/Assets.xcassets",
+        "created": 1758836066,
+        "lastModified": 1758836066,
+        "growthLoc": 0,
+        "dependencies": 0,
+        "complexity": 0,
+        "stability": 100,
+        "mostChangedFiles": [],
+        "owner": "Marvin Häuser",
+        "healthScore": 100
+      },
+      "AutostartHelper": {
+        "moduleId": "AutostartHelper",
+        "created": 1758836066,
+        "lastModified": 1758836066,
+        "growthLoc": 0,
+        "dependencies": 0,
+        "complexity": 0,
+        "stability": 100,
+        "mostChangedFiles": [],
+        "owner": "Marvin Häuser",
+        "healthScore": 100
+      }
+    },
+    "featureEvolution": {}
+  }
+}

@@ -111,7 +111,20 @@ if (!gotTheLock) {
   app.quit();
 } else {
   bootstrap().catch((err) => {
-    console.error("Fatal bootstrap error:", err);
+    // `new Logger()` is the first statement in bootstrap(), so any later
+    // failure has a real logging channel and must use it — electron-log writes
+    // to a file the user can actually send us, which a console.error in a
+    // packaged Electron main process does not (there is no attached terminal).
+    //
+    // The console fallback is reachable only if the Logger itself failed to
+    // construct, i.e. there is no logging channel to route through. That single
+    // case is declared in scripts/check_boundaries.py's DESKTOP_CONSOLE_OWNERS
+    // rather than left to look like an ordinary console call.
+    try {
+      new Logger().error("Main", "Fatal bootstrap error", err);
+    } catch {
+      console.error("Fatal bootstrap error (logger unavailable):", err);
+    }
     app.quit();
   });
 }

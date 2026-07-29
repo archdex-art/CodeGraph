@@ -34,6 +34,28 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/**": ["./wasm/**", "./node_modules/@anthropic-ai/claude-agent-sdk-*/**"],
   },
+  // NOTE — `outputFileTracingExcludes` deliberately NOT used here to keep
+  // runtime state out of the bundle: it was tried and it does not work.
+  // Under Turbopack (`output: "standalone"`, Next 16.2.9), `apps/web/data/`
+  // is NOT reached through file tracing at all — no `.nft.json` and no entry
+  // in `.next/required-server-files.json` references it, so there is nothing
+  // for a trace exclusion to filter. Verified by dropping a sentinel file in
+  // `apps/web/data/` and rebuilding: the sentinel was copied through, i.e.
+  // the standalone writer copies that directory wholesale, independently of
+  // the trace. `["./data/**", "apps/web/data/**", "**/*.sqlite*"]` under key
+  // `"*"` had zero effect across rebuilds.
+  //
+  // This matters because `data/` holds `codegraph.sqlite` and
+  // `data/workspaces/` holds full git clones of whatever repositories the
+  // operator has analysed. Both are gitignored, so a fresh checkout and CI
+  // never see them and the problem is invisible there.
+  //
+  // Enforcement therefore lives at the two points that actually build a
+  // distributable, not here:
+  //   · container image  → `.dockerignore` (`apps/web/data`, `**/data/workspaces`)
+  //   · Electron bundle  → `apps/desktop/scripts/build/asset-copy.ts` (EXCLUDED_PATHS)
+  // If a third packaging path is ever added, it needs its own exclusion; this
+  // config will not provide one.
   // node:sqlite + child_process git run only in Node route handlers.
   serverExternalPackages: ["web-tree-sitter"],
   // Baseline security headers. script/style/worker-src stay permissive on

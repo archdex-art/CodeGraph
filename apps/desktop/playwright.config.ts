@@ -8,10 +8,14 @@ export default defineConfig({
   },
   fullyParallel: false, // Electron tests often share state or ports, better to run sequentially
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // Deliberately 0 under CI too. This suite boots the real Next standalone
+  // server and indexes against it, so a retry does not paper over a network
+  // blip — it hides a genuine race in the boot/health-check path and reports
+  // green while proving nothing. If it flakes, that is the finding.
+  retries: 0,
   workers: 1, // Ensure sequential execution
   reporter: "list",
   use: {
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
   },
 });

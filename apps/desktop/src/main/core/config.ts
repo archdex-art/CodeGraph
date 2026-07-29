@@ -46,4 +46,31 @@ export class ConfigManager {
     // In production, the server is packed alongside the electron app
     return path.join(process.resourcesPath, "standalone/apps/web/server.js");
   }
+
+  /**
+   * The environment for the spawned Next.js server process.
+   *
+   * This is the Electron main process's analogue of `@codegraph/config`'s
+   * `childEnv()`, and it exists for the same reason the web ban states: a
+   * child process legitimately needs the whole inherited environment, but the
+   * `...process.env` spread that produces it must live in exactly one place so
+   * the effective configuration stays knowable without grepping (LLD §10.3).
+   * `scripts/check_boundaries.py` enforces that this file is that place for
+   * `apps/desktop`.
+   *
+   * The four explicit entries override anything inherited:
+   *   · ELECTRON_RUN_AS_NODE — `process.execPath` is the Electron binary, so
+   *     without this it boots a second Electron app instead of a Node server.
+   *   · NODE_ENV / PORT / HOSTNAME — the allocated port and a loopback-only
+   *     bind; the server must never be reachable off-host.
+   */
+  public childEnv(port: number): NodeJS.ProcessEnv {
+    return {
+      ...process.env,
+      ELECTRON_RUN_AS_NODE: "1",
+      NODE_ENV: this.isDevelopment ? "development" : "production",
+      PORT: port.toString(),
+      HOSTNAME: "127.0.0.1",
+    };
+  }
 }
