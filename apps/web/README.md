@@ -13,15 +13,15 @@ Index a **public Git URL or a local folder** → CodeGraph produces:
 
 ## Production
 - **Tests:** `npm run test` (vitest, 13 unit tests over the engines).
-- **Docker:** `docker compose up --build` (multi-stage, `node:24-slim`, git in runtime, non-root, persistent `data` volume, `/api/health` healthcheck).
-- **Standalone build:** `output: "standalone"` → `.next/standalone/server.js`.
+- **Docker:** `docker compose up --build` from the repo root (multi-stage, `node:24-slim`, git in runtime, persistent `data` volume, `/api/health` healthcheck). Runs as root deliberately — see `docs/postmortems/`.
+- **Standalone build:** `output: "standalone"` → `apps/web/.next/standalone/apps/web/server.js` (nested; see `DEPLOY.md`).
 - **Ops + env + scaling:** see `DEPLOY.md`.
 
 ## Run it
 
 ```bash
-cd CodeGraph/app
-npm install        # already done if node_modules exists
+cd CodeGraph       # repo root — npm workspace, not apps/web
+npm ci             # never `npm install` at the root (CLAUDE.md §4)
 npm run dev        # http://localhost:4000
 ```
 

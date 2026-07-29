@@ -1,0 +1,227 @@
+/**
+ * Layering gate for the monorepo (HLD §6.1, LLD §1.1).
+ *
+ * This file is the mechanical half of the architecture: HLD §6.1's dependency
+ * rule is only real because this runs in CI. Written data-driven rather than as
+ * hand-rolled rule objects so that adding a package is one line in ALLOWED
+ * instead of an edit in three places — the same reason the language registry is
+ * a manifest (HLD G3).
+ *
+ * Direction of the arrow: a package may import ONLY the packages listed for it.
+ * Anything absent is a violation, so a new dependency is a deliberate act
+ * recorded here, not an accident that compiles.
+ */
+
+/** @type {Record<string, readonly string[]>} */
+const ALLOWED = {
+  // Bottom of the stack: pure types, zero deps, zero I/O (LLD §2).
+  "core-domain": [],
+
+  // Config sits directly above core-domain: everything that needs settings
+  // needs it, so it must not depend on anything that could need settings.
+  // Notably it may NOT import observability — logging a config error requires
+  // config to be loaded, and that cycle is how fail-fast-at-boot stops being
+  // fail-fast.
+  config: ["core-domain"],
+
+  observability: ["core-domain", "config"],
+
+  fsx: ["core-domain", "config", "observability"],
+  vcs: ["core-domain", "config", "observability", "fsx"],
+  persistence: ["core-domain", "config", "observability"],
+  jobs: ["core-domain", "config", "observability", "persistence"],
+
+  "core-graph": ["core-domain"],
+  sarif: ["core-domain"],
+  "score-engine": ["core-domain"],
+
+  "detect-engine": ["core-domain", "core-graph", "fsx", "observability", "config"],
+  "detect-rules": ["core-domain", "detect-engine"],
+
+  "remediate-engine": [
+    "core-domain",
+    "core-graph",
+    "fsx",
+    "vcs",
+    "observability",
+    "config",
+  ],
+  swarm: ["core-domain", "core-graph", "detect-engine", "observability"],
+};
+
+/**
+ * `lang-*` packages get one shared rule: a language plugin never learns the
+ * engine's name (HLD G3 — a new language must be an additive change).
+ */
+const LANG_ALLOWED = ["core-domain"];
+
+const pkgNames = Object.keys(ALLOWED);
+
+/** Path pattern for a package's own sources. */
+const pkgPath = (name) => `^packages/${name}/`;
+
+/** The set of package source paths a given allowlist does NOT cover. */
+const forbiddenTargets = (allowed) =>
+  pkgNames
+    .filter((n) => !allowed.includes(n))
+    .map(pkgPath)
+    // A package importing itself by relative path is fine; exclude self above.
+    .concat(["^packages/lang-"]);
+
+const layerRules = pkgNames.map((name) => ({
+  name: `layer-${name}`,
+  comment: `packages/${name} may only import: ${ALLOWED[name].join(", ") || "(nothing)"} (HLD §6.1)`,
+  severity: "error",
+  from: { path: pkgPath(name) },
+  to: {
+    path: forbiddenTargets([...ALLOWED[name], name]).join("|"),
+  },
+}));
+
+module.exports = {
+  forbidden: [
+    ...layerRules,
+
+    {
+      name: "lang-packages-are-leaves",
+      comment:
+        "A lang-* package knows its own syntax and nothing about detection, " +
+        "scoring, or storage (HLD §6.1, LLD §4). This is what makes a new " +
+        "language an additive change.",
+      severity: "error",
+      from: { path: "^packages/lang-" },
+      to: {
+        path: pkgNames
+          .filter((n) => !LANG_ALLOWED.includes(n))
+          .map(pkgPath)
+          .join("|"),
+      },
+    },
+
+    {
+      name: "no-package-imports-app",
+      comment:
+        "Nothing may import apps/* (HLD §6.1). A package reaching into an app " +
+        "is the end of independent testability and the start of a cycle.",
+      severity: "error",
+      from: { path: "^packages/" },
+      to: { path: "^apps/" },
+    },
+
+    {
+      name: "no-cross-app-imports",
+      comment:
+        "Apps are deployment units, not libraries. Shared code belongs in a " +
+        "package (HLD §6.1).",
+      severity: "error",
+      from: { path: "^apps/([^/]+)/" },
+      to: { path: "^apps/([^/]+)/", pathNot: "^apps/$1/" },
+    },
+
+    {
+      name: "no-deep-import-across-packages",
+      comment:
+        "src/index.ts is a package's ONLY public surface (LLD §1.1). Reaching " +
+        "past it freezes another package's internals into your contract, which " +
+        "is exactly what this refactor exists to undo. Relative imports inside " +
+        "a package are unaffected — the $1 back-reference exempts self.",
+      severity: "error",
+      from: { path: "^packages/([^/]+)/" },
+      to: {
+        path: "^packages/[^/]+/src/",
+        pathNot: ["^packages/$1/", "^packages/[^/]+/src/index\\.ts$"],
+      },
+    },
+
+    {
+      name: "no-deep-import-from-app",
+      comment:
+        "An app consumes a package through its published entry point only " +
+        "(LLD §1.1).",
+      severity: "error",
+      from: { path: "^apps/" },
+      to: {
+        path: "^packages/[^/]+/src/",
+        pathNot: "^packages/[^/]+/src/index\\.ts$",
+      },
+    },
+
+    {
+      name: "fs-only-in-fsx",
+      comment:
+        "node:fs is fsx's capability to hold (LLD §10.1). Raw fs elsewhere is " +
+        "how path containment gets re-implemented slightly wrong.",
+      severity: "error",
+      from: { path: "^packages/", pathNot: "^packages/fsx/" },
+      to: { path: "^(node:)?fs(/promises)?$", dependencyTypes: ["core"] },
+    },
+
+    {
+      name: "child-process-only-in-vcs",
+      comment: "Only vcs shells out (LLD §10.2).",
+      severity: "error",
+      from: { path: "^packages/", pathNot: "^packages/vcs/" },
+      to: { path: "^(node:)?child_process$", dependencyTypes: ["core"] },
+    },
+
+    {
+      name: "sqlite-only-in-persistence",
+      comment: "Only persistence speaks SQL (HLD §6, LLD §8).",
+      severity: "error",
+      from: { path: "^packages/", pathNot: "^packages/persistence/" },
+      to: { path: "^(node:)?sqlite$", dependencyTypes: ["core"] },
+    },
+
+    {
+      name: "no-circular",
+      comment:
+        "A cycle is a build failure (HLD §6.1). Cycles are why v1's lib/ could " +
+        "not be split without moving everything at once.",
+      severity: "error",
+      from: {},
+      to: { circular: true },
+    },
+
+    // `no-orphans` is deliberately NOT enabled. It fired on nine modules that
+    // are all genuinely imported (urlSafety, localAccess, basicAuth, colors,
+    // layout, editorLang, anthropicKeyCheck, GithubMark, postcss.config) —
+    // false positives caused by unresolved path aliases, plus config files that
+    // are legitimately never imported. A warn-level rule that cries wolf nine
+    // times teaches everyone to ignore the tool, which costs more than the
+    // dead code it would find. Unreferenced-export detection is knip's job
+    // (LLD §13.1 already uses it to find dead shims).
+  ],
+
+  options: {
+    doNotFollow: { path: "node_modules" },
+    exclude: {
+      path: [
+        "\\.next/",
+        "/tests?/",
+        "\\.test\\.ts$",
+        "/node_modules/",
+        "^apps/web/terminal/",
+        "^desktop/",
+      ],
+    },
+    tsPreCompilationDeps: true,
+    // tsconfig.depcruise.json, not tsconfig.base.json: the cruiser needs
+    // apps/web's `@/*` alias to resolve, and that file explains why it cannot
+    // simply read apps/web/tsconfig.json. Load-bearing — with the alias
+    // unresolved the cruiser saw only a fraction of the import graph, so every
+    // layering rule below passed by never seeing the edges. A gate that
+    // under-reports is worse than no gate.
+    tsConfig: { fileName: "tsconfig.depcruise.json" },
+    enhancedResolveOptions: {
+      // These two are what let a workspace package be followed through
+      // `"exports": { ".": "./src/index.ts" }` (LLD §1.1) rather than being
+      // reported unresolvable.
+      exportsFields: ["exports"],
+      conditionNames: ["import", "require", "node", "default"],
+      extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json"],
+    },
+    reporterOptions: {
+      text: { highlightFocused: true },
+    },
+  },
+};

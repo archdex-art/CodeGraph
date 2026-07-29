@@ -1,0 +1,42 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Next.js needs the DOM libs, JSX, and its own TS plugin; the shared
+    // baseline is deliberately Node-only so a package can't reach for `window`.
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./src/*"] },
+
+    // The two flags below are the ONLY relaxations from tsconfig.base.json, and
+    // they are temporary. Measured cost of enabling them on this workspace as
+    // of the P1 move (`tsc --noEmit`, no other change):
+    //
+    //   noUncheckedIndexedAccess  → 275 errors
+    //   exactOptionalPropertyTypes →  21 errors
+    //   every other baseline flag  →   0 errors
+    //
+    // The 275 are concentrated in the line-based code paths (`lines[i]` in
+    // agents/fixers.ts, codeintel/extractors.ts) where the compiler is telling
+    // the truth: REVIEW_2026-07-29 B1 is one of these bugs reaching production.
+    // Clearing them means changing what the code DOES on out-of-range input,
+    // which is a behaviour change and therefore not P1's business (LLD §1.2
+    // says to turn this on package-by-package for exactly this reason).
+    //
+    // Every packages/* workspace inherits the baseline unrelaxed, so all new
+    // code is written under the strict rules from its first line. These two
+    // lines get deleted when the code they cover moves out of this workspace.
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "data"]
+}

@@ -1,0 +1,100 @@
+# syntax=docker/dockerfile:1
+#
+# BUILD CONTEXT IS THE MONOREPO ROOT, not this directory.
+#   docker build -f apps/web/Dockerfile .
+# render.yaml sets `dockerContext: .` to match. Building with `apps/web` as the
+# context cannot work: the root lockfile and packages/* would be outside it.
+
+# ---------- Stage 1: builder ----------
+FROM node:24-slim AS builder
+WORKDIR /repo
+
+# Install against the ROOT lockfile so the whole workspace resolves in one
+# pass. `npm ci` is not merely preferred here, it is required: a cold
+# `npm install` at the workspace root does full metadata resolution for ~500
+# packages and did not finish in several minutes during the P1 spike
+# (docs/design/SPIKES.md §1), whereas `npm ci` against the committed lockfile
+# takes ~23s. If the build ever appears to hang at install, this is why.
+#
+# Manifests are copied before sources so a source-only change reuses the
+# install layer.
+COPY package.json package-lock.json ./
+COPY apps/web/package.json ./apps/web/
+RUN npm ci
+
+# Now the sources. `.dockerignore` at the repo root keeps node_modules, .next
+# and the runtime data dir out.
+COPY . .
+
+# Ensure public/ exists so the runner-stage COPY always has a source, even when
+# the repo ships no static assets.
+RUN mkdir -p apps/web/public
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build --workspace @codegraph/web
+
+# ---------- Stage 2: runner ----------
+FROM node:24-slim AS runner
+WORKDIR /app
+
+# git is required at runtime to clone public repos; ca-certificates for https.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends git ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=4000 \
+    HOSTNAME=0.0.0.0
+
+# Standalone output is NESTED under the workspace path, because
+# `outputFileTracingRoot` must be the monorepo root for the tracer to follow
+# imports into packages/* (apps/web/next.config.ts explains the trade).
+#
+#   single app/  →  .next/standalone/server.js
+#   monorepo     →  .next/standalone/apps/web/server.js
+#
+# The standalone tree is copied VERBATIM, preserving that nesting, and the CMD
+# points at the nested entrypoint. Do not "tidy" this by flattening the inner
+# apps/web directory up to /app to keep the old `CMD ["node","server.js"]`:
+# that was tried during P1 and it builds a perfectly healthy-looking image
+# whose /api/health returns 200 while every route that touches the TypeScript
+# compiler dies with
+#
+#   Error: Failed to load external module typescript-<hash>:
+#   Cannot find module 'typescript-<hash>'
+#
+# Turbopack resolves server-external packages through a path baked at build
+# time, relative to where it emitted server.js. Next puts the traced
+# `node_modules` at the standalone ROOT — two levels above the nested
+# server.js — and flattening collapses that distance, so the baked reference
+# no longer lands on node_modules. The failure is invisible to a health check
+# and only shows up on POST /api/index.
+#
+# This whole block fails at CONTAINER START, not at build. A CI build stays
+# green while production crash-loops, which is why the Docker smoke test is a
+# required gate for this phase (docs/design/SPIKES.md §1) and why that test
+# must exercise a real index, not just /api/health.
+COPY --from=builder /repo/apps/web/.next/standalone ./
+COPY --from=builder /repo/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder /repo/apps/web/public ./apps/web/public
+
+# Runtime SQLite DB + WAL live here. Runs as root (see below) specifically
+# so this never depends on file ownership: a platform-attached persistent
+# disk (e.g. Render) mounts fresh over this path on every start and may
+# reset ownership to root, and privilege-dropping tools (setpriv/gosu) can
+# fail outright under a capability-restricted container sandbox (verified:
+# setpriv errors with "setresuid failed: Operation not permitted" when
+# CAP_SETUID/CAP_SETGID aren't granted) — silently crash-looping the whole
+# app. Root sidesteps both failure modes; it can read/write regardless of
+# the mount's ownership.
+RUN mkdir -p /app/data
+
+EXPOSE 4000
+
+# Lightweight health probe against the app's own health route.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||4000)+'/api/health').then(r=>{if(r.status!==200)process.exit(1)}).catch(()=>process.exit(1))"
+
+# Nested per the standalone layout above. `render.yaml` has no start command of
+# its own, so this is the single place the entrypoint path is declared.
+CMD ["node", "apps/web/server.js"]

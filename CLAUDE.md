@@ -40,28 +40,43 @@ Design decisions live in these docs. Don't relitigate a settled ADR in a PR desc
 
 ## 3. Where things are
 
-- `app/` — the Next.js application (currently everything: UI, API, analysis engine)
-- `app/src/lib/` — backend: `indexer.ts`, `store.ts`, `codeintel/`, `agents/`, `gitops/`
-- `app/tests/` — vitest, colocated by concern
+npm-workspaces monorepo (LLD §1). `app/` became `apps/web/` in P1.
+
+- `apps/web/` — the Next.js application: UI, API routes, and (still) the analysis engine
+- `apps/web/src/lib/` — backend: `indexer.ts`, `store.ts`, `codeintel/`, `agents/`, `gitops/`
+- `apps/web/tests/` — vitest, colocated by concern
+- `packages/*` — extracted, independently testable modules. `src/index.ts` is a package's
+  only public surface; deep imports fail the layering gate.
 - `desktop/` — Electron shell. **Not in CI.** Treat as experimental until it is.
 - `docs/postmortems/` — real incidents. Read before touching Docker, memory, or the data dir.
 
+Layering is enforced, not aspirational: `.dependency-cruiser.cjs` encodes HLD §6.1 and runs in
+CI. A new cross-package dependency is a deliberate edit to that file's `ALLOWED` table.
+
 ## 4. Before you push
 
-Run what CI runs, from `app/`:
+Run what CI runs, **from the repo root** (not from `apps/web`):
 
 ```bash
-npx tsc --noEmit -p tsconfig.json
+npm run typecheck
+npm run depcruise
 npm run test
 npm run build
 ```
 
-All three must pass. `main` is branch-protected.
+All four must pass. `main` is branch-protected.
+
+Install with `npm ci`, never `npm install` — a cold install at the workspace root does full
+metadata resolution for ~500 packages and effectively hangs, and generating a lockfile against
+an already-populated `node_modules` silently omits other platforms' native binaries
+(REVIEW_2026-07-29 P1-3). If you must regenerate it, delete every `node_modules` first.
+
+`npm run lint` is **not** green and is not in CI — see REVIEW_2026-07-29 P1-4 before "fixing" it.
 
 ## 5. Standing rules
 
 - **Security-relevant code needs a regression test in the same change.** See
-  `app/tests/tenant-isolation.test.ts` for the expected style: real scenarios, not mocked-away
+  `apps/web/tests/tenant-isolation.test.ts` for the expected style: real scenarios, not mocked-away
   assertions.
 - **Never echo a raw exception message to a client.** Clone paths, remote URLs, and tokens leak
   that way. Log the detail, return a stable message.

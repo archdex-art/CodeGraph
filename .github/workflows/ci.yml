@@ -8,11 +8,8 @@ on:
 
 jobs:
   test-and-build:
-    name: Test & Build (app/)
+    name: Test & Build (workspace)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app
     steps:
       - uses: actions/checkout@v4
 
@@ -20,19 +17,38 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-          cache-dependency-path: app/package-lock.json
+          cache-dependency-path: package-lock.json
 
+      # `npm ci` at the workspace root, never `npm install`: a cold install
+      # resolves metadata for ~500 packages and did not finish in several
+      # minutes during the P1 spike, while `npm ci` against the committed root
+      # lockfile takes ~23s (docs/design/SPIKES.md §1).
       - name: Install dependencies
         run: npm ci
 
       - name: Typecheck
-        run: npx tsc --noEmit -p tsconfig.json
+        run: npm run typecheck
+
+      # Layering gate (HLD §6.1). Runs with --ignore-known: the four
+      # pre-existing cycles in apps/web are baselined in
+      # .dependency-cruiser-known-violations.json and documented as P1-1 in
+      # docs/REVIEW_2026-07-29.md, while any NEW cycle or layering violation
+      # fails here. Verified to fail on a newly introduced cycle.
+      - name: Layering + cycle check
+        run: npm run depcruise
 
       - name: Unit tests
         run: npm run test
 
       - name: Build (Next.js production build)
         run: npm run build
+
+      # The standalone entrypoint is nested under the workspace path once
+      # `outputFileTracingRoot` is the monorepo root. Asserting the file exists
+      # is cheap and catches the layout regression here rather than in a
+      # crash-looping container (docs/design/SPIKES.md §1).
+      - name: Assert standalone entrypoint location
+        run: test -f apps/web/.next/standalone/apps/web/server.js
 
   docker-smoke-test:
     name: Docker build + adversarial smoke test
@@ -41,8 +57,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Context is the repo root; the Dockerfile lives in the app it builds.
       - name: Build production image
-        run: docker build -t codegraph-ci:${{ github.sha }} ./app
+        run: docker build -f apps/web/Dockerfile -t codegraph-ci:${{ github.sha }} .
 
       - name: Run under Render-equivalent constraints (512MB, 0.5 CPU, root-owned disk mount)
         run: |

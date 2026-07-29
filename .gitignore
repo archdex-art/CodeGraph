@@ -9,13 +9,13 @@ next-env.d.ts
 *.tsbuildinfo
 
 # App runtime data (SQLite DB lives on the Render disk, not in git)
-app/data/*.sqlite
-app/data/*.sqlite-shm
-app/data/*.sqlite-wal
+apps/web/data/*.sqlite
+apps/web/data/*.sqlite-shm
+apps/web/data/*.sqlite-wal
 
 # Built-in editor: persistent per-repo git workspaces (cloned target repos —
 # runtime state on the Render disk, never part of this repo's own history)
-app/data/workspaces/
+apps/web/data/workspaces/
 
 # Python
 __pycache__/

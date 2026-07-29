@@ -1,5 +1,5 @@
 {
-  "name": "codegraph-app",
+  "name": "@codegraph/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,6 +8,7 @@
     "start": "next start -p 4000",
     "lint": "eslint",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "cg": "tsx terminal/cli.ts"
   },
   "bin": {

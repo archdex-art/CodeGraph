@@ -1,12 +1,25 @@
+import path from "node:path";
 import type { NextConfig } from "next";
+
+// The monorepo root — two levels up from apps/web (LLD §1).
+const REPO_ROOT = path.join(import.meta.dirname, "..", "..");
 
 const nextConfig: NextConfig = {
   // Emit a self-contained server bundle (.next/standalone) for slim Docker images.
   output: "standalone",
-  // Pin the workspace root to this app so standalone output lands at
-  // .next/standalone/server.js even when a parent-repo lockfile is present.
-  turbopack: { root: import.meta.dirname },
-  outputFileTracingRoot: import.meta.dirname,
+  // Both roots MUST be the monorepo root, not this directory, or the tracer
+  // will not follow imports into `packages/*` and the standalone bundle ships
+  // without them.
+  //
+  // The cost of that correctness, reproduced in docs/design/SPIKES.md §1: the
+  // entrypoint moves from `.next/standalone/server.js` to
+  // `.next/standalone/apps/web/server.js`. That breaks any Dockerfile CMD or
+  // platform start command still pointing at the old path, and it breaks at
+  // CONTAINER START, not at build — CI's build step stays green while
+  // production crash-loops. Dockerfile and render.yaml are matched to this
+  // layout; changing this line means changing both of them too.
+  turbopack: { root: REPO_ROOT },
+  outputFileTracingRoot: REPO_ROOT,
   // Ensure Tree-sitter WASM grammars AND the Claude Agent SDK's platform-
   // specific native binary package are copied into the standalone bundle.
   // Both are resolved dynamically at runtime (tree-sitter's WASM loader,

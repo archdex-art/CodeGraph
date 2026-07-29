@@ -1,0 +1,25 @@
+{
+  // Resolution-only tsconfig, consumed by .dependency-cruiser.cjs and nothing
+  // else. It exists for one reason: dependency-cruiser must be able to resolve
+  // apps/web's `@/*` path alias, or it silently sees a fraction of the real
+  // import graph and every layering rule passes by not noticing the edges.
+  //
+  // Why this is a separate file rather than pointing the cruiser at
+  // apps/web/tsconfig.json: dependency-cruiser resolves a tsconfig's `extends`
+  // relative to the process cwd instead of to the file, so loading a config
+  // that says `"extends": "../../tsconfig.base.json"` from the repo root fails
+  // with `TS5083: Cannot read file apps/web/tsconfig.base.json`. This file
+  // therefore carries no `extends` at all.
+  //
+  // It is NOT part of any build or typecheck. `paths` here must mirror
+  // apps/web/tsconfig.json — if that alias changes and this does not, the
+  // layering gate weakens quietly, so change both together.
+  "compilerOptions": {
+    "baseUrl": ".",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "@/*": ["./apps/web/src/*"]
+    }
+  }
+}

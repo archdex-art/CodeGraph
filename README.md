@@ -112,9 +112,9 @@ No sign-up, no API key, nothing to configure for this path.
 
 | Mode | Command | Notes |
 |---|---|---|
-| **Local dev** | `cd app && npm install && npm run dev` | Hot reload, `http://localhost:4000` |
-| **Production (standalone Node)** | `npm run build && npm run start` | Emits `.next/standalone/server.js` |
-| **Docker (recommended for prod)** | `cd app && docker compose up --build` | Multi-stage `node:24-slim` build; runs as root deliberately (see [`docs/postmortems/`](./docs/postmortems) for why) |
+| **Local dev** | `npm ci && npm run dev` | Repo root. Hot reload, `http://localhost:4000` |
+| **Production (standalone Node)** | `npm ci && npm run build && npm run start` | Emits `apps/web/.next/standalone/apps/web/server.js` |
+| **Docker (recommended for prod)** | `docker compose up --build` | Repo root — the build context is the whole workspace. Multi-stage `node:24-slim`; runs as root deliberately (see [`docs/postmortems/`](./docs/postmortems) for why) |
 | **Render** | `render.yaml` at repo root | Blueprint deploy; persistent disk for SQLite + editor workspaces |
 
 Optional features (all off by default, zero config needed if you don't want them):
@@ -176,16 +176,17 @@ This project audits itself and publishes the results rather than hiding them. A 
 ## Contributing
 
 1. Fork, branch, make your change.
-2. Before opening a PR, run what CI runs — it's the same three commands, no surprises:
+2. Before opening a PR, run what CI runs — from the repo root, not from `apps/web`:
    ```bash
-   cd app
-   npx tsc --noEmit -p tsconfig.json   # typecheck
-   npm run test                         # vitest, must stay green
-   npm run build                        # production build must succeed
+   npm ci                # never `npm install` at the root; see CLAUDE.md
+   npm run typecheck     # every workspace
+   npm run depcruise     # HLD §6.1 layering + cycle gate
+   npm run test          # vitest, must stay green
+   npm run build         # production build must succeed
    ```
 3. `main` is branch-protected — both CI jobs (`Test & Build`, `Docker build + adversarial smoke test`) must pass before a PR can merge.
-4. New security-relevant code needs a regression test in the same PR (see `app/tests/tenant-isolation.test.ts` for the expected style: real scenarios, not mocked-away assertions).
-5. Docs live next to what they describe (`app/*.md` for product detail, root `ARCHITECTURE.md` for the system as a whole) — update the relevant one alongside a behavioral change, not after.
+4. New security-relevant code needs a regression test in the same PR (see `apps/web/tests/tenant-isolation.test.ts` for the expected style: real scenarios, not mocked-away assertions).
+5. Docs live next to what they describe (`apps/web/*.md` for product detail, root `ARCHITECTURE.md` for the system as a whole) — update the relevant one alongside a behavioral change, not after.
 
 Found a security issue? Please open an issue rather than a public PR with exploit details until it's triaged.
 

@@ -11,20 +11,26 @@ Production runbook for the CodeGraph product app.
 
 ### Local dev
 ```bash
-cd CodeGraph/app
-npm install
-npm run dev          # http://localhost:4000
+cd CodeGraph            # repo root — this is an npm workspace
+npm ci                  # never `npm install` at the root (see CLAUDE.md §4)
+npm run dev             # http://localhost:4000
 ```
 
 ### Production (standalone Node)
 ```bash
-npm run build        # emits .next/standalone/server.js (output: "standalone")
-npm run start        # next start -p 4000
+npm run build           # emits apps/web/.next/standalone/apps/web/server.js
+npm run start           # next start -p 4000
 ```
+
+The standalone entrypoint is nested under `apps/web/` because
+`outputFileTracingRoot` points at the monorepo root so the tracer follows
+imports into `packages/*`. Run it with `node apps/web/server.js` from inside
+the copied standalone directory — and do not flatten that layout to shorten
+the path (REVIEW_2026-07-29 P1-5 explains the runtime failure that causes).
 
 ### Docker (recommended)
 ```bash
-cd CodeGraph/app
+cd CodeGraph            # build context must be the repo root
 docker compose up --build          # http://localhost:4000
 ```
 - Multi-stage build on `node:24-slim`; runtime image includes `git`.

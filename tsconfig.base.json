@@ -1,0 +1,35 @@
+{
+  // Shared compiler baseline for every workspace (LLD §1.2).
+  //
+  // The four flags below `strict` are here because each one maps to a class of
+  // bug this codebase has actually shipped:
+  //   noUncheckedIndexedAccess  → the `lines[i]` pattern in the line-based
+  //                               codemods (REVIEW_2026-07-29 B1 is one instance)
+  //   exactOptionalPropertyTypes→ `{ degraded?: string }` silently accepting
+  //                               `undefined` and serialising it into run records
+  //   noImplicitOverride        → silent method shadowing in the agent classes
+  //   noFallthroughCasesInSwitch→ severity/dimension switch ladders
+  //
+  // New packages MUST inherit this file unmodified. `apps/web` currently
+  // relaxes two flags (see apps/web/tsconfig.json) because turning them on
+  // there surfaces pre-existing bugs whose fixes would be behaviour changes —
+  // out of scope for a structural phase.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}

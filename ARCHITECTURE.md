@@ -3,7 +3,7 @@
 **This is the current, accurate description of the real, running product.** For an earlier, unbuilt design (Python/Postgres/NATS/Temporal), see `docs/archive/legacy-design/` — none of that is what's deployed.
 
 ## What it is
-A single Next.js 16 (App Router) application at `app/` that:
+A single Next.js 16 (App Router) application at `apps/web/` that:
 1. Clones a public git repo — or a signed-in user's own private repo (see GitHub sign-in) — or reads a local folder (gated — see Security) and builds a lightweight knowledge graph of its structure.
 2. Computes a blast-radius-weighted, explainable 0–100 **Health Score**.
 3. Renders three interactive visualizations (Architecture flowchart, zoomable Circle-pack, force-directed Network).
@@ -50,13 +50,13 @@ Backend lib (src/lib/*)
 Jobs are fire-and-forget within the same Node process (`void runJob(...)` in `store.ts`) — there's no external queue. This is simple and fine for single-instance deployment; it does mean an unhandled crash mid-job takes the whole server down with it (see `docs/postmortems/`).
 
 ## Security model
-- **No authentication by default.** Optional HTTP Basic Auth: set `CG_BASIC_AUTH_PASSWORD` (and optionally `CG_BASIC_AUTH_USER`, default `codegraph`) to gate the whole app except `/api/health`. See `app/src/proxy.ts`.
-- **Local-folder indexing and server-side folder browsing are disabled in production by default** (`app/src/lib/localAccess.ts`) — they read arbitrary paths on whatever machine runs the server, which is fine for self-hosted/local-dev use and a live file-disclosure risk on a shared public deployment. Opt in explicitly with `CG_ALLOW_LOCAL_ACCESS=true` only on a trusted single-operator host.
-- **Git URLs are validated against SSRF** (`app/src/lib/urlSafety.ts`) — loopback/private/link-local hosts are rejected before `git clone` runs. This is a best-effort literal-IP check, not DNS-rebinding-proof.
+- **No authentication by default.** Optional HTTP Basic Auth: set `CG_BASIC_AUTH_PASSWORD` (and optionally `CG_BASIC_AUTH_USER`, default `codegraph`) to gate the whole app except `/api/health`. See `apps/web/src/proxy.ts`.
+- **Local-folder indexing and server-side folder browsing are disabled in production by default** (`apps/web/src/lib/localAccess.ts`) — they read arbitrary paths on whatever machine runs the server, which is fine for self-hosted/local-dev use and a live file-disclosure risk on a shared public deployment. Opt in explicitly with `CG_ALLOW_LOCAL_ACCESS=true` only on a trusted single-operator host.
+- **Git URLs are validated against SSRF** (`apps/web/src/lib/urlSafety.ts`) — loopback/private/link-local hosts are rejected before `git clone` runs. This is a best-effort literal-IP check, not DNS-rebinding-proof.
 - **Filesystem path traversal is defended** within a workspace root (`resolveSafe` in `workspace.ts`), verified against `../../../etc/passwd`-style attempts.
-- Security headers (CSP, X-Frame-Options, etc.) are set in `app/next.config.ts`. The CSP allows Monaco's CDN (`cdn.jsdelivr.net`) and Next's inline hydration scripts — see the comment there for why it isn't a strict nonce-based policy.
-- **Optional GitHub sign-in** (`app/src/lib/session.ts`, `app/src/lib/githubOAuth.ts`, off unless `GITHUB_OAUTH_CLIENT_ID`/`GITHUB_OAUTH_CLIENT_SECRET`/`CG_SESSION_SECRET` are all set — see `DEPLOY.md`) lets a user browse and import their own repos, including private ones. No server-side session store: the GitHub access token lives only inside an AES-256-GCM-encrypted, `httpOnly` cookie — never persisted to SQLite, never returned by any API response (`/api/auth/me` echoes only login/name/avatar). When cloning, the token is only ever spliced into a URL whose host is verified to be exactly `github.com` (`store.ts`'s `runJob`), so a session can't be tricked into leaking its token to a third-party remote.
-- **Repos are tenant-scoped by `owner_id`** (`repos` table, `app/src/lib/authz.ts`). A repo indexed while signed out lands in a shared public bucket (`owner_id IS NULL`) — visible/mutable by anyone, matching the no-login "paste a URL" flow. A repo indexed while signed in with GitHub is private to that account's `userId`: `listRepos()` filters to the viewer's own rows plus the public bucket, and every `/api/repos/[id]/*` route (`fs`, `git`, `search`, `fix`, `agents`, `intel`, `trash`, delete) calls `repoAccessDenied()` first. A non-owner gets a 404 — identical to a nonexistent repo — never a 403, so a private repo's existence isn't leaked either. Regression tests: `app/tests/tenant-isolation.test.ts`.
+- Security headers (CSP, X-Frame-Options, etc.) are set in `apps/web/next.config.ts`. The CSP allows Monaco's CDN (`cdn.jsdelivr.net`) and Next's inline hydration scripts — see the comment there for why it isn't a strict nonce-based policy.
+- **Optional GitHub sign-in** (`apps/web/src/lib/session.ts`, `apps/web/src/lib/githubOAuth.ts`, off unless `GITHUB_OAUTH_CLIENT_ID`/`GITHUB_OAUTH_CLIENT_SECRET`/`CG_SESSION_SECRET` are all set — see `DEPLOY.md`) lets a user browse and import their own repos, including private ones. No server-side session store: the GitHub access token lives only inside an AES-256-GCM-encrypted, `httpOnly` cookie — never persisted to SQLite, never returned by any API response (`/api/auth/me` echoes only login/name/avatar). When cloning, the token is only ever spliced into a URL whose host is verified to be exactly `github.com` (`store.ts`'s `runJob`), so a session can't be tricked into leaking its token to a third-party remote.
+- **Repos are tenant-scoped by `owner_id`** (`repos` table, `apps/web/src/lib/authz.ts`). A repo indexed while signed out lands in a shared public bucket (`owner_id IS NULL`) — visible/mutable by anyone, matching the no-login "paste a URL" flow. A repo indexed while signed in with GitHub is private to that account's `userId`: `listRepos()` filters to the viewer's own rows plus the public bucket, and every `/api/repos/[id]/*` route (`fs`, `git`, `search`, `fix`, `agents`, `intel`, `trash`, delete) calls `repoAccessDenied()` first. A non-owner gets a 404 — identical to a nonexistent repo — never a 403, so a private repo's existence isn't leaked either. Regression tests: `apps/web/tests/tenant-isolation.test.ts`.
 - Full current status and remaining work: `docs/PROGRESS_TRACKER.md`.
 
 ## Known constraints (learned the hard way — see `docs/postmortems/`)
@@ -65,7 +65,7 @@ Jobs are fire-and-forget within the same Node process (`void runJob(...)` in `st
 - **A platform-mounted persistent disk (Render) is not a Docker named volume** — it doesn't inherit the image's baked-in ownership, and comes up empty/root-owned on every restart if the container also isn't root. Local Docker testing with named volumes will not reproduce this; use `--tmpfs /app/data:uid=0,gid=0` to simulate it.
 
 ## Where to go next
-- Product-level detail: `app/README.md`, `app/AGENTS.md`, `app/CODE_INTELLIGENCE.md`.
-- Ops/deployment: `app/DEPLOY.md`.
+- Product-level detail: `apps/web/README.md`, `apps/web/AGENTS.md`, `apps/web/CODE_INTELLIGENCE.md`.
+- Ops/deployment: `apps/web/DEPLOY.md`.
 - What's planned vs. done: `docs/IMPROVEMENT_PLAN.md` + `docs/PROGRESS_TRACKER.md`.
 - Incident history: `docs/postmortems/`.
