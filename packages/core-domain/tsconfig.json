@@ -1,0 +1,8 @@
+{
+  // Inherits tsconfig.base.json UNRELAXED — every flag in the LLD §1.2 baseline
+  // applies here, including noUncheckedIndexedAccess and
+  // exactOptionalPropertyTypes. apps/web relaxes those two for pre-existing
+  // code; new packages do not get that exemption.
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}
