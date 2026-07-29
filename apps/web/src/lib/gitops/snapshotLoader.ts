@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { logger } from "@codegraph/observability";
 
 export interface LoadedSnapshot {
   hash: string;
@@ -69,7 +70,7 @@ export async function loadSnapshot(repoDir: string, hash: string): Promise<Loade
         try {
           await rm(tempDir, { recursive: true, force: true });
         } catch (e) {
-          console.warn(`Failed to cleanup snapshot dir ${tempDir}`, e);
+          logger.warn("Failed to cleanup snapshot dir", { err: e, dir: tempDir });
         }
       }
     };

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Play, Pause, Loader2, ChevronLeft, ChevronRight, Info, FileText, X } from "lucide-react";
+import { logger } from "@codegraph/observability";
 import { timelineMetadata, timelineSnapshot, timelineBuild, timelineCompare, gitDiffFiles, gitDiffCommits } from "@/lib/api";
 import type { TimelineSnapshot, ArchitectureSnapshot, ArchitectureEvolution } from "@/lib/gitops/timelineApi";
 import { CirclePackView } from "@/components/CirclePackView";
@@ -46,7 +47,7 @@ export function TimelineView({ repoId }: { repoId: string }) {
         setCurrentIndex(data.length - 1); // default to latest
       }
     } catch (e) {
-      console.error(e);
+      logger.error("Failed to load timeline metadata", { err: e, repoId });
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,7 @@ export function TimelineView({ repoId }: { repoId: string }) {
       await timelineBuild(repoId, "everyCommit");
       await loadMetadata();
     } catch (e) {
-      console.error("Failed to build timeline", e);
+      logger.error("Failed to build timeline", { err: e, repoId });
     } finally {
       setBuilding(false);
     }
@@ -70,7 +71,7 @@ export function TimelineView({ repoId }: { repoId: string }) {
       const snap = await timelineSnapshot(repoId, hash);
       setCurrentGraph(snap);
     } catch (e) {
-      console.error(e);
+      logger.error("Failed to load timeline snapshot", { err: e, repoId, hash });
     } finally {
       setGraphLoading(false);
     }
@@ -286,7 +287,7 @@ export function TimelineView({ repoId }: { repoId: string }) {
                 setComparisonEvolution(evo);
                 setChangedFiles(files);
               } catch (err) {
-                console.error(err);
+                logger.error("Failed to compare timeline snapshots", { err, repoId, base: compareBase, head: compareHead });
               } finally {
                 setComparing(false);
               }

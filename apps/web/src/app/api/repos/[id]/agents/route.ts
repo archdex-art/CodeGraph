@@ -3,6 +3,7 @@ import { getRepo } from "@/lib/store";
 import { repoAccessDenied } from "@/lib/authz";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
 import { runSwarm } from "@/lib/agents/orchestrator";
+import { logger } from "@codegraph/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     return NextResponse.json(runSwarm(repo));
   } catch (e) {
-    console.error("[agents] swarm failed", e);
+    logger.error("swarm failed", { err: e, route: "agents", repoId: id });
     return NextResponse.json({ error: "Analysis failed" }, { status: 500 });
   }
 }

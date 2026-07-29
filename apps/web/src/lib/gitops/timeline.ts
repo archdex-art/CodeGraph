@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { logger } from "@codegraph/observability";
 
 const exec = promisify(execFile);
 
@@ -102,7 +103,7 @@ export async function getTimeline(dir: string, strategy: SelectionStrategy = Str
     
     return strategy(snapshots);
   } catch (err) {
-    console.error("Failed to parse git timeline:", err);
+    logger.error("Failed to parse git timeline", { err, dir });
     return [];
   }
 }

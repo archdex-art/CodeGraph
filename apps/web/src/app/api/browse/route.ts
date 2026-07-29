@@ -5,6 +5,7 @@ import path from "node:path";
 import { config } from "@codegraph/config";
 import { localAccessAllowed, LOCAL_ACCESS_DISABLED_MESSAGE } from "@/lib/localAccess";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
+import { logger } from "@codegraph/observability";
 
 // GET /api/browse?path=/abs/dir  -> { path, parent, home, entries: [{name, path}] }
 // Server-side directory listing so the "Start Indexing" local-folder field can
@@ -63,7 +64,7 @@ export async function GET(req: NextRequest) {
   try {
     stat = statSync(target);
   } catch (e) {
-    console.warn("browse: failed to stat path:", e);
+    logger.warn("browse: failed to stat path", { err: e, path: target });
     return NextResponse.json({ error: "Cannot stat path" }, { status: 400 });
   }
   if (!stat.isDirectory()) {
@@ -83,7 +84,7 @@ export async function GET(req: NextRequest) {
       entries.push({ name: d.name, path: full });
     }
   } catch (e) {
-    console.warn("browse: failed to read directory:", e);
+    logger.warn("browse: failed to read directory", { err: e, path: target });
     return NextResponse.json({ error: "Cannot read directory" }, { status: 403 });
   }
   entries.sort((a, b) => a.name.localeCompare(b.name));

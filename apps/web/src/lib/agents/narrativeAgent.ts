@@ -1,5 +1,6 @@
 import { effectiveLocalLlmConfig, ANONYMOUS_USER_ID } from "../settings";
 import type { ArchitectureMetrics, EvolutionEvent } from "../gitops/evolutionEngine";
+import { logger } from "@codegraph/observability";
 
 /**
  * Generates an optional architectural narrative explaining WHY the metrics shifted
@@ -59,7 +60,7 @@ export async function generateNarrative(
     });
 
     if (!res.ok) {
-      console.warn(`Local LLM narrative generation failed (${res.status})`);
+      logger.warn("Local LLM narrative generation failed", { status: res.status });
       return undefined;
     }
 
@@ -75,7 +76,7 @@ export async function generateNarrative(
       }
     }
   } catch (error) {
-    console.warn("Failed to generate architecture narrative via local LLM:", error);
+    logger.warn("Failed to generate architecture narrative via local LLM", { err: error });
   }
   
   return undefined;

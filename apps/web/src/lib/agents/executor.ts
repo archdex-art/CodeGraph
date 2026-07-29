@@ -10,6 +10,7 @@ import { isGithubHost } from "../gitops";
 import { parseGithubRepo, getDefaultBranch, createPullRequest, GitHubApiError } from "../githubApi";
 import { FIXERS } from "./fixers";
 import type { ExecutionStep, FileEdit, FixResult, PRDraft } from "./executor-types";
+import { logger } from "@codegraph/observability";
 
 const SKIP: Record<string, true> = {
   ".git": true, node_modules: true, dist: true, build: true, ".next": true,
@@ -239,7 +240,7 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
         // token-bearing remoteUrl set via `git remote set-url` above — in
         // `.message`/`.cmd`. Redact before it ever reaches a log line.
         const safeErr = err instanceof Error ? redactCredentials(err.message) : redactCredentials(String(err));
-        console.warn("Failed to open PR:", safeErr);
+        logger.warn("Failed to open PR", { err: safeErr });
         rec("record", "Failed to push or open PR", false, t);
       }
     } else {

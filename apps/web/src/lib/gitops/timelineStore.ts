@@ -3,6 +3,7 @@ import { readFile, writeFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { dataDir } from "../db";
 import type { ArchitectureSnapshot } from "./historicalAnalysis";
+import { logger } from "@codegraph/observability";
 
 /**
  * Ensures the timeline directory for a repo exists.
@@ -38,7 +39,7 @@ export async function loadSnapshotCache(repoId: string, hash: string): Promise<A
     const data = await readFile(filePath, "utf8");
     return JSON.parse(data) as ArchitectureSnapshot;
   } catch (err) {
-    console.warn(`Failed to parse timeline snapshot ${hash} for repo ${repoId}`, err);
+    logger.warn("Failed to parse timeline snapshot", { err, hash, repoId });
     return null;
   }
 }

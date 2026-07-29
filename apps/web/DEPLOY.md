@@ -135,10 +135,33 @@ An "AI Assistant" icon appears in the Editor tab's activity bar automatically on
 3. Incremental re-index on webhooks (only changed files re-parsed).
 
 ## CI checklist
+Run from the repo root, not `apps/web` — this is an npm workspace.
 ```bash
-npm run test         # vitest unit tests (engines)
-npm run build        # typecheck + standalone build
+npm ci               # never `npm install` at the root (see CLAUDE.md §4)
+npm run typecheck    # every workspace
+npm run depcruise    # HLD §6.1 layering + cycle gate
+npm run boundaries   # process.env / console.* confinement
+npm run test         # vitest, all workspaces
+npm run build        # standalone build
 ```
+
+## Logs
+Application logs are **structured JSON, one object per line, on stderr**
+(`{"level","time","msg",...}`). Before P1 these were free-text `console.warn`
+/`console.error` lines; the destination is unchanged, so `docker logs` and any
+existing log drain keep working, but a grep written against the old prose
+wording needs updating.
+
+Errors are serialised with `name`/`message`/`stack` — `JSON.stringify` alone
+drops all three, since they are non-enumerable, which is why a logged error used
+to appear as `{}`.
+
+No log-level filter yet: every level is emitted, exactly as the previous
+`console.*` calls always printed. `CG_LOG_LEVEL` arrives with the worker in P2,
+where there is enough volume to justify it.
+
+A raw exception is never returned to a client — the detail goes to the log and
+the response carries a stable, generic message (CLAUDE.md §5).
 
 ## Backup / restore
 - State is a single file: `data/codegraph.sqlite` (+ `-wal`, `-shm`). Back up the `data` volume.

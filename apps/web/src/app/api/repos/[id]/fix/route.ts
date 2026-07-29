@@ -3,6 +3,7 @@ import { getRepo } from "@/lib/store";
 import { repoAccessDenied, publishCredential } from "@/lib/authz";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
 import { executeFixes } from "@/lib/agents/executor";
+import { logger } from "@codegraph/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   } catch (e) {
     // Never echo the raw exception: executor failures can embed clone paths and
     // remote URLs. Log the detail, return a stable message.
-    console.error("[fix] executor failed", e);
+    logger.error("executor failed", { err: e, route: "fix", repoId: id });
     return NextResponse.json({ error: "Remediation failed" }, { status: 500 });
   }
 }

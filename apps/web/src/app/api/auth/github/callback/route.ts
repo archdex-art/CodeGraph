@@ -3,6 +3,7 @@ import { exchangeCodeForToken, fetchGithubUser, publicBaseUrl } from "@/lib/gith
 import { setSessionCookie } from "@/lib/session";
 import { timingSafeEqual } from "@/lib/basicAuth";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
+import { logger } from "@codegraph/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     // F023: GitHub API/network exception detail stays server-side; the
     // client only ever sees a generic message.
-    console.warn("GitHub OAuth callback failed:", e);
+    logger.warn("GitHub OAuth callback failed", { err: e });
     const res = NextResponse.redirect(new URL(`/?authError=${encodeURIComponent("GitHub sign-in failed. Please try again.")}`, base));
     res.cookies.delete("cg_oauth_state");
     res.cookies.delete("cg_oauth_return");

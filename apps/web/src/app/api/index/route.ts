@@ -4,6 +4,7 @@ import { localAccessAllowed, LOCAL_ACCESS_DISABLED_MESSAGE } from "@/lib/localAc
 import { isPublicHttpUrl } from "@/lib/urlSafety";
 import { getSession } from "@/lib/session";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
+import { logger } from "@codegraph/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Provide repoUrl or localPath" }, { status: 400 });
   } catch (e) {
     // F023: internal fs/git/DB exception detail stays server-side.
-    console.warn("Failed to start indexing:", e);
+    logger.warn("Failed to start indexing", { err: e });
     return NextResponse.json({ error: "Failed to start indexing" }, { status: 500 });
   }
 }

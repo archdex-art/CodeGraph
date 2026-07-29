@@ -13,6 +13,7 @@ import { AssistantPanel } from "./editor/AssistantPanel";
 import { fetchAssistantProviders } from "@/lib/api";
 import type { AssistantProviders } from "@/lib/types";
 import { Bot } from "lucide-react";
+import { logger } from "@codegraph/observability";
 import { TrashPanel } from "./editor/TrashPanel";
 import { StatusBar, type SaveState } from "./editor/StatusBar";
 import { fsRead, fsWrite, gitStatus as fetchGitStatus, gitCommit, gitPush, getSaveMode, setSaveMode as persistSaveMode, trashList } from "@/lib/api";
@@ -172,7 +173,7 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
       }
       if (truncated) {
         // still open — best effort — flag to user
-        console.warn(`File ${path} truncated for editing (exceeds size cap).`);
+        logger.warn("File truncated for editing (exceeds size cap)", { path });
       }
       setTabs((prev) => [...prev, { path, content, original: content, dirty: false }]);
       setActivePath(path);
@@ -225,7 +226,7 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
           if (autoPush) await gitPush(repoId, pushToken.trim() || undefined);
         } catch (e) {
           // Commit/push failure shouldn't hide that the file itself saved fine.
-          console.warn("Auto-commit/push failed:", e);
+          logger.warn("Auto-commit/push failed", { err: e, repoId, path });
         }
       }
       setTabs((prev) => prev.map((t) => (t.path === path ? { ...t, original: tab.content, dirty: false } : t)));

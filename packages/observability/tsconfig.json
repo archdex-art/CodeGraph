@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // DOM lib for the browser branch of the sink; the package is isomorphic by
+    // design (see src/index.ts).
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}
