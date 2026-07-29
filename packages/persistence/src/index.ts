@@ -25,6 +25,7 @@ export { MIGRATIONS } from "./migrations/index";
 export type {
   IndexedResultColumns,
   NewRepo,
+  RepoFleetRow,
   RepoRow,
   RepoSummaryRow,
   WorkspaceLocation,
@@ -35,6 +36,7 @@ export {
   findRepo,
   findRepoUnscoped,
   insertRepo,
+  listFleetRepos,
   listRepos,
   repoOwnerId,
   repoWorkspace,

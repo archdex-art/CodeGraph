@@ -11,6 +11,7 @@ import {
   findRepoUnscoped,
   insertJob,
   insertRepo,
+  listFleetRepos as listFleetRepoRows,
   listRepos as listRepoRows,
   repoOwnerId,
   repoWorkspace,
@@ -24,7 +25,7 @@ import {
 import { cloneRepo, indexRepo, cleanup, resolveLocalDir } from "./indexer";
 import { withToken, isGithubHost, getHeadHash } from "@codegraph/vcs";
 import { emptyTrash } from "./trash";
-import type { Job, JobStatus, RepoDetail, RepoSummary, SaveMode, SourceType, VizGraph, IndexResult } from "./types";
+import type { FleetRepo, Job, JobStatus, RepoDetail, RepoSummary, SaveMode, SourceType, VizGraph, IndexResult } from "./types";
 
 /**
  * Application-level repo/job operations.
@@ -184,6 +185,39 @@ export function listRepos(viewer: ViewerId): RepoSummary[] {
     score: r.score ?? null,
     createdAt: r.created_at,
     finishedAt: r.finished_at ?? null,
+  }));
+}
+
+/**
+ * `deps` → package names.
+ *
+ * A blob that is corrupt, or that is valid JSON but not the string array the
+ * indexer writes, degrades to "no known dependencies" for that one repo. The
+ * fleet graph is a whole-estate view: one unparseable row must cost its own
+ * edges, not the entire response.
+ */
+function parseDependencies(raw: string | null | undefined): string[] {
+  const parsed = parseColumn<unknown>(raw, null);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter((d): d is string => typeof d === "string");
+}
+
+/**
+ * Finished repos visible to `viewer`, carrying their dependency names.
+ *
+ * The fleet graph's whole input, in one query. Deliberately not `getRepo` in a
+ * loop: that parses the symbol graph and every other heavy blob per repo
+ * (REVIEW B7).
+ */
+export function listFleetRepos(viewer: ViewerId): FleetRepo[] {
+  return listFleetRepoRows(viewer).map((r) => ({
+    id: r.id,
+    url: r.url,
+    name: r.name,
+    sourceType: (r.source_type || "git") as SourceType,
+    score: r.score ?? null,
+    loc: r.loc ?? 0,
+    dependencies: parseDependencies(r.deps),
   }));
 }
 

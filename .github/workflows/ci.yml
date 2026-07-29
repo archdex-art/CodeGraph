@@ -145,3 +145,83 @@ jobs:
       - name: Dump logs on failure
         if: failure()
         run: docker logs ci-smoke || true
+
+  desktop:
+    name: Desktop (Electron app)
+    runs-on: ubuntu-latest
+    # No `needs:` — desktop/ is deliberately NOT an npm workspace of the root
+    # monorepo (root `workspaces` is apps/* + packages/*) and has its own
+    # committed lockfile, so nothing here depends on the workspace job. Running
+    # it in parallel keeps total wall time flat.
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          # Repo-root-relative on purpose: `defaults.run.working-directory`
+          # applies to `run` steps only, not to action inputs.
+          cache-dependency-path: desktop/package-lock.json
+
+      # This job exists because desktop/ was on main with zero CI coverage
+      # (docs/REVIEW_2026-07-29.md C6). The very first thing it caught: the
+      # committed desktop/package.json and desktop/package-lock.json had never
+      # been in sync (lockfile esbuild@0.28.1 vs manifest ^0.20.1), so `npm ci`
+      # failed outright from the commit that introduced them. Keep this step
+      # `npm ci`, never `npm install` — it is what pins that invariant.
+      #
+      # Skipping the Electron binary download drops a ~90MB fetch from
+      # github.com/electron/electron on every run. Nothing this job does needs
+      # the binary: typecheck reads electron's bundled .d.ts, and the only unit
+      # test that touches the electron module (src/main/ipc/router.test.ts)
+      # mocks it. Verified green with node_modules/electron/dist absent.
+      - name: Install dependencies
+        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+
+      # Widened past tsconfig.json's emit scope to also cover e2e/ and
+      # scripts/ — see the comment in desktop/tsconfig.typecheck.json.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      # tsc emit + the esbuild preload bundle. Cheap, and it is the only thing
+      # that exercises the preload contextBridge build at all.
+      - name: Build (tsc + preload bundle)
+        run: npm run build
+
+      # The Playwright/Electron e2e suite (desktop/e2e/smoke.test.ts) is
+      # deliberately NOT wired in. `xvfb-run` would solve the missing display,
+      # but the display is not the blocker — the suite cannot reach a passing
+      # state at all right now:
+      #
+      #  1. It launches dist/src/main/index.js, whose ConfigManager.serverPath
+      #     resolves to desktop/build/standalone/server.js. That tree is
+      #     produced by `npm run build:orchestrate`, which currently dies with
+      #     ENOENT: desktop/scripts/build/manifest.json still points its
+      #     `sourceRoot` at "../../../app", a path the P1 monorepo move deleted
+      #     (the app is now apps/web).
+      #  2. Repointing sourceRoot is not sufficient. With
+      #     `outputFileTracingRoot` at the monorepo root the standalone tree is
+      #     nested one level deeper — server.js is at
+      #     .next/standalone/apps/web/server.js and the tree-sitter grammars at
+      #     .next/standalone/apps/web/wasm — so the manifest's
+      #     `standalone-server` and `tree-sitter-wasm` artifacts and
+      #     ConfigManager.serverPath all disagree with reality. Fixing that is a
+      #     packaging change, not a CI change.
+      #  3. Even once it boots, the suite spawns the real Next standalone server
+      #     and indexes against it, and playwright.config.ts already sets
+      #     `retries: 2` under CI. A retry-masked job here would report green
+      #     while proving nothing.
+      #
+      # To enable it: fix the manifest + serverPath for the nested standalone
+      # layout, have this job build apps/web (or consume the test-and-build
+      # artifact), install the Electron binary (drop the env var above), run
+      # under `xvfb-run -a`, and set `retries: 0` so flakes fail loudly.

@@ -1,5 +1,6 @@
 import type { RepoDetail } from "../types";
 import { QueryEngine } from "../codeintel/query";
+import { scoreIssues } from "../indexer";
 import type { AgentReport, Finding, Priority, RemediationPlan } from "./types";
 import { SPECIALISTS, resetSeq, type AgentContext } from "./specialists";
 
@@ -52,7 +53,7 @@ export function runSwarm(repo: RepoDetail): RemediationPlan {
   const buckets: Record<Priority, Finding[]> = { P0: [], P1: [], P2: [], P3: [] };
   for (const f of all) buckets[f.priority!].push(f);
 
-  const projectedScore = projectScore(repo.score ?? 0, buckets);
+  const projectedScore = projectScore(repo, buckets);
 
   return {
     generatedAt: Date.now(),
@@ -128,11 +129,40 @@ function priorityOf(f: Finding): Priority {
   return "P3";
 }
 
-// Estimate score recovery if P0+P1 are fixed (bounded, diminishing).
-function projectScore(current: number, buckets: Record<Priority, Finding[]>): number {
-  const impactful = buckets.P0.length * 2.2 + buckets.P1.length * 1.1;
-  const recovery = Math.min(100 - current, Math.round(impactful));
-  return Math.min(100, current + recovery);
+/**
+ * Projected score if the P0 and P1 findings are fixed.
+ *
+ * Fixes review item C5. This used to be
+ * `P0.length × 2.2 + P1.length × 1.1` — a linear guess over bucket counts,
+ * presented in the UI and the README as a forecast of an exponential model over
+ * penalty mass. It could not be right except by coincidence: it never looked at
+ * severity, blast radius, or which dimension a finding belonged to, so two
+ * findings with a 50× penalty difference moved it identically.
+ *
+ * Now it re-runs the real scorer (`scoreIssues`, the same function that produced
+ * the current score) over the issues that would remain. That makes the number a
+ * simulation rather than an estimate, and it moves automatically with any future
+ * change to the score model instead of silently drifting away from it.
+ *
+ * Findings are matched to issues by `file:line`, which is sound because the
+ * specialists derive their findings from `repo.issues` in the first place. A
+ * finding with no corresponding issue — one a specialist inferred from graph
+ * structure rather than from a rule hit — correctly moves the projection by
+ * nothing: the Health Score is computed from issues, so fixing something that is
+ * not one cannot change it. Overstating that was the bug.
+ */
+function projectScore(repo: RepoDetail, buckets: Record<Priority, Finding[]>): number {
+  const targeted = new Set<string>();
+  for (const f of [...buckets.P0, ...buckets.P1]) targeted.add(`${f.file}:${f.line}`);
+
+  const remaining = repo.issues.filter((i) => !targeted.has(`${i.file}:${i.line}`));
+  // Nothing matched: report the score unchanged rather than inventing movement.
+  if (remaining.length === repo.issues.length) return repo.score ?? 0;
+
+  const { overall } = scoreIssues(remaining, repo.loc);
+  // The projection is a floor, not a promise: fixing findings cannot lower the
+  // score, and clamping keeps a re-scored dimension from reading as a regression.
+  return Math.max(repo.score ?? 0, Math.min(100, overall));
 }
 
 function summarize(agent: string, findings: Finding[]): string {

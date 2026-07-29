@@ -26,6 +26,17 @@ export interface Issue {
   line: number;
   blastRadius: number; // >=1, graph fan-in weighting
   churn?: number; // commit count over last 6mo, for hotspot prioritization
+  /**
+   * Total matches for this rule in this file, when it exceeds the per-rule
+   * emit cap.
+   *
+   * Set on the FIRST emitted issue of a (rule, file) group only — the others
+   * are location markers for the UI, and multiplying the volume factor once per
+   * emitted issue would count the same excess five times. `undefined` means
+   * "at or under the cap", which is the common case and scores exactly as it
+   * did before this field existed (review item B3).
+   */
+  occurrences?: number;
 }
 
 export interface LanguageStat {
@@ -113,6 +124,10 @@ export interface FleetNode {
 export interface FleetEdge {
   source: string; // repo id
   target: string; // repo id
+}
+/** A fleet node plus the dependency names its outgoing edges are derived from. */
+export interface FleetRepo extends FleetNode {
+  dependencies: string[];
 }
 export interface FleetGraph {
   nodes: FleetNode[];

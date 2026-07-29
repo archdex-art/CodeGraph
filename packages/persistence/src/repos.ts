@@ -94,6 +94,47 @@ export function listRepos(viewer: ViewerId): RepoSummaryRow[] {
 }
 
 /**
+ * The columns the cross-repo fleet graph draws with, and nothing else.
+ *
+ * `deps` is the one JSON blob here, and it is a short array of package-name
+ * strings — kilobytes, not megabytes.
+ */
+export interface RepoFleetRow {
+  readonly id: string;
+  readonly url: string;
+  readonly name: string;
+  readonly source_type: string;
+  readonly score: number | null;
+  readonly loc: number | null;
+  readonly deps: string;
+}
+
+/**
+ * Finished repos visible to `viewer`, with only the fleet-graph columns.
+ *
+ * Exists so `/api/fleet` stops issuing `findRepo` per repo (REVIEW B7). That
+ * loop ran `SELECT *`, which drags `symbols`, `viz`, `tree`, `modules`, `graph`
+ * and `issues` — the symbol graph alone is megabytes of JSON for a large
+ * codebase — through SQLite and `JSON.parse` only for the caller to throw them
+ * away. On the documented 512 MB / 0.5 vCPU deployment target, 100 of those is
+ * an OOM. One statement, seven columns, no blob but `deps`.
+ *
+ * Same `LIMIT 100` as `listRepos` so the fleet shows the same repo set the
+ * dashboard does; lifting the cap would change which repos appear, which is a
+ * product decision and not this query's to make. `id` breaks `created_at` ties
+ * so the row order — and therefore the edge order — is deterministic.
+ */
+export function listFleetRepos(viewer: ViewerId): RepoFleetRow[] {
+  return db()
+    .prepare(
+      `SELECT id, url, name, source_type, score, loc, deps
+       FROM repos WHERE status = 'done' AND ${VISIBLE}
+       ORDER BY created_at DESC, id ASC LIMIT 100`,
+    )
+    .all(bind(viewer)) as RepoFleetRow[];
+}
+
+/**
  * One repo, or null if it does not exist OR is not visible to `viewer`.
  *
  * The two cases are deliberately indistinguishable to the caller: that is what

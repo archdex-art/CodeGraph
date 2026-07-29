@@ -120,25 +120,30 @@ No sign-up, no API key, nothing to configure for this path.
 Optional features (all off by default, zero config needed if you don't want them):
 - **HTTP Basic Auth gate** — set `CG_BASIC_AUTH_PASSWORD` to lock the whole app behind a shared password.
 - **GitHub sign-in** — set `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` / `CG_SESSION_SECRET` to let users one-click import their own repos, including private ones.
-- **Owner-only lockdown** — with GitHub sign-in configured, additionally set `CG_OWNER_GITHUB_LOGIN` (your GitHub username, or a comma-separated list) to restrict the *entire* app — every page and API route, including the normally-anonymous public bucket — to just that account. Enforced once in `app/src/proxy.ts`.
-- **AI Assistant in the Editor** — set `ANTHROPIC_API_KEY` for a Claude-powered chat panel, and/or `CG_LOCAL_LLM_BASE_URL` + `CG_LOCAL_LLM_MODEL` to point it at your own OpenAI-compatible local model server (Ollama, LM Studio, llama.cpp, vLLM, ...) instead — no data leaves your machine either way you choose the local backend. Either backend gets read/write/search/git on the open repo's workspace, no shell access — see `app/AGENTS.md`. Claude is the only piece of CodeGraph that calls a hosted LLM; everything else, including the agent swarm above and the local-model backend, needs none.
+- **Owner-only lockdown** — with GitHub sign-in configured, additionally set `CG_OWNER_GITHUB_LOGIN` (your GitHub username, or a comma-separated list) to restrict the *entire* app — every page and API route, including the normally-anonymous public bucket — to just that account. Enforced once in `apps/web/src/proxy.ts`.
+- **AI Assistant in the Editor** — set `ANTHROPIC_API_KEY` for a Claude-powered chat panel, and/or `CG_LOCAL_LLM_BASE_URL` + `CG_LOCAL_LLM_MODEL` to point it at your own OpenAI-compatible local model server (Ollama, LM Studio, llama.cpp, vLLM, ...) instead — no data leaves your machine either way you choose the local backend. Either backend gets read/write/search/git on the open repo's workspace, no shell access — see `apps/web/AGENTS.md`. Claude is the only piece of CodeGraph that calls a hosted LLM; everything else, including the agent swarm above and the local-model backend, needs none.
 
-Full env-var reference, OAuth App setup walkthrough, backup/restore, and scaling notes: **[`app/DEPLOY.md`](./app/DEPLOY.md)**.
+Full env-var reference, OAuth App setup walkthrough, backup/restore, and scaling notes: **[`apps/web/DEPLOY.md`](./apps/web/DEPLOY.md)**.
 
 ---
 
 ## Benchmarks
 
-Real numbers from real runs against real repos — not synthetic targets. Reproduce any of these yourself; the exact commands are in [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) and the docs linked below.
+Real numbers from real runs against real repos — not synthetic targets.
+
+Every repo-dependent row below is pinned to the exact commit it was measured against, because these
+numbers move when the target repo moves. Re-measured 2026-07-29 against
+`expressjs/express@a371447`; the previous figures had been carried forward from an older snapshot of
+express and no longer reproduced.
 
 | What | Result | Source |
 |---|---|---|
-| **Symbol graph extraction** (`expressjs/express`) | 123 symbols, 94 edges, 94 resolved calls; 14 real call cycles found; 49 unreferenced functions flagged | [`app/CODE_INTELLIGENCE.md`](./app/CODE_INTELLIGENCE.md) |
-| **Agent swarm** (`expressjs/express`, live) | 69 findings across 6 active specialists (P0:10 · P1:18 · P2:39 · P3:2); projected Health Score **90 → 100** after fixing P0+P1 | [`app/AGENTS.md`](./app/AGENTS.md) |
-| **Verified remediation** (`expressjs/express`, live) | 31 real fixes applied across 27 files; Health Score **90 → 93** (actual re-index, not projected), issues **53 → 29**; valid, applyable unified git diff | [`app/AGENTS.md`](./app/AGENTS.md) |
-| **Graph-RAG context generation** | Query *"render a view template"* → 5 seeds, 11 slices, ~647 tokens, structured prompt | [`app/CODE_INTELLIGENCE.md`](./app/CODE_INTELLIGENCE.md) |
+| **Symbol graph extraction** (`expressjs/express@a371447`) | 123 symbols across 159 files; 11 resolved call edges; 0 call cycles. **Call resolution is weak on this target** — express is CommonJS (`exports.foo = function`), which the extractor largely fails to link, so edge count is low and `deadCode()` returns 110 of 123 symbols. Typed extraction (tier `full`) is where this improves; tracked as an open detection-quality item, not presented as a strength | [`apps/web/CODE_INTELLIGENCE.md`](./apps/web/CODE_INTELLIGENCE.md) |
+| **Agent swarm** (`expressjs/express@a371447`, live) | 59 findings across 6 active specialists (P0:21 · P1:38 · P2:0 · P3:0); Health Score 77, *simulated* **77 → 88** if P0+P1 are fixed. The projection re-runs the real scorer over the issues that would remain, so it is a simulation of the shipped model rather than an estimate — but it is still a simulation, not a measurement. The measured result is the row below. The empty P2/P3 buckets are a judge-calibration issue, tracked openly | [`apps/web/AGENTS.md`](./apps/web/AGENTS.md) |
+| **Verified remediation** (`expressjs/express@a371447`, live) | 31 real fixes applied across 27 files; Health Score **77 → 82** and issues **87 → 56**, both from an actual re-index of the fixed tree rather than a projection; verification gate passed; valid, applyable unified git diff | [`apps/web/AGENTS.md`](./apps/web/AGENTS.md) |
+| **Graph-RAG context generation** | Query *"render a view template"* → 5 seeds, 11 slices, ~647 tokens, structured prompt | [`apps/web/CODE_INTELLIGENCE.md`](./apps/web/CODE_INTELLIGENCE.md) |
 | **Memory ceiling under Render's real constraints** | Full pipeline survives indexing `octocat/Hello-World` **and** `expressjs/express` end-to-end inside a container capped at `--memory=512m --cpus=0.5` — the exact config that OOM-killed the server before the fix in [`docs/postmortems/2026-07-10-tree-sitter-oom.md`](./docs/postmortems/2026-07-10-tree-sitter-oom.md) | CI `docker-smoke-test` job, runs on every push |
-| **Test suite** | 265/265 passing across 22 files (security ×4, indexer, codeintel, executor, orchestrator, specialists, resolution, churn, tenant-isolation, and more) | `npm run test` |
+| **Test suite** | 479/479 passing across 34 files in the workspace (security ×4, indexer, scoring, codeintel, executor, orchestrator, specialists, fleet, migrations, viewer-scoping, tenant-isolation, and more), plus 28/28 across 7 files for the Electron app | `npm run test`; `cd desktop && npm test` |
 | **Security posture (self-audited, tracked openly)** | Baseline **3/10 → 9.1/10**. Phases 0–3 hardening (SSRF guard, local-access gate, security headers, auth gate, cross-tenant isolation fix), then Phase 7 closed **17 of 27** findings from a follow-up deep audit that surfaced **99 issues (5 critical)** across the full stack. Remaining items are tracked, not hidden — plus an independent pen-test pass that verified every control live and fixed a rate-limit `X-Forwarded-For` bypass | [`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md), [`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md) |
 
 ## Comparison with existing tools

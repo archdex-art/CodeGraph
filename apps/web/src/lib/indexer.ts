@@ -56,6 +56,16 @@ const SKIP_DIRS: Record<string, true> = {
 const MAX_FILES = config.maxFiles;
 const MAX_FILE_BYTES = 400_000;
 
+/**
+ * Issues emitted per rule per file.
+ *
+ * A bound on the stored/rendered issue list, NOT on the score — `volumeMultiplier`
+ * accounts for matches beyond it. Conflating the two is review item B3: the cap
+ * was a performance guard doing metric duty, so deleting 400 of 500 debug lines
+ * moved the score by zero.
+ */
+const HITS_PER_RULE_PER_FILE = 5;
+
 
 interface ScannedFile {
   rel: string;
@@ -391,14 +401,31 @@ async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, ch
     const lines = f.text.split("\n");
     for (const rule of RULES) {
       if (rule.exts && !rule.exts[f.ext]) continue;
-      let hits = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const m = rule.re.exec(lines[i]);
-        if (m && (!rule.validate || rule.validate(lines[i], m))) {
-          issues.push(mkIssue(rule.dimension, rule.severity, rule.title, f.rel, i + 1, br, rule.confidence, ch));
-          hits++;
-          if (hits >= 5) break; // bounded top-N (5) hits per rule per file
+      let emitted = 0;
+      let occurrences = 0;
+      let firstIssueIndex = -1;
+      for (const [lineIndex, line] of lines.entries()) {
+        const m = rule.re.exec(line);
+        if (!m || (rule.validate && !rule.validate(line, m))) continue;
+        occurrences++;
+        // Keep emitting only up to the cap: the issue list is rendered and
+        // stored, so it stays bounded. Counting continues past it so the score
+        // can tell 500 matches from 5 (review B3) — scanning the remaining lines
+        // is the same regex pass either way, so this costs nothing extra.
+        if (emitted < HITS_PER_RULE_PER_FILE) {
+          if (firstIssueIndex === -1) firstIssueIndex = issues.length;
+          issues.push(
+            mkIssue(rule.dimension, rule.severity, rule.title, f.rel, lineIndex + 1, br, rule.confidence, ch),
+          );
+          emitted++;
         }
+      }
+      // Volume is recorded once per (rule, file) group, on the first emitted
+      // issue. Setting it on all of them would multiply the same excess by the
+      // number of emitted markers.
+      if (occurrences > HITS_PER_RULE_PER_FILE && firstIssueIndex >= 0) {
+        const first = issues[firstIssueIndex];
+        if (first) first.occurrences = occurrences;
       }
     }
     // AST-based security detector layer (eslint-plugin-security), catches
@@ -500,18 +527,84 @@ function analyzeTests(files: ScannedFile[]): Issue[] {
 }
 
 /**
- * Score model (per design doc 07):
- *   penalty = Σ severity × blastRadius   (recency/confidence = 1 here)
- *   sub_score = 100 × exp(-k · penalty / sizeFactor)
- * Larger codebases tolerate more raw penalty (normalized by LOC).
+ * Damped blast-radius multiplier.
+ *
+ * Fixes review item B2. The raw model was `penalty = severity × blastRadius`
+ * with `blastRadius = 1 + fanIn`, which inverted the ranking it was selling: a
+ * `TODO` (severity 1) in a file imported 60× scored 61, while an `eval()`
+ * (severity 5) in a leaf file scored 5 — the TODO outranking the eval 12:1. The
+ * README calls the score "blast-radius-weighted, explainable"; it was weighted
+ * in a way that systematically buried the findings that matter.
+ *
+ * Log damping is what `judgeScore` in agents/orchestrator.ts already did
+ * (`1 + log2(1 + blastRadius)`), so this also makes the two scorers agree
+ * instead of ranking the same finding differently.
+ *
+ * The cap is the load-bearing part. Without it, damping alone still lets a
+ * severity-1 finding in a sufficiently-imported file outrank a severity-5 one
+ * (at fanIn ≈ 1000 the multiplier reaches ~11). At 8 — which log2 reaches around
+ * fanIn 127 — the worst a severity-1 finding can contribute is 8, while the
+ * least a severity-5 finding can contribute is 5 × 2 = 10. So severity 5 always
+ * outranks severity 1, whatever the graph looks like, and that invariant is
+ * asserted in the tests.
+ *
+ * Blast radius stays deliberately file-level here. Symbol-level reachability
+ * (`QueryEngine.reachableCallers`) is the real answer and is P3 work — it needs
+ * findings to carry a symbol, which the regex rules cannot supply.
  */
-function score(issues: Issue[], loc: number, depCount: number): { dimensions: DimensionScore[]; overall: number } {
+const MAX_BLAST_MULTIPLIER = 8;
+
+function blastMultiplier(blastRadius: number): number {
+  return Math.min(MAX_BLAST_MULTIPLIER, 1 + Math.log2(1 + Math.max(0, blastRadius)));
+}
+
+/**
+ * Volume multiplier for a rule that matched many times in one file.
+ *
+ * Fixes review item B3. `analyzeFiles` stops emitting after
+ * `HITS_PER_RULE_PER_FILE` matches, which is a sensible bound on the issue list
+ * and on memory — but it was also doing metric duty, so a file with 500
+ * `console.log`s and a file with 5 scored identically, and deleting 400 of them
+ * moved the score by zero.
+ *
+ * Returns exactly 1 at or below the cap, so every repository whose files are
+ * under it scores precisely as it did before — the common case is unchanged.
+ * Past the cap, volume registers logarithmically: 10× the cap roughly triples
+ * the contribution rather than multiplying it by ten.
+ */
+function volumeMultiplier(occurrences: number | undefined): number {
+  if (occurrences === undefined || occurrences <= HITS_PER_RULE_PER_FILE) return 1;
+  return 1 + Math.log2(occurrences / HITS_PER_RULE_PER_FILE);
+}
+
+/**
+ * The Health Score model.
+ *
+ *   penalty  = Σ severity × blastMultiplier × volumeMultiplier
+ *   subScore = 100 × exp(-k · penalty / sizeFactor)
+ *
+ * Larger codebases tolerate more raw penalty (normalised by LOC).
+ *
+ * Exported so the swarm's projected score can be a real simulation through this
+ * exact function rather than a parallel guess at it (review item C5).
+ *
+ * `depCount` used to be a third parameter and was never read in the body — the
+ * dependency count reaches the score only through the findings it produces.
+ * Removed rather than left standing as a claim about what the model weighs.
+ */
+export function scoreIssues(
+  issues: Issue[],
+  loc: number,
+): { dimensions: DimensionScore[]; overall: number } {
   const sizeFactor = Math.max(1, Math.log10(Math.max(loc, 10)) ** 2); // ~1 small → ~10 huge
   const k = 0.06;
 
   const dims: DimensionScore[] = (Object.keys(DIMENSION_META) as Dimension[]).map((dim) => {
     const di = issues.filter((i) => i.dimension === dim);
-    const penalty = di.reduce((s, i) => s + i.severity * i.blastRadius, 0);
+    const penalty = di.reduce(
+      (s, i) => s + i.severity * blastMultiplier(i.blastRadius) * volumeMultiplier(i.occurrences),
+      0,
+    );
     const norm = penalty / sizeFactor;
     const sub = 100 * Math.exp(-k * norm);
     return {
@@ -753,8 +846,14 @@ export async function indexRepo(root: string): Promise<IndexResult> {
     edges: importEdges.length + files.length, // imports + containment
   };
 
-  const { dimensions, overall } = score(issues, loc, dep.count);
-  issues.sort((a, b) => b.severity * b.blastRadius - a.severity * a.blastRadius);
+  const { dimensions, overall } = scoreIssues(issues, loc);
+  // Same damped model as the score, so the order the user reads matches the
+  // weighting the score applied. Sorting by the raw `severity × blastRadius`
+  // product was review item B2 surfacing a second time: it put a TODO in a
+  // heavily-imported file above an eval() in a leaf.
+  const rank = (i: Issue) =>
+    i.severity * blastMultiplier(i.blastRadius) * volumeMultiplier(i.occurrences);
+  issues.sort((a, b) => rank(b) - rank(a));
 
   // Per-file issue counts (shared by viz, tree, modules).
   const issuesByFile = new Map<string, number>();
