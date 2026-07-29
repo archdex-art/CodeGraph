@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { DatabaseSync, runMigrations, schemaVersions, type Migration, type SqliteDatabase } from "../src/index";
+import { DatabaseSync, MIGRATIONS, runMigrations, schemaVersions, type Migration, type SqliteDatabase } from "../src/index";
 
 /**
  * The migration runner, exercised against databases built by hand rather than
@@ -154,11 +154,16 @@ describe("upgrading a pre-migration v1 database", () => {
 });
 
 describe("runner behaviour", () => {
-  it("records a version only after its migration succeeds", () => {
+  it("records exactly the versions it declares, in order", () => {
+    // Compared against MIGRATIONS rather than a hard-coded list, so adding a
+    // migration does not require editing this test — while still failing if the
+    // runner skips one or records a version it never applied.
     const dbPath = freshDbPath();
     const db = new DatabaseSync(dbPath);
     runMigrations(db);
-    expect(schemaVersions(db)).toEqual([1]);
+    const declared = MIGRATIONS.map((m) => m.version).sort((a, b) => a - b);
+    expect(schemaVersions(db)).toEqual(declared);
+    expect(declared.length).toBeGreaterThan(0);
   });
 
   it("rolls a failing migration back and reports which one failed", () => {

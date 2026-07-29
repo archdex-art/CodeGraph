@@ -51,6 +51,17 @@ export { findJob, insertJob, updateJob } from "./jobs";
 
 export { readSetting, writeSetting } from "./settings";
 
+export type { FindingRow } from "./findings";
+export {
+  countFindingsByDimension,
+  findingsForRun,
+  isDimension,
+  latestRunId,
+  newFindingsSince,
+  suppressFingerprint,
+  suppressedFingerprints,
+} from "./findings";
+
 export type { TrashRow } from "./trash";
 export {
   deleteTrashRow,
