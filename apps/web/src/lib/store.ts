@@ -1,53 +1,105 @@
 import { initTreeSitter } from "./codeintel/ast-extractor";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { db, dataDir } from "./db";
+import type { ViewerId } from "@codegraph/core-domain";
+import {
+  completeRepoIndex,
+  dataDir,
+  deleteRepo as deleteRepoRow,
+  findJob,
+  findRepo,
+  findRepoUnscoped,
+  insertJob,
+  insertRepo,
+  listRepos as listRepoRows,
+  repoOwnerId,
+  repoWorkspace,
+  saveMode as readSaveMode,
+  setRepoError,
+  setRepoStatus,
+  setSaveMode as writeSaveMode,
+  updateJob,
+  type RepoRow,
+} from "@codegraph/persistence";
 import { cloneRepo, indexRepo, cleanup, resolveLocalDir } from "./indexer";
 import { withToken, isGithubHost, getHeadHash } from "@codegraph/vcs";
 import { emptyTrash } from "./trash";
 import type { Job, JobStatus, RepoDetail, RepoSummary, SaveMode, SourceType, VizGraph, IndexResult } from "./types";
 
+/**
+ * Application-level repo/job operations.
+ *
+ * No SQL lives here any more — every statement moved to
+ * `@codegraph/persistence`, which is the only module allowed to write it
+ * (LLD §8). What remains is orchestration: the indexing job body, and the
+ * mapping between database rows and the API's view types.
+ *
+ * `runJob` is still fire-and-forget inside the web process. Moving it to a real
+ * worker is P2 (HLD §17); doing it here would change the request path's
+ * behaviour, which P1 may not.
+ */
+
 const EMPTY_VIZ: VizGraph = { nodes: [], edges: [], truncated: false };
+const EMPTY_TREE = { name: "/", path: ".", children: [] };
+const EMPTY_MODULES = { nodes: [], edges: [] };
+const EMPTY_SYMBOLS = {
+  symbols: [],
+  edges: [],
+  truncated: false,
+  stats: { symbols: 0, edges: 0, resolvedCalls: 0 },
+};
 
 function gitName(url: string): string {
   const m = url.replace(/\.git$/, "").match(/([^/]+\/[^/]+)\/?$/);
-  return m ? m[1] : url;
+  return m ? (m[1] ?? url) : url;
+}
+
+/** JSON column → value, falling back when the column is empty or unparseable. */
+function parseColumn<T>(raw: string | null | undefined, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return (JSON.parse(raw) as T) ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 export function createIndexJob(
   source: string,
   sourceType: SourceType,
   githubToken?: string,
-  ownerId?: number | null
+  ownerId?: number | null,
 ): { jobId: string; repoId: string } {
   const repoId = randomUUID();
   const jobId = randomUUID();
-  const now = Date.now();
   const name = sourceType === "git" ? gitName(source) : path.basename(source.replace(/\/+$/, "")) || source;
-  const d = db();
-  d.prepare(
-    "INSERT INTO repos (id, url, name, source_type, status, owner_id, created_at) VALUES (?, ?, ?, ?, 'queued', ?, ?)"
-  ).run(repoId, source, name, sourceType, ownerId ?? null, now);
-  d.prepare(
-    "INSERT INTO jobs (id, repo_id, status, progress, message) VALUES (?, ?, 'queued', 0, 'Queued')"
-  ).run(jobId, repoId);
+
+  insertRepo({
+    id: repoId,
+    url: source,
+    name,
+    sourceType,
+    ownerId: ownerId ?? null,
+    createdAt: Date.now(),
+  });
+  insertJob(jobId, repoId);
 
   // Fire-and-forget: runs in the Node server process.
   void runJob(jobId, repoId, source, sourceType, githubToken);
   return { jobId, repoId };
 }
 
-function setJob(jobId: string, status: JobStatus, progress: number, message: string, error?: string) {
-  db()
-    .prepare("UPDATE jobs SET status=?, progress=?, message=?, error=? WHERE id=?")
-    .run(status, progress, message, error ?? null, jobId);
+function setJob(jobId: string, status: JobStatus, progress: number, message: string, error?: string): void {
+  updateJob(jobId, status, progress, message, error);
 }
 
-function setRepoStatus(repoId: string, status: JobStatus) {
-  db().prepare("UPDATE repos SET status=? WHERE id=?").run(status, repoId);
-}
-
-async function runJob(jobId: string, repoId: string, source: string, sourceType: SourceType, githubToken?: string) {
+async function runJob(
+  jobId: string,
+  repoId: string,
+  source: string,
+  sourceType: SourceType,
+  githubToken?: string,
+): Promise<void> {
   try {
     let root: string;
     if (sourceType === "git") {
@@ -83,177 +135,175 @@ async function runJob(jobId: string, repoId: string, source: string, sourceType:
     // re-deriving it from scratch via git-archive + a second full index pass.
     const headHash = sourceType === "git" ? await getHeadHash(root) : null;
 
-    // Keep the on-disk checkout around as a persistent workspace for the
-    // built-in editor (git clones are no longer deleted after indexing;
-    // local folders were never copied in the first place).
-    db()
-      .prepare(
-        `UPDATE repos SET status='done', score=?, loc=?, languages=?, graph=?, dimensions=?, issues=?, deps=?, churn_by_file=?, viz=?, tree=?, modules=?, symbols=?, workspace_dir=?, head_hash=?, finished_at=?
-         WHERE id=?`
-      )
-      .run(
-        result.score,
-        result.loc,
-        JSON.stringify(result.languages),
-        JSON.stringify(result.graphStats),
-        JSON.stringify(result.dimensions),
-        JSON.stringify(result.issues),
-        JSON.stringify(result.dependencies),
-        JSON.stringify(result.churnByFile),
-        JSON.stringify(result.viz),
-        JSON.stringify(result.tree),
-        JSON.stringify(result.modules),
-        JSON.stringify(result.symbolGraph),
-        root,
-        headHash,
-        Date.now(),
-        repoId
-      );
+    completeRepoIndex(repoId, {
+      score: result.score,
+      loc: result.loc,
+      languages: JSON.stringify(result.languages),
+      graph: JSON.stringify(result.graphStats),
+      dimensions: JSON.stringify(result.dimensions),
+      issues: JSON.stringify(result.issues),
+      deps: JSON.stringify(result.dependencies),
+      churnByFile: JSON.stringify(result.churnByFile),
+      viz: JSON.stringify(result.viz),
+      tree: JSON.stringify(result.tree),
+      modules: JSON.stringify(result.modules),
+      symbols: JSON.stringify(result.symbolGraph),
+      workspaceDir: root,
+      headHash,
+      finishedAt: Date.now(),
+    });
     setJob(jobId, "done", 100, `Done — Health Score ${result.score}/100`);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     setJob(jobId, "error", 100, "Indexing failed", msg);
-    db()
-      .prepare("UPDATE repos SET status='error', error=?, finished_at=? WHERE id=?")
-      .run(msg, Date.now(), repoId);
+    setRepoError(repoId, "error", msg);
   }
 }
 
 export function getJob(jobId: string): Job | null {
-  const r = db()
-    .prepare("SELECT id, repo_id, status, progress, message, error FROM jobs WHERE id=?")
-    .get(jobId) as
-    | { id: string; repo_id: string; status: JobStatus; progress: number; message: string; error: string | null }
-    | undefined;
-  if (!r) return null;
-  return { id: r.id, repoId: r.repo_id, status: r.status, progress: r.progress, message: r.message, error: r.error };
-}
-
-/** Repos visible to `viewerId`: anonymously-indexed repos (owner_id IS NULL,
- *  the shared public bucket — unchanged legacy behavior) plus the viewer's
- *  own privately-owned repos. Pass `null` for an anonymous/signed-out
- *  viewer — they see only the public bucket. */
-export function listRepos(viewerId: number | null): RepoSummary[] {
-  const rows = db()
-    .prepare(
-      `SELECT id, url, name, source_type, status, score, created_at, finished_at FROM repos
-       WHERE owner_id IS NULL OR owner_id = ?
-       ORDER BY created_at DESC LIMIT 100`
-    )
-    .all(viewerId ?? -1) as Array<Record<string, unknown>>;
-  return rows.map((r) => ({
-    id: r.id as string,
-    url: r.url as string,
-    name: r.name as string,
-    sourceType: ((r.source_type as string) || "git") as SourceType,
-    status: r.status as JobStatus,
-    score: (r.score as number | null) ?? null,
-    createdAt: r.created_at as number,
-    finishedAt: (r.finished_at as number | null) ?? null,
-  }));
-}
-
-/** Lean ownership lookup for authz checks — avoids parsing the heavy JSON
- *  blobs `getRepo` loads. Returns `undefined` if the repo doesn't exist,
- *  `null` if it's in the public bucket (no owner), else the owning userId. */
-export function getRepoOwnerId(id: string): number | null | undefined {
-  const r = db().prepare("SELECT owner_id FROM repos WHERE id=?").get(id) as { owner_id: number | null } | undefined;
-  if (!r) return undefined;
-  return r.owner_id;
-}
-
-/** Delete a repo, its jobs, and its trash. Removes the on-disk workspace only
- *  for git clones (a "local" workspace is the user's real folder — never
- *  touched); trash blobs always live under our own data dir, so those are
- *  purged regardless of source type. */
-export function deleteRepo(id: string): boolean {
-  const d = db();
-  const row = d.prepare("SELECT source_type, workspace_dir FROM repos WHERE id=?").get(id) as
-    | { source_type: string; workspace_dir: string | null }
-    | undefined;
-  d.prepare("DELETE FROM jobs WHERE repo_id = ?").run(id);
-  const res = d.prepare("DELETE FROM repos WHERE id = ?").run(id);
-  if (row?.source_type === "git" && row.workspace_dir) cleanup(row.workspace_dir);
-  emptyTrash(id);
-  return Number(res.changes ?? 0) > 0;
-}
-
-export function getRepo(id: string): RepoDetail | null {
-  const r = db().prepare("SELECT * FROM repos WHERE id=?").get(id) as Record<string, unknown> | undefined;
+  const r = findJob(jobId);
   if (!r) return null;
   return {
-    id: r.id as string,
-    url: r.url as string,
-    name: r.name as string,
-    sourceType: ((r.source_type as string) || "git") as SourceType,
+    id: r.id,
+    repoId: r.repo_id,
     status: r.status as JobStatus,
-    hasWorkspace: Boolean(r.workspace_dir),
-    score: (r.score as number | null) ?? null,
-    error: (r.error as string | null) ?? null,
-    loc: (r.loc as number) ?? 0,
-    languages: JSON.parse((r.languages as string) || "[]"),
-    graphStats: JSON.parse((r.graph as string) || "{}"),
-    dimensions: JSON.parse((r.dimensions as string) || "[]"),
-    issues: JSON.parse((r.issues as string) || "[]"),
-    dependencies: JSON.parse((r.deps as string) || "[]"),
-    churnByFile: JSON.parse((r.churn_by_file as string) || "{}"),
-    viz: JSON.parse((r.viz as string) || "null") || EMPTY_VIZ,
-    tree: JSON.parse((r.tree as string) || "null") || { name: "/", path: ".", children: [] },
-    modules: JSON.parse((r.modules as string) || "null") || { nodes: [], edges: [] },
-    symbolGraph: JSON.parse((r.symbols as string) || "null") || { symbols: [], edges: [], truncated: false, stats: { symbols: 0, edges: 0, resolvedCalls: 0 } },
-    createdAt: r.created_at as number,
-    finishedAt: (r.finished_at as number | null) ?? null,
+    progress: r.progress,
+    message: r.message,
+    error: r.error,
   };
 }
 
-/** The already-computed indexer result for the exact commit this repo's
- *  live workspace was last indexed at (`head_hash`, git sources only).
- *  Consumed by TimelineEngine.ensureSnapshot to skip a redundant
- *  git-archive + full re-index pass when a requested timeline entry is
- *  that same commit — the common case, since the timeline UI defaults to
- *  its newest entry on open. Returns null if the repo hasn't finished
- *  indexing, isn't a git source, or predates this tracking. */
+/** Repos visible to `viewer`: the shared public bucket plus the viewer's own. */
+export function listRepos(viewer: ViewerId): RepoSummary[] {
+  return listRepoRows(viewer).map((r) => ({
+    id: r.id,
+    url: r.url,
+    name: r.name,
+    sourceType: (r.source_type || "git") as SourceType,
+    status: r.status as JobStatus,
+    score: r.score ?? null,
+    createdAt: r.created_at,
+    finishedAt: r.finished_at ?? null,
+  }));
+}
+
+/** Lean ownership lookup for authz checks. */
+export function getRepoOwnerId(id: string): number | null | undefined {
+  return repoOwnerId(id);
+}
+
+function toRepoDetail(r: RepoRow): RepoDetail {
+  return {
+    id: r.id,
+    url: r.url,
+    name: r.name,
+    sourceType: (r.source_type || "git") as SourceType,
+    status: r.status as JobStatus,
+    hasWorkspace: Boolean(r.workspace_dir),
+    score: r.score ?? null,
+    error: r.error ?? null,
+    loc: r.loc ?? 0,
+    languages: parseColumn(r.languages, []),
+    graphStats: parseColumn(r.graph, {} as RepoDetail["graphStats"]),
+    dimensions: parseColumn(r.dimensions, []),
+    issues: parseColumn(r.issues, []),
+    dependencies: parseColumn(r.deps, []),
+    churnByFile: parseColumn(r.churn_by_file, {}),
+    viz: parseColumn(r.viz, EMPTY_VIZ),
+    tree: parseColumn(r.tree, EMPTY_TREE),
+    modules: parseColumn(r.modules, EMPTY_MODULES),
+    symbolGraph: parseColumn(r.symbols, EMPTY_SYMBOLS),
+    createdAt: r.created_at,
+    finishedAt: r.finished_at ?? null,
+  };
+}
+
+/**
+ * One repo, or null if it does not exist OR is not visible to `viewer`.
+ *
+ * The viewer is mandatory: the whole point of pushing the predicate into
+ * persistence (LLD §8) is that a route cannot forget it. Callers that act as the
+ * system rather than for a viewer use `getRepoForSystem`.
+ */
+export function getRepo(id: string, viewer: ViewerId): RepoDetail | null {
+  const r = findRepo(id, viewer);
+  return r ? toRepoDetail(r) : null;
+}
+
+/**
+ * One repo with no visibility filter, for the background job runner and the
+ * timeline engine.
+ *
+ * Named so that every unscoped read is greppable. Never reachable from a route
+ * handler acting on a user's behalf.
+ */
+export function getRepoForSystem(id: string): RepoDetail | null {
+  const r = findRepoUnscoped(id);
+  return r ? toRepoDetail(r) : null;
+}
+
+/**
+ * Delete a repo, its jobs, and its trash. Removes the on-disk workspace only
+ * for git clones (a "local" workspace is the user's real folder — never
+ * touched); trash blobs always live under our own data dir, so those are
+ * purged regardless of source type.
+ */
+export function deleteRepo(id: string, viewer: ViewerId): boolean {
+  // Read the location BEFORE the row goes away, but delete through the scoped
+  // repository so a non-owner cannot remove anything.
+  const location = repoWorkspace(id);
+  const removed = deleteRepoRow(id, viewer);
+  if (!removed) return false;
+  if (location?.source_type === "git" && location.workspace_dir) cleanup(location.workspace_dir);
+  emptyTrash(id);
+  return true;
+}
+
+/**
+ * The already-computed indexer result for the exact commit this repo's
+ * live workspace was last indexed at (`head_hash`, git sources only).
+ * Consumed by TimelineEngine.ensureSnapshot to skip a redundant
+ * git-archive + full re-index pass when a requested timeline entry is
+ * that same commit — the common case, since the timeline UI defaults to
+ * its newest entry on open. Returns null if the repo hasn't finished
+ * indexing, isn't a git source, or predates this tracking.
+ *
+ * Unscoped: the timeline engine runs as the system, for a repo whose access was
+ * already checked by the route that started it.
+ */
 export function getIndexedHead(id: string): { hash: string; result: IndexResult } | null {
-  const r = db()
-    .prepare(
-      `SELECT status, head_hash, score, loc, languages, graph, dimensions, issues, deps, churn_by_file, viz, tree, modules, symbols
-       FROM repos WHERE id=?`
-    )
-    .get(id) as Record<string, unknown> | undefined;
+  const r = findRepoUnscoped(id);
   if (!r || r.status !== "done" || !r.head_hash) return null;
   return {
-    hash: r.head_hash as string,
+    hash: r.head_hash,
     result: {
-      score: (r.score as number) ?? 0,
-      loc: (r.loc as number) ?? 0,
-      languages: JSON.parse((r.languages as string) || "[]"),
-      graphStats: JSON.parse((r.graph as string) || "{}"),
-      dimensions: JSON.parse((r.dimensions as string) || "[]"),
-      issues: JSON.parse((r.issues as string) || "[]"),
-      dependencies: JSON.parse((r.deps as string) || "[]"),
-      churnByFile: JSON.parse((r.churn_by_file as string) || "{}"),
-      viz: JSON.parse((r.viz as string) || "null") || EMPTY_VIZ,
-      tree: JSON.parse((r.tree as string) || "null") || { name: "/", path: ".", children: [] },
-      modules: JSON.parse((r.modules as string) || "null") || { nodes: [], edges: [] },
-      symbolGraph: JSON.parse((r.symbols as string) || "null") || { symbols: [], edges: [], truncated: false, stats: { symbols: 0, edges: 0, resolvedCalls: 0 } },
+      score: r.score ?? 0,
+      loc: r.loc ?? 0,
+      languages: parseColumn(r.languages, []),
+      graphStats: parseColumn(r.graph, {} as IndexResult["graphStats"]),
+      dimensions: parseColumn(r.dimensions, []),
+      issues: parseColumn(r.issues, []),
+      dependencies: parseColumn(r.deps, []),
+      churnByFile: parseColumn(r.churn_by_file, {}),
+      viz: parseColumn(r.viz, EMPTY_VIZ),
+      tree: parseColumn(r.tree, EMPTY_TREE),
+      modules: parseColumn(r.modules, EMPTY_MODULES),
+      symbolGraph: parseColumn(r.symbols, EMPTY_SYMBOLS),
     },
   };
 }
 
 /** Resolve the on-disk workspace root for a repo, or null if not indexed yet. */
 export function getWorkspaceDir(id: string): { dir: string; sourceType: SourceType } | null {
-  const r = db().prepare("SELECT workspace_dir, source_type FROM repos WHERE id=?").get(id) as
-    | { workspace_dir: string | null; source_type: string }
-    | undefined;
-  if (!r || !r.workspace_dir) return null;
+  const r = repoWorkspace(id);
+  if (!r?.workspace_dir) return null;
   return { dir: r.workspace_dir, sourceType: (r.source_type as SourceType) || "git" };
 }
 
 export function getSaveMode(id: string): SaveMode {
-  const r = db().prepare("SELECT save_mode FROM repos WHERE id=?").get(id) as { save_mode: string } | undefined;
-  return ((r?.save_mode as SaveMode) || "local");
+  return (readSaveMode(id) as SaveMode) || "local";
 }
 
 export function setSaveMode(id: string, mode: SaveMode): void {
-  db().prepare("UPDATE repos SET save_mode=? WHERE id=?").run(mode, id);
+  writeSaveMode(id, mode);
 }

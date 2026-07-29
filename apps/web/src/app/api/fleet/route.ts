@@ -7,7 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const summaries = listRepos(viewerId(req));
+  const viewer = viewerId(req);
+  const summaries = listRepos(viewer);
   const nodes: FleetNode[] = [];
   const edges: FleetEdge[] = [];
   
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   // In a real enterprise system, we'd add `deps` to listRepos or a specific query.
   for (const s of summaries) {
     if (s.status !== "done") continue;
-    const r = getRepo(s.id);
+    const r = getRepo(s.id, viewer);
     if (!r) continue;
     
     nodes.push({

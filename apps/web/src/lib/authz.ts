@@ -9,12 +9,19 @@
 //     signed-in accounts and anonymous visitors — gets a 404, not a 403, so
 //     a private repo's mere existence isn't leaked to anyone but its owner.
 import { NextRequest, NextResponse } from "next/server";
+import { viewerId as brandViewerId, type ViewerId } from "@codegraph/core-domain";
 import { getSession } from "./session";
 import { getRepoOwnerId } from "./store";
 
-/** Current viewer's userId for scoping list queries, or `null` if signed out. */
-export function viewerId(req: NextRequest): number | null {
-  return getSession(req)?.userId ?? null;
+/**
+ * Current viewer for scoping persistence reads, or `null` when signed out.
+ *
+ * Returns the branded `ViewerId` so it cannot be confused with any other numeric
+ * id at a call site, and so a repository read cannot be handed a repo id by
+ * mistake (LLD §2, §8).
+ */
+export function viewerId(req: NextRequest): ViewerId {
+  return brandViewerId(getSession(req)?.userId ?? null);
 }
 
 /**

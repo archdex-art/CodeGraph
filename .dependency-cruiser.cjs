@@ -147,12 +147,18 @@ module.exports = {
     },
 
     {
-      name: "fs-only-in-fsx",
+      name: "raw-fs-only-in-io-packages",
       comment:
-        "node:fs is fsx's capability to hold (LLD §10.1). Raw fs elsewhere is " +
-        "how path containment gets re-implemented slightly wrong.",
+        "node:fs belongs to the three packages that exist to own I/O: fsx " +
+        "(workspace containment, LLD §10.1), vcs (git working trees), and " +
+        "persistence (creating the data dir before opening SQLite). LLD §1.1 " +
+        "names exactly these three. Raw fs anywhere else is how path " +
+        "containment gets re-implemented slightly wrong.",
       severity: "error",
-      from: { path: "^packages/", pathNot: "^packages/fsx/" },
+      from: {
+        path: "^packages/",
+        pathNot: "^packages/(fsx|vcs|persistence)/",
+      },
       to: { path: "^(node:)?fs(/promises)?$", dependencyTypes: ["core"] },
     },
 

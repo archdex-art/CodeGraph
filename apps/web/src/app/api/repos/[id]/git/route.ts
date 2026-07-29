@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRepo, getWorkspaceDir, getSaveMode, setSaveMode } from "@/lib/store";
-import { repoAccessDenied } from "@/lib/authz";
+import { repoAccessDenied, viewerId } from "@/lib/authz";
 import {
   isGitRepo,
   getStatus,
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ ok: true });
     }
     if (op === "push") {
-      const repo = getRepo(id);
+      const repo = getRepo(id, viewerId(req));
       if (githubToken && repo?.sourceType === "git" && !isGithubHost(repo.url)) {
         return NextResponse.json(
           { error: "A GitHub PAT can only be used to push to a github.com-hosted repo." },

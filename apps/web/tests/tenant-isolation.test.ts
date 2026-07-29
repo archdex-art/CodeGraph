@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
-import { db } from "@/lib/db";
+import { db } from "@codegraph/persistence";
+import { viewerId as brandViewerId } from "@codegraph/core-domain";
 import { listRepos, getRepoOwnerId } from "@/lib/store";
 import { repoAccessDenied, viewerId } from "@/lib/authz";
 import { encryptSession, SESSION_COOKIE_NAME } from "@/lib/session";
@@ -61,21 +62,21 @@ describe("listRepos tenant scoping", () => {
   });
 
   it("shows an anonymous viewer only the public bucket", () => {
-    const ids = listRepos(null).map((r) => r.id);
+    const ids = listRepos(brandViewerId(null)).map((r) => r.id);
     expect(ids).toContain(publicRepo);
     expect(ids).not.toContain(privateA);
     expect(ids).not.toContain(privateB);
   });
 
   it("shows user A their own private repo plus the public bucket, never user B's", () => {
-    const ids = listRepos(USER_A).map((r) => r.id);
+    const ids = listRepos(brandViewerId(USER_A)).map((r) => r.id);
     expect(ids).toContain(publicRepo);
     expect(ids).toContain(privateA);
     expect(ids).not.toContain(privateB);
   });
 
   it("shows user B their own private repo plus the public bucket, never user A's", () => {
-    const ids = listRepos(USER_B).map((r) => r.id);
+    const ids = listRepos(brandViewerId(USER_B)).map((r) => r.id);
     expect(ids).toContain(publicRepo);
     expect(ids).toContain(privateB);
     expect(ids).not.toContain(privateA);

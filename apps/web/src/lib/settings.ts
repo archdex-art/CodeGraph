@@ -26,7 +26,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { config } from "@codegraph/config";
-import { db } from "./db";
+import { readSetting, writeSetting } from "@codegraph/persistence";
 import { githubOAuthConfigured, ownerLoginAllowlist } from "./githubOAuth";
 
 // Whether a deployment-wide credential (ANTHROPIC_API_KEY,
@@ -79,19 +79,13 @@ const KEYS = {
 } as const;
 
 function getRaw(key: string, userId: number): string | null {
-  const row = db().prepare("SELECT value FROM settings WHERE key = ? AND user_id = ?").get(key, userId) as { value: string } | undefined;
-  return row?.value ?? null;
+  return readSetting(key, userId);
 }
 
 function setRaw(key: string, value: string | null, userId: number): void {
-  const trimmed = value?.trim() ?? "";
-  if (!trimmed) {
-    db().prepare("DELETE FROM settings WHERE key = ? AND user_id = ?").run(key, userId);
-  } else {
-    db()
-      .prepare("INSERT INTO settings (key, user_id, value) VALUES (?, ?, ?) ON CONFLICT(key, user_id) DO UPDATE SET value = excluded.value")
-      .run(key, userId, trimmed);
-  }
+  // The empty-string-deletes-the-row rule lives in the repository, so "unset"
+  // has exactly one representation regardless of which caller writes it.
+  writeSetting(key, userId, value ?? "");
 }
 
 export function getAssistantSettings(userId: number = ANONYMOUS_USER_ID): AssistantSettings {

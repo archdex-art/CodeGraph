@@ -7,7 +7,15 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, renameSync, rmSync, statSync, lstatSync, cpSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { db, dataDir } from "./db";
+import {
+  dataDir,
+  deleteTrashRow,
+  deleteTrashRowsForRepo,
+  findTrashRow,
+  insertTrashRow,
+  listTrashRows,
+  trashRowsBeyondCap,
+} from "@codegraph/persistence";
 import { resolveSafe, WorkspacePathError } from "@codegraph/fsx";
 import type { TrashEntry } from "./types";
 
@@ -60,12 +68,12 @@ function sizeOf(full: string): number {
 }
 
 function pruneTrash(repoId: string, cap = TRASH_CAP): void {
-  const rows = db()
-    .prepare("SELECT id FROM trash WHERE repo_id=? ORDER BY deleted_at DESC")
-    .all(repoId) as Array<{ id: string }>;
-  for (const { id } of rows.slice(cap)) {
+  // The OFFSET is done in SQL rather than by fetching every row and slicing:
+  // the cap exists to bound disk use, so the query should not grow with the
+  // thing it bounds.
+  for (const id of trashRowsBeyondCap(repoId, cap)) {
     rmSync(path.join(trashRoot(repoId), id), { recursive: true, force: true });
-    db().prepare("DELETE FROM trash WHERE id=?").run(id);
+    deleteTrashRow(id);
   }
 }
 
@@ -87,9 +95,15 @@ export function moveToTrash(repoId: string, workspaceRoot: string, relPath: stri
 
   const entry: TrashEntry = { id, path: rel, name: path.basename(rel), type, size, deletedAt: Date.now() };
   try {
-    db()
-      .prepare("INSERT INTO trash (id, repo_id, orig_path, name, type, size, deleted_at) VALUES (?,?,?,?,?,?,?)")
-      .run(entry.id, repoId, entry.path, entry.name, entry.type, entry.size, entry.deletedAt);
+    insertTrashRow({
+      id: entry.id,
+      repo_id: repoId,
+      orig_path: entry.path,
+      name: entry.name,
+      type: entry.type,
+      size: entry.size,
+      deleted_at: entry.deletedAt,
+    });
   } catch (e) {
     // DB write failed — move the file back so it never goes untracked in trash.
     moveSync(dest, full);
@@ -101,15 +115,12 @@ export function moveToTrash(repoId: string, workspaceRoot: string, relPath: stri
 
 /** List a repo's trash, most recently deleted first. */
 export function listTrash(repoId: string): TrashEntry[] {
-  const rows = db()
-    .prepare("SELECT * FROM trash WHERE repo_id=? ORDER BY deleted_at DESC")
-    .all(repoId) as TrashRow[];
-  return rows.map((r) => ({ id: r.id, path: r.orig_path, name: r.name, type: r.type as "file" | "dir", size: r.size, deletedAt: r.deleted_at }));
+  return listTrashRows(repoId).map((r) => ({ id: r.id, path: r.orig_path, name: r.name, type: r.type as "file" | "dir", size: r.size, deletedAt: r.deleted_at }));
 }
 
 /** Move a trashed entry back to its original location. Fails if something now occupies that path. */
 export function restoreFromTrash(repoId: string, workspaceRoot: string, trashId: string): TrashEntry {
-  const row = db().prepare("SELECT * FROM trash WHERE id=? AND repo_id=?").get(trashId, repoId) as TrashRow | undefined;
+  const row = findTrashRow(trashId, repoId);
   if (!row) throw new Error("Trash entry not found");
 
   const target = resolveSafe(workspaceRoot, row.orig_path);
@@ -117,26 +128,26 @@ export function restoreFromTrash(repoId: string, workspaceRoot: string, trashId:
 
   const src = path.join(trashRoot(repoId), row.id);
   if (!existsSync(src)) {
-    db().prepare("DELETE FROM trash WHERE id=?").run(row.id);
+    deleteTrashRow(row.id);
     throw new Error("Trash contents are gone (already purged)");
   }
 
   mkdirSync(path.dirname(target), { recursive: true });
   moveSync(src, target);
-  db().prepare("DELETE FROM trash WHERE id=?").run(row.id);
+  deleteTrashRow(row.id);
   return { id: row.id, path: row.orig_path, name: row.name, type: row.type as "file" | "dir", size: row.size, deletedAt: row.deleted_at };
 }
 
 /** Permanently erase one trashed entry. */
 export function purgeTrashEntry(repoId: string, trashId: string): void {
-  const row = db().prepare("SELECT id FROM trash WHERE id=? AND repo_id=?").get(trashId, repoId);
+  const row = findTrashRow(trashId, repoId);
   if (!row) throw new Error("Trash entry not found");
   rmSync(path.join(trashRoot(repoId), trashId), { recursive: true, force: true });
-  db().prepare("DELETE FROM trash WHERE id=?").run(trashId);
+  deleteTrashRow(trashId);
 }
 
 /** Permanently erase every trashed entry for a repo (also used on repo delete). */
 export function emptyTrash(repoId: string): void {
   rmSync(trashRoot(repoId), { recursive: true, force: true });
-  db().prepare("DELETE FROM trash WHERE repo_id=?").run(repoId);
+  deleteTrashRowsForRepo(repoId);
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRepo } from "@/lib/store";
-import { repoAccessDenied, publishCredential } from "@/lib/authz";
+import { repoAccessDenied, publishCredential, viewerId } from "@/lib/authz";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
 import { executeFixes } from "@/lib/agents/executor";
 import { logger } from "@codegraph/observability";
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const denied = repoAccessDenied(req, id);
   if (denied) return denied;
-  const repo = getRepo(id);
+  const repo = getRepo(id, viewerId(req));
   if (!repo) return NextResponse.json({ error: "Repo not found" }, { status: 404 });
   if (repo.status !== "done") return NextResponse.json({ error: "Repo not indexed yet" }, { status: 409 });
 

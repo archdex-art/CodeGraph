@@ -17,7 +17,7 @@ import { redactCredentials } from "@codegraph/vcs";
 import { isSafeReturnPath } from "@codegraph/vcs";
 import { executeFixes } from "@/lib/agents/executor";
 import type { RepoDetail } from "@/lib/types";
-import { db } from "@/lib/db";
+import { db } from "@codegraph/persistence";
 import { encryptSession, SESSION_COOKIE_NAME } from "@/lib/session";
 import { GET as jobsGet } from "@/app/api/jobs/[id]/route";
 

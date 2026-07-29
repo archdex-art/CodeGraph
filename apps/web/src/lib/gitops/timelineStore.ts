@@ -1,7 +1,7 @@
 import { mkdirSync, existsSync } from "node:fs";
 import { readFile, writeFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { dataDir } from "../db";
+import { dataDir } from "@codegraph/persistence";
 import type { ArchitectureSnapshot } from "./historicalAnalysis";
 import { logger } from "@codegraph/observability";
 

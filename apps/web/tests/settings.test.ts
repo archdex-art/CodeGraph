@@ -7,13 +7,13 @@ import { afterAll, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync } from "@codegraph/persistence";
 
 const dataDir = mkdtempSync(path.join(tmpdir(), "cg-settings-"));
 process.env.CG_DATA_DIR = dataDir;
 process.env.CG_SESSION_SECRET = process.env.CG_SESSION_SECRET || "test-secret-for-settings";
 
-import { db } from "@/lib/db";
+import { db } from "@codegraph/persistence";
 import {
   ANONYMOUS_USER_ID,
   getAssistantSettings,

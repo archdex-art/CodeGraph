@@ -11,7 +11,7 @@ const dataDir = mkdtempSync(path.join(tmpdir(), "cg-publish-"));
 process.env.CG_DATA_DIR = dataDir;
 process.env.CG_SESSION_SECRET = "test-secret-for-publish-credential";
 
-const { db } = await import("@/lib/db");
+const { db } = await import("@codegraph/persistence");
 const { publishCredential, repoAccessDenied } = await import("@/lib/authz");
 const { encryptSession, SESSION_COOKIE_NAME } = await import("@/lib/session");
 type SessionPayload = import("@/lib/session").SessionPayload;
