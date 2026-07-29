@@ -43,6 +43,12 @@ export interface Config {
   // ---------- indexing budgets ----------
   readonly maxFiles: number;
   readonly cloneTimeoutMs: number;
+  readonly analysisBudgetMs: number;
+
+  // ---------- worker (HLD §5.1, LLD §10.3) ----------
+  readonly workerConcurrency: number;
+  readonly workerPollIntervalMs: number;
+  readonly workerLeaseMs: number;
 
   // ---------- network / proxy ----------
   readonly trustedProxyHops: number;
@@ -105,6 +111,38 @@ export function buildSchema(options: LoadOptions = {}): Schema {
 
     maxFiles: intVar("CG_MAX_FILES", { fallback: 4000, min: 1 }),
     cloneTimeoutMs: intVar("CG_CLONE_TIMEOUT_MS", { fallback: 90_000, min: 1 }),
+    analysisBudgetMs: intVar("CG_ANALYSIS_BUDGET_MS", { fallback: 120_000, min: 1 }),
+
+    /**
+     * Jobs run at once per worker process (LLD §10.3: default 1, max 8).
+     *
+     * The default is 1 deliberately, and it is not timidity: HLD §3 pins peak RSS
+     * under 400 MB on a 512 MB host, and a single analysis is the thing that
+     * already OOM'd it once (docs/postmortems/2026-07-10-tree-sitter-oom.md).
+     * Two concurrent analyses in one process share the same WASM linear memory,
+     * which only grows — so raising this multiplies the exposure to the exact
+     * failure the worker exists to contain. Raise it only with real headroom.
+     */
+    workerConcurrency: intVar("CG_WORKER_CONCURRENCY", { fallback: 1, min: 1, max: 8 }),
+
+    /**
+     * Idle poll interval. Only paid when the queue is empty: a worker that just
+     * finished a job re-polls immediately, so this is latency on an idle queue,
+     * not throughput under load.
+     */
+    workerPollIntervalMs: intVar("CG_WORKER_POLL_INTERVAL_MS", { fallback: 1_000, min: 50 }),
+
+    /**
+     * How long a claim is held before another worker may reclaim the job
+     * (LLD §8.3's orphan-reclaim clause).
+     *
+     * Floor of 5s, and it must exceed `workerPollIntervalMs` by enough that a
+     * busy worker always heartbeats before its own lease expires — otherwise a
+     * healthy job gets stolen mid-run and two workers write the same run. The
+     * worker asserts that relationship at boot rather than trusting the operator
+     * to have reasoned it through.
+     */
+    workerLeaseMs: intVar("CG_WORKER_LEASE_MS", { fallback: 60_000, min: 5_000 }),
 
     /**
      * How many reverse-proxy hops to trust when reading `X-Forwarded-For` from
