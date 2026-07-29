@@ -17,8 +17,8 @@ import {
   log,
   withToken,
   isGithubHost,
-} from "@/lib/gitops";
-import { redactCredentials } from "@/lib/indexer";
+} from "@codegraph/vcs";
+import { redactCredentials } from "@codegraph/vcs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

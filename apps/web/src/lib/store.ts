@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { db, dataDir } from "./db";
 import { cloneRepo, indexRepo, cleanup, resolveLocalDir } from "./indexer";
-import { withToken, isGithubHost, getHeadHash } from "./gitops";
+import { withToken, isGithubHost, getHeadHash } from "@codegraph/vcs";
 import { emptyTrash } from "./trash";
 import type { Job, JobStatus, RepoDetail, RepoSummary, SaveMode, SourceType, VizGraph, IndexResult } from "./types";
 

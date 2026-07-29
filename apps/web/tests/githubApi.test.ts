@@ -4,7 +4,7 @@ import {
   getDefaultBranch,
   createPullRequest,
   GitHubApiError,
-} from "../src/lib/githubApi";
+} from "@codegraph/vcs";
 
 /** Minimal fetch double: returns a canned status/body and records the call. */
 function fakeFetch(

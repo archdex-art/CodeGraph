@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { githubOAuthConfigured, buildAuthorizeUrl, publicBaseUrl } from "@/lib/githubOAuth";
-import { isSafeReturnPath } from "@/lib/urlSafety";
+import { isSafeReturnPath } from "@codegraph/vcs";
 import { oauthTransitCookieOptions } from "@/lib/session";
 
 export const runtime = "nodejs";

@@ -5,6 +5,7 @@ import { execSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { childEnv, config } from "@codegraph/config";
+import { redactError } from "@codegraph/vcs";
 import type {
   Dimension,
   DimensionScore,
@@ -64,9 +65,6 @@ interface ScannedFile {
   imports: string[]; // resolved-ish relative targets
 }
 
-export function redactCredentials(s: string): string {
-  return s.replace(/:\/\/[^\s@/]+@/g, "://");
-}
 
 /**
  * Clone a public git repo. With no `destDir`, clones into a disposable temp
@@ -97,13 +95,10 @@ export async function cloneRepo(url: string, destDir?: string): Promise<string> 
       env: childEnv({ GIT_TERMINAL_PROMPT: "0" }),
     });
   } catch (e) {
-    if (e instanceof Error) {
-      e.message = redactCredentials(e.message);
-      const withCmd = e as Error & { cmd?: string; stderr?: string };
-      if (typeof withCmd.cmd === "string") withCmd.cmd = redactCredentials(withCmd.cmd);
-      if (typeof withCmd.stderr === "string") withCmd.stderr = redactCredentials(withCmd.stderr);
-    }
-    throw e;
+    // Same redaction as every other git error path, from the one place that
+    // owns it (LLD §10.2). redactError also covers `.stdout`, which the
+    // hand-rolled version here missed.
+    throw redactError(e);
   }
   return dir;
 }

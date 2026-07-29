@@ -262,37 +262,18 @@ export interface TrashEntry {
   deletedAt: number; // epoch ms
 }
 
-export type GitFileStatus = "modified" | "added" | "deleted" | "untracked" | "renamed" | "conflicted";
-
 // --- Built-in editor: Git status/branches/log ---
-
-export interface GitStatusEntry {
-  path: string;
-  status: GitFileStatus;
-  staged: boolean;
-}
-
-export interface GitStatus {
-  branch: string;
-  ahead: number;
-  behind: number;
-  clean: boolean;
-  entries: GitStatusEntry[];
-  detached: boolean;
-}
-
-export interface GitBranch {
-  name: string;
-  current: boolean;
-  remote: boolean;
-}
-
-export interface GitLogEntry {
-  hash: string;
-  author: string;
-  date: string;
-  message: string;
-}
+// Defined in core-domain so `vcs` (which produces them) and the Git panel
+// (which renders them) share one declaration without the UI importing a module
+// that shells out to git. Re-exported here so existing importers are
+// unaffected; type-only, so nothing reaches the client bundle at runtime.
+export type {
+  GitBranch,
+  GitFileStatus,
+  GitLogEntry,
+  GitStatus,
+  GitStatusEntry,
+} from "@codegraph/core-domain";
 
 export type SaveMode = "local" | "git-manual" | "git-auto";
 

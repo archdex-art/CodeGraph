@@ -33,7 +33,7 @@ const PRIVATE_HOSTNAME_RE =
  * The rules are inet_aton's: 1–4 dot-separated parts, each decimal, octal
  * (leading 0) or hex (leading 0x); the final part absorbs all remaining bytes.
  */
-function normalizeIPv4(host: string): string | null {
+function normalizeIPv4(host: string): readonly [number, number, number, number] | null {
   const parts = host.split(".");
   if (parts.length === 0 || parts.length > 4) return null;
 
@@ -50,7 +50,11 @@ function normalizeIPv4(host: string): string | null {
   }
 
   // Every part except the last must fit in one byte; the last absorbs the rest.
-  const last = nums[nums.length - 1];
+  const last = nums.at(-1);
+  // Unreachable for a non-empty `parts`, but returning null (= "not an IP
+  // literal") is the safe direction and costs one comparison. `nums[len-1]!`
+  // would assert the same thing without the compiler checking it.
+  if (last === undefined) return null;
   const leading = nums.slice(0, -1);
   if (leading.some((n) => n > 0xff)) return null;
   const maxLast = Math.pow(256, 4 - leading.length);
@@ -60,18 +64,22 @@ function normalizeIPv4(host: string): string | null {
   for (const n of leading) value = value * 256 + n;
   value = value * maxLast + last;
 
+  // Returns octets rather than a dotted string so the caller does not have to
+  // split and re-parse what this function just built — a round trip that also
+  // produced four possibly-undefined values for the predicate below to trip
+  // over.
   return [
     (value >>> 24) & 0xff,
     (value >>> 16) & 0xff,
     (value >>> 8) & 0xff,
     value & 0xff,
-  ].join(".");
+  ] as const;
 }
 
 function isPrivateIPv4(host: string): boolean {
-  const dotted = normalizeIPv4(host);
-  if (!dotted) return false;
-  const [a, b] = dotted.split(".").map(Number);
+  const octets = normalizeIPv4(host);
+  if (!octets) return false;
+  const [a, b] = octets;
   if (a === 0) return true; // "this network"
   if (a === 10) return true; // private
   if (a === 127) return true; // loopback
@@ -95,13 +103,18 @@ function isPrivateIPv4(host: string): boolean {
  * waves the cloud metadata endpoint straight through.
  */
 function embeddedIPv4(h: string): string | null {
+  // Capture groups are destructured with an explicit guard rather than asserted
+  // with `!`. A group is only "obviously" present to a reader who checks the
+  // pattern; the compiler checking it costs nothing here.
   const dotted = /^::(?:ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/.exec(h);
-  if (dotted) return dotted[1];
+  if (dotted) return dotted[1] ?? null;
 
   const hex = /^::(?:ffff:)?([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(h);
   if (hex) {
-    const hi = parseInt(hex[1], 16);
-    const lo = parseInt(hex[2], 16);
+    const [, hiRaw, loRaw] = hex;
+    if (hiRaw === undefined || loRaw === undefined) return null;
+    const hi = parseInt(hiRaw, 16);
+    const lo = parseInt(loRaw, 16);
     return [(hi >> 8) & 0xff, hi & 0xff, (lo >> 8) & 0xff, lo & 0xff].join(".");
   }
   return null;

@@ -11,7 +11,7 @@
 // Each backend owns its own tool-declaration format (zod for the Claude
 // Agent SDK, JSON Schema for OpenAI-style function calling).
 import { createEntry, listDir, readWorkspaceFile, renameEntry, searchWorkspace, writeWorkspaceFile } from "@codegraph/fsx";
-import { commit, diffFile, getStatus } from "../gitops";
+import { commit, diffFile, getStatus } from "@codegraph/vcs";
 import { moveToTrash } from "../trash";
 
 export interface WorkspaceToolImpls {

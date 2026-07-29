@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { localAccessAllowed, LOCAL_ACCESS_DISABLED_MESSAGE } from "@/lib/localAccess";
-import { isPublicHttpUrl } from "@/lib/urlSafety";
+import { isPublicHttpUrl } from "@codegraph/vcs";
 import { checkBasicAuth } from "@/lib/basicAuth";
 import { isAllowedOwnerLogin, ownerLoginAllowlist } from "@/lib/githubOAuth";
 

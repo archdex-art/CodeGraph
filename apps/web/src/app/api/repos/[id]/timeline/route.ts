@@ -3,7 +3,7 @@ import { getWorkspaceDir } from "@/lib/store";
 import { repoAccessDenied } from "@/lib/authz";
 import { TimelineEngine, Strategies } from "@/lib/gitops/timelineApi";
 import { loadSnapshotCache } from "@/lib/gitops/timelineStore";
-import { isGitRepo } from "@/lib/gitops";
+import { isGitRepo } from "@codegraph/vcs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

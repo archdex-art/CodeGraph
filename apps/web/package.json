@@ -20,6 +20,7 @@
     "@codegraph/core-domain": "*",
     "@codegraph/fsx": "*",
     "@codegraph/observability": "*",
+    "@codegraph/vcs": "*",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@monaco-editor/react": "^4.7.0",
     "@types/d3-hierarchy": "^3.1.7",

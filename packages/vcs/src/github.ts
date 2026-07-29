@@ -16,12 +16,7 @@
 // status and GitHub's own message attached, so the caller can report the real
 // reason instead of a generic failure.
 
-/** Never let a token reach a log line, an error message, or an API response. */
-function redactToken(s: string): string {
-  return s
-    .replace(/gh[pousr]_[A-Za-z0-9]{16,}/g, "[redacted-token]")
-    .replace(/:\/\/[^\s@/]+@/g, "://");
-}
+import { redactCredentials } from "./redact";
 
 export class GitHubApiError extends Error {
   constructor(
@@ -29,7 +24,7 @@ export class GitHubApiError extends Error {
     readonly endpoint: string,
     message: string,
   ) {
-    super(redactToken(message));
+    super(redactCredentials(message));
     this.name = "GitHubApiError";
   }
 }
@@ -59,8 +54,10 @@ export function parseGithubRepo(url: string): { owner: string; repo: string } | 
   const parts = parsed.pathname.split("/").filter(Boolean);
   if (parts.length < 2) return null;
   const owner = parts[0];
-  const repo = parts[1].replace(/\.git$/i, "");
-  if (!owner || !repo) return null;
+  const repoRaw = parts[1];
+  if (!owner || !repoRaw) return null;
+  const repo = repoRaw.replace(/\.git$/i, "");
+  if (!repo) return null;
   return { owner, repo };
 }
 

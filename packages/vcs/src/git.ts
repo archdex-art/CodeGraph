@@ -5,7 +5,14 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { childEnv } from "@codegraph/config";
-import type { GitBranch, GitLogEntry, GitStatus, GitStatusEntry, GitFileStatus } from "./types";
+import type {
+  GitBranch,
+  GitFileStatus,
+  GitLogEntry,
+  GitStatus,
+  GitStatusEntry,
+} from "@codegraph/core-domain";
+import { redactError } from "./redact";
 
 const exec = promisify(execFile);
 
@@ -28,9 +35,23 @@ export function isGithubHost(url: string): boolean {
   }
 }
 
+/**
+ * Every git invocation goes through here, which is why redaction lives here.
+ *
+ * `push()` puts a token-bearing remote URL in argv, so a failure produces an
+ * Error whose `.cmd` contains a live credential — and `.cmd` was NOT redacted
+ * anywhere in v1. Only `.message` was, at one route boundary. Doing it at the
+ * choke point makes LLD §10.2's "every error path through vcs passes through
+ * redactCredentials" structurally true rather than a rule 15 call sites have to
+ * remember.
+ */
 async function git(cwd: string, args: string[]): Promise<string> {
-  const { stdout } = await exec("git", args, { cwd, env: GIT_ENV, maxBuffer: 1024 * 1024 * 32 });
-  return stdout;
+  try {
+    const { stdout } = await exec("git", args, { cwd, env: GIT_ENV, maxBuffer: 1024 * 1024 * 32 });
+    return stdout;
+  } catch (e) {
+    throw redactError(e);
+  }
 }
 
 export async function isGitRepo(dir: string): Promise<boolean> {
@@ -91,13 +112,13 @@ export async function getStatus(dir: string): Promise<GitStatus> {
       entries.push({ path: p, status: "untracked", staged: false });
     } else if (kind === "1" || kind === "2") {
       const xy = parts[1] || "..";
-      const x = xy[0];
-      const y = xy[1];
+      const x = xy[0] ?? ".";
+      const y = xy[1] ?? ".";
       const status = mapPorcelainCode(x, y);
       const staged = x !== "." && x !== "?";
       const rest = line.split("\t");
-      const pathPart = kind === "2" ? rest[0].split(" ").slice(9).join(" ") : parts.slice(8).join(" ");
-      entries.push({ path: pathPart || parts[parts.length - 1], status, staged });
+      const pathPart = kind === "2" ? (rest[0] ?? "").split(" ").slice(9).join(" ") : parts.slice(8).join(" ");
+      entries.push({ path: pathPart || parts[parts.length - 1] || "", status, staged });
     } else if (kind === "u") {
       const p = parts.slice(10).join(" ");
       entries.push({ path: p, status: "conflicted", staged: false });
@@ -169,14 +190,22 @@ export async function getCommitDiffFiles(dir: string, base: string, head: string
   try {
     const out = await git(dir, ["diff", "--name-status", `${base}..${head}`]);
     if (!out.trim()) return [];
-    return out.trim().split("\n").map(line => {
-      const [status, ...pathParts] = line.split("\t");
-      return { status: status.trim()[0], path: pathParts.join("\t").trim() }; // Handle tab-separated rename paths if necessary by just taking the last or keeping it raw. Actually name-status with renames is `R100 \t old \t new`.
-      // To be safe:
-    }).map(item => {
-      const parts = item.path.split("\t");
-      return { status: item.status, path: parts[parts.length - 1] };
-    });
+    // One pass. The original mapped twice — taking the first character of the
+    // status, re-joining the path, then re-splitting it by tab — and its own
+    // comment ("To be safe:") admitted it was unsure. `--name-status` prints
+    // `R100\told\tnew` for a rename, so the NEW path is always the last field.
+    return out
+      .trim()
+      .split("\n")
+      .flatMap((line) => {
+        const fields = line.split("\t");
+        const status = fields[0]?.trim()[0];
+        const filePath = fields[fields.length - 1]?.trim();
+        // A line missing either half is not a diff entry; dropping it is
+        // truthful, where the previous version emitted `status: undefined`.
+        if (!status || !filePath) return [];
+        return [{ status, path: filePath }];
+      });
   } catch {
     return [];
   }
@@ -201,7 +230,11 @@ export async function log(dir: string, limit = 30): Promise<GitLogEntry[]> {
   const raw = await git(dir, ["log", `-${limit}`, `--pretty=format:%H${sep}%an${sep}%ad${sep}%s`, "--date=iso-strict"]);
   if (!raw.trim()) return [];
   return raw.split("\n").map((line) => {
-    const [hash, author, date, ...rest] = line.split(sep);
+    // Destructuring defaults, not `!`: git's own --pretty format always emits
+    // all four fields, so these are unreachable for well-formed output, but an
+    // empty string is a truthful value where `undefined` would silently vanish
+    // from the JSON response.
+    const [hash = "", author = "", date = "", ...rest] = line.split(sep);
     return { hash, author, date, message: rest.join(sep) };
   });
 }

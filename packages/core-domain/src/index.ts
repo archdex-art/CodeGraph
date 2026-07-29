@@ -44,5 +44,13 @@ export type {
 
 export type { FsEntry } from "./files";
 
+export type {
+  GitBranch,
+  GitFileStatus,
+  GitLogEntry,
+  GitStatus,
+  GitStatusEntry,
+} from "./git";
+
 export type { FingerprintInput } from "./fingerprint";
 export { fingerprint, normalizeSnippet } from "./fingerprint";

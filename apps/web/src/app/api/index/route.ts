@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createIndexJob } from "@/lib/store";
 import { localAccessAllowed, LOCAL_ACCESS_DISABLED_MESSAGE } from "@/lib/localAccess";
-import { isPublicHttpUrl } from "@/lib/urlSafety";
+import { isPublicHttpUrl } from "@codegraph/vcs";
 import { getSession } from "@/lib/session";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
 import { logger } from "@codegraph/observability";
