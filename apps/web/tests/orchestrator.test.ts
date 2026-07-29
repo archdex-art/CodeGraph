@@ -70,9 +70,12 @@ describe("runSwarm: critic corroboration", () => {
 });
 
 describe("runSwarm: judge score -> priority thresholds", () => {
-  // Hand-computed against the actual formula (severity * blast * churnMult * confidence * effortBonus * 10),
-  // routed through the "test" agent (confidence: i.confidence, effort fixed to "M" -> effortBonus 1.0,
-  // churn defaults to 1 -> churnMult = 1 + log10(2) ≈ 1.301) so every input is fully controlled.
+  // Hand-computed against the actual formula (severity band 10 + (severity-1)*20, i.e.
+  // 10/30/50/70/90 -- the MIDPOINT of each priority range, not its edge -- times a
+  // [0.4, 1.6]-clamped modifier of blastFactor * churnFactor * confidence * effortBonus),
+  // routed through the "test" agent (confidence: i.confidence, effort fixed to "M" ->
+  // effortBonus 1.0, churn defaults to 1 -> churnFactor = 1 + log10(2)/6 ≈ 1.050) so every
+  // input is fully controlled.
   it("assigns P0 to a high severity/confidence/blast-radius finding (score >= 70)", () => {
     const repo = repoWithIssues([mkIssue({ dimension: "test_integrity", severity: 5, confidence: 1.0, blastRadius: 10 })]);
     const plan = runSwarm(repo);
@@ -81,7 +84,10 @@ describe("runSwarm: judge score -> priority thresholds", () => {
   });
 
   it("assigns P1 to a mid-strength finding (40 <= score < 70)", () => {
-    const repo = repoWithIssues([mkIssue({ dimension: "test_integrity", severity: 2, confidence: 0.7, blastRadius: 3 })]);
+    // Deliberately strong confidence/blast so a severity-2 finding (band 30,
+    // needs modifier >= 1.33) crosses into P1 -- demonstrating the modifier
+    // actually moves a finding a full band, not just wobbles within one.
+    const repo = repoWithIssues([mkIssue({ dimension: "test_integrity", severity: 2, confidence: 1.0, blastRadius: 20 })]);
     const plan = runSwarm(repo);
     expect(plan.topFindings[0].priority).toBe("P1");
     expect(plan.topFindings[0].score!).toBeGreaterThanOrEqual(40);
@@ -89,7 +95,9 @@ describe("runSwarm: judge score -> priority thresholds", () => {
   });
 
   it("assigns P2 to a weak finding (20 <= score < 40)", () => {
-    const repo = repoWithIssues([mkIssue({ dimension: "test_integrity", severity: 1, confidence: 0.7, blastRadius: 3 })]);
+    // A severity-2 finding (band 30) at a neutral modifier (~1.0) lands here --
+    // this is the "typical" case the old formula got wrong (see below).
+    const repo = repoWithIssues([mkIssue({ dimension: "test_integrity", severity: 2, confidence: 0.7, blastRadius: 3 })]);
     const plan = runSwarm(repo);
     expect(plan.topFindings[0].priority).toBe("P2");
     expect(plan.topFindings[0].score!).toBeGreaterThanOrEqual(20);
@@ -110,6 +118,62 @@ describe("runSwarm: judge score -> priority thresholds", () => {
     const plan = runSwarm(repo);
     expect(plan.topFindings[0].agent).toBe("security");
     expect(plan.topFindings[0].priority).toBe("P0");
+  });
+
+  it("assigns P2, not P1, to a moderate finding that used to sit exactly on the P1 floor", () => {
+    // Reproduces the real calibration bug, not a synthetic one: this is a
+    // "large file" maintainability finding shaped exactly like the ones
+    // measured on expressjs/express@a371447, where the old formula
+    // (severity x blast x churnMult x confidence x effortBonus x 10) put a
+    // bare-minimum instance of this finding at *exactly* 40 -- the P1 floor --
+    // with nothing left below it, which is why P2/P3 were empty on that repo
+    // (docs/REVIEW_2026-07-29.md, 2026-07-29 remediation pass).
+    const repo = repoWithIssues([
+      mkIssue({ dimension: "maintainability", severity: 2, confidence: 0.9, blastRadius: 1, title: "Large file (900 LOC)" }),
+    ]);
+    const plan = runSwarm(repo);
+    expect(plan.topFindings[0].agent).toBe("refactor");
+    expect(plan.topFindings[0].priority).toBe("P2");
+    expect(plan.topFindings[0].score!).toBeLessThan(40);
+  });
+
+  it("puts routine findings in P2 rather than P1, so the urgent buckets stay small", () => {
+    // The observed failure was degenerate bucketing: on express, 59 of 59
+    // findings landed in P0/P1 (P0:21 P1:38 P2:0 P3:0), so "P1" meant nothing.
+    // 44 of those 59 were severity 2 -- deadcode, refactor, and low-severity
+    // security all cluster there -- and the old formula scored a typical
+    // severity-2 finding at ~40, exactly the P1 floor.
+    //
+    // Asserting P2 > P1 on a severity-2-dominated mix is what actually
+    // discriminates the two models: under the old one these are all P1 (so
+    // P2 is empty and this fails); under the new one a typical severity-2
+    // finding sits mid-P2 and only an unusually strong one is promoted.
+    // A looser "at least 3 buckets are non-empty" assertion passes under BOTH
+    // models and therefore defends nothing -- verified, not assumed.
+    const routine = Array.from({ length: 8 }, (_, i) =>
+      mkIssue({ dimension: "test_integrity", severity: 2, confidence: 0.7, blastRadius: 2, file: `routine${i}.ts` })
+    );
+    const urgent = mkIssue({ dimension: "security", severity: 5, confidence: 1.0, blastRadius: 10, title: "Use of eval()", file: "urgent.ts" });
+    const plan = runSwarm(repoWithIssues([...routine, urgent]));
+
+    expect(plan.buckets.P2.length).toBeGreaterThan(plan.buckets.P1.length);
+    expect(plan.buckets.P0.length).toBe(1); // only the genuine severity-5 security finding
+    expect(plan.buckets.P0.length + plan.buckets.P1.length).toBeLessThan(plan.totalFindings);
+  });
+
+  it("still ranks a high-severity, high-confidence, well-corroborated finding above a low-severity, low-confidence one", () => {
+    // The invariant the [0.4, 1.6] modifier clamp actually guarantees (see the
+    // judgeScore doc comment): severity 5 at its floor always outranks
+    // severity 1 at its ceiling. This is the B2-style guarantee -- it does NOT
+    // claim severity dominates at every adjacent band, only at this extreme.
+    const repo = repoWithIssues([
+      mkIssue({ dimension: "security", severity: 5, confidence: 0.4, blastRadius: 0, title: "Use of eval()", file: "worst.ts" }),
+      mkIssue({ dimension: "test_integrity", severity: 1, confidence: 1.0, blastRadius: 60, file: "best.ts" }),
+    ]);
+    const plan = runSwarm(repo);
+    const worst = plan.topFindings.find((f) => f.file === "worst.ts")!;
+    const best = plan.topFindings.find((f) => f.file === "best.ts")!;
+    expect(worst.score!).toBeGreaterThan(best.score!);
   });
 });
 

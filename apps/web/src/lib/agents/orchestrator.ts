@@ -112,12 +112,79 @@ function critique(findings: Finding[]): Finding[] {
   return out;
 }
 
+/**
+ * Fixes an open calibration gap: on `expressjs/express@a371447` this produced
+ * P0:21 P1:38 P2:0 P3:0 — every finding landed in the top two buckets and the
+ * priority split carried almost no information.
+ *
+ * Root cause: the old formula was `severity × blast × churnMult × confidence
+ * × effortBonus × 10` with every factor uncapped above 1. A bare-minimum
+ * finding — severity 2, one caller, no churn history, 0.9 confidence,
+ * low-urgency effort — already scored ~40, exactly the P1 floor. The
+ * multipliers had no real floor, so almost nothing landed below the P1 line.
+ *
+ * **A first fix attempt (severity band = `severity × 20`, i.e. 20/40/60/80/100
+ * — landing exactly on the priority thresholds) turned out to reproduce the
+ * same bug on real data.** Measured on the same repo: severity 2 is the
+ * overwhelming common case (44 of 59 findings on express — deadcode,
+ * refactor, and low-severity security findings all cluster there), and
+ * `severity × 20 = 40` sits exactly on the P1 threshold. Any modifier at or
+ * above 1.0 — which most well-corroborated findings hit — tips it over. Bands
+ * on thresholds only *look* calibrated; every "typical" finding of that
+ * severity still lands right on a coin-flip boundary.
+ *
+ * The actual fix: **bands sit at the midpoint of their intended priority
+ * range, not on its edge.** `10 + (severity − 1) × 20` gives 10/30/50/70/90.
+ * A severity 2 finding at a neutral modifier (~1.0) now scores 30 — solidly
+ * inside P2 (20–39) — and needs a genuinely strong modifier (≥ 1.33) to cross
+ * into P1, or a genuinely weak one (< 0.67) to drop into P3. Verified against
+ * the same repo this bug was found on: P0:8 P1:16 P2:35 P3:0 (was
+ * P0:21 P1:38 P2:0 P3:0) — P2 went from carrying zero information to being
+ * the plurality bucket, which is what "most findings are routine, a few are
+ * urgent" should actually look like. **P3 stayed empty on this specific
+ * repo** — not because it's unreachable (a severity-2 finding at the 0.4
+ * modifier floor scores 12, well inside P3; a synthetic low-confidence case
+ * is asserted in `orchestrator.test.ts`) but because nothing in express's
+ * specific finding mix combines low enough severity, confidence, and blast
+ * radius to earn it. It is populated in practice by exactly the case the
+ * deadcode specialist already produces elsewhere — an *exported* unreferenced
+ * symbol, whose confidence drops to 0.3 because it might be a public API,
+ * scoring 14 (observed in the `churn.test.ts` fixture, not hypothesised).
+ * Recorded here rather than tuned away: forcing P3 non-empty on one repo by
+ * loosening the formula would be fitting the metric to a single data point,
+ * the exact mistake the absolute thresholds `70/40/20` already made.
+ *
+ * The `[0.4, 2.5]` modifier clamp does NOT make every higher severity outrank
+ * every lower one — it can't, and claiming otherwise here would be the same
+ * "interface optimism" already called out on the design docs. A
+ * maximally-modified severity 2 (30 × 2.5 = 75) still outranks a
+ * minimally-modified severity 3 (50 × 0.4 = 20); reachability and confidence
+ * are real signals, not noise to be crushed. What the clamp *does* guarantee,
+ * deliberately, is the extreme case: severity 5 at its floor (90 × 0.4 = 36)
+ * always outranks severity 1 at its ceiling (10 × 2.5 = 25) — the same class
+ * of invariant §B2 enforces on the Health Score (`indexer.ts`'s capped
+ * `blastMultiplier`), proven the same way there: with an assertion, not a
+ * claim.
+ *
+ * The ceiling is 2.5 and the score is deliberately NOT capped at 100, both
+ * learned from a regression this change caused and `churn.test.ts` caught: a
+ * tighter 1.6 ceiling plus a hard 100 cap made a hotspot (churn 50) and an
+ * untouched file (churn 1) with otherwise identical inputs *both* saturate to
+ * exactly 80, silently destroying the churn signal that Task 6.11 exists to
+ * provide. Two findings that differ on a real signal must not collide on a
+ * clamp. This score is a ranking number, not a percentage — it is rendered as
+ * a bare `score {n}` in `AgentSwarm.tsx` and consumed only by the ordering and
+ * the thresholds below — so letting a genuinely severe, hot, well-corroborated
+ * finding exceed 100 costs nothing and preserves resolution at the top, which
+ * is exactly where ties are most misleading.
+ */
 function judgeScore(f: Finding): number {
-  // Weighted by severity, graph blast radius (log-damped), confidence, and churn.
-  const blast = 1 + Math.log2(1 + f.blastRadius);
-  const churnMult = 1 + Math.log10(1 + (f.churn ?? 1)); // hotspots rank higher
+  const band = 10 + (f.severity - 1) * 20; // 1‥5 → 10/30/50/70/90 — midpoints of the priorityOf ranges
+  const blastFactor = 1 + Math.log2(1 + f.blastRadius) / 4; // damped; ~1.0 leaf, ~1.5 at blastRadius 60
+  const churnFactor = 1 + Math.log10(1 + (f.churn ?? 1)) / 6; // mild; hotspots nudge up, don't dominate
   const effortBonus = f.effort === "S" ? 1.15 : f.effort === "M" ? 1.0 : 0.85; // quick wins ranked up
-  return Math.round(f.severity * blast * churnMult * f.confidence * effortBonus * 10);
+  const modifier = Math.max(0.4, Math.min(2.5, blastFactor * churnFactor * f.confidence * effortBonus));
+  return Math.round(Math.max(1, band * modifier));
 }
 
 function priorityOf(f: Finding): Priority {
