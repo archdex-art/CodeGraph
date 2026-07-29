@@ -41,9 +41,9 @@ export class ConfigManager {
     if (!app.isPackaged) {
       // In local dev/unpackaged mode, use the assembled build folder
       // __dirname is dist/src/main/core
-      return path.join(__dirname, "../../../../build/standalone/server.js");
+      return path.join(__dirname, "../../../../build/standalone/apps/web/server.js");
     }
     // In production, the server is packed alongside the electron app
-    return path.join(process.resourcesPath, "standalone/server.js");
+    return path.join(process.resourcesPath, "standalone/apps/web/server.js");
   }
 }

@@ -1,0 +1,45 @@
+{
+  "name": "codegraph-desktop-build-manifest",
+  "version": "1.0.0",
+  "sourceRoot": "../../../web",
+  "targetRoot": "../../build",
+  "artifacts": [
+    {
+      "id": "standalone-server",
+      "source": ".next/standalone",
+      "target": "standalone",
+      "required": true,
+      "type": "directory"
+    },
+    {
+      "id": "static-assets",
+      "source": ".next/static",
+      "target": "standalone/apps/web/.next/static",
+      "required": true,
+      "type": "directory"
+    },
+    {
+      "id": "public-assets",
+      "source": "public",
+      "target": "standalone/apps/web/public",
+      "required": false,
+      "type": "directory"
+    },
+    {
+      "id": "claude-native-sdk",
+      "source": "../../node_modules/@anthropic-ai",
+      "target": "standalone/node_modules/@anthropic-ai",
+      "required": true,
+      "type": "directory",
+      "notes": "Native bindings for the AI agent. Must be unpacked from ASAR."
+    },
+    {
+      "id": "tree-sitter-wasm",
+      "source": ".next/standalone/apps/web/wasm",
+      "target": "standalone/apps/web/wasm",
+      "required": true,
+      "type": "directory",
+      "notes": "WebAssembly grammar files. Must be unpacked from ASAR."
+    }
+  ]
+}

@@ -149,13 +149,11 @@ jobs:
   desktop:
     name: Desktop (Electron app)
     runs-on: ubuntu-latest
-    # No `needs:` — desktop/ is deliberately NOT an npm workspace of the root
-    # monorepo (root `workspaces` is apps/* + packages/*) and has its own
-    # committed lockfile, so nothing here depends on the workspace job. Running
-    # it in parallel keeps total wall time flat.
+    # desktop/ was moved to apps/desktop and is now part of the root monorepo
+    # workspaces. It depends on the web build to test its standalone server integration.
     defaults:
       run:
-        working-directory: desktop
+        working-directory: apps/desktop
     steps:
       - uses: actions/checkout@v4
 
@@ -163,27 +161,17 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-          # Repo-root-relative on purpose: `defaults.run.working-directory`
-          # applies to `run` steps only, not to action inputs.
-          cache-dependency-path: desktop/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      # This job exists because desktop/ was on main with zero CI coverage
-      # (docs/REVIEW_2026-07-29.md C6). The very first thing it caught: the
-      # committed desktop/package.json and desktop/package-lock.json had never
-      # been in sync (lockfile esbuild@0.28.1 vs manifest ^0.20.1), so `npm ci`
-      # failed outright from the commit that introduced them. Keep this step
-      # `npm ci`, never `npm install` — it is what pins that invariant.
-      #
-      # Skipping the Electron binary download drops a ~90MB fetch from
-      # github.com/electron/electron on every run. Nothing this job does needs
-      # the binary: typecheck reads electron's bundled .d.ts, and the only unit
-      # test that touches the electron module (src/main/ipc/router.test.ts)
-      # mocks it. Verified green with node_modules/electron/dist absent.
       - name: Install dependencies
         run: npm ci
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
 
+      # Build the web standalone server first, since desktop needs it
+      - name: Build Web Standalone
+        run: npm run build --workspace @codegraph/web
+        working-directory: .
       # Widened past tsconfig.json's emit scope to also cover e2e/ and
       # scripts/ — see the comment in desktop/tsconfig.typecheck.json.
       - name: Typecheck

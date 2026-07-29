@@ -1,8 +1,8 @@
 # TypeScript build output
 dist/
 
-# Assembled Next.js standalone server + native assets (produced by build:orchestrate)
-build/
+ # Assembled Next.js standalone server + native assets (produced by build:orchestrate)
+ /build/
 
 # electron-builder output
 dist-bin/

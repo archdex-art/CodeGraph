@@ -1,5 +1,5 @@
 {
-  "name": "codegraph-desktop",
+  "name": "@codegraph/desktop",
   "version": "0.1.0",
   "private": true,
   "main": "dist/src/main/index.js",
@@ -29,7 +29,7 @@
     ],
     "asarUnpack": [
       "build/standalone/node_modules/@anthropic-ai/**/*",
-      "build/standalone/wasm/**/*"
+      "build/standalone/apps/web/wasm/**/*"
     ],
     "mac": {
       "target": "dmg",
@@ -46,7 +46,7 @@
   "devDependencies": {
     "@playwright/test": "^1.49.1",
     "@types/node": "^20.0.0",
-    "electron": "^29.0.0",
+    "electron": "^29.4.6",
     "electron-builder": "^24.13.3",
     "esbuild": "^0.28.1",
     "ts-node": "^10.9.2",
