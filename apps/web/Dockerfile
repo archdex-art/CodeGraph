@@ -46,6 +46,23 @@ ENV NODE_ENV=production \
     PORT=4000 \
     HOSTNAME=0.0.0.0
 
+# MUST be absolute, and MUST match the disk mountPath in render.yaml.
+#
+# Not optional, and not merely tidy. `config.dataDir` defaults to
+# `path.join(process.cwd(), "data")`, and Next's standalone server chdirs to the
+# directory holding server.js. Before the monorepo move that was /app, so the
+# default landed on /app/data — exactly where the persistent disk mounts. After
+# the move it is /app/apps/web, so the default silently became
+# /app/apps/web/data: a container-ephemeral path.
+#
+# The failure mode is nasty precisely because nothing looks wrong. Health checks
+# pass, indexing works, scores appear — and then every deploy or restart discards
+# every indexed repo, editor workspace and saved setting, because the writes
+# never touched the mounted volume. Verified by inspecting /proc/1/cwd and
+# finding the live SQLite file under /app/apps/web/data while /app/data sat
+# empty. The Docker smoke test now asserts the database is on this path.
+ENV CG_DATA_DIR=/app/data
+
 # Standalone output is NESTED under the workspace path, because
 # `outputFileTracingRoot` must be the monorepo root for the tracer to follow
 # imports into packages/* (apps/web/next.config.ts explains the trade).

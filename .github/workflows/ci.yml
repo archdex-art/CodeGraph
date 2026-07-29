@@ -112,6 +112,36 @@ jobs:
           curl -sf http://localhost:4000/api/health | grep -q '"status":"ok"' \
             || { echo "server unhealthy after indexing (residual crash?)"; exit 1; }
 
+      # Assert the database landed on the MOUNTED path, not somewhere
+      # container-ephemeral.
+      #
+      # This exists because the monorepo move broke it and nothing above
+      # noticed: `dataDir` defaults to `cwd/data`, Next's standalone server
+      # chdirs to the directory holding server.js, and that directory moved from
+      # /app to /app/apps/web. Indexing still worked, health stayed green, and
+      # every restart would have silently discarded all persisted state because
+      # the writes never reached the volume. A smoke test that only checks
+      # "does it work right now" cannot see that; this can.
+      - name: Assert persisted state is on the mounted data dir
+        run: |
+          set -e
+          docker exec ci-smoke sh -c 'test -s /app/data/codegraph.sqlite' \
+            || { echo "FAIL: /app/data/codegraph.sqlite missing or empty — the data dir is not the mount point"; \
+                 echo "server cwd: $(docker exec ci-smoke readlink /proc/1/cwd)"; \
+                 docker exec ci-smoke sh -c 'find / -name "codegraph.sqlite" -not -path "/proc/*" 2>/dev/null'; \
+                 exit 1; }
+          # And the schema is actually initialised there, not just an empty file
+          # that opening a connection would create on its own.
+          docker exec ci-smoke node -e "
+            const { DatabaseSync } = process.getBuiltinModule('node:sqlite');
+            const db = new DatabaseSync('/app/data/codegraph.sqlite');
+            const versions = db.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map(r => r.version);
+            const repos = db.prepare('SELECT COUNT(*) c FROM repos').get().c;
+            console.log('migrations:', versions.join(','), '| repos:', repos);
+            if (versions.length === 0) { console.error('FAIL: no migrations recorded'); process.exit(1); }
+            if (repos < 2) { console.error('FAIL: indexed repos did not persist here'); process.exit(1); }
+          "
+
       - name: Dump logs on failure
         if: failure()
         run: docker logs ci-smoke || true
