@@ -200,26 +200,92 @@ export interface AnalysisRun {
 }
 ```
 
-### 2.1 Fingerprints
+### 2.1 Fingerprints — a two-factor hash, not a utility function
+
+This is a core algorithm, not a helper. It is the single function every downstream identity
+guarantee — suppression, baselines, "new since main", trend lines — inherits its correctness
+from, and the single-hash version shipped in v1 is already wrong in production: the P1
+findings-backfill (`docs/REVIEW_2026-07-29.md` P1-8) found real repos where every occurrence of
+one rule in one file collapsed onto the same fingerprint, because v1 hashed `(ruleId, file)`
+with no snippet at all. Two independent findings became one. A two-factor design is the fix, not
+an enhancement.
+
+**Why one hash cannot work.** A hash needs to be *insensitive* to churn that doesn't change the
+finding (reformatting, unrelated edits above it) and *sensitive* to churn that does (the
+vulnerable code moving to a different function). Those pull in opposite directions, and no
+single normalisation gets both right: normalise away identifiers and unrelated `if (x) return
+null;` statements across the whole repo collide; keep identifiers and a harmless rename creates
+a phantom "new" finding next to a phantom "resolved" one.
 
 ```ts
 /**
- * Location-independent finding identity (HLD §11.2).
- * Deliberately excludes line numbers and file path so a finding survives
- * reformatting, file moves, and unrelated edits above it.
+ * Location-independent finding identity (HLD §11.2). Two independent hashes,
+ * resolved by an explicit precedence rule below — never merged into one.
  */
-export function fingerprint(input: {
-  ruleId: string;
-  /** Enclosing symbol's fully-qualified name, or the file's basename if none. */
-  scope: string;
+export interface FingerprintInput {
+  readonly ruleId: string;
+  /** Enclosing symbol's fully-qualified name, or the file's basename if none.
+   *  Read from `Sym.qualifiedName` (core-graph §3) — this ties fingerprint
+   *  identity to symbol identity instead of duplicating name resolution. */
+  readonly scope: string;
   /** The matched source, normalised: whitespace collapsed, string/number
    *  literals replaced by placeholders, identifiers preserved. */
-  normalizedSnippet: string;
-}): string;
+  readonly normalizedSnippet: string;
+  /** AST-structural shape of the matched node and its immediate parent chain
+   *  up to the containing statement: node *types* only (CallExpression,
+   *  BinaryExpression, ...), no identifiers, no literals. Two occurrences of
+   *  `if (x) return null;` with different variable names produce the same
+   *  structuralHash — that collision is intentional here; §2.1.1 is what
+   *  prevents it from merging unrelated findings. */
+  readonly structuralHash: string;
+}
+
+export interface Fingerprint {
+  readonly primary: string;    // sha256(ruleId, scope, structuralHash) — the identity anchor
+  readonly secondary: string;  // sha256(ruleId, scope, normalizedSnippet) — the exact match
+}
+
+export function fingerprint(input: FingerprintInput): Fingerprint;
 ```
 
-This one function enables suppression, baselines, "new since main", and trend lines. It should
-be written first and covered heavily — everything downstream inherits its stability.
+`scope` is included in **both** hashes and is never dropped from either. This is what stops
+`structuralHash` from merging unrelated findings — the reviewer's concrete failure mode for a
+bare structural hash: every `if (x) return null;` in the repo has the same `structuralHash`, but
+only the ones inside the *same enclosing symbol* as a prior finding are candidates for identity
+resolution. `structuralHash` narrows "is this the same code, restructured or renamed"; `scope`
+narrows "is this even the same place."
+
+#### 2.1.1 Resolution: matching a new run against the prior baseline
+
+```
+match(newFinding, priorBaseline):
+  exact    = priorBaseline.find(p => p.secondary == newFinding.secondary)
+  if exact: return { same: exact, reason: "unchanged" }
+
+  moved    = priorBaseline.find(p => p.primary == newFinding.primary
+                                  && p.secondary != newFinding.secondary)
+  if moved: return { same: moved, reason: "renamed-or-reformatted-in-place" }
+           # primary matched (same rule, same scope, same AST shape) but the
+           # snippet text changed — a variable rename or an added-but-inert
+           # parameter, not a new vulnerability. Carry the finding's identity
+           # forward; do NOT reset its "first seen" date.
+
+  return { same: null, reason: "new" }
+```
+
+A finding with no `moved` or `exact` match is reported new. A prior finding with no match in the
+new run is reported resolved. This is a heuristic, stated as one: `primary` matching does not
+*prove* the two occurrences are the same vulnerability — it proves they are the same rule, in
+the same scope, with the same code shape, which is the strongest signal available without
+re-running the taint solver on both commits to compare paths. Two genuinely different bugs that
+happen to share rule, scope, and AST shape (e.g. two different `eval()` calls added to the same
+function in one commit) will incorrectly resolve to one identity. Documented as a known
+false-negative on "new findings," not silently accepted — the failure mode is *undercounting*
+new findings in this narrow case, never inventing findings that don't exist, and never merging
+findings from different scopes or different rules.
+
+`structuralHash` is computed once per matched node during the same AST walk `normalizedSnippet`
+already requires (core-graph §3.1 traversal) — no second pass, no meaningful runtime cost.
 
 ---
 
@@ -285,6 +351,75 @@ export interface Cfg {
   readonly exits: readonly string[];
 }
 ```
+
+### 3.1.1 SSA form and def-use chains — precondition for L4, not optional
+
+DETECTION_ENGINE.md §4.5's taint solver pseudocode says `propagate along def-use`. A `Cfg` alone
+cannot answer "which definition of `x` reaches this use" — it sees statements, not variable
+versions, so `x = 1; if (cond) x = tainted(); sink(x);` has no way to distinguish "the tainted
+definition reaches the sink through the true branch" from "the safe definition always reaches
+it." Without this, a worklist dataflow over a bare CFG either treats every reassignment as
+conservatively tainting the whole variable for its rest of scope (false positives at every
+branch merge) or ignores branches entirely (false negatives). Both are the specific failure mode
+DETECTION_ENGINE.md §4.5 warns against generally — unmodelled dataflow "produces more noise than
+signal, and noise is what gets a scanner switched off."
+
+SSA (static single assignment) is the standard fix, and it is explicitly pre-approved technique
+per IDENTITY.md §3 ("Def-use chains and SSA... that vocabulary is decades old and belongs to the
+field, not to any vendor").
+Every reassignment gets a fresh version; control-flow merges get an explicit φ (phi) node that
+picks the version per incoming edge. `DefUseChain` is then a direct lookup, not a graph walk.
+
+```ts
+export interface SsaVersion {
+  readonly variable: string;
+  readonly version: number;          // x_0, x_1, x_2…
+  readonly definedAt: CfgNode["id"];
+  /** null only for the implicit version 0 of a function parameter. */
+  readonly definingExpr: string | null;
+}
+
+/** A branch merge point where the reaching definition of a variable depends on
+ *  which predecessor edge was taken. Synthetic — has no `SourceRange`. */
+export interface PhiNode {
+  readonly id: string;
+  readonly at: CfgNode["id"];        // the merge point (loop header, post-if, etc.)
+  readonly variable: string;
+  readonly result: SsaVersion;
+  /** One source version per incoming CFG edge, in `Cfg.edges` order. */
+  readonly operands: readonly SsaVersion[];
+}
+
+/** One version's complete reach: everywhere it is read before being
+ *  redefined. This *is* the def-use chain — a lookup table, not a traversal,
+ *  which is what makes `solveLocal`'s `propagate along def-use` step O(uses)
+ *  instead of a re-walk of the CFG per definition. */
+export interface DefUseChain {
+  readonly def: SsaVersion;
+  readonly uses: readonly CfgNode["id"][];
+}
+
+/** Built once per `Cfg`, lazily, cached alongside it — the standard
+ *  CFG→SSA construction (dominance frontiers → φ placement → renaming). Not
+ *  reproduced here; it is a well-known algorithm, not a design decision. */
+export interface SsaForm {
+  readonly cfg: Cfg;
+  readonly versions: readonly SsaVersion[];
+  readonly phis: readonly PhiNode[];
+  readonly chains: readonly DefUseChain[];
+}
+
+export function toSsa(cfg: Cfg): SsaForm;
+```
+
+`solveLocal` (DETECTION_ENGINE.md §4.5) runs over `SsaForm`, not `Cfg` directly: taint attaches
+to an `SsaVersion`, not a variable name, so `x = 1; if (cond) x = tainted();` produces two
+distinct versions of `x` and the sink after the merge reads through the φ node to see that only
+one incoming operand is tainted — the source of both the reduced false-positive rate over v1's
+string-matching and the reduced false-negative rate over a bare-CFG worklist. This is the one
+piece of `core-graph` allowed to be CPU-heavier than the rest of the package: it runs once per
+`full`-tier symbol that a taint rule actually reaches, not on every symbol at index time — see
+DETECTION_ENGINE.md §4.9 for the gate that keeps it off the hot path.
 
 ### 3.2 Query surface
 
@@ -500,6 +635,59 @@ export interface TaintPath {
 The `sanitizers` concept is the piece v1's `taintFindings` lacks entirely, and it is the single
 biggest false-positive source in any taint analysis: without it, correctly-sanitised code is
 reported as vulnerable, which is exactly the noise that makes developers switch a scanner off.
+
+### 5.3.1 Cache invalidation matrix — and why it is gated on resolution quality
+
+Every layer above the raw AST is a cache: `Cfg` per symbol (§3.1), `SsaForm` per symbol (§3.1.1),
+`solveGlobal`'s per-function taint summaries (§5.3), and P5's planned content-addressed
+incremental cache (HLD §17) all sit on top of `Edge.resolution` (core-graph §3). None of them are
+correct if invalidation stops at the file that changed.
+
+| Layer | Keyed by | Invalidated when | Must also invalidate |
+|---|---|---|---|
+| `Cfg` | `SymbolId` | that symbol's source range changes | its `SsaForm` (derived) |
+| `SsaForm` | `SymbolId` | its `Cfg` is invalidated | any `solveLocal` result computed from it |
+| Local taint result | `SymbolId` | its `SsaForm` is invalidated | any `solveGlobal` summary that consumed it |
+| Interprocedural summary | `SymbolId` | any **callee reachable via a `resolution: "exact"` edge** changes its own summary | every summary that transitively calls this one — the reverse-dependency walk below |
+| Finding | `Fingerprint.primary` | its symbol's `structuralHash` changes (§2.1) | nothing further — findings are leaves |
+
+```ts
+/** file changed → symbols in it invalidated → walk callers via resolved
+ *  "calls" edges → invalidate every reachable summary, transitively. */
+function invalidate(g: ProgramGraph, changedFile: string): Set<SymbolId> {
+  const dirty = new Set(g.symbolsInFile(changedFile).map((s) => s.id));
+  const frontier = [...dirty];
+  while (frontier.length) {
+    const id = frontier.pop()!;
+    // Only exact edges propagate a summary invalidation — a heuristic or
+    // dynamic caller *might* be affected, but re-running speculatively on
+    // every possible caller defeats the point of an incremental cache.
+    for (const caller of g.callers(id)) {
+      if (dirty.has(caller.id)) continue;
+      dirty.add(caller.id);
+      frontier.push(caller.id);
+    }
+  }
+  return dirty;
+}
+```
+
+**This is where cache correctness stops being a caching problem and becomes an `Edge.resolution`
+problem.** `invalidate` only walks edges the graph actually resolved. Measured on
+`expressjs/express` post-P1 (`docs/REVIEW_2026-07-29.md`, 2026-07-29 remediation pass): the
+extractor currently resolves **11 call edges across 123 symbols** — a caller that the graph
+failed to resolve is invisible to this walk, so its cached summary goes stale silently instead of
+being invalidated. A cache with unsound invalidation is worse than no cache: it serves a finding
+that looks current and isn't.
+
+**Consequence for phased delivery:** P5 ("scale & incrementality" — content-addressed cache,
+HLD §17) cannot be built correctly on P3's call-resolution quality as it stands today. This is
+recorded as an explicit phase dependency in HLD §17, not left implicit. Shipping the cache before
+resolution is fixed would need every summary to be invalidated on *any* change to its file's
+direct neighbourhood (imports in, imports out) rather than the precise reverse-call-graph above —
+correct, but reduces to file-level invalidation and gives up most of the incrementality P5 exists
+to deliver. That fallback is an acceptable interim if P5 ships before resolution quality
+improves further; it is not acceptable as the permanent design.
 
 ### 5.4 Rules as data (`@codegraph/detect-rules`)
 

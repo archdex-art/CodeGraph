@@ -486,6 +486,80 @@ The `0.3` factor for test/example code alone removes a large fraction of real-wo
   (an active research direction for false-positive reduction), but never *create* one — this
   keeps results reproducible and the no-API-key promise intact (ADR-007).
 
+### 4.9 Engine execution strategy — the memory physics of L4 in Node
+
+Everything above this line describes what the engine computes. This section is about what it
+costs to compute it inside the constraint HLD §3/§4 actually sets: a 512 MB / 0.5 vCPU container.
+That constraint has already caused one production outage
+(`docs/postmortems/2026-07-10-tree-sitter-oom.md`) at L2, before any of L4 existed. L4 does more
+work per file, not less, so this is not a section to skip.
+
+**Where the memory actually goes, precisely — because the two candidate causes have opposite
+fixes.** `full`-tier extraction (§4.2's `T` node) runs the **TypeScript compiler API**, whose
+`Program`, `TypeChecker`, and AST are ordinary V8 heap objects — pointer-chasing, GC pressure,
+all of it applies exactly as stated. `SsaForm` (LLD §3.1.1) is built from that same AST and lives
+in the same heap. Universal tier-`ast` extraction (§4.2's `P` node) runs on `web-tree-sitter`,
+whose trees live in **WASM linear memory**, a separate arena — but that arena is the one the
+postmortem already measured growing monotonically (~26 MB per parsed file, non-reclaimable, per
+the WebAssembly spec) until the container OOM'd, which is why tree-sitter now runs gated on live
+RSS and is **disabled by default** in production. Moving *more* traversal into that arena is the
+wrong direction — it re-expands exactly the surface that was just deliberately shrunk to
+(effectively) zero. The L4 memory problem lives entirely on the V8 side, where `full`-tier
+extraction already does the work; it is not solved by pushing work into WASM.
+
+**What a separate worker process solves, and what it does not.** HLD §5.1 already commits to
+extraction and detection running in a process separate from the web server. That process
+boundary buys three concrete things: (1) a crash during analysis returns a job-failed status
+instead of taking the request-serving process down with it, (2) process exit unconditionally
+frees everything — the V8 heap *and* the WASM arena — resetting both ratchets between jobs
+instead of letting them accumulate for the process's remaining lifetime the way the pre-fix v1
+server did, and (3) it makes a hard RSS ceiling enforceable via `--max-old-space-size` plus a
+watchdog, without also killing the routes serving other users' requests. It does **not** raise
+the ceiling on how large a single repo can be fully analysed within one job — a repo whose
+`full`-tier working set exceeds the container limit still fails that job. The mitigation for that
+is the pruning ladder below, not the process boundary; the process boundary's job is to make
+the failure cheap, contained, and legible instead of a silent host-wide crash.
+
+**The pruning ladder — explicit thresholds, degrading in the direction of correctness over
+recall.** Both dimensions below are measured live (`process.memoryUsage().rss` in the worker;
+per-function `SymbolMetrics.cyclomatic`, LLD §3), not estimated in advance, for the same reason
+the tree-sitter fix used a measured-RSS gate instead of a fixed file-count guess: static
+estimates of dynamic memory behaviour were exactly what failed in the original incident.
+
+| Signal | Threshold | Degrades to | Why this direction |
+|---|---|---|---|
+| Function cyclomatic complexity (LLD `SymbolMetrics.cyclomatic`) | > 50 | Skip `toSsa`/taint for this function; structural (L2/L3) rules still run | Worklist dataflow is worst-case exponential in branch count without widening; 50 is where CPU time starts dominating a single-repo job budget, not a correctness cliff — chosen conservatively, tunable |
+| Worker RSS (`process.memoryUsage().rss`) | crosses `CG_FULL_TIER_MAX_RSS_BYTES` | Remaining files in the job drop from `full`/`ast` to `lexical` (HLD §8.3's existing tier ladder) for the rest of that job only | Same live-measurement pattern as the tree-sitter fix; a fixed per-repo file-count budget was already shown not to predict actual RSS |
+| Function body size | > 2000 LOC | Skip CFG/SSA construction; L2/L3 structural rules still run | A function this large is already `analyzeTests`-flagged as a maintainability issue in its own right (`indexer.ts` god-file rule); spending taint-solver time on it is a bad trade against the rest of the repo's budget |
+
+Every row degrades to a **lower detection tier for that unit of work**, never to skipping the
+file or silently dropping it from the run. `Finding.confidenceBasis` (§4.6) already encodes tier
+honestly — a function that fell back to structural matching produces `structural` findings, not
+`dataflow_verified` ones — so degradation is visible in the product, in `GraphStats.truncated`
+(HLD §8.3) and per-file, not hidden behind an aggregate score.
+
+**Framework boundaries — dataflow does not follow them, and the engine says so instead of
+guessing.** `solveLocal`/`solveGlobal` (§4.5) resolve calls through `Edge.resolution: "exact"` —
+ordinary function calls the graph can see. They cannot, and will not attempt to, track a value
+through:
+
+- A React context provider (`<AuthContext.Provider value={token}>` → `useContext(AuthContext)`
+  elsewhere) — the data flow is real but happens through a framework runtime the AST doesn't
+  model as a call.
+- Next.js data-fetching boundaries (`getServerSideProps`'s return value arriving as `props` in
+  the page component) — same shape: real flow, framework-mediated, invisible to a call-graph
+  walk.
+- Any dependency-injection container, event bus, or `Promise`/callback crossing an
+  unresolved (`heuristic`/`dynamic`) edge — consistent with `Edge.resolution` already existing as
+  a three-valued honesty signal rather than a boolean.
+
+A source reachable only through one of these has `crossesFunctions` (§4.5's `TaintPath`) stop at
+the boundary; the path is reported only as far as it was actually traced, never bridged by
+assumption. This is the same choice §4.8 already makes for pointer aliasing and unbounded
+interprocedural search — stated here because framework boundaries are the case most likely to be
+silently wrong (a plausible-looking path that quietly assumes a framework wired it up) rather
+than simply absent.
+
 ---
 
 ## Part 5 — Side-by-side comparison

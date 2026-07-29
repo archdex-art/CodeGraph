@@ -610,12 +610,33 @@ Each phase is independently shippable and leaves the product working.
 | **P0** *(days)* | Stop the bleeding | Brace-less-JS fixer bug; PR `res.ok` + default-branch detection; token from session only; rate-limit `/fix` | Review items P0 closed, regression tests green |
 | **P1** *(1–2 wk)* | Extract the seams | `core-domain`, `persistence`, `fsx`, `vcs`, `config`, `observability` packages; dependency-cruiser gate; findings → rows + fingerprints | No analysis logic left in `src/app/**`; dependency graph acyclic |
 | **P2** *(1–2 wk)* | Get the work off the request path | `jobs` + worker process; SSE progress; cancellation; per-repo mutex | `/fix` and `/agents` are 202 + poll; p99 route latency < 500 ms |
-| **P3** *(2–3 wk)* | Make detection real | `detect-engine` with rule registry + intraprocedural dataflow; `lang-typescript` at `full` tier; SARIF export; benchmark harness + CI gate | Precision ≥ 0.85 on benchmark; regex tier demoted to fallback |
+| **P3** *(2–3 wk)* | Make detection real | `detect-engine` with rule registry + intraprocedural dataflow; `lang-typescript` at `full` tier; SARIF export; benchmark harness + CI gate | Precision ≥ 0.85 on benchmark; regex tier demoted to fallback; `Edge.resolution: "exact"` call-edge coverage measured and reported (no numeric target set — the benchmark corpus this needs doesn't exist yet, see the note below) |
 | **P4** *(2 wk)* | Make remediation honest | Finding-scoped fix providers; 4-gate verification; explicit publish step | 100 % of patches carry `findingId` + `VerificationRecord` |
 | **P5** *(2 wk)* | Scale & incrementality | Content-addressed cache; interprocedural taint; PR-scoped/baseline mode | Warm re-index < 5 % of cold; new-findings-only view works |
 | **P6** *(1 wk)* | Close the docs gap | `desktop/` in CI; feature status labels; README claims reconciled with code | Every README claim maps to a passing test |
 
----
+**P5 depends on P3's call-resolution quality, not just its calendar completion.** P5's cache
+(LLD §5.3.1) is only sound if it invalidates every stale summary, which requires walking resolved
+call edges backward from a changed file (LLD §5.3.1's `invalidate`). Measured on
+`expressjs/express@a371447` post-P1 (`docs/REVIEW_2026-07-29.md`): the current extractor resolves
+**11 call edges across 123 symbols** — far too sparse for that walk to find most real callers.
+Starting P5 against that resolution quality produces a cache that appears to work (fast warm
+re-index) while silently serving stale findings, which is worse than the unindexed baseline it
+replaces. P5's entry criterion is therefore not "P3 is done" on the calendar but **P3's own exit
+criterion (`Edge.resolution: "exact"` coverage, above) landing at a level where the reverse walk
+is actually load-bearing** — expected to be true once `lang-typescript` reaches `full` tier
+(TS compiler resolution, not tree-sitter heuristic matching), but stated as a measured gate here
+rather than assumed. If P5 is pulled forward regardless, LLD §5.3.1 documents the required
+fallback: invalidate on file-neighbourhood rather than resolved call edges, which is correct but
+gives up most of the incrementality P5 exists to deliver.
+
+**P3's precision gate has an unresolved prerequisite.** "Precision ≥ 0.85 on benchmark" needs a
+ground-truth benchmark corpus — real vulnerable code with agreed-correct labels — to measure
+against. SPIKES.md's Spike 2 found this can't be run under Render's own resource constraints, and
+no such corpus currently exists in this repository. This is not closed by writing more detection
+design; it is a separate, external dependency (build or source a labelled corpus, and decide
+where CI runs the comparison) that should be resolved before P3 is scheduled, not discovered
+during it.
 
 ## 18. Traceability — review findings → design response
 
