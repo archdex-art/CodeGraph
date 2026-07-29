@@ -1,0 +1,20 @@
+# TypeScript build output
+dist/
+
+# Assembled Next.js standalone server + native assets (produced by build:orchestrate)
+build/
+
+# electron-builder output
+dist-bin/
+
+# Playwright artifacts
+test-results/
+playwright-report/
+
+# Stray compiled JS emitted next to sources
+shared/**/*.js
+shared/**/*.js.map
+
+# Misc
+.DS_Store
+*.log

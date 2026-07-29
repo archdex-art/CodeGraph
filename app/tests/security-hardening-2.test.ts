@@ -150,18 +150,55 @@ describe("rateLimit (F015 — token bucket)", () => {
   });
 });
 
-describe("clientIp", () => {
-  it("uses the first hop of x-forwarded-for", () => {
+describe("clientIp (F-PT-01 — spoof-resistant rate-limit keying)", () => {
+  const prevHops = process.env.CG_TRUSTED_PROXY_HOPS;
+  afterEach(() => {
+    if (prevHops === undefined) delete process.env.CG_TRUSTED_PROXY_HOPS;
+    else process.env.CG_TRUSTED_PROXY_HOPS = prevHops;
+  });
+
+  it("takes the rightmost (proxy-appended) hop by default, not the spoofable leftmost", () => {
+    delete process.env.CG_TRUSTED_PROXY_HOPS; // default = 1 trusted proxy
+    const req = new NextRequest("http://x/", { headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" } });
+    expect(clientIp(req)).toBe("5.6.7.8");
+  });
+
+  it("a client-forged leftmost X-Forwarded-For cannot change the bucket key", () => {
+    delete process.env.CG_TRUSTED_PROXY_HOPS;
+    // Attacker rotates the leftmost value to try to mint fresh buckets; the
+    // proxy-appended real peer (rightmost) is identical every time.
+    const a = new NextRequest("http://x/", { headers: { "x-forwarded-for": "9.9.9.9, 5.6.7.8" } });
+    const b = new NextRequest("http://x/", { headers: { "x-forwarded-for": "0.0.0.1, 5.6.7.8" } });
+    expect(clientIp(a)).toBe("5.6.7.8");
+    expect(clientIp(b)).toBe("5.6.7.8");
+  });
+
+  it("counts trusted hops from the right when CG_TRUSTED_PROXY_HOPS > 1", () => {
+    process.env.CG_TRUSTED_PROXY_HOPS = "2";
+    const req = new NextRequest("http://x/", { headers: { "x-forwarded-for": "client, mid, edge" } });
+    expect(clientIp(req)).toBe("mid");
+  });
+
+  it("clamps to the leftmost when the chain is shorter than the configured hops", () => {
+    process.env.CG_TRUSTED_PROXY_HOPS = "5";
     const req = new NextRequest("http://x/", { headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" } });
     expect(clientIp(req)).toBe("1.2.3.4");
   });
 
-  it("falls back to x-real-ip when x-forwarded-for is absent", () => {
+  it("refuses to trust X-Forwarded-For entirely when hops = 0 (direct-exposed)", () => {
+    process.env.CG_TRUSTED_PROXY_HOPS = "0";
+    const req = new NextRequest("http://x/", { headers: { "x-forwarded-for": "6.6.6.6" } });
+    expect(clientIp(req)).toBe("unknown"); // shared bucket, not a spoofable per-IP one
+  });
+
+  it("falls back to x-real-ip when x-forwarded-for is absent (proxy trusted)", () => {
+    delete process.env.CG_TRUSTED_PROXY_HOPS;
     const req = new NextRequest("http://x/", { headers: { "x-real-ip": "9.9.9.9" } });
     expect(clientIp(req)).toBe("9.9.9.9");
   });
 
   it("falls back to a constant when no IP header is present, instead of silently disabling the limit", () => {
+    delete process.env.CG_TRUSTED_PROXY_HOPS;
     const req = new NextRequest("http://x/");
     expect(clientIp(req)).toBe("unknown");
   });

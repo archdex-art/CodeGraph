@@ -9,6 +9,27 @@ export function initTreeSitter(): Promise<void> {
   return Promise.resolve();
 }
 
+/**
+ * Extract the signature head of a declaration: everything up to the body-opening
+ * `{`, ignoring `{` that appear inside generic type parameters or parameter type
+ * annotations. A naive `.split(/[\n{]/)` truncates `foo<T extends { a: 1 }>()` at
+ * the first brace, corrupting the stored signature. We track angle/paren depth and
+ * stop at the first brace at depth 0 (or the first newline outside any bracket).
+ */
+function signatureHead(src: string): string {
+  let angle = 0, paren = 0;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (c === "<") angle++;
+    else if (c === ">") { if (angle > 0) angle--; }
+    else if (c === "(") paren++;
+    else if (c === ")") { if (paren > 0) paren--; }
+    else if (c === "{" && angle === 0 && paren === 0) return src.slice(0, i).trim();
+    else if (c === "\n" && angle === 0 && paren === 0) return src.slice(0, i).trim();
+  }
+  return src.trim();
+}
+
 export const astTsExtractor = (fallback: LanguageExtractor): LanguageExtractor => ({
   language: "TypeScript",
   exts: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
@@ -66,7 +87,7 @@ export const astTsExtractor = (fallback: LanguageExtractor): LanguageExtractor =
             kind: ts.isClassDeclaration(node) ? "class" : "interface",
             line: lineOf(node),
             endLine: endLineOf(node),
-            signature: ctx.text.slice(node.getStart(sourceFile), node.getStart(sourceFile) + 100).split(/[\n{]/)[0].trim(),
+            signature: signatureHead(ctx.text.slice(node.getStart(sourceFile), node.getStart(sourceFile) + 300)),
             doc: getDoc(node),
             exported: isExported(node),
             container: null,
@@ -92,7 +113,7 @@ export const astTsExtractor = (fallback: LanguageExtractor): LanguageExtractor =
             kind,
             line: lineOf(node),
             endLine: endLineOf(node),
-            signature: ctx.text.slice(node.getStart(sourceFile), node.getStart(sourceFile) + 100).split(/[\n{]/)[0].trim(),
+            signature: signatureHead(ctx.text.slice(node.getStart(sourceFile), node.getStart(sourceFile) + 300)),
             doc: getDoc(node),
             exported: isExported(ts.isArrowFunction(node) ? node.parent.parent : node),
             container: ts.isMethodDeclaration(node) ? currentContainer : null,

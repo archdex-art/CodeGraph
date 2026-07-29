@@ -20,13 +20,35 @@ export interface RateLimitResult {
   retryAfter: number; // seconds until at least one token is available
 }
 
-/** Derive a best-effort client IP from proxy headers, falling back to a
- *  constant so a missing header degrades to a shared (still-bounded) bucket
- *  rather than silently disabling the limit. */
+/** Derive a best-effort client IP for rate-limit keying.
+ *
+ *  Reverse proxies APPEND the peer they saw to `X-Forwarded-For`, so the
+ *  trustworthy client address is the Nth entry from the RIGHT (the one the
+ *  outermost trusted proxy recorded) — NOT the leftmost, which is fully
+ *  attacker-controlled (a client can send any `X-Forwarded-For` it likes and
+ *  otherwise mint a fresh empty bucket per request, defeating the limit).
+ *
+ *  `CG_TRUSTED_PROXY_HOPS` is the number of trusted proxies that append to the
+ *  header; default 1 (single reverse proxy, e.g. Render). Set it to 0 for a
+ *  directly-exposed deployment to refuse to trust the header at all — that
+ *  degrades to a single shared bucket (still bounded, just coarse) rather than
+ *  a spoofable per-IP one. A missing header falls back to a constant so the
+ *  limit is never silently disabled. */
 export function clientIp(req: NextRequest): string {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]!.trim();
-  return req.headers.get("x-real-ip")?.trim() || "unknown";
+  const hops = Number(process.env.CG_TRUSTED_PROXY_HOPS ?? 1);
+  const trustProxy = Number.isFinite(hops) && hops >= 1;
+  if (trustProxy) {
+    const xff = req.headers.get("x-forwarded-for");
+    if (xff) {
+      const parts = xff.split(",").map((p) => p.trim()).filter(Boolean);
+      if (parts.length) return parts[Math.max(0, parts.length - hops)]!;
+    }
+    // x-real-ip is set by the proxy to the direct peer; trust it only when we
+    // trust a proxy at all, same as X-Forwarded-For.
+    const realIp = req.headers.get("x-real-ip")?.trim();
+    if (realIp) return realIp;
+  }
+  return "unknown";
 }
 
 /**

@@ -7,6 +7,7 @@ const exec = promisify(execFile);
 import type { RepoDetail } from "../types";
 import { cloneRepo, resolveLocalDir, indexRepo, cleanup, redactCredentials } from "../indexer";
 import { isGithubHost } from "../gitops";
+import { parseGithubRepo, getDefaultBranch, createPullRequest, GitHubApiError } from "../githubApi";
 import { FIXERS } from "./fixers";
 import type { ExecutionStep, FileEdit, FixResult, PRDraft } from "./executor-types";
 
@@ -197,35 +198,42 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
         await runGit(["add", "."]);
         await runGit(["commit", "-m", pr.title + "\n\n" + pr.body]);
         
-        // Parse owner/repo
-        const m = repo.url.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/);
-        if (m) {
-          const [_, owner, name] = m;
-          const remoteUrl = `https://x-access-token:${githubToken}@github.com/${owner}/${name}.git`;
-          await runGit(["remote", "set-url", "origin", remoteUrl]);
-          await runGit(["push", "-u", "origin", pr.branch]);
-          
-          // Open PR via API
-          const res = await fetch(`https://api.github.com/repos/${owner}/${name}/pulls`, {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${githubToken}`,
-              "Accept": "application/vnd.github.v3+json",
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              title: pr.title,
-              body: pr.body,
-              head: pr.branch,
-              base: "main" // or master, ideally we'd detect this
-            })
+        const parsed = parseGithubRepo(repo.url);
+        if (!parsed) throw new Error("Could not parse owner/repo from the remote URL");
+        const { owner, repo: name } = parsed;
+
+        // Resolve the REAL default branch before pushing anything. Doing it
+        // first means a repo we can't read (bad token, renamed repo) fails
+        // before we mutate the user's remote, not after.
+        const base = await getDefaultBranch(owner, name, githubToken);
+
+        const remoteUrl = `https://x-access-token:${githubToken}@github.com/${owner}/${name}.git`;
+        await runGit(["remote", "set-url", "origin", remoteUrl]);
+        await runGit(["push", "-u", "origin", pr.branch]);
+
+        // From here the user's remote HAS been mutated. If PR creation now
+        // fails we must say so precisely — the old code reported success
+        // regardless, leaving a pushed branch and no PR with no indication.
+        try {
+          const created = await createPullRequest({
+            owner, repo: name, token: githubToken,
+            title: pr.title, body: pr.body, head: pr.branch, base,
           });
-          if (res.ok) {
-            const data = await res.json();
-            pr = { ...pr, diff: `PR Opened successfully: ${data.html_url}\n\n` + pr.diff };
-          }
+          pr = { ...pr, url: created.url, number: created.number, base };
+          rec("record", `Pushed ${pr.branch} and opened PR #${created.number} against ${base}`, true, t);
+        } catch (prErr) {
+          const detail = prErr instanceof GitHubApiError
+            ? `${prErr.status} ${prErr.message}`
+            : redactCredentials(prErr instanceof Error ? prErr.message : String(prErr));
+          pr = { ...pr, base, pushed: true };
+          rec(
+            "record",
+            `Pushed branch ${pr.branch}, but opening the PR failed (${detail}). ` +
+              `The branch exists on the remote — open the PR manually or delete it.`,
+            false,
+            t,
+          );
         }
-        rec("record", "Pushed branch and opened GitHub PR", true, t);
       } catch (err) {
         // F017: execFile rejections embed the full argv — including the
         // token-bearing remoteUrl set via `git remote set-url` above — in

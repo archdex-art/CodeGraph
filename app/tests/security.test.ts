@@ -151,6 +151,70 @@ describe("isPublicHttpUrl", () => {
   it.each(MALFORMED_URLS)("rejects malformed URL %j", (url) => {
     expect(isPublicHttpUrl(url)).toBe(false);
   });
+
+  // --- Alternate encodings of a private destination --------------------------
+  // Node's WHATWG URL normalises integer IPv4 forms to dotted-quad before we
+  // ever see them, so these were already covered; they are pinned here so a
+  // future refactor that stops parsing with `URL` can't silently reopen them.
+  const ENCODED_LOOPBACK_URLS = [
+    "http://2130706433/repo", // decimal
+    "http://0x7f000001/repo", // hex
+    "http://017700000001/repo", // octal
+    "http://127.1/repo", // 2-part shorthand
+    "http://0x7f.1/repo", // mixed hex + decimal
+  ];
+
+  it.each(ENCODED_LOOPBACK_URLS)("rejects alternately-encoded loopback %s", (url) => {
+    expect(isPublicHttpUrl(url)).toBe(false);
+  });
+
+  // These were genuinely reachable before: URL hands back the HEX spelling of
+  // an IPv4-mapped address (`[::ffff:a9fe:a9fe]`), which a dotted-form-only
+  // check does not recognise as the metadata endpoint.
+  const EMBEDDED_V4_URLS = [
+    "http://[::ffff:169.254.169.254]/repo", // cloud metadata, v6-mapped
+    "http://[::ffff:127.0.0.1]/repo", // loopback, v6-mapped
+    "http://[::ffff:10.0.0.1]/repo", // private, v6-mapped
+  ];
+
+  it.each(EMBEDDED_V4_URLS)("rejects IPv4-mapped IPv6 pointing at a private address %s", (url) => {
+    expect(isPublicHttpUrl(url)).toBe(false);
+  });
+
+  const NEWLY_BLOCKED_RANGES = [
+    "http://100.64.0.1/repo", // CGNAT 100.64/10
+    "http://100.127.255.255/repo", // CGNAT upper bound
+    "http://224.0.0.1/repo", // multicast
+    "http://255.255.255.255/repo", // broadcast
+    "http://192.0.0.1/repo", // IETF protocol assignments
+  ];
+
+  it.each(NEWLY_BLOCKED_RANGES)("rejects reserved/shared address space %s", (url) => {
+    expect(isPublicHttpUrl(url)).toBe(false);
+  });
+
+  const INTERNAL_HOSTNAMES = [
+    "http://metadata.google.internal/repo", // GCP metadata service
+    "http://foo.internal/repo",
+    "http://printer.home.arpa/repo",
+  ];
+
+  it.each(INTERNAL_HOSTNAMES)("rejects internal-network hostname %s", (url) => {
+    expect(isPublicHttpUrl(url)).toBe(false);
+  });
+
+  // Guard the other direction: the widened ranges must not swallow real hosts.
+  const STILL_PUBLIC = [
+    "http://100.63.255.255/repo", // just below CGNAT
+    "http://100.128.0.1/repo", // just above CGNAT
+    "http://223.255.255.255/repo", // just below multicast
+    "https://internal-tools.example.com/repo", // "internal" as a label, not a TLD
+    "http://[2001:4860:4860::8844]/repo", // public v6, not 2001:0::/32 Teredo
+  ];
+
+  it.each(STILL_PUBLIC)("does not over-block public address %s", (url) => {
+    expect(isPublicHttpUrl(url)).toBe(true);
+  });
 });
 
 describe("checkBasicAuth", () => {

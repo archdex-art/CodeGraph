@@ -3,9 +3,9 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { db, dataDir } from "./db";
 import { cloneRepo, indexRepo, cleanup, resolveLocalDir } from "./indexer";
-import { withToken, isGithubHost } from "./gitops";
+import { withToken, isGithubHost, getHeadHash } from "./gitops";
 import { emptyTrash } from "./trash";
-import type { Job, JobStatus, RepoDetail, RepoSummary, SaveMode, SourceType, VizGraph } from "./types";
+import type { Job, JobStatus, RepoDetail, RepoSummary, SaveMode, SourceType, VizGraph, IndexResult } from "./types";
 
 const EMPTY_VIZ: VizGraph = { nodes: [], edges: [], truncated: false };
 
@@ -77,12 +77,18 @@ async function runJob(jobId: string, repoId: string, source: string, sourceType:
     setJob(jobId, "scoring", 85, "Computing Health Score…");
     setRepoStatus(repoId, "scoring");
 
+    // Only git sources have a meaningful commit hash (a local-folder source
+    // is never even guaranteed to be a git repo). Recording it lets the
+    // Timeline engine reuse this exact result for its HEAD entry instead of
+    // re-deriving it from scratch via git-archive + a second full index pass.
+    const headHash = sourceType === "git" ? await getHeadHash(root) : null;
+
     // Keep the on-disk checkout around as a persistent workspace for the
     // built-in editor (git clones are no longer deleted after indexing;
     // local folders were never copied in the first place).
     db()
       .prepare(
-        `UPDATE repos SET status='done', score=?, loc=?, languages=?, graph=?, dimensions=?, issues=?, deps=?, churn_by_file=?, viz=?, tree=?, modules=?, symbols=?, workspace_dir=?, finished_at=?
+        `UPDATE repos SET status='done', score=?, loc=?, languages=?, graph=?, dimensions=?, issues=?, deps=?, churn_by_file=?, viz=?, tree=?, modules=?, symbols=?, workspace_dir=?, head_hash=?, finished_at=?
          WHERE id=?`
       )
       .run(
@@ -99,6 +105,7 @@ async function runJob(jobId: string, repoId: string, source: string, sourceType:
         JSON.stringify(result.modules),
         JSON.stringify(result.symbolGraph),
         root,
+        headHash,
         Date.now(),
         repoId
       );
@@ -196,6 +203,40 @@ export function getRepo(id: string): RepoDetail | null {
     symbolGraph: JSON.parse((r.symbols as string) || "null") || { symbols: [], edges: [], truncated: false, stats: { symbols: 0, edges: 0, resolvedCalls: 0 } },
     createdAt: r.created_at as number,
     finishedAt: (r.finished_at as number | null) ?? null,
+  };
+}
+
+/** The already-computed indexer result for the exact commit this repo's
+ *  live workspace was last indexed at (`head_hash`, git sources only).
+ *  Consumed by TimelineEngine.ensureSnapshot to skip a redundant
+ *  git-archive + full re-index pass when a requested timeline entry is
+ *  that same commit — the common case, since the timeline UI defaults to
+ *  its newest entry on open. Returns null if the repo hasn't finished
+ *  indexing, isn't a git source, or predates this tracking. */
+export function getIndexedHead(id: string): { hash: string; result: IndexResult } | null {
+  const r = db()
+    .prepare(
+      `SELECT status, head_hash, score, loc, languages, graph, dimensions, issues, deps, churn_by_file, viz, tree, modules, symbols
+       FROM repos WHERE id=?`
+    )
+    .get(id) as Record<string, unknown> | undefined;
+  if (!r || r.status !== "done" || !r.head_hash) return null;
+  return {
+    hash: r.head_hash as string,
+    result: {
+      score: (r.score as number) ?? 0,
+      loc: (r.loc as number) ?? 0,
+      languages: JSON.parse((r.languages as string) || "[]"),
+      graphStats: JSON.parse((r.graph as string) || "{}"),
+      dimensions: JSON.parse((r.dimensions as string) || "[]"),
+      issues: JSON.parse((r.issues as string) || "[]"),
+      dependencies: JSON.parse((r.deps as string) || "[]"),
+      churnByFile: JSON.parse((r.churn_by_file as string) || "{}"),
+      viz: JSON.parse((r.viz as string) || "null") || EMPTY_VIZ,
+      tree: JSON.parse((r.tree as string) || "null") || { name: "/", path: ".", children: [] },
+      modules: JSON.parse((r.modules as string) || "null") || { nodes: [], edges: [] },
+      symbolGraph: JSON.parse((r.symbols as string) || "null") || { symbols: [], edges: [], truncated: false, stats: { symbols: 0, edges: 0, resolvedCalls: 0 } },
+    },
   };
 }
 

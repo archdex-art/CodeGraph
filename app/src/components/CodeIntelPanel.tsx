@@ -26,16 +26,29 @@ export function CodeIntelPanel({ repoId, graph }: { repoId: string; graph: Symbo
   useEffect(() => {
     if (!q.trim()) { setResults([]); return; }
     setLoading(true);
+    let cancelled = false;
     const t = setTimeout(async () => {
-      try { setResults(await intelSearch(repoId, q)); } finally { setLoading(false); }
+      try {
+        const r = await intelSearch(repoId, q);
+        if (!cancelled) setResults(r);
+      } catch {
+        if (!cancelled) setResults([]); // don't strand stale results on error
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }, 250);
-    return () => clearTimeout(t);
+    return () => { cancelled = true; clearTimeout(t); };
   }, [q, repoId]);
 
   useEffect(() => {
     if (!selected) { setRelResults([]); return; }
     setRelLoading(true);
-    intelRelation(repoId, rel, selected.id).then(setRelResults).finally(() => setRelLoading(false));
+    let cancelled = false;
+    intelRelation(repoId, rel, selected.id)
+      .then((r) => { if (!cancelled) setRelResults(r); })
+      .catch(() => { if (!cancelled) setRelResults([]); }) // clear stale relations on error
+      .finally(() => { if (!cancelled) setRelLoading(false); });
+    return () => { cancelled = true; };
   }, [selected, rel, repoId]);
 
   if (!graph || graph.symbols.length === 0) {

@@ -32,10 +32,22 @@ export async function analyzeSnapshot(
 ): Promise<ArchitectureSnapshot> {
   // Run the existing AST pipeline on the extracted temporary directory
   const result = await indexRepo(loadedSnapshot.dir);
-  
-  // Phase 5: Compute Snapshot Metrics
+  return buildSnapshot(timelineEntry, result, previousSnapshot);
+}
+
+/**
+ * Assembles an ArchitectureSnapshot from an already-computed IndexResult —
+ * the shared tail end of both the normal git-archive-derived path above and
+ * the Timeline engine's HEAD fast path (which reuses the live-index result
+ * instead of re-running indexRepo on a fresh checkout of the same commit).
+ */
+export async function buildSnapshot(
+  timelineEntry: TimelineSnapshot,
+  result: IndexResult,
+  previousSnapshot?: ArchitectureSnapshot | null
+): Promise<ArchitectureSnapshot> {
   const metrics = computeMetrics(result);
-  
+
   const baseSnapshot: ArchitectureSnapshot = {
     timeline: timelineEntry,
     result,
@@ -43,7 +55,7 @@ export async function analyzeSnapshot(
   };
 
   baseSnapshot.evolution = await analyzeEvolution(previousSnapshot || null, baseSnapshot);
-  
+
   return baseSnapshot;
 }
 

@@ -48,16 +48,24 @@ export function FileExplorer({
   const uploadTargetRef = useRef<string>(".");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function loadDir(dir: string) {
-    const entries = await fsList(repoId, dir);
-    if (dir === ".") setRootEntries(entries);
-    else setChildren((m) => new Map(m).set(dir, entries));
+  async function loadDir(dir: string, alive: () => boolean = () => true) {
+    try {
+      const entries = await fsList(repoId, dir);
+      if (!alive()) return; // repo switched / unmounted mid-request
+      if (dir === ".") setRootEntries(entries);
+      else setChildren((m) => new Map(m).set(dir, entries));
+    } catch {
+      // Don't leave the previous repo's tree on screen when the fetch fails.
+      if (alive() && dir === ".") setRootEntries([]);
+    }
   }
 
   useEffect(() => {
-    loadDir(".");
+    let active = true;
     setChildren(new Map());
     setExpanded(new Set());
+    loadDir(".", () => active);
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repoId, refreshToken]);
 

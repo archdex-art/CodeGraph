@@ -1,9 +1,10 @@
 import { getTimeline, Strategies, type TimelineSnapshot, type SelectionStrategy } from "./timeline";
 import { loadSnapshot } from "./snapshotLoader";
-import { analyzeSnapshot, type ArchitectureSnapshot, type SnapshotMetrics } from "./historicalAnalysis";
+import { analyzeSnapshot, buildSnapshot, type ArchitectureSnapshot, type SnapshotMetrics } from "./historicalAnalysis";
 import type { ArchitectureEvolution } from "./evolutionEngine";
 import { saveSnapshot, loadSnapshotCache, hasSnapshot, listSnapshots } from "./timelineStore";
 import { TimelineController } from "./timelineController";
+import { getIndexedHead } from "../store";
 import type { GraphDiff } from "./graphDiff";
 
 export { Strategies };
@@ -45,6 +46,20 @@ export class TimelineEngine {
     if (snapshotIndex > 0) {
       const prevHash = timeline[snapshotIndex - 1].hash;
       previousSnapshot = await loadSnapshotCache(this.repoId, prevHash);
+    }
+
+    // Fast path: this commit is exactly the one the repo's live index
+    // already analyzed (the common case — the timeline defaults to its
+    // newest entry on open). Reuse that result instead of spawning
+    // `git archive`/`tar` and re-running the full indexRepo pipeline against
+    // a fresh checkout of content already sitting in the DB — on a
+    // resource-constrained host this redundant pass is the dominant cost of
+    // opening the Timeline tab.
+    const indexedHead = getIndexedHead(this.repoId);
+    if (indexedHead && indexedHead.hash === hash) {
+      const architecture = await buildSnapshot(snapshotMeta, indexedHead.result, previousSnapshot);
+      await saveSnapshot(this.repoId, architecture);
+      return;
     }
 
     const loaded = await loadSnapshot(this.repoDir, hash);

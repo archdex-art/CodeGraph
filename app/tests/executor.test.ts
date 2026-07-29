@@ -141,6 +141,98 @@ describe("fixers: python block-body protection", () => {
     expect(out.edits.length).toBe(1);
     expect(out.lines.some((l) => l.trim() === 'console.log("debug");')).toBe(false);
   });
+
+  // --- Brace-less JS block bodies -------------------------------------------
+  // The file still PARSES after a bad deletion here, so no syntax check catches
+  // it — the program just silently does something else. These are the cases
+  // that made the fixer unsafe to point at a real repository.
+
+  it("refuses to delete the sole body of a brace-less `if` (would promote the next statement)", () => {
+    const fx = fixerById("remove-debug-output")!;
+    const lines = ["if (!authorized)", '  console.log("denied");', "grantAccess();"];
+    const out = fx.apply({ rel: "a.ts", ext: ".ts", lines });
+
+    expect(out.edits).toHaveLength(0);
+    expect(out.lines).toEqual(lines); // byte-identical: nothing touched
+  });
+
+  it("refuses to delete a brace-less `else` body", () => {
+    const fx = fixerById("remove-debug-output")!;
+    const lines = ["if (a) {", "  b();", "} else", '  console.log("fallback");', "after();"];
+    const out = fx.apply({ rel: "a.js", ext: ".js", lines });
+
+    expect(out.edits).toHaveLength(0);
+    expect(out.lines).toEqual(lines);
+  });
+
+  it.each([
+    ["for", ["for (const x of xs)", "  console.log(x);", "total++;"]],
+    ["while", ["while (running)", "  console.log(tick);", "cleanup();"]],
+    ["arrow body", ["arr.forEach((x) =>", "  console.log(x)", ");"]],
+  ])("refuses to delete a brace-less %s body", (_label, lines) => {
+    const fx = fixerById("remove-debug-output")!;
+    const out = fx.apply({ rel: "a.js", ext: ".js", lines: lines as string[] });
+    expect(out.edits).toHaveLength(0);
+  });
+
+  it("recognises a brace-less opener that carries a trailing line comment", () => {
+    const fx = fixerById("remove-debug-output")!;
+    const lines = ["if (x) // guard", '  console.log("hit");', "next();"];
+    const out = fx.apply({ rel: "a.ts", ext: ".ts", lines });
+    expect(out.edits).toHaveLength(0);
+  });
+
+  it("still deletes a debug line that plainly follows a completed statement", () => {
+    const fx = fixerById("remove-debug-output")!;
+    const lines = ["const x = compute();", '  console.log("x", x);', "return x;"];
+    const out = fx.apply({ rel: "a.ts", ext: ".ts", lines });
+
+    expect(out.edits).toHaveLength(1);
+    expect(out.lines).toEqual(["const x = compute();", "return x;"]);
+  });
+
+  it("deletes a run of consecutive debug lines — they must not protect each other", () => {
+    const fx = fixerById("remove-debug-output")!;
+    // Semicolon-less style: each line ends in `)`, so a naive lookback would
+    // treat every line after the first as a possible brace-less body.
+    const lines = ["const a = 1", "console.log(a)", "console.log(a * 2)", "return a"];
+    const out = fx.apply({ rel: "a.js", ext: ".js", lines });
+
+    expect(out.edits).toHaveLength(2);
+    expect(out.lines).toEqual(["const a = 1", "return a"]);
+  });
+
+  it("protects only the block body, still deleting an unrelated debug line below it", () => {
+    const fx = fixerById("remove-debug-output")!;
+    const lines = ["if (x)", '  console.log("body");', 'console.log("standalone");'];
+    const out = fx.apply({ rel: "a.ts", ext: ".ts", lines });
+
+    expect(out.edits).toHaveLength(1);
+    expect(out.edits[0].line).toBe(3);
+    expect(out.lines).toEqual(["if (x)", '  console.log("body");']);
+  });
+
+  it("refuses to delete a brace-less body guarded by a multi-line condition", () => {
+    const fx = fixerById("remove-debug-output")!;
+    const lines = ["if (a &&", "    b)", '  console.log("both");', "proceed();"];
+    const out = fx.apply({ rel: "a.ts", ext: ".ts", lines });
+    expect(out.edits).toHaveLength(0);
+  });
+
+  it("applies the same protection to a bare `debugger` statement", () => {
+    const fx = fixerById("remove-debug-output")!;
+    const lines = ["if (x)", "  debugger;", "proceed();"];
+    const out = fx.apply({ rel: "a.ts", ext: ".ts", lines });
+    expect(out.edits).toHaveLength(0);
+  });
+
+  it("deletes a debug line at the very start of a file", () => {
+    const fx = fixerById("remove-debug-output")!;
+    const lines = ['console.log("boot");', "start();"];
+    const out = fx.apply({ rel: "a.ts", ext: ".ts", lines });
+    expect(out.edits).toHaveLength(1);
+    expect(out.lines).toEqual(["start();"]);
+  });
 });
 
 describe("fixers: TODO/FIXME marker removal", () => {
@@ -179,6 +271,27 @@ describe("fixers: empty catch block annotation", () => {
     const fx = fixerById("annotate-empty-catch")!;
     const out = fx.apply({ rel: "a.py", ext: ".py", lines: ["except Exception:", "    pass"] });
     expect(out.edits.length).toBe(0);
+  });
+
+  it("preserves the original indentation of the annotated catch line (regression: after was trimmed)", () => {
+    const fx = fixerById("annotate-empty-catch")!;
+    const lines = ["    try {", "      risky();", "    } catch (e) {}"];
+    const out = fx.apply({ rel: "a.ts", ext: ".ts", lines });
+    // The replacement MUST keep the leading 4-space indent, not collapse to col 0.
+    expect(out.lines[2]).toBe("    } catch (e) { /* intentionally ignored */ }");
+    // The recorded edit's `after` is the authoritative content the executor
+    // writes to disk and emits in the diff — it must equal the full new line.
+    expect(out.edits[0].after).toBe("    } catch (e) { /* intentionally ignored */ }");
+  });
+
+  it("does not truncate a long catch line when annotating (regression: after was sliced to 120 chars)", () => {
+    const fx = fixerById("annotate-empty-catch")!;
+    const tail = "x".repeat(140);
+    const line = `} catch (e) {} // ${tail}`;
+    const out = fx.apply({ rel: "a.ts", ext: ".ts", lines: [line] });
+    // The full line (well over 120 chars) must survive intact after the edit.
+    expect(out.lines[0]).toBe(`} catch (e) { /* intentionally ignored */ } // ${tail}`);
+    expect(out.edits[0].after).toBe(out.lines[0]);
   });
 });
 
@@ -229,7 +342,9 @@ describe("executeFixes: end-to-end sandboxed remediation", () => {
       expect(diff).not.toContain("+  console.log");
       expect(diff).toContain("-  } catch (e) {}");
       expect(diff).toContain("intentionally ignored");
-      expect(diff.split("\n").some((l) => l.startsWith("+") && l.includes("intentionally ignored"))).toBe(true);
+      // The `+` replacement must carry the fixture's original 2-space indent —
+      // regression guard for the trimmed/truncated `after` bug.
+      expect(diff).toContain("+  } catch (e) { /* intentionally ignored */ }");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

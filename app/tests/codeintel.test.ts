@@ -46,6 +46,33 @@ describe("buildSymbolGraph", () => {
     const calls = graph.edges.filter((e) => e.kind === "calls");
     expect(calls.length).toBeGreaterThanOrEqual(2);
   });
+
+  it("does not truncate a signature at a `{` inside generic type parameters (regression)", async () => {
+    const g = await buildSymbolGraph(
+      [
+        {
+          rel: "g.ts",
+          ext: ".ts",
+          language: "TypeScript",
+          text: [
+            "export function pick<T extends { a: string }>(x: T): string {",
+            "  return x.a;",
+            "}",
+            "",
+          ].join("\n"),
+        },
+      ],
+      new Map()
+    );
+    const sym = g.symbols.find((s) => s.name === "pick");
+    expect(sym).toBeDefined();
+    // The old `.split(/[\n{]/)` cut this at "export function pick<T extends "
+    // — the signature must now retain the full generic constraint and params.
+    expect(sym!.signature).toContain("T extends { a: string }");
+    expect(sym!.signature).toContain("(x: T)");
+    // ...but must still stop before the function body.
+    expect(sym!.signature).not.toContain("return x.a");
+  });
 });
 
 describe("QueryEngine", () => {

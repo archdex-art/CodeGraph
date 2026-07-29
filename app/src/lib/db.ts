@@ -1,6 +1,17 @@
-import { DatabaseSync } from "node:sqlite";
+import type * as NodeSqlite from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+
+// node:sqlite is a Node builtin, but Turbopack's dev server (`next dev`)
+// mis-externalizes it as `require("node:sqlite")` inside an ESM chunk, where
+// `require` is undefined — the module then throws at import time and every
+// DB-backed route returns a bodyless 500 ("Failed to load external module
+// node:sqlite: ReferenceError: require is not defined"). process.getBuiltinModule
+// is the runtime builtin loader that bundlers don't rewrite; it works
+// identically in `next dev` and the standalone production build. (The `import
+// type` lines above are erased at compile time, so they emit no real import.)
+const { DatabaseSync: DatabaseSyncCtor } = process.getBuiltinModule("node:sqlite") as typeof NodeSqlite;
 
 // Singleton DB across hot-reloads / route invocations.
 const g = globalThis as unknown as { __cgDb?: DatabaseSync };
@@ -13,7 +24,7 @@ export function dataDir(): string {
 function init(): DatabaseSync {
   const dir = dataDir();
   mkdirSync(dir, { recursive: true });
-  const db = new DatabaseSync(path.join(dir, "codegraph.sqlite"));
+  const db = new DatabaseSyncCtor(path.join(dir, "codegraph.sqlite"));
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec(`
     CREATE TABLE IF NOT EXISTS repos (
@@ -79,6 +90,12 @@ function init(): DatabaseSync {
   if (!cols.has("save_mode")) db.exec("ALTER TABLE repos ADD COLUMN save_mode TEXT NOT NULL DEFAULT 'local'");
   if (!cols.has("owner_id")) db.exec("ALTER TABLE repos ADD COLUMN owner_id INTEGER");
   if (!cols.has("churn_by_file")) db.exec(`ALTER TABLE repos ADD COLUMN churn_by_file TEXT DEFAULT '{}'`);
+  // The exact commit hash the live workspace was analyzed at (git sources
+  // only). Lets the Timeline engine recognize when a requested historical
+  // snapshot IS the already-indexed HEAD and reuse that result instead of
+  // re-running the full git-archive + indexRepo pipeline for content it has
+  // already computed — see TimelineEngine.ensureSnapshot.
+  if (!cols.has("head_hash")) db.exec("ALTER TABLE repos ADD COLUMN head_hash TEXT");
   // Migrate the settings table from a single global row-per-key (shared by
   // every visitor) to per-account rows keyed by (key, user_id) — user_id=0
   // is the "no account" bucket (self-hosted/no GitHub sign-in, or an
@@ -91,7 +108,14 @@ function init(): DatabaseSync {
     (db.prepare("PRAGMA table_info(settings)").all() as Array<{ name: string }>).map((c) => c.name)
   );
   if (!settingsCols.has("user_id")) {
+    // Wrap the table rebuild in a transaction: if the process dies mid-migration
+    // (after RENAME but before the copy/DROP), an implicit-autocommit run would
+    // let the top-level `CREATE TABLE IF NOT EXISTS settings` recreate an EMPTY
+    // per-user table on the next boot, orphaning `settings_pre_peruser` and
+    // silently losing every pre-migration setting. A transaction makes the whole
+    // rebuild atomic — it either fully applies or fully rolls back.
     db.exec(`
+      BEGIN IMMEDIATE;
       ALTER TABLE settings RENAME TO settings_pre_peruser;
       CREATE TABLE settings (
         key TEXT NOT NULL,
@@ -101,6 +125,7 @@ function init(): DatabaseSync {
       );
       INSERT INTO settings (key, user_id, value) SELECT key, 0, value FROM settings_pre_peruser;
       DROP TABLE settings_pre_peruser;
+      COMMIT;
     `);
   }
   return db;

@@ -22,6 +22,14 @@ export interface PRDraft {
   body: string; // markdown
   branch: string;
   diff: string; // unified git diff
+  /** The repository's real default branch, once resolved. Never assumed. */
+  base?: string;
+  /** True once the branch has been pushed to the remote — i.e. the user's
+   *  repository HAS been mutated, whether or not the PR was then created. */
+  pushed?: boolean;
+  /** Set only when a PR was actually created and GitHub confirmed it. */
+  url?: string;
+  number?: number;
 }
 
 export interface FixResult {

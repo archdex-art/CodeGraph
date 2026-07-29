@@ -5,7 +5,7 @@
 // "local" source repos, where the workspace root is the user's real folder
 // on disk, so a hard `rm` there would be unrecoverable.
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, renameSync, rmSync, statSync, cpSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, rmSync, statSync, lstatSync, cpSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { db, dataDir } from "./db";
 import { resolveSafe, WorkspacePathError } from "./workspace";
@@ -41,7 +41,12 @@ function moveSync(from: string, to: string): void {
 }
 
 function sizeOf(full: string): number {
-  const st = statSync(full);
+  // lstat, never stat: a symlink (legitimately present in a cloned repo, or a
+  // crafted local folder) pointing back at an ancestor would otherwise make
+  // statSync report a directory and recurse forever -> stack overflow. Symlink
+  // targets aren't part of this entry's own on-disk footprint, so skip them.
+  const st = lstatSync(full);
+  if (st.isSymbolicLink()) return 0;
   if (!st.isDirectory()) return st.size;
   let total = 0;
   for (const name of readdirSync(full)) {

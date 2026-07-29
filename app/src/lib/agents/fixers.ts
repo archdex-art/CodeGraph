@@ -62,9 +62,54 @@ function protectPythonBlockBodies(lines: string[], candidateDelete: Set<number>)
   }
 }
 
+/**
+ * JS/TS has the same hazard Python does, in a shape the indentation check above
+ * can't see: a brace-less block body.
+ *
+ *     if (!authorized)
+ *       console.log("denied");
+ *     grantAccess();
+ *
+ * Deleting line 2 promotes `grantAccess()` into the `if` — the file still
+ * PARSES, so no syntax check catches it, and the program now does the opposite
+ * of what it did. Same for `else`, `for`, `while`, `do`, and arrow bodies
+ * (`arr.forEach(x =>\n  console.log(x)\n)`), which becomes a syntax error.
+ *
+ * Without a parser we can't know for certain whether a line is a block body, so
+ * we are deliberately conservative: a deletion is refused whenever the
+ * preceding effective line ends in a token that can open a brace-less body
+ * (`)`, `=>`, `else`, `do`). That over-protects in semicolon-less code — e.g.
+ * `doSomething()` on the line above — costing us a few legitimate deletions.
+ * Skipping a valid fix is a non-event; corrupting control flow in someone's
+ * repo is not, so the trade is one-sided.
+ *
+ * "Preceding effective line" skips blanks, comment-only lines, and lines that
+ * are themselves being deleted — otherwise a run of consecutive semicolon-less
+ * `console.log(...)` lines would protect each other for no reason.
+ */
+const JS_BRACELESS_OPENER_END_RE = /(\)|=>|\belse\b|\bdo\b)\s*$/;
+const JS_COMMENT_ONLY_RE = /^(\/\/|\/\*|\*)/;
+
+function protectJsBracelessBodies(lines: string[], candidateDelete: Set<number>): void {
+  for (const i of [...candidateDelete].sort((a, b) => a - b)) {
+    let j = i - 1;
+    while (j >= 0) {
+      const t = lines[j].trim();
+      if (t === "" || JS_COMMENT_ONLY_RE.test(t) || candidateDelete.has(j)) { j--; continue; }
+      break;
+    }
+    if (j < 0) continue; // start of file — nothing can be holding this as a body
+    // Strip a trailing line comment before testing the terminator, so
+    // `if (x) // guard` is still recognised as a brace-less opener.
+    const effective = lines[j].replace(/\/\/.*$/, "").trimEnd();
+    if (JS_BRACELESS_OPENER_END_RE.test(effective)) candidateDelete.delete(i);
+  }
+}
+
 // Remove standalone debug output / debugger statements (leftover from development).
 // Matches ONLY whole-line statements so we never split an expression, and never
-// empties a Python block's body (which would produce invalid syntax).
+// empties a Python block's body or a JS brace-less block body (either of which
+// would change behavior or produce invalid syntax).
 const debugFixer: Fixer = {
   id: "remove-debug-output",
   label: "Remove leftover debug output",
@@ -79,6 +124,7 @@ const debugFixer: Fixer = {
       if (jsDebug || pyDebug) candidateDelete.add(i);
     }
     if (isPy) protectPythonBlockBodies(lines, candidateDelete);
+    if (isJs) protectJsBracelessBodies(lines, candidateDelete);
 
     const edits: FileEdit[] = [];
     const out: string[] = [];
@@ -162,7 +208,10 @@ const emptyCatchFixer: Fixer = {
         file: rel,
         line: i + 1,
         before: before.trim().slice(0, 120),
-        after: after.trim().slice(0, 120),
+        // `after` is the AUTHORITATIVE replacement line the executor writes to
+        // disk and emits in the diff — it MUST be the full, untrimmed content.
+        // (debug/todo fixers use after=null, so this is the only replacement.)
+        after,
         fixer: "annotate-empty-catch",
         reason: "Documented an empty catch block's intent instead of silently swallowing the error (no behavior change).",
       });

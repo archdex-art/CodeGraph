@@ -138,8 +138,8 @@ Real numbers from real runs against real repos — not synthetic targets. Reprod
 | **Verified remediation** (`expressjs/express`, live) | 31 real fixes applied across 27 files; Health Score **90 → 93** (actual re-index, not projected), issues **53 → 29**; valid, applyable unified git diff | [`app/AGENTS.md`](./app/AGENTS.md) |
 | **Graph-RAG context generation** | Query *"render a view template"* → 5 seeds, 11 slices, ~647 tokens, structured prompt | [`app/CODE_INTELLIGENCE.md`](./app/CODE_INTELLIGENCE.md) |
 | **Memory ceiling under Render's real constraints** | Full pipeline survives indexing `octocat/Hello-World` **and** `expressjs/express` end-to-end inside a container capped at `--memory=512m --cpus=0.5` — the exact config that OOM-killed the server before the fix in [`docs/postmortems/2026-07-10-tree-sitter-oom.md`](./docs/postmortems/2026-07-10-tree-sitter-oom.md) | CI `docker-smoke-test` job, runs on every push |
-| **Test suite** | 96/96 passing across 6 files (security, indexer, codeintel, executor, layout, tenant-isolation) | `npm run test` |
-| **Security posture (self-audited, tracked openly)** | Baseline **3/10 → 8/10** after Phase 0–3 hardening (SSRF guard, local-access gate, security headers, auth gate, cross-tenant isolation fix). A follow-up deep audit found **99 further issues (5 critical)** across the full stack, mostly *not yet fixed* — see [Known issues](#known-issues--security-status) below | [`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md), [`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md) |
+| **Test suite** | 265/265 passing across 22 files (security ×4, indexer, codeintel, executor, orchestrator, specialists, resolution, churn, tenant-isolation, and more) | `npm run test` |
+| **Security posture (self-audited, tracked openly)** | Baseline **3/10 → 9.1/10**. Phases 0–3 hardening (SSRF guard, local-access gate, security headers, auth gate, cross-tenant isolation fix), then Phase 7 closed **17 of 27** findings from a follow-up deep audit that surfaced **99 issues (5 critical)** across the full stack. Remaining items are tracked, not hidden — plus an independent pen-test pass that verified every control live and fixed a rate-limit `X-Forwarded-For` bypass | [`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md), [`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md) |
 
 ## Comparison with existing tools
 
@@ -162,14 +162,14 @@ Tracked live in [`docs/IMPROVEMENT_PLAN.md`](./docs/IMPROVEMENT_PLAN.md) (the pl
 
 - [x] **Phase 0 — Security lockdown**: SSRF guard, local-access gate, security headers, opt-in auth gate
 - [x] **Phase 1 — Reliability guardrails**: CI (typecheck + tests + adversarial Docker smoke test), branch protection, 4 incident postmortems
-- [x] **Phase 2 — Test coverage**: 96 regression tests locking the security/reliability fixes
+- [x] **Phase 2 — Test coverage**: 265 regression tests locking the security/reliability/accuracy fixes
 - [x] **Phase 3 — Documentation cleanup**: this README, `ARCHITECTURE.md`, legacy docs archived
 - [x] **Phase 0.6 — Multi-tenant isolation** *(pulled forward, was live-severity)*: per-repo ownership, cross-tenant data leak closed
 - [ ] **Phase 4 — Close the agent loop** *(next up)*: real PR creation (branch → commit → push → open PR via GitHub API) from a verified fix, with an explicit confirmation gate and a visible audit trail
 - [ ] **Phase 5 — Scale & domains** *(stretch)*: a second Tree-sitter language extractor (Python) for AST-grade precision beyond regex, runtime/observability domain (OTel ingestion)
 
 ### Known issues / security status
-This project audits itself and publishes the results rather than hiding them. A comprehensive follow-up audit ([`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md)) found **99 issues (5 critical, 24 high)** beyond what Phases 0–3 already fixed — including a confused-deputy token-relay path in the fix executor and two symlink-escape vectors. These are **tracked, not silently patched over**; fixing them is the next priority ahead of Phase 4. If you're evaluating this for anything beyond local/trusted-host use, read that audit first.
+This project audits itself and publishes the results rather than hiding them. A comprehensive follow-up audit ([`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md)) found **99 issues (5 critical, 24 high)** beyond what Phases 0–3 already fixed — including a confused-deputy token-relay path in the fix executor and two symlink-escape vectors. **Phase 7 has since closed all 5 criticals and 17 of 27 security findings** (symlink-escape fixes, credential redaction, job-ownership checks, OAuth open-redirect guard, session expiry, rate limiting, and more — each with regression tests), and an independent pen-test pass verified the controls live. The remaining items are testing-debt or deliberate product/infra tradeoffs, all **tracked in the open** ([`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md)), not silently patched over. If you're evaluating this for anything beyond local/trusted-host use, read that audit first.
 
 ---
 

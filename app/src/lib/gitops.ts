@@ -37,6 +37,16 @@ export async function isGitRepo(dir: string): Promise<boolean> {
   }
 }
 
+/** Current commit hash of `dir`'s checked-out HEAD, or null if it isn't a
+ *  git repo (e.g. a local-folder source) or has no commits yet. */
+export async function getHeadHash(dir: string): Promise<string | null> {
+  try {
+    return (await git(dir, ["rev-parse", "HEAD"])).trim();
+  } catch {
+    return null;
+  }
+}
+
 function mapPorcelainCode(x: string, y: string): GitFileStatus {
   if (x === "?" && y === "?") return "untracked";
   if (x === "U" || y === "U" || (x === "A" && y === "A") || (x === "D" && y === "D")) return "conflicted";
