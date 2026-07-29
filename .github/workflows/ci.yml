@@ -37,6 +37,13 @@ jobs:
       - name: Layering + cycle check
         run: npm run depcruise
 
+      # Property-access bans that dependency-cruiser structurally cannot see:
+      # `process.env` outside @codegraph/config (LLD §10.3) and `console.*`
+      # outside @codegraph/observability (HLD §14). Exclusions are stated and
+      # justified in the script itself.
+      - name: Module boundary check
+        run: python3 scripts/check_boundaries.py
+
       - name: Unit tests
         run: npm run test
 

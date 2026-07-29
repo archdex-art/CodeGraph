@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fingerprint, normalizeSnippet } from "../src/index.js";
+import { fingerprint, normalizeSnippet } from "../src/index";
 
 /**
  * `fingerprint()` is a persisted contract, not an implementation detail: a

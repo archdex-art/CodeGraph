@@ -2,6 +2,7 @@ import type * as NodeSqlite from "node:sqlite";
 import type { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import { config } from "@codegraph/config";
 
 // node:sqlite is a Node builtin, but Turbopack's dev server (`next dev`)
 // mis-externalizes it as `require("node:sqlite")` inside an ESM chunk, where
@@ -18,7 +19,7 @@ const g = globalThis as unknown as { __cgDb?: DatabaseSync };
 
 /** Resolve the persistent data directory (SQLite + editor workspaces live here). */
 export function dataDir(): string {
-  return process.env.CG_DATA_DIR || path.join(process.cwd(), "data");
+  return config.dataDir;
 }
 
 function init(): DatabaseSync {

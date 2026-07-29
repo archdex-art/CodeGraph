@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync, readFileSync, existsSync, readdirSync, 
 import { execSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { childEnv, config } from "@codegraph/config";
 import type {
   Dimension,
   DimensionScore,
@@ -51,7 +52,7 @@ const SKIP_DIRS: Record<string, true> = {
   ".vscode": true, "coverage": true,
 };
 
-const MAX_FILES = Number(process.env.CG_MAX_FILES) || 4000;
+const MAX_FILES = config.maxFiles;
 const MAX_FILE_BYTES = 400_000;
 
 
@@ -88,9 +89,12 @@ export async function cloneRepo(url: string, destDir?: string): Promise<string> 
     : ["clone", "--depth", "1", "--single-branch", url, dir];
   try {
     await exec("git", args, {
-      timeout: Number(process.env.CG_CLONE_TIMEOUT_MS) || 90_000,
+      timeout: config.cloneTimeoutMs,
       maxBuffer: 1024 * 1024 * 16,
-      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+      // childEnv, not a config value: `git` needs the whole inherited
+      // environment (PATH, HOME, SSH_AUTH_SOCK, proxy vars) to run at all.
+      // GIT_TERMINAL_PROMPT=0 stops it blocking forever on a credential prompt.
+      env: childEnv({ GIT_TERMINAL_PROMPT: "0" }),
     });
   } catch (e) {
     if (e instanceof Error) {
@@ -106,7 +110,7 @@ export async function cloneRepo(url: string, destDir?: string): Promise<string> 
 
 /** Validate and resolve a local folder path for indexing (no clone). */
 export function resolveLocalDir(inputPath: string): string {
-  const resolved = path.resolve(inputPath.replace(/^~(?=$|\/)/, process.env.HOME || "~"));
+  const resolved = path.resolve(inputPath.replace(/^~(?=$|\/)/, config.homeDir ?? "~"));
   if (!existsSync(resolved)) {
     throw new Error(`Path does not exist: ${resolved}`);
   }

@@ -6,6 +6,7 @@
 // the client — only login/name/avatar.
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes, createCipheriv, createDecipheriv, createHash } from "node:crypto";
+import { config } from "@codegraph/config";
 
 export const SESSION_COOKIE_NAME = "cg_session";
 export const SESSION_MAX_AGE_S = 60 * 60 * 24 * 30; // 30 days
@@ -20,7 +21,7 @@ export interface SessionPayload {
 }
 
 function sessionKey(): Buffer {
-  const secret = process.env.CG_SESSION_SECRET;
+  const secret = config.sessionSecret;
   if (!secret) throw new Error("CG_SESSION_SECRET is not set");
   return createHash("sha256").update(secret).digest(); // 32 bytes, fits AES-256
 }
@@ -62,8 +63,9 @@ export function decryptSession(cookieValue: string): SessionPayload | null {
 // explicitly; otherwise trust `x-forwarded-proto` (Render/any reverse proxy)
 // then the request's own scheme.
 export function requestIsSecure(req: NextRequest): boolean {
-  if (process.env.CG_FORCE_SECURE_COOKIES === "true") return true;
-  if (process.env.CG_FORCE_SECURE_COOKIES === "false") return false;
+  // Tri-state on purpose: an explicit setting wins, but "unset" means inspect
+  // the real transport below rather than assume anything from NODE_ENV.
+  if (config.forceSecureCookies !== undefined) return config.forceSecureCookies;
   const xfProto = req.headers.get("x-forwarded-proto");
   if (xfProto) return xfProto.split(",")[0]!.trim() === "https";
   return req.nextUrl.protocol === "https:";
@@ -79,7 +81,7 @@ export function getSession(req: NextRequest): SessionPayload | null {
 export function setSessionCookie(res: NextResponse, payload: SessionPayload, req?: NextRequest): void {
   res.cookies.set(SESSION_COOKIE_NAME, encryptSession(payload), {
     httpOnly: true,
-    secure: req ? requestIsSecure(req) : process.env.NODE_ENV === "production",
+    secure: req ? requestIsSecure(req) : config.isProduction,
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_MAX_AGE_S,
@@ -92,5 +94,5 @@ export function clearSessionCookie(res: NextResponse): void {
 
 /** Short-lived cookie options for the OAuth CSRF `state` + return-path values. */
 export function oauthTransitCookieOptions(req?: NextRequest) {
-  return { httpOnly: true, secure: req ? requestIsSecure(req) : process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/", maxAge: 600 };
+  return { httpOnly: true, secure: req ? requestIsSecure(req) : config.isProduction, sameSite: "lax" as const, path: "/", maxAge: 600 };
 }

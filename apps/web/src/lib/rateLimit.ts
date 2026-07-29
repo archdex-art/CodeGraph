@@ -7,6 +7,7 @@
 // unauthenticated routes that do real outbound network / filesystem / OAuth-
 // quota work per request; it is not a distributed DoS shield.
 import type { NextRequest } from "next/server";
+import { config } from "@codegraph/config";
 
 interface Bucket {
   tokens: number;
@@ -35,8 +36,8 @@ export interface RateLimitResult {
  *  a spoofable per-IP one. A missing header falls back to a constant so the
  *  limit is never silently disabled. */
 export function clientIp(req: NextRequest): string {
-  const hops = Number(process.env.CG_TRUSTED_PROXY_HOPS ?? 1);
-  const trustProxy = Number.isFinite(hops) && hops >= 1;
+  const hops = config.trustedProxyHops;
+  const trustProxy = hops >= 1;
   if (trustProxy) {
     const xff = req.headers.get("x-forwarded-for");
     if (xff) {

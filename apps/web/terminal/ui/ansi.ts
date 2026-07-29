@@ -2,7 +2,11 @@
  * Zero-dependency ANSI styling. Respects NO_COLOR / non-TTY.
  * Isolated here so the rest of the terminal layer never hardcodes escape codes.
  */
-const enabled = process.stdout.isTTY && process.env.NO_COLOR === undefined;
+import { config } from "@codegraph/config";
+
+// `isTTY` is process state, not configuration, so it stays a direct read;
+// NO_COLOR is an environment variable and goes through config like every other.
+const enabled = process.stdout.isTTY && !config.noColor;
 
 function wrap(open: number, close: number) {
   return (s: string | number): string => (enabled ? `\x1b[${open}m${s}\x1b[${close}m` : String(s));

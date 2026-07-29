@@ -14,7 +14,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "depcruise": "depcruise . --config .dependency-cruiser.cjs --ignore-known",
-    "depcruise:all": "depcruise . --config .dependency-cruiser.cjs --no-ignore-known"
+    "depcruise:all": "depcruise . --config .dependency-cruiser.cjs --no-ignore-known",
+    "boundaries": "python3 scripts/check_boundaries.py"
   },
   "devDependencies": {
     "dependency-cruiser": "^17.0.1",

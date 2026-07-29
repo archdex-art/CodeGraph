@@ -1,3 +1,5 @@
+import { config } from "@codegraph/config";
+
 // Local-filesystem access (folder browsing + "local folder" indexing) reads
 // and indexes arbitrary paths on whatever machine runs this server. That's
 // the whole point when self-hosting CodeGraph against your own disk — and a
@@ -7,10 +9,13 @@
 // host (a private VPC self-host, a single-operator box) with
 // CG_ALLOW_LOCAL_ACCESS=true; explicitly opt out of a permissive dev default
 // with CG_ALLOW_LOCAL_ACCESS=false.
+//
+// The tri-state default lives in @codegraph/config; this stays a function
+// rather than becoming a re-exported constant because callers treat it as a
+// runtime check and inlining `config.allowLocalAccess` at 6 call sites would
+// scatter the concept.
 export function localAccessAllowed(): boolean {
-  if (process.env.CG_ALLOW_LOCAL_ACCESS === "true") return true;
-  if (process.env.CG_ALLOW_LOCAL_ACCESS === "false") return false;
-  return process.env.NODE_ENV !== "production";
+  return config.allowLocalAccess;
 }
 
 export const LOCAL_ACCESS_DISABLED_MESSAGE =

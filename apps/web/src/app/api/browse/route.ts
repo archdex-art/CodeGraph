@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readdirSync, statSync, existsSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
+import { config } from "@codegraph/config";
 import { localAccessAllowed, LOCAL_ACCESS_DISABLED_MESSAGE } from "@/lib/localAccess";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
 
@@ -29,7 +30,7 @@ function resolveBrowsePath(input: string): string {
 // automatically mean full-filesystem read exposure. Off by default —
 // unset CG_LOCAL_ACCESS_ROOT preserves today's unrestricted behavior.
 function withinConfiguredRoot(target: string): boolean {
-  const configuredRoot = process.env.CG_LOCAL_ACCESS_ROOT;
+  const configuredRoot = config.localAccessRoot;
   if (!configuredRoot) return true;
   try {
     const rootReal = realpathSync(path.resolve(configuredRoot));

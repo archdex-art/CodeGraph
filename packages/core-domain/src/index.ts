@@ -18,8 +18,8 @@ export type {
   RunId,
   SymbolId,
   ViewerId,
-} from "./ids.js";
-export { findingId, jobId, repoId, runId, symbolId, viewerId } from "./ids.js";
+} from "./ids";
+export { findingId, jobId, repoId, runId, symbolId, viewerId } from "./ids";
 
 export type {
   AnalysisTier,
@@ -31,8 +31,8 @@ export type {
   FindingStatus,
   Severity,
   SourceRange,
-} from "./finding.js";
-export { tierRank } from "./finding.js";
+} from "./finding";
+export { tierRank } from "./finding";
 
 export type {
   AnalysisCoverage,
@@ -40,7 +40,7 @@ export type {
   DimensionScore,
   RunStatus,
   StageTiming,
-} from "./run.js";
+} from "./run";
 
-export type { FingerprintInput } from "./fingerprint.js";
-export { fingerprint, normalizeSnippet } from "./fingerprint.js";
+export type { FingerprintInput } from "./fingerprint";
+export { fingerprint, normalizeSnippet } from "./fingerprint";

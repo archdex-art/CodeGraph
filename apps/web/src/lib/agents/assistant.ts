@@ -21,6 +21,7 @@
 import { createSdkMcpServer, query, tool, type Options, type Query, type SdkMcpToolDefinition, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { childEnv } from "@codegraph/config";
 import { buildGitToolImpls, buildWorkspaceToolImpls } from "./workspaceToolImpls";
 import { effectiveAnthropicApiKey, effectiveClaudeModel, effectiveUseClaudeSubscription, claudeSubscriptionCredentialsAvailable, deploymentWideCredentialsAllowed, ANONYMOUS_USER_ID } from "../settings";
 import type { AssistantEvent } from "../types";
@@ -289,7 +290,11 @@ function getOrCreateSession(repoId: string, workspaceDir: string, hasGit: boolea
     // (`claude login`) or CLAUDE_CODE_OAUTH_TOKEN already present in this
     // process's environment -- billed against the Pro/Max/Team subscription
     // instead of per-token API usage. CodeGraph never sees those credentials.
-    env: apiKey ? { ...process.env, ANTHROPIC_API_KEY: apiKey } : { ...process.env },
+    // childEnv, not a config value: the SDK spawns its own Claude Code CLI,
+    // which needs the whole inherited environment. When falling back to a
+    // subscription login, ANTHROPIC_API_KEY is left absent entirely rather than
+    // set to an empty string, so the CLI reaches for its own stored login.
+    env: childEnv(apiKey ? { ANTHROPIC_API_KEY: apiKey } : {}),
   };
 
   const q = query({ prompt: input, options });

@@ -3,9 +3,10 @@
 // they see. No server-side app registration/state beyond env vars — the
 // access token is handed to lib/session.ts's caller to encrypt into a cookie
 // and is never written to disk here.
+import { config } from "@codegraph/config";
 
 export function githubOAuthConfigured(): boolean {
-  return !!(process.env.GITHUB_OAUTH_CLIENT_ID && process.env.GITHUB_OAUTH_CLIENT_SECRET && process.env.CG_SESSION_SECRET);
+  return !!(config.githubOauthClientId && config.githubOauthClientSecret && config.sessionSecret);
 }
 
 /** Parses CG_OWNER_GITHUB_LOGIN into a lowercased allowlist, or `null` if
@@ -13,7 +14,7 @@ export function githubOAuthConfigured(): boolean {
  *  GitHub accounts private" model applies unchanged). Comma-separated so an
  *  operator can allow a small team, not just a single account. */
 export function ownerLoginAllowlist(): string[] | null {
-  const raw = process.env.CG_OWNER_GITHUB_LOGIN;
+  const raw = config.ownerGithubLogin;
   if (!raw?.trim()) return null;
   const logins = raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
   return logins.length > 0 ? logins : null;
@@ -34,7 +35,7 @@ export function isAllowedOwnerLogin(login: string): boolean {
 // for building an OAuth redirect_uri that must exactly match what's
 // registered on the GitHub OAuth App) over deriving one from the request.
 export function publicBaseUrl(requestOrigin: string): string {
-  return process.env.NEXT_PUBLIC_APP_URL || requestOrigin;
+  return config.publicAppUrl ?? requestOrigin;
 }
 
 // `repo` scope is required for GitHub's classic OAuth to read/clone PRIVATE
@@ -45,7 +46,7 @@ const SCOPES = "repo read:user";
 
 export function buildAuthorizeUrl(state: string, redirectUri: string): string {
   const params = new URLSearchParams({
-    client_id: process.env.GITHUB_OAUTH_CLIENT_ID!,
+    client_id: config.githubOauthClientId!,
     redirect_uri: redirectUri,
     scope: SCOPES,
     state,
@@ -59,8 +60,8 @@ export async function exchangeCodeForToken(code: string, redirectUri: string): P
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
-      client_id: process.env.GITHUB_OAUTH_CLIENT_ID,
-      client_secret: process.env.GITHUB_OAUTH_CLIENT_SECRET,
+      client_id: config.githubOauthClientId,
+      client_secret: config.githubOauthClientSecret,
       code,
       redirect_uri: redirectUri,
     }),

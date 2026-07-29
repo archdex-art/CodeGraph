@@ -25,6 +25,7 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
+import { config } from "@codegraph/config";
 import { db } from "./db";
 import { githubOAuthConfigured, ownerLoginAllowlist } from "./githubOAuth";
 
@@ -201,7 +202,7 @@ export function effectiveLocalModelList(userId: number = ANONYMOUS_USER_ID): str
 export function effectiveAnthropicApiKey(userId: number = ANONYMOUS_USER_ID): string | undefined {
   const saved = getAssistantSettings(userId).anthropicApiKey;
   if (saved) return saved;
-  return deploymentWideCredentialsAllowed() ? process.env.ANTHROPIC_API_KEY || undefined : undefined;
+  return deploymentWideCredentialsAllowed() ? config.anthropicApiKey || undefined : undefined;
 }
 
 /** The Claude model alias/id to use (e.g. "sonnet", "opus", "haiku"), or
@@ -209,7 +210,7 @@ export function effectiveAnthropicApiKey(userId: number = ANONYMOUS_USER_ID): st
  *  Not a credential -- a shared deployment-default model *preference* is
  *  harmless to expose to every user, so this one is never gated. */
 export function effectiveClaudeModel(userId: number = ANONYMOUS_USER_ID): string | undefined {
-  return getAssistantSettings(userId).claudeModel || process.env.CG_CLAUDE_MODEL || undefined;
+  return getAssistantSettings(userId).claudeModel || config.claudeModel || undefined;
 }
 
 /** Whether the Claude backend should authenticate via a Claude Pro/Max/Team
@@ -227,7 +228,7 @@ export function effectiveClaudeModel(userId: number = ANONYMOUS_USER_ID): string
  *  process -- offering it to arbitrary users would mean they're all
  *  silently chatting through the operator's own subscription. */
 export function effectiveUseClaudeSubscription(userId: number = ANONYMOUS_USER_ID): boolean {
-  return getAssistantSettings(userId).useClaudeSubscription === "true" || process.env.CG_CLAUDE_USE_SUBSCRIPTION === "true";
+  return getAssistantSettings(userId).useClaudeSubscription === "true" || config.claudeUseSubscription;
 }
 
 // The Claude Code CLI persists a subscription login to `~/.claude/.credentials.json`
@@ -259,7 +260,7 @@ const CLAUDE_CREDENTIALS_PATH = path.join(homedir(), ".claude", ".credentials.js
  *  multi-tenant gate on top of this, since a `CLAUDE_CODE_OAUTH_TOKEN`
  *  represents one shared Claude.ai account for the whole process. */
 export function claudeSubscriptionCredentialsAvailable(): boolean {
-  return !!process.env.CLAUDE_CODE_OAUTH_TOKEN || existsSync(CLAUDE_CREDENTIALS_PATH);
+  return !!config.claudeCodeOauthToken || existsSync(CLAUDE_CREDENTIALS_PATH);
 }
 
 export interface EffectiveLocalLlmConfig {
@@ -278,10 +279,10 @@ export interface EffectiveLocalLlmConfig {
 export function effectiveLocalLlmConfig(userId: number = ANONYMOUS_USER_ID): EffectiveLocalLlmConfig | null {
   const s = getAssistantSettings(userId);
   const allowEnv = deploymentWideCredentialsAllowed();
-  const baseUrl = s.localBaseUrl || (allowEnv ? process.env.CG_LOCAL_LLM_BASE_URL : undefined);
-  const model = s.localModel || (allowEnv ? process.env.CG_LOCAL_LLM_MODEL : undefined);
+  const baseUrl = s.localBaseUrl || (allowEnv ? config.localLlmBaseUrl : undefined);
+  const model = s.localModel || (allowEnv ? config.localLlmModel : undefined);
   if (!baseUrl || !model) return null;
-  const apiKey = s.localApiKey || (allowEnv ? process.env.CG_LOCAL_LLM_API_KEY : undefined) || "local";
+  const apiKey = s.localApiKey || (allowEnv ? config.localLlmApiKey : undefined) || "local";
   return { baseUrl, model, apiKey };
 }
 
@@ -322,18 +323,18 @@ export interface AssistantSettingsView {
 export function viewAssistantSettings(userId: number = ANONYMOUS_USER_ID): AssistantSettingsView {
   const s = getAssistantSettings(userId);
   const allowEnv = deploymentWideCredentialsAllowed();
-  const anthropicKey = s.anthropicApiKey || (allowEnv ? process.env.ANTHROPIC_API_KEY : undefined) || null;
-  const localApiKey = s.localApiKey || (allowEnv ? process.env.CG_LOCAL_LLM_API_KEY : undefined) || null;
+  const anthropicKey = s.anthropicApiKey || (allowEnv ? config.anthropicApiKey : undefined) || null;
+  const localApiKey = s.localApiKey || (allowEnv ? config.localLlmApiKey : undefined) || null;
   return {
     anthropicApiKeySet: !!anthropicKey,
     anthropicApiKeyMasked: mask(anthropicKey),
     anthropicApiKeySavedInDb: !!s.anthropicApiKey,
-    claudeModel: s.claudeModel || process.env.CG_CLAUDE_MODEL || null,
+    claudeModel: s.claudeModel || config.claudeModel || null,
     claudeModelSavedInDb: !!s.claudeModel,
     useClaudeSubscription: effectiveUseClaudeSubscription(userId),
     claudeSubscriptionUsable: claudeSubscriptionCredentialsAvailable() && allowEnv,
-    localBaseUrl: s.localBaseUrl || (allowEnv ? process.env.CG_LOCAL_LLM_BASE_URL : undefined) || null,
-    localModel: s.localModel || (allowEnv ? process.env.CG_LOCAL_LLM_MODEL : undefined) || null,
+    localBaseUrl: s.localBaseUrl || (allowEnv ? config.localLlmBaseUrl : undefined) || null,
+    localModel: s.localModel || (allowEnv ? config.localLlmModel : undefined) || null,
     localModelList: effectiveLocalModelList(userId),
     localApiKeySet: !!localApiKey,
     localApiKeyMasked: mask(localApiKey),

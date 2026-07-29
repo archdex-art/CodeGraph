@@ -1,4 +1,4 @@
-import type { FindingId, RunId, SymbolId } from "./ids.js";
+import type { FindingId, RunId, SymbolId } from "./ids";
 
 /** Repo-relative, posix-separated source location. 1-indexed (LLD §2). */
 export interface SourceRange {

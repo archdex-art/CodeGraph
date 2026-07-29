@@ -4,11 +4,16 @@
 // branch names, commit messages, or file paths.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { childEnv } from "@codegraph/config";
 import type { GitBranch, GitLogEntry, GitStatus, GitStatusEntry, GitFileStatus } from "./types";
 
 const exec = promisify(execFile);
 
-const GIT_ENV = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
+// childEnv rather than a config value: git needs the inherited environment
+// (PATH, HOME, SSH_AUTH_SOCK, proxy vars) to function. GIT_TERMINAL_PROMPT=0
+// makes a credential prompt fail fast instead of hanging the request forever.
+// Snapshotted at module load, exactly as before.
+const GIT_ENV = childEnv({ GIT_TERMINAL_PROMPT: "0" });
 
 /** True iff `url`'s host is exactly `github.com` — the only host we ever
  *  attach a GitHub OAuth/PAT token to. Every call site that embeds a token

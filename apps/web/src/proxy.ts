@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+// Aliased: this module already exports its own `config` (Next's proxy matcher).
+import { config as appConfig } from "@codegraph/config";
 import { checkBasicAuth } from "@/lib/basicAuth";
 import { githubOAuthConfigured, isAllowedOwnerLogin, ownerLoginAllowlist } from "@/lib/githubOAuth";
 import { getSession } from "@/lib/session";
@@ -35,9 +37,9 @@ export function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   if (pathname === "/api/health") return NextResponse.next();
 
-  const password = process.env.CG_BASIC_AUTH_PASSWORD;
+  const password = appConfig.basicAuthPassword;
   if (password) {
-    const expectedUser = process.env.CG_BASIC_AUTH_USER || "codegraph";
+    const expectedUser = appConfig.basicAuthUser;
     if (!checkBasicAuth(req.headers.get("authorization"), expectedUser, password)) {
       return new NextResponse("Authentication required", {
         status: 401,

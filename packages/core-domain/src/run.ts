@@ -1,5 +1,5 @@
-import type { AnalysisTier, Dimension } from "./finding.js";
-import type { RepoId, RunId } from "./ids.js";
+import type { AnalysisTier, Dimension } from "./finding";
+import type { RepoId, RunId } from "./ids";
 
 /**
  * What the analysis actually managed to look at (HLD §8.3, ADR-008).
