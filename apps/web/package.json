@@ -22,6 +22,7 @@
     "@codegraph/core-domain": "*",
     "@codegraph/core-graph": "*",
     "@codegraph/fsx": "*",
+    "@codegraph/jobs": "*",
     "@codegraph/observability": "*",
     "@codegraph/persistence": "*",
     "@codegraph/vcs": "*",

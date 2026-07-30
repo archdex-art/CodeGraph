@@ -1,7 +1,9 @@
-import { initTreeSitter } from "./codeintel/ast-extractor";
+import { initTreeSitter } from "@codegraph/core-graph";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import type { ViewerId } from "@codegraph/core-domain";
+import { config } from "@codegraph/config";
+import { createJobQueue } from "@codegraph/jobs";
 import {
   completeRepoIndex,
   dataDir,
@@ -22,10 +24,17 @@ import {
   updateJob,
   type RepoRow,
 } from "@codegraph/persistence";
-import { cloneRepo, indexRepo, cleanup, resolveLocalDir } from "./indexer";
-import { withToken, isGithubHost, getHeadHash } from "@codegraph/vcs";
+import { indexRepo } from "@codegraph/analysis";
+import { cleanup, cloneRepo, getHeadHash, isGithubHost, resolveLocalDir, withToken } from "@codegraph/vcs";
 import { emptyTrash } from "./trash";
 import type { FleetRepo, Job, JobStatus, RepoDetail, RepoSummary, SaveMode, SourceType, VizGraph, IndexResult } from "./types";
+
+/**
+ * Built lazily rather than at module load: this module is imported by route files
+ * that Next may evaluate during build, and constructing the queue opens SQLite.
+ */
+let queue: ReturnType<typeof createJobQueue> | null = null;
+const jobQueue = (): ReturnType<typeof createJobQueue> => (queue ??= createJobQueue());
 
 /**
  * Application-level repo/job operations.
@@ -65,12 +74,39 @@ function parseColumn<T>(raw: string | null | undefined, fallback: T): T {
   }
 }
 
+export type CreateIndexJobResult =
+  | { readonly ok: true; readonly jobId: string; readonly repoId: string; readonly deduplicated: boolean }
+  /**
+   * The per-repo mutex refused. Not an error: submitting the same repository twice
+   * (double-click, two tabs) is an ordinary thing to do, and the caller wants the
+   * in-flight job's id so it can attach to that progress stream.
+   */
+  | { readonly ok: false; readonly reason: "repo-busy"; readonly jobId: string; readonly repoId: string };
+
+/**
+ * Enqueue an analysis run.
+ *
+ * P2 cutover: this used to end in `void runJob(...)` — fire-and-forget inside the web
+ * process, which is what made a parse able to OOM the server (ADR-001). It now writes
+ * a queued row and returns; `apps/worker` claims it and runs it in a child process
+ * that dies with the job, reclaiming the WASM heap.
+ *
+ * IDEMPOTENCY IS NARROWER THAN HLD §418 SPECIFIES, deliberately. §418 wants
+ * `hash(repoId, commitSha, engineVersion)`, so re-submitting the same commit returns
+ * the existing run. That cannot be computed here: the commit is unknown until the repo
+ * is cloned, which is the worker's first step. Keying on the freshly-minted `repoId`
+ * would make every key unique and the column decorative — worse than honest absence,
+ * because it would look implemented. The commit-aware key belongs with P6's
+ * baseline/PR-scoped work, which is the phase that needs `commitSha` before enqueue
+ * anyway. What IS enforced today is the per-repo mutex below, which covers the failure
+ * §418 is really guarding: two concurrent runs on one workspace directory.
+ */
 export function createIndexJob(
   source: string,
   sourceType: SourceType,
   githubToken?: string,
   ownerId?: number | null,
-): { jobId: string; repoId: string } {
+): CreateIndexJobResult {
   const repoId = randomUUID();
   const jobId = randomUUID();
   const name = sourceType === "git" ? gitName(source) : path.basename(source.replace(/\/+$/, "")) || source;
@@ -83,83 +119,46 @@ export function createIndexJob(
     ownerId: ownerId ?? null,
     createdAt: Date.now(),
   });
-  insertJob(jobId, repoId);
 
-  // Fire-and-forget: runs in the Node server process.
-  void runJob(jobId, repoId, source, sourceType, githubToken);
-  return { jobId, repoId };
-}
-
-function setJob(jobId: string, status: JobStatus, progress: number, message: string, error?: string): void {
-  updateJob(jobId, status, progress, message, error);
-}
-
-async function runJob(
-  jobId: string,
-  repoId: string,
-  source: string,
-  sourceType: SourceType,
-  githubToken?: string,
-): Promise<void> {
-  try {
-    let root: string;
-    if (sourceType === "git") {
-      setJob(jobId, "cloning", 15, "Cloning repository…");
-      setRepoStatus(repoId, "cloning");
-      // Clone straight into the persistent data dir (not os.tmpdir()) so the
-      // editor's workspace survives process restarts / container redeploys.
-      const workspaceDir = path.join(dataDir(), "workspaces", repoId);
-      // Only ever hand the signed-in user's token to github.com itself —
-      // never to whatever host is in `source`, so a signed-in session can't
-      // be tricked into leaking its GitHub token to a third-party remote.
-      const cloneUrl = githubToken && isGithubHost(source) ? withToken(source, githubToken) : source;
-      root = await cloneRepo(cloneUrl, workspaceDir);
-    } else {
-      setJob(jobId, "cloning", 15, "Reading local folder…");
-      setRepoStatus(repoId, "cloning");
-      root = resolveLocalDir(source);
-    }
-
-    setJob(jobId, "indexing", 30, "Initializing Tree-sitter parsers…");
-    await initTreeSitter();
-
-    setJob(jobId, "indexing", 55, "Building knowledge graph…");
-    setRepoStatus(repoId, "indexing");
-    const result = await indexRepo(root);
-
-    setJob(jobId, "scoring", 85, "Computing Health Score…");
-    setRepoStatus(repoId, "scoring");
-
-    // Only git sources have a meaningful commit hash (a local-folder source
-    // is never even guaranteed to be a git repo). Recording it lets the
-    // Timeline engine reuse this exact result for its HEAD entry instead of
-    // re-deriving it from scratch via git-archive + a second full index pass.
-    const headHash = sourceType === "git" ? await getHeadHash(root) : null;
-
-    completeRepoIndex(repoId, {
-      score: result.score,
-      loc: result.loc,
-      languages: JSON.stringify(result.languages),
-      graph: JSON.stringify(result.graphStats),
-      dimensions: JSON.stringify(result.dimensions),
-      issues: JSON.stringify(result.issues),
-      deps: JSON.stringify(result.dependencies),
-      churnByFile: JSON.stringify(result.churnByFile),
-      viz: JSON.stringify(result.viz),
-      tree: JSON.stringify(result.tree),
-      modules: JSON.stringify(result.modules),
-      symbols: JSON.stringify(result.symbolGraph),
-      workspaceDir: root,
-      headHash,
-      finishedAt: Date.now(),
-    });
-    setJob(jobId, "done", 100, `Done — Health Score ${result.score}/100`);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    setJob(jobId, "error", 100, "Indexing failed", msg);
-    setRepoError(repoId, "error", msg);
+  // STRANGLER-FIG FLIP (LLD §13.1 step 4, the pattern `CG_ENGINE=v1|v2|both` uses).
+  //
+  // Default is the inline path, and that is not timidity — it is the only correct
+  // default until the worker is DEPLOYABLE. Measured today: the container runs
+  // `CMD ["node", "apps/web/server.js"]` and nothing else, and `tsx` is absent from
+  // the standalone runtime, so a queued job in production would sit unclaimed
+  // forever. Enqueuing by default would have turned "indexing is slow" into
+  // "indexing silently never happens", which is strictly worse than the OOM it
+  // replaces.
+  //
+  // Flip to `true` in the same commit that (a) compiles the worker to JS and (b) runs
+  // it alongside the web process in the container. The 512 MB two-concurrent-job
+  // smoke test is what proves that commit, and it is the real exit criterion for P2.
+  if (!config.useWorker) {
+    insertJob(jobId, repoId);
+    void runJob(jobId, repoId, source, sourceType, githubToken);
+    return { ok: true, jobId, repoId, deduplicated: false };
   }
+
+  const queued = jobQueue().enqueue({
+    id: jobId,
+    repoId,
+    kind: "analyze",
+    payload: {
+      repoId,
+      source,
+      sourceType,
+      // Session-scoped and never persisted beyond this row. The worker only ever
+      // sends it to github.com — see the handler.
+      ...(githubToken ? { githubToken } : {}),
+    },
+  });
+
+  if (!queued.ok) {
+    return { ok: false, reason: "repo-busy", jobId: queued.activeJobId, repoId };
+  }
+  return { ok: true, jobId: queued.jobId, repoId, deduplicated: queued.deduplicated };
 }
+
 
 export function getJob(jobId: string): Job | null {
   const r = findJob(jobId);
@@ -340,4 +339,75 @@ export function getSaveMode(id: string): SaveMode {
 
 export function setSaveMode(id: string, mode: SaveMode): void {
   writeSaveMode(id, mode);
+}
+
+function setJob(jobId: string, status: JobStatus, progress: number, message: string, error?: string): void {
+  updateJob(jobId, status, progress, message, error);
+}
+
+async function runJob(
+  jobId: string,
+  repoId: string,
+  source: string,
+  sourceType: SourceType,
+  githubToken?: string,
+): Promise<void> {
+  try {
+    let root: string;
+    if (sourceType === "git") {
+      setJob(jobId, "cloning", 15, "Cloning repository…");
+      setRepoStatus(repoId, "cloning");
+      // Clone straight into the persistent data dir (not os.tmpdir()) so the
+      // editor's workspace survives process restarts / container redeploys.
+      const workspaceDir = path.join(dataDir(), "workspaces", repoId);
+      // Only ever hand the signed-in user's token to github.com itself —
+      // never to whatever host is in `source`, so a signed-in session can't
+      // be tricked into leaking its GitHub token to a third-party remote.
+      const cloneUrl = githubToken && isGithubHost(source) ? withToken(source, githubToken) : source;
+      root = await cloneRepo(cloneUrl, workspaceDir);
+    } else {
+      setJob(jobId, "cloning", 15, "Reading local folder…");
+      setRepoStatus(repoId, "cloning");
+      root = resolveLocalDir(source);
+    }
+
+    setJob(jobId, "indexing", 30, "Initializing Tree-sitter parsers…");
+    await initTreeSitter();
+
+    setJob(jobId, "indexing", 55, "Building knowledge graph…");
+    setRepoStatus(repoId, "indexing");
+    const result = await indexRepo(root);
+
+    setJob(jobId, "scoring", 85, "Computing Health Score…");
+    setRepoStatus(repoId, "scoring");
+
+    // Only git sources have a meaningful commit hash (a local-folder source
+    // is never even guaranteed to be a git repo). Recording it lets the
+    // Timeline engine reuse this exact result for its HEAD entry instead of
+    // re-deriving it from scratch via git-archive + a second full index pass.
+    const headHash = sourceType === "git" ? await getHeadHash(root) : null;
+
+    completeRepoIndex(repoId, {
+      score: result.score,
+      loc: result.loc,
+      languages: JSON.stringify(result.languages),
+      graph: JSON.stringify(result.graphStats),
+      dimensions: JSON.stringify(result.dimensions),
+      issues: JSON.stringify(result.issues),
+      deps: JSON.stringify(result.dependencies),
+      churnByFile: JSON.stringify(result.churnByFile),
+      viz: JSON.stringify(result.viz),
+      tree: JSON.stringify(result.tree),
+      modules: JSON.stringify(result.modules),
+      symbols: JSON.stringify(result.symbolGraph),
+      workspaceDir: root,
+      headHash,
+      finishedAt: Date.now(),
+    });
+    setJob(jobId, "done", 100, `Done — Health Score ${result.score}/100`);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    setJob(jobId, "error", 100, "Indexing failed", msg);
+    setRepoError(repoId, "error", msg);
+  }
 }

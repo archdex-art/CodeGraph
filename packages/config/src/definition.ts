@@ -46,6 +46,18 @@ export interface Config {
   readonly analysisBudgetMs: number;
 
   // ---------- worker (HLD §5.1, LLD §10.3) ----------
+  /**
+   * Route analysis through the job queue and `apps/worker` instead of running it
+   * inline in the web process (ADR-001).
+   *
+   * Defaults to FALSE, and the default is load-bearing rather than cautious: as of
+   * this phase the container starts only the web server and `tsx` is absent from the
+   * standalone runtime, so a queued job would never be claimed. Enqueuing by default
+   * would replace a slow index with one that silently never runs. Flips to true in
+   * the commit that makes the worker deployable and passes the 512 MB
+   * two-concurrent-job smoke test.
+   */
+  readonly useWorker: boolean;
   readonly workerConcurrency: number;
   readonly workerPollIntervalMs: number;
   readonly workerLeaseMs: number;
@@ -123,6 +135,8 @@ export function buildSchema(options: LoadOptions = {}): Schema {
      * which only grows — so raising this multiplies the exposure to the exact
      * failure the worker exists to contain. Raise it only with real headroom.
      */
+    useWorker: boolVar("CG_USE_WORKER", () => false),
+
     workerConcurrency: intVar("CG_WORKER_CONCURRENCY", { fallback: 1, min: 1, max: 8 }),
 
     /**
