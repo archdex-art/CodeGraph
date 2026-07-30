@@ -1,43 +1,5 @@
-import type { FileEdit } from "./executor-types";
+import type { FileEdit, Fixer, FixerInput, FixerOutput } from "../types";
 
-export interface FixerInput {
-  rel: string; // posix repo-relative path
-  ext: string;
-  lines: string[];
-}
-
-export interface FixerOutput {
-  lines: string[]; // possibly mutated
-  edits: FileEdit[];
-}
-
-/**
- * A Fixer is a safe, deterministic codemod over a single file's lines.
- * SAFETY BAR: only transformations that (a) cannot change program behavior in the
- * common case and (b) remove an issue the scorer actually counts. This keeps the
- * executor's "verified" claim honest — re-indexing must show the score improve.
- */
-export interface Fixer {
-  id: string;
-  label: string;
-  /**
-   * The rule ids this fixer can fix — "THE binding v1 lacks entirely" (LLD §7.1),
-   * review item C1.
-   *
-   * Without it there is no relation between a finding and a fixer, and the consequence was
-   * concrete rather than theoretical: `POST /api/repos/:id/fix` ran ALL THREE fixers over
-   * EVERY file, so clicking a P0 "untrusted input reaches eval()" finding produced a diff
-   * deleting `console.log` in 27 unrelated files. The ranked plan and the executor were two
-   * disconnected systems that the UI implied were one.
-   *
-   * Ids are the `legacy/<slugged-title>` form that migration 003 assigns, because that is
-   * what findings in the database actually carry today. P5's rule registry replaces them
-   * with real ids, and this field is the seam that makes that a rename rather than a
-   * redesign.
-   */
-  handles: readonly string[];
-  apply(input: FixerInput): FixerOutput;
-}
 
 /**
  * Slug a finding title into the rule id migration 003 assigns.

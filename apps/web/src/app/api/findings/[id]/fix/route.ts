@@ -3,7 +3,7 @@ import { logger } from "@codegraph/observability";
 import { findingById, repoIdForFinding } from "@codegraph/persistence";
 import { repoAccessDenied, viewerId } from "@/lib/authz";
 import { executeFixes } from "@/lib/agents/executor";
-import { fixersForRule } from "@/lib/agents/fixers";
+import { fixersForRule } from "@codegraph/remediate-engine";
 import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { getRepo } from "@/lib/store";
 

@@ -3,7 +3,7 @@ import { execSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { FIXERS, fixerById } from "@/lib/agents/fixers";
+import { FIXERS, fixerById } from "@codegraph/remediate-engine";
 import { executeFixes } from "@/lib/agents/executor";
 import type { RepoDetail } from "@/lib/types";
 

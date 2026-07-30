@@ -9,7 +9,7 @@ import { cloneRepo, resolveLocalDir, indexRepo, cleanup } from "../indexer";
 import { redactCredentials } from "@codegraph/vcs";
 import { isGithubHost } from "@codegraph/vcs";
 import { parseGithubRepo, getDefaultBranch, createPullRequest, GitHubApiError } from "@codegraph/vcs";
-import { FIXERS } from "./fixers";
+import { candidateFor, FIXERS, parseCheck } from "@codegraph/remediate-engine";
 import type { ExecutionStep, FileEdit, FixResult, PRDraft } from "./executor-types";
 import type { VerificationRecord } from "@codegraph/verify";
 import { logger } from "@codegraph/observability";
@@ -25,7 +25,8 @@ import {
   type FixCandidate,
   type GateResult,
 } from "@codegraph/verify";
-import { canIsolateTests, createSandbox, detectTestRunner, hasTypeConfig } from "./sandbox";
+import { canIsolateTests } from "./sandbox";
+import { createSandbox, detectTestRunner, hasTypeConfig } from "@codegraph/sandbox";
 
 const SKIP: Record<string, true> = {
   ".git": true, node_modules: true, dist: true, build: true, ".next": true,
@@ -271,7 +272,7 @@ export async function executeFixes(
     const targetFingerprint = scope?.targetFingerprint ?? null;
 
     const gates: GateResult[] = [];
-    const candidate = candidateFor(allEdits, scope);
+    const candidate = candidateFor(allEdits, scope ? scope.fixerIds.join("+") : "legacy-batch");
 
     gates.push(
       await syntaxGate(candidate, sandbox, parseCheck, async (abs) => readFileSync(abs, "utf8"))
@@ -507,72 +508,3 @@ function fingerprintOf(issue: { title?: string; file?: string }): string {
  * attribution. Gate 4 is weakened to "the batch removed this finding", which is why the
  * per-finding `/fix` route is the next piece of P3 rather than a later nicety.
  */
-function candidateFor(edits: readonly FileEdit[], scope?: FixScope): FixCandidate {
-  const files = [...new Set(edits.map((e) => e.file))];
-  return {
-    findingId: "" as FixCandidate["findingId"],
-    // Naming the actual providers for a scoped run, so the record does not describe a
-    // targeted single-finding fix as `legacy-batch`. The batch path keeps that name because
-    // it IS a batch.
-    providerId: scope ? scope.fixerIds.join("+") : "legacy-batch",
-    edits: files.map((file) => ({
-      range: { file, startLine: 1, startCol: 0, endLine: 1, endCol: 0 },
-      newText: "",
-    })),
-    explanation: `${edits.length} deterministic edit(s) across ${files.length} file(s)`,
-    confidence: 1,
-  };
-}
-
-/**
- * Gate 1's parse check.
- *
- * Deliberately NOT a full parser. `@codegraph/verify` takes `parse` injected precisely so it
- * depends on no language plugin, and the plugin that would answer properly arrives in P5
- * (`lang-typescript` at `full` tier). What is checkable now without one is balance of
- * brackets and quotes, which is exactly the damage a line-deleting fixer does — review B1
- * shipped an edit that left `if (x)` with no body.
- *
- * It is honest about being weak: it reports `ok` for anything it cannot disprove, so it
- * catches the destructive case and never blocks a valid fix it does not understand.
- */
-function parseCheck(file: string, text: string): { ok: boolean; error?: string } {
-  if (!/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file)) return { ok: true };
-
-  let depth = 0;
-  let inString: string | null = null;
-  let inLineComment = false;
-  let inBlockComment = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    const next = text[i + 1];
-
-    if (inLineComment) {
-      if (c === "\n") inLineComment = false;
-      continue;
-    }
-    if (inBlockComment) {
-      if (c === "*" && next === "/") { inBlockComment = false; i++; }
-      continue;
-    }
-    if (inString) {
-      if (c === "\\") { i++; continue; }
-      if (c === inString) inString = null;
-      continue;
-    }
-    if (c === "/" && next === "/") { inLineComment = true; i++; continue; }
-    if (c === "/" && next === "*") { inBlockComment = true; i++; continue; }
-    if (c === '"' || c === "'" || c === "`") { inString = c; continue; }
-    if (c === "{" || c === "(" || c === "[") depth++;
-    if (c === "}" || c === ")" || c === "]") {
-      depth--;
-      if (depth < 0) return { ok: false, error: "unbalanced closing bracket" };
-    }
-  }
-
-  if (depth !== 0) return { ok: false, error: `unbalanced brackets (depth ${depth})` };
-  if (inString) return { ok: false, error: "unterminated string literal" };
-  if (inBlockComment) return { ok: false, error: "unterminated block comment" };
-  return { ok: true };
-}

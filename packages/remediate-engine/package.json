@@ -1,0 +1,19 @@
+{
+  "name": "@codegraph/remediate-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@codegraph/core-domain": "*",
+    "@codegraph/observability": "*",
+    "@codegraph/verify": "*",
+    "typescript": "*"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

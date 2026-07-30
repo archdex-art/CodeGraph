@@ -20,6 +20,6 @@ export default defineConfig({
     // separate config (electron mocks, its own `include`) and a Playwright e2e suite
     // that a root glob would try to collect. Its tests run from the desktop job in
     // CI. See `apps/desktop/vitest.config.ts`.
-    projects: ["apps/web", "apps/worker", "packages/*"],
+    projects: ["apps/cli", "apps/web", "apps/worker", "packages/*"],
   },
 });

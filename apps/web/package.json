@@ -11,9 +11,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "cg": "tsx terminal/cli.ts"
   },
-  "bin": {
-    "codegraph": "terminal/bin.mjs"
-  },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.211",
     "@codegraph/analysis": "*",
@@ -25,6 +22,8 @@
     "@codegraph/jobs": "*",
     "@codegraph/observability": "*",
     "@codegraph/persistence": "*",
+    "@codegraph/remediate-engine": "*",
+    "@codegraph/sandbox": "*",
     "@codegraph/vcs": "*",
     "@codegraph/verify": "*",
     "@modelcontextprotocol/sdk": "^1.29.0",

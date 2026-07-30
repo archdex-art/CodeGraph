@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIXERS, fixersForRule, legacyRuleIdFor } from "@/lib/agents/fixers";
+import { FIXERS, fixersForRule, legacyRuleIdFor } from "@codegraph/remediate-engine";
 
 /**
  * The finding→fixer binding (review C1, LLD §7.1's `handles`).

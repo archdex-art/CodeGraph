@@ -1,7 +1,7 @@
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { FIXERS } from "@/lib/agents/fixers";
-import { deletableDebugLines } from "@/lib/agents/ast-guards";
+import { FIXERS } from "@codegraph/remediate-engine";
+import { deletableDebugLines } from "@codegraph/remediate-engine";
 
 /**
  * Review B1's structural cure: the debug fixer decides from the AST, not from a line scan.

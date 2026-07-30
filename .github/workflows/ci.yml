@@ -59,6 +59,20 @@ jobs:
       - name: Module boundary check
         run: python3 scripts/check_boundaries.py
 
+      # Every workspace must declare `typecheck` and `test`, and any workspace
+      # with a vitest config must appear in `test.projects`. Both root scripts
+      # skip silently otherwise: `--workspaces --if-present` passes over a
+      # missing script, and `vitest run` collects from `test.projects` rather
+      # than the workspace list.
+      #
+      # This is not theoretical. `apps/cli`, `packages/sandbox`, and
+      # `packages/remediate-engine` were created, imported, and green while
+      # entirely unchecked — a deliberate type error in apps/cli produced 0
+      # errors. Adding the script surfaced 14 real ones, including `--rule`
+      # with no value silently binding undefined and running every fixer.
+      - name: Workspace gate coverage
+        run: python3 scripts/check_workspace_scripts.py
+
       - name: Unit tests
         run: npm run test
 

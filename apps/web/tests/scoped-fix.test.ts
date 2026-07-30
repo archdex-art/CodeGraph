@@ -10,7 +10,7 @@ process.env["CG_ALLOW_LOCAL_ACCESS"] = "true";
 const P = await import("@codegraph/persistence");
 const { indexRepo } = await import("@codegraph/analysis");
 const { executeFixes } = await import("@/lib/agents/executor");
-const { fixersForRule } = await import("@/lib/agents/fixers");
+const { fixersForRule } = await import("@codegraph/remediate-engine");
 
 const repos: string[] = [];
 

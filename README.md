@@ -108,6 +108,39 @@ Open `http://localhost:4000`, paste a public repo URL — e.g. `https://github.c
 
 No sign-up, no API key, nothing to configure for this path.
 
+### The CLI — where `verified` means the most
+
+```bash
+node apps/cli/bin.mjs fix . --verify
+```
+
+Gate 3 of verification runs **your** test suite, and that needs an isolated container. A hosted
+instance cannot provide one, so it reports `verified: partial` and says so. On your machine —
+your toolchain, your dependencies, your call on isolation — it reports `verified: full`.
+
+```
+Applied 3 edit(s) across 1 file(s)
+Health  85 → 93   5 → 2 issues
+
+Verification: full
+  ✓ syntax     0ms — 1 file(s) re-parsed
+  − types      0ms — no tsconfig.json in the project
+  ✓ tests      205ms — npm test --silent
+  ✓ reanalysis 186ms — no new findings introduced; no target finding was named, so this
+                       does not prove a specific finding was fixed
+```
+
+That last line is the tool refusing to overstate: a batch run cannot attribute an edit to one
+finding, so it verifies "nothing new broke" and says so rather than implying more. Fix a single
+finding from the UI and gate 4 makes the stronger claim — that *this* finding's fingerprint is
+gone.
+
+Your source is never modified: the work happens in a temp copy and you get a unified diff to
+pipe into `git apply`. The exit code is the verdict, so it works as a pre-commit hook — `0` for
+verified, `1` for a gate that rejected the patch.
+
+`--rule <id>` narrows to one rule, `--file <path>` to one file, `--json` for machine output.
+
 ## Installation & deployment
 
 | Mode | Command | Notes |

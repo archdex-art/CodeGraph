@@ -147,11 +147,19 @@ export async function testsGate(
     readonly canIsolate: boolean;
     readonly detectRunner: () => Promise<{ command: string; args: readonly string[] } | null>;
     readonly timeoutMs?: number;
+    /**
+     * How THIS host explains an opt-out, because the answer differs per host and a wrong one
+     * misdirects. The default names `CG_ALLOW_TEST_VERIFICATION`, which is correct for the web
+     * app and meaningless in the CLI — where the switch is `--verify` and no such variable
+     * exists. A skip reason that points at the wrong lever is the same class of small
+     * dishonesty as a `partial` verdict painted green.
+     */
+    readonly notAllowedReason?: string;
   }
 ): Promise<GateResult> {
   if (!opts.allowed) {
     return result("tests", "skipped", 0, {
-      reason: "test verification not enabled (CG_ALLOW_TEST_VERIFICATION)",
+      reason: opts.notAllowedReason ?? "test verification not enabled (CG_ALLOW_TEST_VERIFICATION)",
     });
   }
   if (!opts.canIsolate) {

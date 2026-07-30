@@ -45,8 +45,30 @@ const ALLOWED = {
     "vcs",
     "observability",
     "config",
+    "verify",
+    "sandbox",
   ],
   swarm: ["core-domain", "core-graph", "detect-engine", "observability"],
+
+  // ── Added 2026-07-30. These EXISTED ON DISK WITH NO LAYER RULE, which is worse than a
+  // wrong rule: `layerRules` is built from this map's keys, so a package absent here got no
+  // constraint at all and could import anything. `verify` arrived in P3 and
+  // `analysis`/`analysis-model` in P2, and each time the gate silently grew a hole exactly
+  // where the new code went. The `every-package-is-constrained` rule below now fails when a
+  // package on disk is missing from this map, so the gate cannot develop that blind spot
+  // again.
+
+  // The four-gate verification harness (LLD §7.2). Independent of detection ON PURPOSE — it
+  // operates on a patch and a sandbox, which is what let P3 jump ahead of P5. Do not add a
+  // detect-* or lang-* entry here without revisiting that.
+  verify: ["core-domain", "config", "observability", "vcs"],
+
+  // Process-execution mechanics for verification (see child-process-only-in-vcs below).
+  sandbox: ["core-domain", "config", "observability", "verify"],
+
+  // P2's transitional package, split by P5 per LLD §13.2.
+  analysis: ["core-domain", "core-graph", "config", "vcs", "analysis-model"],
+  "analysis-model": ["core-graph"],
 };
 
 /**
@@ -56,6 +78,32 @@ const ALLOWED = {
 const LANG_ALLOWED = ["core-domain"];
 
 const pkgNames = Object.keys(ALLOWED);
+
+/**
+ * A package on disk that is MISSING from ALLOWED gets no layer rule and is therefore
+ * unconstrained — it can import anything. That is exactly how `verify`, `analysis`, and
+ * `analysis-model` sat outside this gate for two phases.
+ *
+ * Fail at config-load rather than emitting a rule, because a silent hole in the gate is worse
+ * than a loud failure to start: an unconstrained package still shows "no dependency violations
+ * found", which reads as a pass.
+ */
+{
+  const fs = require("node:fs");
+  const onDisk = fs
+    .readdirSync(`${__dirname}/packages`, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && !d.name.startsWith("lang-"))
+    .map((d) => d.name);
+  const unconstrained = onDisk.filter((n) => !pkgNames.includes(n));
+  if (unconstrained.length > 0) {
+    throw new Error(
+      `.dependency-cruiser.cjs: packages exist with no layer rule and are therefore ` +
+        `unconstrained: ${unconstrained.join(", ")}. Add each to ALLOWED with the packages it ` +
+        `may import (HLD §6.1). An absent entry is not a permissive default — it is a hole in ` +
+        `the gate.`
+    );
+  }
+}
 
 /** Path pattern for a package's own sources. */
 const pkgPath = (name) => `^packages/${name}/`;
@@ -181,6 +229,20 @@ module.exports = {
         path: "^packages/",
         pathNot: [
           "^packages/(fsx|vcs|persistence)/",
+          // Two more named files, 2026-07-30. Same reasoning as the `analysis/indexer.ts`
+          // exemption below — fsx's WorkspaceHandle is async by design (§10.1) and both of
+          // these are synchronous throughout — plus one thing that is NOT true of that one:
+          //
+          //   `remediate-engine/apply.ts` WRITES. So the containment this rule protects is
+          //   implemented explicitly in `containedPath()` there (path.resolve before the
+          //   comparison, separator-suffixed prefix check) and covered by tests, rather than
+          //   left to the caller. That is the specific failure the rule's comment warns
+          //   about, so it is discharged in code instead of waived.
+          //
+          //   `sandbox/sandbox.ts` only ever reads two manifests to answer "is there a test
+          //   script" and "is there a tsconfig", both under a root the caller supplied.
+          "^packages/remediate-engine/src/apply\\.ts$",
+          "^packages/sandbox/src/sandbox\\.ts$",
           // ONE file, named explicitly rather than exempting the package, so
           // anything else in `analysis` that reaches for fs still fails.
           //
@@ -210,9 +272,16 @@ module.exports = {
 
     {
       name: "child-process-only-in-vcs",
-      comment: "Only vcs shells out (LLD §10.2).",
+      comment:
+        "Only vcs and sandbox shell out. LLD §10.2 scoped this to vcs because git was the " +
+        "only subprocess the design had — it predates P3's gate 2/3, which must run `tsc` " +
+        "and the analysed repository's own test suite. AMENDED rather than worked around: " +
+        "the alternative was a sandbox duplicated in apps/web and apps/cli (apps are outside " +
+        "this rule), and duplicating process-isolation mechanics across two hosts is how the " +
+        "timeout, the argv array, and the scrubbed env quietly diverge. sandbox owns the " +
+        "MECHANICS; each app keeps its own POLICY on whether gate 3 may run at all.",
       severity: "error",
-      from: { path: "^packages/", pathNot: "^packages/vcs/" },
+      from: { path: "^packages/", pathNot: "^packages/(vcs|sandbox)/" },
       to: { path: "^(node:)?child_process$", dependencyTypes: ["core"] },
     },
 
