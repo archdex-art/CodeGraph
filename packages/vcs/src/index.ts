@@ -20,6 +20,12 @@ export { redactCredentials, redactError } from "./redact";
  * `apps/web`.
  */
 export { churnByFile, cleanup, cloneRepo, resolveLocalDir } from "./acquire";
+export {
+  gitSignals,
+  parseGitLog,
+  signalsFromCommits,
+  type FileSignals,
+} from "./signals";
 
 export {
   checkoutBranch,

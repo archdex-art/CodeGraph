@@ -1,7 +1,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { config } from "@codegraph/config";
-import { churnByFile as gitChurnByFile } from "@codegraph/vcs";
+import { gitSignals, type FileSignals } from "@codegraph/vcs";
 import { throwIfAborted, type PipelineContext } from "./context";
 import type {
   Dimension,
@@ -877,7 +877,16 @@ function buildModuleGraph(
 /** Full pipeline: scan a repo/folder dir → result (graph + score + viz). */
 export async function indexRepo(root: string, ctx?: PipelineContext): Promise<IndexResult> {
   _issueSeq = 0;
-  const churnMap = gitChurnByFile(root);
+  /**
+   * One git pass now yields eight organisational signals, not just churn (PLAN.md §5.2).
+   *
+   * `churnMap` is derived from the same pass rather than costing a second one, so this
+   * replaces the old `churnByFile()` call at equal cost. The other seven signals are REPORTED,
+   * NOT SCORED — see `signals` in the result below.
+   */
+  const signalMap = gitSignals(root);
+  const churnMap = new Map<string, number>();
+  for (const [file, sig] of signalMap) churnMap.set(file, sig.churn);
   const { files, languages, loc, coverage } = await scan(root, ctx);
   const { fanIn, importEdges } = await computeImportGraph(files, ctx);
   
@@ -936,6 +945,14 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
     issues: issues.slice(0, 200),
     dependencies: dep.depsList,
     churnByFile: Object.fromEntries(churnMap),
+    /**
+     * Organisational signals (PLAN.md §5.2), reported and deliberately NOT scored.
+     *
+     * Weighting these by hand would add eight more hand-picked constants to a model whose
+     * stated problem is that its one constant was hand-picked. §5.3 fits them against a
+     * labelled defect corpus and ships the learned weights; until then they are measurements.
+     */
+    signals: Object.fromEntries(signalMap),
     score: overall,
     viz,
     tree,

@@ -30,6 +30,7 @@
 
 export type {
   Dimension,
+  FileSignals,
   Pillar,
   PillarScore,
   ScanCoverage,

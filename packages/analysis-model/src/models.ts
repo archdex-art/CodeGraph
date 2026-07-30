@@ -33,6 +33,25 @@ export type Dimension =
 
 /** Mirrors `@codegraph/analysis`'s ScanCoverage. Declared here because IndexResult carries it
  *  and this package is the client-safe home for everything the UI renders. */
+/**
+ * Organisational signals per file (PLAN.md §5.2), mirroring `@codegraph/vcs`'s FileSignals.
+ *
+ * REPORTED, NOT SCORED. Nothing here feeds the Health Score: hand-weighting eight new markers
+ * would add eight hand-picked constants to a model whose stated problem is that its one
+ * constant was hand-picked. §5.3 fits them against a labelled defect corpus.
+ */
+export interface FileSignals {
+  churn: number;
+  authors: number;
+  ownershipRatio: number;
+  busFactor: number;
+  coChangeScatter: number;
+  changeEntropy: number;
+  knowledgeLoss: number;
+  priorDefect: number;
+  ageVolatility: number;
+}
+
 export interface ScanCoverage {
   filesSeen: number;
   /** Files the walk kept. NOT the number analysed — see filesAnalysed. */
@@ -165,6 +184,11 @@ export interface IndexResult {
   issues: Issue[];
   dependencies: string[]; // actual package names this repo depends on
   churnByFile: Record<string, number>;
+  /**
+   * Per-file organisational signals (§5.2). Optional: absent for runs from before they were
+   * computed, and empty for a directory with no git history.
+   */
+  signals?: Record<string, FileSignals>;
   tree: TreeNode;
   viz: VizGraph;
   modules: ModuleGraph;

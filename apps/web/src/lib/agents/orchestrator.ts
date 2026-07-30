@@ -219,6 +219,26 @@ function priorityOf(f: Finding): Priority {
  * not one cannot change it. Overstating that was the bug.
  */
 function projectScore(repo: RepoDetail, buckets: Record<Priority, Finding[]>): number {
+  /**
+   * REFUSE TO PROJECT FROM A TRUNCATED ISSUE LIST.
+   *
+   * `repo.issues` is capped at 200 by the indexer, but the score is computed over ALL issues.
+   * Re-scoring the visible subset therefore starts from a much healthier baseline than the real
+   * one — measured on this repository: 858 issues found, 200 exposed, score 44, and re-scoring
+   * the exposed 200 yields 67. The projection would have reported ~67 whether or not the fixes
+   * removed anything, because the truncated baseline alone is 67.
+   *
+   * That is review C5's bug wearing a different hat. C5 replaced a linear guess with a real
+   * simulation; the simulation was then run over 23% of the input. `Math.max(repo.score, …)`
+   * below hid it by clamping upward, so the number always looked plausible.
+   *
+   * The total is derived from `dimensions`, which the scorer computes over every issue and
+   * which is already persisted — so this needs no new column and cannot disagree with the
+   * score it guards.
+   */
+  const issuesScored = repo.dimensions.reduce((sum, d) => sum + d.issueCount, 0);
+  if (issuesScored > repo.issues.length) return repo.score ?? 0;
+
   const targeted = new Set<string>();
   for (const f of [...buckets.P0, ...buckets.P1]) targeted.add(`${f.file}:${f.line}`);
 

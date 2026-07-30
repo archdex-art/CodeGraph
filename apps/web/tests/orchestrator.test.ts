@@ -211,3 +211,46 @@ describe("runSwarm: symbol-graph truncation (Task 6.14)", () => {
     expect(plan.summary).not.toMatch(/partial/i);
   });
 });
+
+describe("projectScore refuses a truncated issue list", () => {
+  /**
+   * `repo.issues` is capped at 200 by the indexer while the score covers ALL issues, so
+   * re-scoring the visible subset starts from a healthier baseline than the real one.
+   * Measured on this repository: 858 issues found, 200 exposed, score 44, re-scoring the
+   * exposed 200 gives 67 — so the projection reported ~67 regardless of what the fixes did.
+   *
+   * That is review C5's bug again: C5 replaced a linear guess with a real simulation, and the
+   * simulation was then run over 23% of its input. `Math.max(repo.score, …)` clamped upward,
+   * so the wrong number always looked plausible.
+   *
+   * The completeness check reads `dimensions`, which the scorer fills over every issue and
+   * which is already persisted — so it cannot disagree with the score it guards.
+   */
+  const sec = (line: number): Issue =>
+    ({
+      id: `i${line}`, dimension: "security", severity: 5, confidence: 0.9,
+      title: "Use of eval()", file: "src/a.ts", line, blastRadius: 1,
+    }) as Issue;
+
+  it("returns the current score unchanged when issues are truncated", async () => {
+    const repo = repoWithIssues([sec(1), sec(2)], 40);
+    // The scorer saw 858; only 2 are exposed.
+    repo.dimensions = [
+      { dimension: "security", score: 2, penalty: 1372, issueCount: 858 },
+    ] as RepoDetail["dimensions"];
+
+    const plan = await runSwarm(repo);
+    expect(plan.projectedScore).toBe(40);
+  });
+
+  it("still projects when the list is complete", async () => {
+    const repo = repoWithIssues([sec(1), sec(2)], 40);
+    repo.dimensions = [
+      { dimension: "security", score: 2, penalty: 20, issueCount: 2 },
+    ] as RepoDetail["dimensions"];
+
+    const plan = await runSwarm(repo);
+    // Fixing everything it can see cannot leave the score where it was.
+    expect(plan.projectedScore).toBeGreaterThanOrEqual(40);
+  });
+});
