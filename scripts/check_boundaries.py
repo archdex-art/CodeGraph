@@ -89,6 +89,12 @@ BANS = (
             # package.json only. Routing it through electron-log would hide the
             # build log in a userData directory.
             "apps/desktop/scripts/build/",
+            # Same category, same reason: developer-facing build tooling whose entire
+            # output contract is the terminal it is run from. It never ships — the
+            # Dockerfile invokes it in the builder stage and copies only `dist/`. Routing
+            # it through the structured logger would put the build log somewhere nobody
+            # looking at a failed build would think to look.
+            "apps/worker/build.mjs",
         ),
         reason=(
             "Use the logger from @codegraph/observability. Unstructured console output "

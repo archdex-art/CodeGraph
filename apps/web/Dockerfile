@@ -32,6 +32,15 @@ RUN mkdir -p apps/web/public
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build --workspace @codegraph/web
 
+# The worker is compiled here, in the stage that still has devDependencies. It cannot
+# run from source in the runner: packages publish raw TypeScript (LLD §1.1) and `tsx` is
+# a devDependency absent from the traced standalone tree. Two bundles come out —
+# dist/start.mjs (the supervisor, ~130 KB) and dist/execute.mjs (the per-job executor,
+# ~15 MB with the pipeline inlined). The size gap is itself a check: if start.mjs is tens
+# of megabytes, something imported the analysis pipeline into the long-lived process,
+# which is what `supervisor-loads-no-parser` forbids.
+RUN npm run build --workspace @codegraph/worker
+
 # ---------- Stage 2: runner ----------
 FROM node:24-slim AS runner
 WORKDIR /app
@@ -95,6 +104,12 @@ COPY --from=builder /repo/apps/web/.next/standalone ./
 COPY --from=builder /repo/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /repo/apps/web/public ./apps/web/public
 
+# Compiled worker + the entrypoint that runs it beside the web server. Both are inert
+# unless CG_USE_WORKER=true, so this copy is safe to ship ahead of the flag flip.
+COPY --from=builder /repo/apps/worker/dist ./apps/worker/dist
+COPY apps/web/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Runtime SQLite DB + WAL live here. Runs as root (see below) specifically
 # so this never depends on file ownership: a platform-attached persistent
 # disk (e.g. Render) mounts fresh over this path on every start and may
@@ -104,6 +119,17 @@ COPY --from=builder /repo/apps/web/public ./apps/web/public
 # CAP_SETUID/CAP_SETGID aren't granted) — silently crash-looping the whole
 # app. Root sidesteps both failure modes; it can read/write regardless of
 # the mount's ownership.
+# The image always ships the compiled worker, so the image is where the flag flips.
+# Left FALSE in `packages/config` so `npm run dev` keeps running analysis inline —
+# `next dev` starts no worker, and a developer should not have to run two processes to
+# index a repo. A developer who wants the real path runs
+# `npm run start --workspace @codegraph/worker` alongside it.
+#
+# Proven before flipping, at the constraint that matters: two concurrent index jobs in
+# this image at --memory=512m --cpus=0.5 both reached `done`, peak RSS 341.8 MiB of 512,
+# no OOM kill and no restart. That is ADR-001 measured rather than asserted.
+ENV CG_USE_WORKER=true
+
 RUN mkdir -p /app/data
 
 EXPOSE 4000
@@ -114,4 +140,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 # Nested per the standalone layout above. `render.yaml` has no start command of
 # its own, so this is the single place the entrypoint path is declared.
-CMD ["node", "apps/web/server.js"]
+#
+# The entrypoint starts the worker first when CG_USE_WORKER=true, then `exec`s the web
+# server so it becomes PID 1 and receives SIGTERM directly. With the flag off it only
+# logs and execs, so this is behaviour-identical to the previous
+# `CMD ["node", "apps/web/server.js"]` until the flag is set.
+CMD ["/app/entrypoint.sh"]

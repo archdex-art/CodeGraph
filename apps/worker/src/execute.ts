@@ -19,7 +19,7 @@ import { analyze, parseAnalyzePayload, type AnalyzePayload } from "./handlers/an
  *   3  the payload was unusable — retrying cannot help
  */
 
-import { EXIT_BAD_PAYLOAD, EXIT_CANCELLED, EXIT_FAILED, EXIT_OK } from "./supervise";
+import { EXIT_BAD_PAYLOAD, EXIT_CANCELLED, EXIT_FAILED, EXIT_OK } from "./exit-codes";
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];

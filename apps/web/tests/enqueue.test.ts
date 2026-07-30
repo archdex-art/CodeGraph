@@ -8,7 +8,7 @@ process.env["CG_DATA_DIR"] = dataDir;
 process.env["CG_USE_WORKER"] = "true";
 
 const { db, findQueuedJob, findLiveJobForRepo } = await import("@codegraph/persistence");
-const { createIndexJob } = await import("@/lib/store");
+const { createIndexJob, getJob } = await import("@/lib/store");
 
 afterAll(() => rmSync(dataDir, { recursive: true, force: true }));
 
@@ -62,5 +62,39 @@ describe("createIndexJob with the worker enabled", () => {
     const first = createIndexJob("/tmp/a", "local", undefined, null);
     db().prepare("UPDATE jobs SET status='succeeded' WHERE id=?").run(first.jobId);
     expect(findLiveJobForRepo(first.repoId)).toBeNull();
+  });
+
+  it("maps queue statuses onto the vocabulary the dashboard polls", () => {
+    // The regression this pins: `r.status as JobStatus` compiled fine and returned
+    // "succeeded", which page.tsx:79 (`j.status === "done"`) never matches — so a
+    // finished job left the client polling forever. Caught in the container, not here,
+    // which is why it now has a test here.
+    const r = createIndexJob("/tmp/statuses", "local", undefined, null);
+
+    const set = (status: string, stage: string | null) =>
+      db().prepare("UPDATE jobs SET status=?, stage=? WHERE id=?").run(status, stage, r.jobId);
+
+    set("succeeded", "done");
+    expect(getJob(r.jobId)?.status).toBe("done");
+
+    set("failed", null);
+    expect(getJob(r.jobId)?.status).toBe("error");
+
+    set("cancelled", null);
+    expect(getJob(r.jobId)?.status).toBe("error");
+
+    // In-flight: the executor's reported stage is already the UI's vocabulary.
+    set("running", "cloning");
+    expect(getJob(r.jobId)?.status).toBe("cloning");
+    set("running", "scoring");
+    expect(getJob(r.jobId)?.status).toBe("scoring");
+
+    // Claimed but not yet reporting. "leased" has no UI equivalent, and the honest
+    // answer is that work has started.
+    set("leased", null);
+    expect(getJob(r.jobId)?.status).toBe("indexing");
+
+    set("queued", null);
+    expect(getJob(r.jobId)?.status).toBe("queued");
   });
 });

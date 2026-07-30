@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { JobContext } from "@codegraph/jobs";
 import { childEnv } from "@codegraph/config";
 import type { Logger } from "@codegraph/observability";
+import { EXIT_BAD_PAYLOAD } from "./exit-codes";
 
 /**
  * Run one job in a short-lived child process.
@@ -27,18 +28,32 @@ import type { Logger } from "@codegraph/observability";
  * fail a job.
  */
 
-const EXECUTOR = path.join(path.dirname(fileURLToPath(import.meta.url)), "execute.ts");
-
 /**
- * The executor's exit-code contract, declared here because this is the side that
- * interprets it. `execute.ts` imports these rather than keeping a second copy — two
- * copies of a protocol drift, and the drift is silent.
+ * Where the executor is, and how to run it.
+ *
+ * Decided from THIS module's own extension rather than from an env var or NODE_ENV: if
+ * the supervisor is running as compiled `.mjs`, the executor beside it is compiled too,
+ * and if it is running as `.ts` under tsx then so is the executor. That is the one
+ * signal that cannot disagree with reality — a flag can be set wrong, and the failure
+ * mode is a job that dies on every spawn with a module-resolution error.
  */
-export const EXIT_OK = 0;
-export const EXIT_FAILED = 1;
-export const EXIT_CANCELLED = 2;
-/** Retrying cannot help: the same bytes deserialise the same way. Quarantined. */
-export const EXIT_BAD_PAYLOAD = 3;
+function executorCommand(): { file: string; nodeArgs: string[] } {
+  const here = fileURLToPath(import.meta.url);
+  const dir = path.dirname(here);
+  return here.endsWith(".mjs") || here.endsWith(".js")
+    ? { file: path.join(dir, "execute.mjs"), nodeArgs: [] }
+    : // `tsx` is a devDependency and is absent from the production runtime, which is
+      // why `npm run build` exists and why CG_USE_WORKER stays false until the
+      // container runs the compiled output.
+      { file: path.join(dir, "execute.ts"), nodeArgs: ["--import", "tsx"] };
+}
+
+export {
+  EXIT_BAD_PAYLOAD,
+  EXIT_CANCELLED,
+  EXIT_FAILED,
+  EXIT_OK,
+} from "./exit-codes";
 
 /** SIGTERM grace before SIGKILL. Longer than any stage boundary, shorter than a lease. */
 const TERM_GRACE_MS = 5_000;
@@ -51,11 +66,14 @@ export async function runInChild(
   payload: unknown,
   ctx: JobContext,
   logger: Logger,
-  executorPath = EXECUTOR
+  executorPath?: string
 ): Promise<void> {
-  // `tsx` because packages publish raw TypeScript (LLD §1.1) — there is no build step
-  // that would produce a .js executor to run instead.
-  const child = spawn(process.execPath, ["--import", "tsx", executorPath], {
+  const resolved = executorCommand();
+  // An explicit path (tests, or an unusual layout) always runs under tsx: a test stub is
+  // TypeScript.
+  const file = executorPath ?? resolved.file;
+  const nodeArgs = executorPath ? ["--import", "tsx"] : resolved.nodeArgs;
+  const child = spawn(process.execPath, [...nodeArgs, file], {
     // Payload on stdin, not argv: a clone URL can carry a token, and argv is visible
     // in `ps` to every user on the host.
     stdio: ["pipe", "pipe", "pipe"],

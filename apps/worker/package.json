@@ -7,7 +7,9 @@
   "scripts": {
     "start": "tsx src/start.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "node build.mjs",
+    "start:dist": "node dist/start.mjs"
   },
   "dependencies": {
     "@codegraph/analysis": "*",
@@ -20,5 +22,8 @@
     "@codegraph/persistence": "*",
     "@codegraph/vcs": "*",
     "tsx": "^4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
   }
 }

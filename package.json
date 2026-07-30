@@ -15,7 +15,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "depcruise": "depcruise . --config .dependency-cruiser.cjs --ignore-known",
     "depcruise:all": "depcruise . --config .dependency-cruiser.cjs --no-ignore-known",
-    "boundaries": "python3 scripts/check_boundaries.py"
+    "boundaries": "python3 scripts/check_boundaries.py",
+    "dev:worker": "npm run start --workspace @codegraph/worker"
   },
   "devDependencies": {
     "dependency-cruiser": "^17.0.1",

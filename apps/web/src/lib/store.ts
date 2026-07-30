@@ -8,7 +8,7 @@ import {
   completeRepoIndex,
   dataDir,
   deleteRepo as deleteRepoRow,
-  findJob,
+  findQueuedJob,
   findRepo,
   findRepoUnscoped,
   insertJob,
@@ -160,13 +160,49 @@ export function createIndexJob(
 }
 
 
+/**
+ * The queue's status vocabulary is not the UI's, and the cast that used to sit here hid
+ * that.
+ *
+ * `jobs.status` holds the QUEUE's states (LLD §8.1:
+ * `queued|leased|running|succeeded|failed|cancelled`) while `JobStatus` is what the
+ * dashboard polls (`queued|cloning|indexing|scoring|done|error`). `r.status as JobStatus`
+ * compiled fine and produced `"succeeded"`, which `page.tsx:79` never matches — so with
+ * `CG_USE_WORKER=true` the client polls a finished job forever. Verified in the container
+ * before this mapping existed.
+ *
+ * `stage` is preferred over `status` for in-flight work: it is the pipeline phase the
+ * executor reported and is already the UI's vocabulary, where `status` only says the job
+ * is running. Falling back to `indexing` is honest — a claimed job that has not reported
+ * yet has been picked up, and the UI has no state for "leased".
+ */
+function toJobStatus(status: string, stage: string | null): JobStatus {
+  switch (status) {
+    case "succeeded":
+      return "done";
+    case "failed":
+    case "cancelled":
+      return "error";
+    case "queued":
+      return "queued";
+    case "leased":
+    case "running":
+      return stage === "cloning" || stage === "indexing" || stage === "scoring"
+        ? stage
+        : "indexing";
+    default:
+      // The inline path writes UI states directly, so anything else is already one.
+      return status as JobStatus;
+  }
+}
+
 export function getJob(jobId: string): Job | null {
-  const r = findJob(jobId);
+  const r = findQueuedJob(jobId);
   if (!r) return null;
   return {
     id: r.id,
     repoId: r.repo_id,
-    status: r.status as JobStatus,
+    status: toJobStatus(r.status, r.stage),
     progress: r.progress,
     message: r.message,
     error: r.error,

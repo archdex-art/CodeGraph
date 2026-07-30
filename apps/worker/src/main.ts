@@ -20,7 +20,13 @@ import { runInChild } from "./supervise";
 
 const sleep = (ms: number): Promise<void> => {
   const { promise, resolve } = Promise.withResolvers<void>();
-  setTimeout(resolve, ms).unref();
+  // NOT `.unref()`. When the queue is empty this timer is the only pending handle, so
+  // unref'ing it lets the event loop drain and Node exits — the worker logged
+  // "worker started" and then vanished, leaving jobs queued forever with nothing to
+  // claim them. Found by the 512 MB container smoke test, which is the only check that
+  // runs the worker as a long-lived process; every unit test bounds it with `maxJobs`
+  // and so never waits on an idle poll.
+  setTimeout(resolve, ms);
   return promise;
 };
 
