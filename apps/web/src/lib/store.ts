@@ -186,7 +186,15 @@ function toJobStatus(status: string, stage: string | null): JobStatus {
     case "queued":
       return "queued";
     case "leased":
+      // Claimed, executor spawning, NOTHING reported yet. Mapped to "queued" rather than
+      // "indexing" because the row's `message` still reads "Queued", and an earlier
+      // version that returned "indexing" here produced a visibly incoherent frame in the
+      // SSE stream: `status: "indexing"` beside `message: "Queued"`. Understating a ~100ms
+      // window is better than contradicting the message next to it.
+      return "queued";
     case "running":
+      // The executor has checked in. Prefer the stage it reported — already the UI's
+      // vocabulary — and fall back only if it reported progress without one.
       return stage === "cloning" || stage === "indexing" || stage === "scoring"
         ? stage
         : "indexing";

@@ -89,9 +89,14 @@ describe("createIndexJob with the worker enabled", () => {
     set("running", "scoring");
     expect(getJob(r.jobId)?.status).toBe("scoring");
 
-    // Claimed but not yet reporting. "leased" has no UI equivalent, and the honest
-    // answer is that work has started.
+    // Claimed but not yet reporting. Stays "queued" so it cannot contradict the row's
+    // own message, which still reads "Queued" — an earlier mapping returned "indexing"
+    // here and the SSE stream showed `status: "indexing"` beside `message: "Queued"`.
     set("leased", null);
+    expect(getJob(r.jobId)?.status).toBe("queued");
+
+    // Once the executor checks in without a stage, "indexing" is the honest fallback.
+    set("running", null);
     expect(getJob(r.jobId)?.status).toBe("indexing");
 
     set("queued", null);
