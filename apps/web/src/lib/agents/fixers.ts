@@ -20,7 +20,39 @@ export interface FixerOutput {
 export interface Fixer {
   id: string;
   label: string;
+  /**
+   * The rule ids this fixer can fix — "THE binding v1 lacks entirely" (LLD §7.1),
+   * review item C1.
+   *
+   * Without it there is no relation between a finding and a fixer, and the consequence was
+   * concrete rather than theoretical: `POST /api/repos/:id/fix` ran ALL THREE fixers over
+   * EVERY file, so clicking a P0 "untrusted input reaches eval()" finding produced a diff
+   * deleting `console.log` in 27 unrelated files. The ranked plan and the executor were two
+   * disconnected systems that the UI implied were one.
+   *
+   * Ids are the `legacy/<slugged-title>` form that migration 003 assigns, because that is
+   * what findings in the database actually carry today. P5's rule registry replaces them
+   * with real ids, and this field is the seam that makes that a rename rather than a
+   * redesign.
+   */
+  handles: readonly string[];
   apply(input: FixerInput): FixerOutput;
+}
+
+/**
+ * Slug a finding title into the rule id migration 003 assigns.
+ *
+ * Duplicated deliberately from `persistence`'s `legacyRuleId` rather than exported from it:
+ * that function is a fixed property of a released migration and must never change, while
+ * this one follows whatever the current findings carry. Coupling them would make a
+ * migration's frozen behaviour a live dependency of the fixer registry.
+ */
+export function legacyRuleIdFor(title: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `legacy/${slug || "unknown"}`;
 }
 
 const JS_EXTS: Record<string, true> = { ".ts": true, ".tsx": true, ".js": true, ".jsx": true, ".mjs": true, ".cjs": true };
@@ -113,6 +145,8 @@ function protectJsBracelessBodies(lines: string[], candidateDelete: Set<number>)
 const debugFixer: Fixer = {
   id: "remove-debug-output",
   label: "Remove leftover debug output",
+  // Both rules that emit a debug-output finding in `analysis`'s RULES table.
+  handles: ["legacy/leftover-debug-output", "legacy/debugger-statement"],
   apply({ rel, ext, lines }) {
     const isJs = JS_EXTS[ext];
     const isPy = ext === ".py";
@@ -155,6 +189,7 @@ const debugFixer: Fixer = {
 const todoFixer: Fixer = {
   id: "remove-todo-marker",
   label: "Remove stale TODO/FIXME marker",
+  handles: ["legacy/todo-fixme-marker"],
   apply({ rel, lines }) {
     const markerRe = /\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b/;
     const commentLineRe = /^(\/\/|#)/;
@@ -195,6 +230,7 @@ const EMPTY_CATCH_RE = /catch\s*\([^)]*\)\s*\{\s*\}/;
 const emptyCatchFixer: Fixer = {
   id: "annotate-empty-catch",
   label: "Document empty catch blocks",
+  handles: ["legacy/empty-catch-block"],
   apply({ rel, ext, lines }) {
     if (!JS_ONLY[ext]) return { lines, edits: [] };
     const edits: FileEdit[] = [];
@@ -221,6 +257,17 @@ const emptyCatchFixer: Fixer = {
 };
 
 export const FIXERS: Fixer[] = [debugFixer, todoFixer, emptyCatchFixer];
+
+/**
+ * The fixers that claim a given rule. Empty means the finding is not auto-fixable.
+ *
+ * Returning a list rather than one fixer keeps the door open for two providers claiming a
+ * rule at different safety levels (LLD §7.1's `safety` field), without pretending to choose
+ * between them here.
+ */
+export function fixersForRule(ruleId: string): Fixer[] {
+  return FIXERS.filter((f) => f.handles.includes(ruleId));
+}
 
 export function fixerById(id: string): Fixer | null {
   return FIXERS.find((f) => f.id === id) ?? null;
