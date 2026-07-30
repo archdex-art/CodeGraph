@@ -6,6 +6,7 @@ import { config } from "@codegraph/config";
 import { createJobQueue } from "@codegraph/jobs";
 import {
   completeRepoIndex,
+  latestRunCoverage,
   recordRun,
   dataDir,
   deleteRepo as deleteRepoRow,
@@ -305,7 +306,13 @@ function toRepoDetail(r: RepoRow): RepoDetail {
  */
 export function getRepo(id: string, viewer: ViewerId): RepoDetail | null {
   const r = findRepo(id, viewer);
-  return r ? toRepoDetail(r) : null;
+  if (!r) return null;
+  const detail = toRepoDetail(r);
+  // Coverage is a property of a RUN, not of the repo row (LLD §8), so it is joined here rather
+  // than duplicated into `repos`. Null for anything indexed before ADR-008, which the UI must
+  // render as unknown rather than as complete.
+  const coverage = latestRunCoverage(id) as RepoDetail["coverage"] | null;
+  return coverage ? { ...detail, coverage } : detail;
 }
 
 /**
@@ -466,6 +473,9 @@ async function runJob(
         commitSha: headHash,
         score: result.score,
         loc: result.loc,
+        // ADR-008. Both write paths pass it so the two cannot diverge — the reason the
+        // findings rows were backfill-only was one path writing and the other not.
+        coverage: result.coverage,
         startedAt: jobStartedAt,
         finishedAt: Date.now(),
       },

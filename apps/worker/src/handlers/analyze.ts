@@ -150,6 +150,9 @@ export async function analyze(
         commitSha: headHash,
         score: result.score,
         loc: result.loc,
+        // ADR-008. Both write paths pass it so the two cannot diverge — the reason the
+        // findings rows were backfill-only was one path writing and the other not.
+        coverage: result.coverage,
         startedAt: startedAt,
         finishedAt: Date.now(),
       },

@@ -67,7 +67,13 @@ export {
 } from "./jobs";
 
 export type { AnalysedIssue, NewRun } from "./runs";
-export { findingById, legacyRuleId, recordRun, repoIdForFinding } from "./runs";
+export {
+  findingById,
+  latestRunCoverage,
+  legacyRuleId,
+  recordRun,
+  repoIdForFinding,
+} from "./runs";
 
 export type { CounterRow, MetricLabels } from "./metrics";
 export {

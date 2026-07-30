@@ -31,6 +31,22 @@ export type Dimension =
   | "dependency_hygiene"
   | "test_integrity";
 
+/** Mirrors `@codegraph/analysis`'s ScanCoverage. Declared here because IndexResult carries it
+ *  and this package is the client-safe home for everything the UI renders. */
+export interface ScanCoverage {
+  filesSeen: number;
+  /** Files the walk kept. NOT the number analysed — see filesAnalysed. */
+  filesKept: number;
+  skippedTooLarge: number;
+  skippedUnreadable: number;
+  capHit: boolean;
+  unvisitedDirs: number;
+  skippedNoLanguage: number;
+  locAnalysed: number;
+  /** Files actually read and scanned. */
+  filesAnalysed: number;
+}
+
 export interface DimensionScore {
   dimension: Dimension;
   score: number; // 0..100
@@ -139,6 +155,13 @@ export interface IndexResult {
   languages: LanguageStat[];
   graphStats: GraphStats;
   dimensions: DimensionScore[];
+  /**
+   * What the scan actually looked at (ADR-008).
+   *
+   * Optional so rows indexed before this existed keep deserialising — absent means "this run
+   * predates coverage reporting", which the UI must render as unknown rather than as complete.
+   */
+  coverage?: ScanCoverage;
   issues: Issue[];
   dependencies: string[]; // actual package names this repo depends on
   churnByFile: Record<string, number>;

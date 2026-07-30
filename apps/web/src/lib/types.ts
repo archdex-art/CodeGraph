@@ -18,6 +18,7 @@ import type {
   Issue,
   LanguageStat,
   ModuleGraph,
+  ScanCoverage,
   TreeNode,
   VizGraph,
 } from "@codegraph/analysis-model";
@@ -39,7 +40,7 @@ export type {
   VizGraph,
 } from "@codegraph/analysis-model";
 export { DIMENSION_META, PILLAR_META, pillarsFrom } from "@codegraph/analysis-model";
-export type { Pillar, PillarScore } from "@codegraph/analysis-model";
+export type { Pillar, PillarScore, ScanCoverage } from "@codegraph/analysis-model";
 
 export type JobStatus = "queued" | "cloning" | "indexing" | "scoring" | "done" | "error";
 
@@ -86,6 +87,11 @@ export interface RepoDetail extends RepoSummary {
   languages: LanguageStat[];
   graphStats: GraphStats;
   dimensions: DimensionScore[];
+  /**
+   * What the scan looked at (ADR-008). Joined from the latest run, absent for repos indexed
+   * before coverage was recorded — the UI renders absent as UNKNOWN, never as complete.
+   */
+  coverage?: ScanCoverage;
   issues: Issue[];
   dependencies: string[]; // actual package names this repo depends on
   churnByFile: Record<string, number>;

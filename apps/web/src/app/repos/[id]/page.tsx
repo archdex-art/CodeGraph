@@ -134,6 +134,38 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
                 ))}
             </div>
           )}
+          {/* ADR-008: the score reports its own coverage, so one computed over a partial scan
+              cannot masquerade as one computed over the whole repository. */}
+          <div className="mt-3 text-[11px] text-gray-500">
+            {repo.coverage ? (
+              <span
+                title={
+                  `${repo.coverage.filesAnalysed} of ${repo.coverage.filesSeen} files scanned · ` +
+                  `${repo.coverage.skippedNoLanguage} unsupported language · ` +
+                  `${repo.coverage.skippedTooLarge} over the size cap · ` +
+                  `${repo.coverage.skippedUnreadable} unreadable`
+                }
+              >
+                Scored over{" "}
+                <span className="font-mono text-gray-300">
+                  {repo.coverage.filesSeen === 0
+                    ? "—"
+                    : `${Math.round((repo.coverage.filesAnalysed / repo.coverage.filesSeen) * 100)}%`}
+                </span>{" "}
+                of files · {repo.coverage.locAnalysed.toLocaleString()} LOC
+                {/* A truncated walk is the one case where the denominator itself is unknown,
+                    so it is called out rather than folded into a percentage. */}
+                {repo.coverage.capHit && (
+                  <span className="text-amber-400"> · scan hit the file cap</span>
+                )}
+              </span>
+            ) : (
+              // Absent coverage is UNKNOWN, never 100%. Repos indexed before ADR-008 land here.
+              <span className="text-gray-600" title="This repo was indexed before coverage was recorded. Re-index to measure it.">
+                Coverage not recorded for this index
+              </span>
+            )}
+          </div>
         </motion.div>
 
         <motion.div

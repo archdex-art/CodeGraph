@@ -32,6 +32,7 @@ export type {
   Dimension,
   Pillar,
   PillarScore,
+  ScanCoverage,
   DimensionScore,
   GraphEdge,
   GraphNode,

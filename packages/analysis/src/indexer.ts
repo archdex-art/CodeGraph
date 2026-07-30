@@ -76,15 +76,78 @@ interface ScannedFile {
 
 
 
-function walk(root: string): string[] {
+/**
+ * What the scan actually looked at (ADR-008).
+ *
+ * The walk drops files for three reasons and used to count none of them, so a score computed
+ * over half a repository rendered identically to one computed over all of it. ADR-008: "a
+ * score computed over 40% analysed LOC can no longer masquerade as one computed over 98%."
+ */
+interface WalkCoverage {
+  /** Files the walk encountered, including ones it then dropped. */
+  filesSeen: number;
+  /**
+   * Files the walk KEPT — not the number analysed.
+   *
+   * The scan drops more of these afterwards for having no language mapping, so naming this
+   * `filesAnalysed` (as it briefly was) overstated coverage by 176 files on this repository.
+   * Overstating coverage inside the coverage report is the exact failure this feature exists
+   * to prevent.
+   */
+  filesKept: number;
+  /** Dropped for exceeding MAX_FILE_BYTES. */
+  skippedTooLarge: number;
+  /** Dropped because `stat`/`readdir` failed — permissions, races, broken links. */
+  skippedUnreadable: number;
+  /**
+   * The MAX_FILES cap stopped the walk early.
+   *
+   * A boolean, not a count, and deliberately so: the cap breaks out before the remaining
+   * directories are visited, so the number of files never seen is genuinely UNKNOWN. Reporting
+   * an invented total would be worse than reporting that the walk was truncated — and
+   * `unvisitedDirs` below bounds how much was left rather than guessing what was in it.
+   */
+  capHit: boolean;
+  /** Directories still on the stack when the cap stopped the walk. */
+  unvisitedDirs: number;
+}
+
+/**
+ * Walk coverage plus what the scan itself dropped.
+ *
+ * Split from `WalkCoverage` so each stage returns exactly what it knows: the walk cannot see
+ * language mapping, and the scan cannot see directories the walk never visited. A single type
+ * spanning both would force one of them to invent a number.
+ */
+export interface ScanCoverage extends WalkCoverage {
+  /**
+   * Files kept by the walk but skipped by the scan for having no language mapping.
+   *
+   * Usually the largest single category and usually benign — images, lockfiles, binaries. It
+   * is reported anyway because "benign" is a judgement the operator should make: a repository
+   * that is 90% an unsupported language reads as well-covered otherwise.
+   */
+  skippedNoLanguage: number;
+  /** Lines of code across the files that were actually scanned. */
+  locAnalysed: number;
+  /** Files that were actually read and scanned — `filesKept` minus `skippedNoLanguage`. */
+  filesAnalysed: number;
+}
+
+function walk(root: string): { files: string[]; coverage: WalkCoverage } {
   const out: string[] = [];
   const stack = [root];
+  let filesSeen = 0;
+  let skippedTooLarge = 0;
+  let skippedUnreadable = 0;
+
   while (stack.length && out.length < MAX_FILES) {
     const cur = stack.pop()!;
     let entries: string[];
     try {
       entries = readdirSync(cur);
     } catch {
+      skippedUnreadable++;
       continue;
     }
     for (const name of entries) {
@@ -93,16 +156,30 @@ function walk(root: string): string[] {
       try {
         st = statSync(full);
       } catch {
+        skippedUnreadable++;
         continue;
       }
       if (st.isDirectory()) {
         if (!SKIP_DIRS[name] && !name.startsWith(".")) stack.push(full);
-      } else if (st.isFile() && st.size <= MAX_FILE_BYTES) {
-        out.push(full);
+      } else if (st.isFile()) {
+        filesSeen++;
+        if (st.size <= MAX_FILE_BYTES) out.push(full);
+        else skippedTooLarge++;
       }
     }
   }
-  return out;
+
+  return {
+    files: out,
+    coverage: {
+      filesSeen,
+      filesKept: out.length,
+      skippedTooLarge,
+      skippedUnreadable,
+      capHit: out.length >= MAX_FILES,
+      unvisitedDirs: stack.length,
+    },
+  };
 }
 
 function extractImports(text: string, ext: string): string[] {
@@ -175,8 +252,12 @@ function yieldToEventLoop(): Promise<void> {
 }
 
 /** Walk the repo, build per-file records + language stats. */
-async function scan(root: string, ctx?: PipelineContext): Promise<{ files: ScannedFile[]; languages: LanguageStat[]; loc: number }> {
-  const paths = walk(root);
+async function scan(
+  root: string,
+  ctx?: PipelineContext,
+): Promise<{ files: ScannedFile[]; languages: LanguageStat[]; loc: number; coverage: ScanCoverage }> {
+  const { files: paths, coverage: walkCoverage } = walk(root);
+  let skippedNoLanguage = 0;
   const files: ScannedFile[] = [];
   const langMap = new Map<string, { files: number; loc: number }>();
   let totalLoc = 0;
@@ -189,7 +270,10 @@ async function scan(root: string, ctx?: PipelineContext): Promise<{ files: Scann
     const full = paths[idx];
     const ext = path.extname(full).toLowerCase();
     const lang = LANG_BY_EXT[ext];
-    if (!lang) continue;
+    if (!lang) {
+      skippedNoLanguage++;
+      continue;
+    }
     let text = "";
     try {
       text = readFileSync(full, "utf8");
@@ -216,7 +300,17 @@ async function scan(root: string, ctx?: PipelineContext): Promise<{ files: Scann
     .map(([language, v]) => ({ language, ...v }))
     .sort((a, b) => b.loc - a.loc);
 
-  return { files, languages, loc: totalLoc };
+  return {
+    files,
+    languages,
+    loc: totalLoc,
+    coverage: {
+      ...walkCoverage,
+      skippedNoLanguage,
+      locAnalysed: totalLoc,
+      filesAnalysed: walkCoverage.filesKept - skippedNoLanguage,
+    },
+  };
 }
 
 /** Resolve import edges between scanned files + fan-in centrality. */
@@ -784,7 +878,7 @@ function buildModuleGraph(
 export async function indexRepo(root: string, ctx?: PipelineContext): Promise<IndexResult> {
   _issueSeq = 0;
   const churnMap = gitChurnByFile(root);
-  const { files, languages, loc } = await scan(root, ctx);
+  const { files, languages, loc, coverage } = await scan(root, ctx);
   const { fanIn, importEdges } = await computeImportGraph(files, ctx);
   
   const dep = analyzeDependencies(root);
@@ -838,6 +932,7 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
     languages,
     graphStats,
     dimensions,
+    coverage,
     issues: issues.slice(0, 200),
     dependencies: dep.depsList,
     churnByFile: Object.fromEntries(churnMap),

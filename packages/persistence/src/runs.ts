@@ -51,6 +51,18 @@ export interface NewRun {
   readonly loc: number;
   readonly startedAt: number;
   readonly finishedAt: number;
+  /**
+   * What the scan actually looked at (ADR-008), serialised into `coverage_json`.
+   *
+   * The column has existed since migration 002 and was written as a literal `'{}'` — present
+   * in the schema, never populated, so every run claimed the same unknown coverage. Optional
+   * here because the backfilled rows genuinely have none.
+   */
+  // `object`, not the real ScanCoverage type: that lives in `analysis-model`, which
+  // persistence may not import (layering — see ALLOWED in .dependency-cruiser.cjs). This
+  // package's job is to store the value, not to understand it, and an interface has no
+  // implicit index signature so `Record<string, unknown>` would not accept one anyway.
+  readonly coverage?: object;
 }
 
 /**
@@ -88,7 +100,7 @@ export function recordRun(run: NewRun, issues: readonly AnalysedIssue[]): void {
       .prepare(
         `INSERT INTO runs (id, repo_id, commit_sha, engine_version, score_model_version,
            status, score, loc, coverage_json, timings_json, started_at, finished_at)
-         VALUES (?, ?, ?, ?, ?, 'done', ?, ?, '{}', '[]', ?, ?)`
+         VALUES (?, ?, ?, ?, ?, 'done', ?, ?, ?, '[]', ?, ?)`
       )
       .run(
         run.id,
@@ -98,6 +110,7 @@ export function recordRun(run: NewRun, issues: readonly AnalysedIssue[]): void {
         SCORE_MODEL_VERSION,
         run.score,
         run.loc,
+        JSON.stringify(run.coverage ?? {}),
         run.startedAt,
         run.finishedAt
       );
@@ -193,4 +206,31 @@ export function repoIdForFinding(findingId: string): string | null {
     )
     .get(findingId) as { repoId: string } | undefined;
   return row?.repoId ?? null;
+}
+
+/**
+ * Coverage recorded for a repo's most recent run, or null.
+ *
+ * Null covers two real cases that must not be conflated with "fully covered": a repo indexed
+ * before coverage was recorded, and a repo with no run row at all. The UI renders unknown
+ * coverage as unknown — claiming 100% for a run that never reported is the same shape of
+ * overclaim as scoring an unmeasured pillar 100.
+ */
+export function latestRunCoverage(repoId: string): Record<string, unknown> | null {
+  const row = db()
+    .prepare(
+      `SELECT coverage_json AS c FROM runs
+        WHERE repo_id = ? AND status = 'done'
+        ORDER BY finished_at DESC LIMIT 1`
+    )
+    .get(repoId) as { c?: string } | undefined;
+  if (!row?.c) return null;
+  try {
+    const parsed = JSON.parse(row.c) as Record<string, unknown>;
+    // `'{}'` is what every pre-ADR-008 row holds. Empty means "not reported", not "nothing
+    // was skipped".
+    return Object.keys(parsed).length === 0 ? null : parsed;
+  } catch {
+    return null;
+  }
 }
