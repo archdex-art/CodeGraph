@@ -19,3 +19,23 @@ export {
   type LabelCommit,
   type LabelledFile,
 } from "./label";
+
+export { auc, bootstrapAucByRepo, mulberry32, type Interval } from "./metrics";
+export {
+  fitLogistic,
+  predict,
+  sigmoid,
+  standardise,
+  standardiser,
+  type FitOptions,
+  type Model,
+} from "./fit";
+export {
+  columnScorer,
+  leaveOneRepoOut,
+  modelScorer,
+  modelScorerCV,
+  type EvaluationResult,
+  type RepoData,
+  type RepoResult,
+} from "./evaluate";

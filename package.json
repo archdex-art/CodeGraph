@@ -18,7 +18,8 @@
     "boundaries": "python3 scripts/check_boundaries.py",
     "dev:worker": "npm run start --workspace @codegraph/worker",
     "bench": "tsx scripts/bench.mts",
-    "calibrate": "tsx scripts/calibrate.mts"
+    "calibrate": "tsx scripts/calibrate.mts",
+    "fit": "tsx scripts/fit.mts"
   },
   "devDependencies": {
     "dependency-cruiser": "^17.0.1",

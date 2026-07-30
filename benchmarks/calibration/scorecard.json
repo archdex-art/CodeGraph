@@ -1,0 +1,132 @@
+{
+  "generatedBy": "npm run fit",
+  "lambdaGrid": [
+    0.1,
+    1,
+    10,
+    100,
+    1000,
+    5000,
+    20000
+  ],
+  "lambdaSelection": "nested leave-one-repo-out over the training repos only",
+  "features": [
+    "log_nloc",
+    "churn",
+    "authors",
+    "ownershipRatio",
+    "busFactor",
+    "coChangeScatter",
+    "changeEntropy",
+    "knowledgeLoss",
+    "priorDefect",
+    "ageVolatility"
+  ],
+  "repos": 12,
+  "files": 1239,
+  "positives": 192,
+  "model": {
+    "pooledAuc": 0.6036642390958293,
+    "ci": {
+      "lo": 0.5453581180424281,
+      "hi": 0.6967455621301775
+    },
+    "meanRepoAuc": 0.6565504242388499,
+    "perRepo": [
+      {
+        "repo": "axios__axios",
+        "files": 63,
+        "defective": 16,
+        "auc": 0.6363031914893617
+      },
+      {
+        "repo": "encode__httpx",
+        "files": 23,
+        "defective": 6,
+        "auc": 0.6470588235294118
+      },
+      {
+        "repo": "eslint__eslint",
+        "files": 413,
+        "defective": 44,
+        "auc": 0.6256159152500615
+      },
+      {
+        "repo": "moment__moment",
+        "files": 407,
+        "defective": 25,
+        "auc": 0.4852356020942408
+      },
+      {
+        "repo": "pallets__click",
+        "files": 17,
+        "defective": 5,
+        "auc": 0.8
+      },
+      {
+        "repo": "pallets__flask",
+        "files": 23,
+        "defective": 6,
+        "auc": 0.7647058823529411
+      },
+      {
+        "repo": "psf__black",
+        "files": 51,
+        "defective": 22,
+        "auc": 0.7476489028213166
+      },
+      {
+        "repo": "psf__requests",
+        "files": 19,
+        "defective": 3,
+        "auc": 0.8541666666666666
+      },
+      {
+        "repo": "python-attrs__attrs",
+        "files": 21,
+        "defective": 6,
+        "auc": 0.8333333333333334
+      },
+      {
+        "repo": "scrapy__scrapy",
+        "files": 174,
+        "defective": 47,
+        "auc": 0.6845367733288658
+      },
+      {
+        "repo": "socketio__socket.io",
+        "files": 9,
+        "defective": 7,
+        "auc": 0.21428571428571427
+      },
+      {
+        "repo": "winstonjs__winston",
+        "files": 19,
+        "defective": 5,
+        "auc": 0.5857142857142857
+      }
+    ]
+  },
+  "baselines": {
+    "recentChurn": {
+      "pooledAuc": 0.6711835402737981,
+      "meanRepoAuc": 0.7177001862066965
+    },
+    "priorDefect": {
+      "pooledAuc": 0.6384635665393187,
+      "meanRepoAuc": 0.7071270041421696
+    },
+    "fileSize": {
+      "pooledAuc": 0.7300446712830309,
+      "meanRepoAuc": 0.7174455864747702
+    }
+  },
+  "beats": {
+    "recentChurn": false,
+    "priorDefect": false,
+    "fileSize": false
+  },
+  "verdict": "FAIL",
+  "weightsAdopted": false,
+  "note": "Criteria not met. Weights are NOT adopted into the Health Score; the scorer is unchanged. Convergence was verified (loss identical to 6dp beyond 8442 iterations) and lambda was chosen by nested leave-one-repo-out on the training folds, so this is not an artefact of under-fitting or of an assumed penalty. Diagnosis: the markers are severely collinear (churn~authors r=0.887, churn~priorDefect r=0.802, authors~priorDefect r=0.839), so the regression splits one shared signal into opposing coefficients that do not transfer."
+}
