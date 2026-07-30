@@ -14,6 +14,7 @@ import type { ExecutionStep, FileEdit, FixResult, PRDraft } from "./executor-typ
 import type { VerificationRecord } from "@codegraph/verify";
 import { logger } from "@codegraph/observability";
 import { fingerprint, normalizeSnippet } from "@codegraph/core-domain";
+import { incrementCounter } from "@codegraph/persistence";
 import {
   buildRecord,
   describeRecord,
@@ -295,6 +296,19 @@ export async function executeFixes(
     );
 
     const record = buildRecord(candidateId, gates);
+
+    // HLD §14's cg_verification_total{gate,outcome} — "the metric that keeps the product
+    // honest: it makes 'how often does our fix actually pass the tests?' a number on a
+    // dashboard rather than a claim in a README."
+    //
+    // Recorded per GATE, not per record, so a `skipped` tests gate is visible as its own
+    // series. An operator who only ever sees tests=skipped is being told, in a number, that
+    // their verification is not test-backed — which is exactly the distinction between
+    // `level: full` and `level: partial` that C3 exists to preserve.
+    for (const gate of gates) {
+      incrementCounter("cg_verification_total", { gate: gate.gate, outcome: gate.status });
+    }
+    incrementCounter("cg_verification_level_total", { level: record.level });
     const verified = record.verified;
     rec("verify", describeRecord(record), verified, t);
 

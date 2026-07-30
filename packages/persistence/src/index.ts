@@ -69,6 +69,15 @@ export {
 export type { AnalysedIssue, NewRun } from "./runs";
 export { findingById, legacyRuleId, recordRun, repoIdForFinding } from "./runs";
 
+export type { CounterRow, MetricLabels } from "./metrics";
+export {
+  allCounters,
+  counterValue,
+  incrementCounter,
+  renderPrometheus,
+  resetCountersForTests,
+} from "./metrics";
+
 export { readSetting, writeSetting } from "./settings";
 
 export type { FindingRow } from "./findings";
