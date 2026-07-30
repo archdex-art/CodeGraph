@@ -60,6 +60,8 @@ export interface ScanCoverage {
   skippedUnreadable: number;
   capHit: boolean;
   unvisitedDirs: number;
+  /** Nested git repositories skipped — clones, vendored checkouts, submodules. */
+  skippedNestedRepos: number;
   skippedNoLanguage: number;
   locAnalysed: number;
   /** Files actually read and scanned. */

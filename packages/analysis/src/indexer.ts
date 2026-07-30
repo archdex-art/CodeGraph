@@ -110,6 +110,19 @@ interface WalkCoverage {
   capHit: boolean;
   /** Directories still on the stack when the cap stopped the walk. */
   unvisitedDirs: number;
+  /**
+   * Nested git repositories skipped — clones, vendored checkouts, submodules.
+   *
+   * A directory with its own `.git` is a DIFFERENT PROJECT by git's own definition, and folding
+   * it in attributes someone else's issues to this repository. Measured on CodeGraph's own
+   * checkout before this existed: `apps/web/data/workspaces/` holds the repos the app has
+   * indexed, and they were **54.2% of the scanned tree** and 77 of the 200 reported issues.
+   * The self-index was majority foreign code.
+   *
+   * Counted rather than silently dropped, because "we ignored 5 nested repos" is exactly the
+   * kind of thing ADR-008 says the score must disclose.
+   */
+  skippedNestedRepos: number;
 }
 
 /**
@@ -140,6 +153,7 @@ function walk(root: string): { files: string[]; coverage: WalkCoverage } {
   let filesSeen = 0;
   let skippedTooLarge = 0;
   let skippedUnreadable = 0;
+  let skippedNestedRepos = 0;
 
   while (stack.length && out.length < MAX_FILES) {
     const cur = stack.pop()!;
@@ -160,7 +174,15 @@ function walk(root: string): { files: string[]; coverage: WalkCoverage } {
         continue;
       }
       if (st.isDirectory()) {
-        if (!SKIP_DIRS[name] && !name.startsWith(".")) stack.push(full);
+        if (SKIP_DIRS[name] || name.startsWith(".")) continue;
+        // A nested repository is a separate project. Checked on the CHILD, so the scan root's
+        // own `.git` never excludes the repository we were asked to analyse — and indexing a
+        // clone directly still works, because the walk starts inside it.
+        if (existsSync(path.join(full, ".git"))) {
+          skippedNestedRepos++;
+          continue;
+        }
+        stack.push(full);
       } else if (st.isFile()) {
         filesSeen++;
         if (st.size <= MAX_FILE_BYTES) out.push(full);
@@ -178,6 +200,7 @@ function walk(root: string): { files: string[]; coverage: WalkCoverage } {
       skippedUnreadable,
       capHit: out.length >= MAX_FILES,
       unvisitedDirs: stack.length,
+      skippedNestedRepos,
     },
   };
 }
@@ -499,55 +522,113 @@ async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, ch
   return issues;
 }
 
-/** Dependency hygiene from manifests actually present in the repo. */
-function analyzeDependencies(root: string): { issues: Issue[]; count: number; depsList: string[] } {
-  const depsList: string[] = [];
+/**
+ * Dependency hygiene across EVERY manifest in the repo, not just the root one.
+ *
+ * THE BUG THIS FIXES. This read `path.join(root, "package.json")` and nothing else. On a
+ * workspaces monorepo that is the thinnest manifest in the tree: measured on CodeGraph itself,
+ * the root declares 3 dependencies while the 18 workspace manifests declare 36 distinct
+ * external packages between them. So 33 of 36 dependencies — including every runtime one the
+ * product actually ships — were invisible to dependency hygiene, and the dimension scored a
+ * clean 100 over 3 packages.
+ *
+ * Manifests come from the ALREADY-SCANNED file list rather than a second filesystem walk, so
+ * this costs nothing and — the part that matters — it inherits the walk's exclusions. That
+ * includes `node_modules` and nested git repositories, without which this would happily report
+ * a cloned target repository's dependencies as this project's own. Five such clones were
+ * present in this checkout while the fix was written.
+ */
+function analyzeDependencies(
+  root: string,
+  files: readonly ScannedFile[],
+): { issues: Issue[]; count: number; depsList: string[] } {
   const issues: Issue[] = [];
-  let count = 0;
+  const external = new Set<string>();
 
-  const pkgPath = path.join(root, "package.json");
-  if (existsSync(pkgPath)) {
+  const manifests = files
+    .filter((f) => path.basename(f.rel) === "package.json")
+    .map((f) => f.rel)
+    .sort();
+
+  // Names declared BY manifests in this repo are workspace-internal, not dependencies. Two
+  // passes so a package can be recognised as internal regardless of manifest order.
+  const internal = new Set<string>();
+  const parsed = new Map<string, { deps: Record<string, string>; name?: string }>();
+  for (const rel of manifests) {
     try {
-      const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
-      const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
-      count = Object.keys(deps).length;
-      depsList.push(...Object.keys(deps));
-      for (const [name, range] of Object.entries(deps)) {
-        const v = String(range);
-        if (v === "*" || v === "latest" || v.startsWith("http") || v.startsWith("git")) {
-          issues.push(mkIssue("dependency_hygiene", 3, `Unpinned dependency: ${name} (${v})`, "package.json", 1, 2, 1.0));
-        } else if (/^[~^]?0\./.test(v)) {
-          issues.push(mkIssue("dependency_hygiene", 1, `Pre-1.0 dependency: ${name} (${v})`, "package.json", 1, 1, 1.0));
-        }
-      }
-      if (!existsSync(path.join(root, "package-lock.json")) &&
-          !existsSync(path.join(root, "pnpm-lock.yaml")) &&
-          !existsSync(path.join(root, "yarn.lock"))) {
-        issues.push(mkIssue("dependency_hygiene", 2, "No lockfile committed", "package.json", 1, 2, 1.0));
-      }
+      const pkg = JSON.parse(readFileSync(path.join(root, rel), "utf8")) as {
+        name?: string;
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      if (pkg.name) internal.add(pkg.name);
+      parsed.set(rel, {
+        deps: { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) },
+        ...(pkg.name === undefined ? {} : { name: pkg.name }),
+      });
     } catch {
-      /* ignore malformed */
+      // A malformed manifest is a finding, not a crash — it breaks `npm install` too.
+      issues.push(
+        mkIssue("dependency_hygiene", 2, "Unparseable package.json", rel, 1, 2, 1.0),
+      );
     }
   }
 
-  const reqPath = path.join(root, "requirements.txt");
-  if (existsSync(reqPath)) {
+  for (const [rel, pkg] of parsed) {
+    for (const [name, range] of Object.entries(pkg.deps)) {
+      // A workspace depending on a sibling is structure, not supply chain.
+      if (internal.has(name)) continue;
+      external.add(name);
+      const v = String(range);
+      // `*` is how workspace protocols are often written; only flag it for externals, which
+      // is why this sits after the `internal` check.
+      if (v === "*" || v === "latest" || v.startsWith("http") || v.startsWith("git")) {
+        issues.push(
+          mkIssue("dependency_hygiene", 3, `Unpinned dependency: ${name} (${v})`, rel, 1, 2, 1.0),
+        );
+      } else if (/^[~^]?0\./.test(v)) {
+        issues.push(
+          mkIssue("dependency_hygiene", 1, `Pre-1.0 dependency: ${name} (${v})`, rel, 1, 1, 1.0),
+        );
+      }
+    }
+  }
+
+  // The lockfile check stays at the ROOT. In a workspaces repo one root lockfile covers every
+  // member, so requiring one per manifest would report a problem that does not exist.
+  if (
+    manifests.length > 0 &&
+    !existsSync(path.join(root, "package-lock.json")) &&
+    !existsSync(path.join(root, "pnpm-lock.yaml")) &&
+    !existsSync(path.join(root, "yarn.lock"))
+  ) {
+    issues.push(mkIssue("dependency_hygiene", 2, "No lockfile committed", "package.json", 1, 2, 1.0));
+  }
+
+  // Python, same treatment: every requirements.txt the scan found.
+  for (const f of files) {
+    if (path.basename(f.rel) !== "requirements.txt") continue;
     try {
-      const lines = readFileSync(reqPath, "utf8").split("\n").filter((l) => l.trim() && !l.startsWith("#"));
-      count += lines.length;
+      const lines = readFileSync(path.join(root, f.rel), "utf8")
+        .split("\n")
+        .filter((l) => l.trim() && !l.startsWith("#"));
       for (const l of lines) {
-        const m = l.match(/^([A-Za-z0-9_-]+)/);
-        if (m) depsList.push(m[1]);
+        const m = l.match(/^([A-Za-z0-9_.-]+)/);
+        if (m?.[1]) external.add(m[1]);
         if (!/[=<>~]/.test(l)) {
-          issues.push(mkIssue("dependency_hygiene", 2, `Unpinned dependency: ${l.trim()}`, "requirements.txt", 1, 1, 1.0));
+          issues.push(
+            mkIssue("dependency_hygiene", 2, `Unpinned dependency: ${l.trim()}`, f.rel, 1, 1, 1.0),
+          );
         }
       }
     } catch {
-      /* ignore */
+      /* unreadable — already counted by the scan's coverage */
     }
   }
 
-  return { issues, count, depsList };
+  // DISTINCT external packages. The same dependency declared by six workspaces is one
+  // dependency; counting declarations instead would make a monorepo look six times heavier.
+  return { issues, count: external.size, depsList: [...external].sort() };
 }
 
 /** Test integrity: presence/ratio of test files. */
@@ -890,7 +971,7 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
   const { files, languages, loc, coverage } = await scan(root, ctx);
   const { fanIn, importEdges } = await computeImportGraph(files, ctx);
   
-  const dep = analyzeDependencies(root);
+  const dep = analyzeDependencies(root, files);
   const codeIssues = await analyzeFiles(files, fanIn, churnMap, ctx);
   const testIssues = analyzeTests(files);
   const issues = [...codeIssues, ...dep.issues, ...testIssues];
