@@ -1,4 +1,4 @@
-import { mkdtempSync, cpSync, readFileSync, writeFileSync, readdirSync, lstatSync } from "node:fs";
+import { mkdtempSync, cpSync, existsSync, readFileSync, writeFileSync, readdirSync, lstatSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
@@ -106,7 +106,38 @@ const now = () => Date.now();
  * re-index to VERIFY the Health Score improves → produce a git diff + PR draft.
  * Runs entirely in a disposable sandbox; the user's original source is never mutated.
  */
-export async function executeFixes(repo: RepoDetail, githubToken?: string): Promise<FixResult> {
+/**
+ * Restrict a run to one finding (review C1).
+ *
+ * The whole point: without this, `executeFixes` walks every file and runs every fixer, so
+ * clicking a P0 "untrusted input reaches eval()" finding returned a diff deleting
+ * `console.log` in 27 unrelated files. A scope makes the diff answer the question the user
+ * asked.
+ *
+ * It is a parameter on the existing function rather than a second implementation, because
+ * every other phase — acquire, baseline, apply, diff, verify, publish — is identical. Only
+ * the SELECTION differs, and a parallel copy of that pipeline would be two things to keep
+ * correct.
+ */
+export interface FixScope {
+  /** Repo-relative path. Nothing outside it is read or edited. */
+  readonly file: string;
+  /** Fixer ids permitted to run, from `fixersForRule(finding.rule_id)`. */
+  readonly fixerIds: readonly string[];
+  /**
+   * The finding's fingerprint, handed to gate 4 as its target.
+   *
+   * This is what upgrades verification from "nothing new was introduced" to "THIS finding is
+   * gone" — the strong claim the batch path cannot make because it cannot name a target.
+   */
+  readonly targetFingerprint: string;
+}
+
+export async function executeFixes(
+  repo: RepoDetail,
+  githubToken?: string,
+  scope?: FixScope
+): Promise<FixResult> {
   const steps: ExecutionStep[] = [];
   let n = 0;
   const rec = (phase: ExecutionStep["phase"], detail: string, ok: boolean, t0: number) =>
@@ -136,7 +167,11 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
 
     // 3. apply fixers
     t = now();
-    const files = walkCode(work);
+    // Scoped runs read one file. Not an optimisation — reading the rest is what produced
+    // edits nobody asked for.
+    const files = scope
+      ? [path.join(work, scope.file)].filter((f) => existsSync(f))
+      : walkCode(work);
     const allEdits: FileEdit[] = [];
     const changed = new Map<string, { before: string[]; edits: Map<number, string | null> }>();
     for (const full of files) {
@@ -152,7 +187,9 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
       // numbers by however many lines an earlier fixer deleted.
       const merged = new Map<number, string | null>(); // original line idx -> after (null = delete)
       const fileEdits: FileEdit[] = [];
-      for (const fx of FIXERS) {
+      // Only the fixers that declare they handle this finding's rule (`Fixer.handles`).
+      const applicable = scope ? FIXERS.filter((f) => scope.fixerIds.includes(f.id)) : FIXERS;
+      for (const fx of applicable) {
         const res = fx.apply({ rel, ext, lines: original });
         for (const e of res.edits) {
           const idx = e.line - 1;
@@ -203,17 +240,15 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
     // One id per run. Review C4's publish step keys on this, so it has to be stable across
     // the record and the draft rather than regenerated per consumer.
     const candidateId = `${repo.id}:${Date.now()}`;
-    // NO TARGET FINDING, deliberately. This path applies every applicable fixer across the
-    // repo and cannot attribute an edit to the finding it served, so there is no specific
-    // claim for gate 4 to check. An earlier version picked the highest-severity issue as a
-    // stand-in and the gate correctly rejected it: the fixers handle debug output, TODO
-    // markers and empty catches, so a security finding at the top of the list was never
-    // going to disappear, and the fix was reported unverified for doing exactly what it
-    // said. Review C1's per-finding route supplies a real target.
-    const targetFingerprint = null;
+    // A scoped run names its target, so gate 4 makes the strong claim. The unscoped batch
+    // path passes null because it genuinely cannot attribute an edit to a finding — an
+    // earlier version picked the highest-severity issue as a stand-in and the gate correctly
+    // rejected it, since the fixers handle debug output, TODO markers and empty catches and
+    // a security finding at the top of the list was never going to disappear.
+    const targetFingerprint = scope?.targetFingerprint ?? null;
 
     const gates: GateResult[] = [];
-    const candidate = candidateFor(allEdits);
+    const candidate = candidateFor(allEdits, scope);
 
     gates.push(
       await syntaxGate(candidate, sandbox, parseCheck, async (abs) => readFileSync(abs, "utf8"))
@@ -432,11 +467,14 @@ function fingerprintOf(issue: { title?: string; file?: string }): string {
  * attribution. Gate 4 is weakened to "the batch removed this finding", which is why the
  * per-finding `/fix` route is the next piece of P3 rather than a later nicety.
  */
-function candidateFor(edits: readonly FileEdit[]): FixCandidate {
+function candidateFor(edits: readonly FileEdit[], scope?: FixScope): FixCandidate {
   const files = [...new Set(edits.map((e) => e.file))];
   return {
     findingId: "" as FixCandidate["findingId"],
-    providerId: "legacy-batch",
+    // Naming the actual providers for a scoped run, so the record does not describe a
+    // targeted single-finding fix as `legacy-batch`. The batch path keeps that name because
+    // it IS a batch.
+    providerId: scope ? scope.fixerIds.join("+") : "legacy-batch",
     edits: files.map((file) => ({
       range: { file, startLine: 1, startCol: 0, endLine: 1, endCol: 0 },
       newText: "",
