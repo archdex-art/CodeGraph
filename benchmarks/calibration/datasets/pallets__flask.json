@@ -1,0 +1,405 @@
+{
+  "repo": "https://github.com/pallets/flask",
+  "t0": "2023-01-01",
+  "windowEnd": "2024-01-01",
+  "t0Rev": "74e5263c88e51bb442879ab863a5d03292fc0a33",
+  "files": [
+    {
+      "file": "setup.py",
+      "features": {
+        "churn": 121,
+        "authors": 34,
+        "ownershipRatio": 0.38016528925619836,
+        "busFactor": 2,
+        "coChangeScatter": 180,
+        "changeEntropy": 0.6510310163523004,
+        "knowledgeLoss": 0.21487603305785125,
+        "priorDefect": 17,
+        "ageVolatility": 0.6554658320597931
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 17
+    },
+    {
+      "file": "src/flask/__init__.py",
+      "features": {
+        "churn": 48,
+        "authors": 6,
+        "ownershipRatio": 0.8958333333333334,
+        "busFactor": 1,
+        "coChangeScatter": 58,
+        "changeEntropy": 0.2800557678361792,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.7182395992726693
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 71
+    },
+    {
+      "file": "src/flask/__main__.py",
+      "features": {
+        "churn": 4,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 39,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.41414049709253514
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 3
+    },
+    {
+      "file": "src/flask/app.py",
+      "features": {
+        "churn": 95,
+        "authors": 29,
+        "ownershipRatio": 0.5684210526315789,
+        "busFactor": 1,
+        "coChangeScatter": 93,
+        "changeEntropy": 0.5704484653903666,
+        "knowledgeLoss": 0,
+        "priorDefect": 12,
+        "ageVolatility": 0.6261878447408574
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 2551
+    },
+    {
+      "file": "src/flask/blueprints.py",
+      "features": {
+        "churn": 48,
+        "authors": 14,
+        "ownershipRatio": 0.4791666666666667,
+        "busFactor": 2,
+        "coChangeScatter": 71,
+        "changeEntropy": 0.6512434894276191,
+        "knowledgeLoss": 0,
+        "priorDefect": 10,
+        "ageVolatility": 0.6663962124257575
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 706
+    },
+    {
+      "file": "src/flask/cli.py",
+      "features": {
+        "churn": 50,
+        "authors": 13,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 69,
+        "changeEntropy": 0.5116575926453335,
+        "knowledgeLoss": 0,
+        "priorDefect": 3,
+        "ageVolatility": 0.6002256295871716
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 1054
+    },
+    {
+      "file": "src/flask/config.py",
+      "features": {
+        "churn": 19,
+        "authors": 6,
+        "ownershipRatio": 0.631578947368421,
+        "busFactor": 1,
+        "coChangeScatter": 57,
+        "changeEntropy": 0.6706029327091878,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.5890739316945035
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 338
+    },
+    {
+      "file": "src/flask/ctx.py",
+      "features": {
+        "churn": 32,
+        "authors": 8,
+        "ownershipRatio": 0.71875,
+        "busFactor": 1,
+        "coChangeScatter": 71,
+        "changeEntropy": 0.5333665365471378,
+        "knowledgeLoss": 0,
+        "priorDefect": 5,
+        "ageVolatility": 0.5705109413454752
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 438
+    },
+    {
+      "file": "src/flask/debughelpers.py",
+      "features": {
+        "churn": 13,
+        "authors": 3,
+        "ownershipRatio": 0.8461538461538461,
+        "busFactor": 1,
+        "coChangeScatter": 64,
+        "changeEntropy": 0.4878527713892913,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5446397484437975
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 158
+    },
+    {
+      "file": "src/flask/globals.py",
+      "features": {
+        "churn": 11,
+        "authors": 4,
+        "ownershipRatio": 0.6363636363636364,
+        "busFactor": 1,
+        "coChangeScatter": 42,
+        "changeEntropy": 0.7455574250275929,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.5692415683755117
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 107
+    },
+    {
+      "file": "src/flask/helpers.py",
+      "features": {
+        "churn": 59,
+        "authors": 16,
+        "ownershipRatio": 0.576271186440678,
+        "busFactor": 1,
+        "coChangeScatter": 81,
+        "changeEntropy": 0.5998850775290521,
+        "knowledgeLoss": 0,
+        "priorDefect": 3,
+        "ageVolatility": 0.6408405239875969
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 705
+    },
+    {
+      "file": "src/flask/json/__init__.py",
+      "features": {
+        "churn": 25,
+        "authors": 9,
+        "ownershipRatio": 0.64,
+        "busFactor": 1,
+        "coChangeScatter": 65,
+        "changeEntropy": 0.6321462460036034,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.636742216756537
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 342
+    },
+    {
+      "file": "src/flask/json/provider.py",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 310
+    },
+    {
+      "file": "src/flask/json/tag.py",
+      "features": {
+        "churn": 8,
+        "authors": 2,
+        "ownershipRatio": 0.875,
+        "busFactor": 1,
+        "coChangeScatter": 56,
+        "changeEntropy": 0.5435644431995964,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.6126834717720272
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 312
+    },
+    {
+      "file": "src/flask/logging.py",
+      "features": {
+        "churn": 10,
+        "authors": 4,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 46,
+        "changeEntropy": 0.6783898247235198,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.5689981670193747
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 74
+    },
+    {
+      "file": "src/flask/scaffold.py",
+      "features": {
+        "churn": 40,
+        "authors": 17,
+        "ownershipRatio": 0.425,
+        "busFactor": 2,
+        "coChangeScatter": 48,
+        "changeEntropy": 0.7530685768270167,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.6310373544696865
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 898
+    },
+    {
+      "file": "src/flask/sessions.py",
+      "features": {
+        "churn": 16,
+        "authors": 7,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 56,
+        "changeEntropy": 0.6852695843977522,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.4974267388557833
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 419
+    },
+    {
+      "file": "src/flask/signals.py",
+      "features": {
+        "churn": 6,
+        "authors": 2,
+        "ownershipRatio": 0.8333333333333334,
+        "busFactor": 1,
+        "coChangeScatter": 42,
+        "changeEntropy": 0.6500224216483541,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4789581385094858
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 56
+    },
+    {
+      "file": "src/flask/templating.py",
+      "features": {
+        "churn": 12,
+        "authors": 5,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 46,
+        "changeEntropy": 0.8166663857315859,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5685210640435607
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 212
+    },
+    {
+      "file": "src/flask/testing.py",
+      "features": {
+        "churn": 24,
+        "authors": 3,
+        "ownershipRatio": 0.875,
+        "busFactor": 1,
+        "coChangeScatter": 73,
+        "changeEntropy": 0.4153735007338397,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.5979438264880742
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 286
+    },
+    {
+      "file": "src/flask/typing.py",
+      "features": {
+        "churn": 18,
+        "authors": 11,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 3,
+        "coChangeScatter": 22,
+        "changeEntropy": 0.8920681061268272,
+        "knowledgeLoss": 0,
+        "priorDefect": 3,
+        "ageVolatility": 0.631480803497178
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 80
+    },
+    {
+      "file": "src/flask/views.py",
+      "features": {
+        "churn": 13,
+        "authors": 4,
+        "ownershipRatio": 0.7692307692307693,
+        "busFactor": 1,
+        "coChangeScatter": 60,
+        "changeEntropy": 0.5725552071907913,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.6133116469573757
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 188
+    },
+    {
+      "file": "src/flask/wrappers.py",
+      "features": {
+        "churn": 17,
+        "authors": 3,
+        "ownershipRatio": 0.8235294117647058,
+        "busFactor": 1,
+        "coChangeScatter": 53,
+        "changeEntropy": 0.5264143616682583,
+        "knowledgeLoss": 0,
+        "priorDefect": 4,
+        "ageVolatility": 0.5791144971347885
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 171
+    }
+  ],
+  "total": 23,
+  "defective": 6,
+  "defectRate": 0.2608695652173913,
+  "fixCommits": 21,
+  "sweepingCommitsIgnored": 0,
+  "withNloc": 23
+}

@@ -1,0 +1,111 @@
+{
+  "$comment": [
+    "Calibration corpus for PLAN.md \u00a75.3. PRE-REGISTERED: the criteria below were written and",
+    "committed BEFORE any repository was scored, and the list was not revised afterwards.",
+    "",
+    "That ordering is the whole point. The failure mode for a calibration corpus is not a bad",
+    "repo, it is a corpus chosen \u2014 even unconsciously \u2014 because it makes the model look good.",
+    "Selecting on outcome produces a scorecard that measures the selection, and nothing",
+    "downstream can detect it. So the criteria are objective, they are recorded here, and the",
+    "run that follows takes whatever result it gets.",
+    "",
+    "If a repository has to be dropped later, the reason belongs in `excluded` below with the",
+    "date \u2014 never by quiet deletion from `repos`."
+  ],
+  "criteria": {
+    "language": "The scorer supports TS/JS and Python, so the corpus must cover both. A JS-only corpus calibrates a JS-only model while claiming to be general.",
+    "maturity": "At least ~4 years of history before T0, so features computed at T0 rest on real history rather than a handful of commits.",
+    "activity": "Actively maintained through the label window, or the window yields no fixes to label.",
+    "size": "Roughly 50-3000 source files. Below that a repo contributes almost nothing; above it, one repo dominates the pooled dataset.",
+    "shape": "Single-project repositories. Monorepos of unrelated packages mix several codebases' defect processes into one label set.",
+    "kind": "Production software that real systems depend on. No tutorials, no awesome-lists, no example collections.",
+    "independence": "Chosen WITHOUT running CodeGraph against any of them first. No repository was added or removed on the basis of its score, its findings, or how well it fit."
+  },
+  "t0": "2023-01-01",
+  "windowMonths": 12,
+  "$t0Rationale": [
+    "T0 is the boundary: features come from everything before it, labels from the 12 months",
+    "after. 2023 is recent enough that the code resembles what the tool will be pointed at,",
+    "and leaves every repo below at least four years of prior history.",
+    "",
+    "A 12-month window rather than \u00a75.3's 6: measured on express, six months of 2023 produced",
+    "FIVE fix commits and two defective files. Six months is the standard figure in the",
+    "literature for repos far busier than most of these. Twelve is a deliberate deviation, and",
+    "it is recorded here rather than left for a reader to infer from the numbers."
+  ],
+  "repos": [
+    {
+      "url": "https://github.com/axios/axios",
+      "lang": "js"
+    },
+    {
+      "url": "https://github.com/eslint/eslint",
+      "lang": "js"
+    },
+    {
+      "url": "https://github.com/socketio/socket.io",
+      "lang": "ts"
+    },
+    {
+      "url": "https://github.com/moment/moment",
+      "lang": "js"
+    },
+    {
+      "url": "https://github.com/winstonjs/winston",
+      "lang": "js"
+    },
+    {
+      "url": "https://github.com/psf/requests",
+      "lang": "py"
+    },
+    {
+      "url": "https://github.com/pallets/flask",
+      "lang": "py"
+    },
+    {
+      "url": "https://github.com/pallets/click",
+      "lang": "py"
+    },
+    {
+      "url": "https://github.com/python-attrs/attrs",
+      "lang": "py"
+    },
+    {
+      "url": "https://github.com/encode/httpx",
+      "lang": "py"
+    },
+    {
+      "url": "https://github.com/psf/black",
+      "lang": "py"
+    },
+    {
+      "url": "https://github.com/scrapy/scrapy",
+      "lang": "py"
+    }
+  ],
+  "excluded": [
+    {
+      "url": "https://github.com/lodash/lodash",
+      "lang": "js",
+      "date": "2026-07-30",
+      "criterion": "activity",
+      "reason": "0 fix commits in the 2023 window. Dormant that year, so it contributes 1147 negative examples and no positives \u2014 it would move the pooled base rate without carrying any signal about what predicts a defect."
+    },
+    {
+      "url": "https://github.com/expressjs/express",
+      "lang": "js",
+      "date": "2026-07-30",
+      "criterion": "activity",
+      "reason": "1 fix commit in the 2023 window. Same problem as lodash: 103 files of negatives off a single positive. Note this is the repo the README benchmarks against \u2014 it is excluded from CALIBRATION for having a quiet 2023, not from the product."
+    },
+    {
+      "url": "https://github.com/date-fns/date-fns",
+      "lang": "ts",
+      "date": "2026-07-30",
+      "criterion": "size",
+      "reason": "5319 source files, above the pre-registered ceiling of ~3000, and the stated rationale for that ceiling held exactly: it was 58.2% of every file in the pooled corpus while contributing 8.4% of the positives (19 of 225, a 0.4% defect rate). A model fit on that would largely learn 'looks like a date-fns locale file -> not defective'. The file count is structural, not incidental: date-fns is one function per file across ~200 locales."
+    }
+  ],
+  "$exclusionNote": "Both were removed by applying the PRE-REGISTERED `activity` criterion, not because of how they scored. That distinction is the whole reason the criteria were committed first: 'this repo yields no labels' is a property of the window, checkable by anyone, and it is recorded here with the numbers rather than by quietly shortening the list.",
+  "$boundsNote": "One bound was NOT applied, and the asymmetry is deliberate. `python-attrs/attrs` has 31 source files, below the ~50 lower bound. That bound's stated rationale is 'contributes almost nothing' \u2014 attrs contributes 7 positives, 3.1% of the corpus, comparable to httpx (6) and flask (6). The rationale is measurably false for it, so it stays. date-fns was excluded because its bound's rationale was measurably TRUE. Applying a threshold whose reason does not hold is cargo-culting the number instead of the intent, and doing it silently either way is how a corpus gets quietly shaped."
+}

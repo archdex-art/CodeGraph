@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGitLog, signalsFromCommits, type FileSignals } from "../src/signals";
+import { isBotAuthor, isFixSubject, parseGitLog, signalsFromCommits, type FileSignals } from "../src/signals";
 
 /**
  * PLAN.md §5.2's organisational signals.
@@ -176,7 +176,11 @@ describe("prior defect", () => {
     ["Fixes #42", 1],
     ["revert bad commit", 1],
     ["hotfix login", 1],
-    ["closes #7", 1],
+    // WAS `1`. The hand-audit against real express history disproved it: `closes`/`resolves`
+    // shut an issue of ANY kind, and three of twenty sampled "defects" were a feature, a
+    // refactor and a chore that happened to close a ticket. Only `fixes #N` survives.
+    ["closes #7", 0],
+    ["fixes #7", 1],
     ["add a feature", 0],
     ["refactor the parser", 0],
     ["docs: update readme", 0],
@@ -221,5 +225,86 @@ describe("age volatility", () => {
 describe("degenerate input", () => {
   it("returns an empty map for no commits", () => {
     expect(signalsFromCommits([]).size).toBe(0);
+  });
+});
+
+describe("isFixSubject — the label classifier", () => {
+  /**
+   * Every case below was found by auditing real `expressjs/express` history (6158 commits),
+   * not invented. The classifier went 1140 flagged (18.5%) -> 565 (9.2%) across two rounds of
+   * audit, and precision on a 20-commit sample went from ~85% to ~95%.
+   */
+  it.each([
+    ["fix(res.send): add Content-Length header only if Transfer-Encoding is present", true],
+    ["Fix res.sendFile not always detecting aborted connection", true],
+    ["fixes #1826: res.redirect('toString') fails with 500", true],
+    ["Revert \"Only unshift support libs once\"", true],
+    ["router: fix optimization on router exit", true],
+    ["hotfix: broken release", true],
+  ])("flags %s", (subject, expected) => {
+    expect(isFixSubject(subject)).toBe(expected);
+  });
+
+  it.each([
+    // A BARE issue reference is not a fix. GitHub squash-merges append `(#123)` to EVERY
+    // commit; matching it flagged 282 of 1140 express commits, almost none of them fixes.
+    ["feat: allow conditional revalidation for QUERY requests (#7366)", false],
+    ["docs: use the new logo (#7316)", false],
+    ["build(deps): bump actions/checkout from 6.0.2 to 7.0.0 (#7345)", false],
+    ["build(deps-dev): bump hbs from 4.2.0 to 4.2.1 (#7152)", false],
+    ["deps: bump qs minimum to 6.15.2 (#7305)", false],
+    // `closes`/`resolves` shut an issue of ANY kind. All three of these are real express
+    // commits the audit caught being mislabelled as defects.
+    ["Added `app.routes.all()`. Closes #803", false],
+    ["Refactored router. Closes #639", false],
+    ["Updated express(1). Closes #365", false],
+    ["add res.vary(). Closes #1682", false],
+    // Conventional type is authoritative over any keyword that follows.
+    ["chore: remove the fix workaround", false],
+    ["test: add coverage for the fixed path", false],
+    ["perf: faster than the fix in 4.x", false],
+  ])("does NOT flag %s", (subject, expected) => {
+    expect(isFixSubject(subject)).toBe(expected);
+  });
+
+  it("is not fooled by words containing 'fix'", () => {
+    expect(isFixSubject("add prefix handling to the router")).toBe(false);
+    expect(isFixSubject("support suffix matching")).toBe(false);
+  });
+
+  it("still uses keywords when the type prefix is unrecognised", () => {
+    // `router:` is not a conventional type, so the keyword path must still run.
+    expect(isFixSubject("router: fix optimization on router exit")).toBe(true);
+  });
+});
+
+describe("isBotAuthor", () => {
+  it.each(["dependabot[bot]", "renovate[bot]", "github-actions[bot]", "snyk-bot"])(
+    "recognises %s",
+    (name) => expect(isBotAuthor(name)).toBe(true),
+  );
+
+  it.each(["Tj Holowaychuk", "Douglas Christopher Wilson", "Robot Ada"])(
+    "does not misclassify %s",
+    (name) => expect(isBotAuthor(name)).toBe(false),
+  );
+
+  it("keeps bot commits out of the author signals entirely", () => {
+    // `authors`, `busFactor` and `changeEntropy` measure how many HUMANS touch a file. A bot
+    // with hundreds of dependency bumps otherwise reads as the most involved contributor.
+    const withBot = sig(
+      log([
+        { author: "Ada", at: DAY, subject: "x", files: ["a.ts"] },
+        ...Array.from({ length: 20 }, (_, i) => ({
+          author: "dependabot[bot]",
+          at: (i + 2) * DAY,
+          subject: "build(deps): bump x",
+          files: ["a.ts"],
+        })),
+      ]),
+    ).get("a.ts")!;
+    expect(withBot.authors).toBe(1);
+    expect(withBot.churn).toBe(1);
+    expect(withBot.ownershipRatio).toBe(1);
   });
 });

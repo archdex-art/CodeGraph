@@ -1,0 +1,167 @@
+{
+  "repo": "https://github.com/socketio/socket.io",
+  "t0": "2023-01-01",
+  "windowEnd": "2024-01-01",
+  "t0Rev": "547c541fb9954ef2ec9703a39ee264c7113ba26f",
+  "files": [
+    {
+      "file": "lib/broadcast-operator.ts",
+      "features": {
+        "churn": 12,
+        "authors": 4,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0.603759374819711,
+        "knowledgeLoss": 0,
+        "priorDefect": 5,
+        "ageVolatility": 0.5212719132018817
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 486
+    },
+    {
+      "file": "lib/client.ts",
+      "features": {
+        "churn": 25,
+        "authors": 7,
+        "ownershipRatio": 0.76,
+        "busFactor": 1,
+        "coChangeScatter": 21,
+        "changeEntropy": 0.5041867946359212,
+        "knowledgeLoss": 0,
+        "priorDefect": 8,
+        "ageVolatility": 0.6018004077651309
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 347
+    },
+    {
+      "file": "lib/index.ts",
+      "features": {
+        "churn": 125,
+        "authors": 22,
+        "ownershipRatio": 0.784,
+        "busFactor": 1,
+        "coChangeScatter": 133,
+        "changeEntropy": 0.3748848978543153,
+        "knowledgeLoss": 0,
+        "priorDefect": 42,
+        "ageVolatility": 0.7979154719458965
+      },
+      "defective": true,
+      "fixCount": 11,
+      "nloc": 1003
+    },
+    {
+      "file": "lib/namespace.ts",
+      "features": {
+        "churn": 37,
+        "authors": 9,
+        "ownershipRatio": 0.7837837837837838,
+        "busFactor": 1,
+        "coChangeScatter": 24,
+        "changeEntropy": 0.4422333774711741,
+        "knowledgeLoss": 0,
+        "priorDefect": 10,
+        "ageVolatility": 0.6229300849174455
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 654
+    },
+    {
+      "file": "lib/parent-namespace.ts",
+      "features": {
+        "churn": 15,
+        "authors": 6,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 15,
+        "changeEntropy": 0.6546601218437399,
+        "knowledgeLoss": 0,
+        "priorDefect": 5,
+        "ageVolatility": 0.5203355813818165
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 76
+    },
+    {
+      "file": "lib/socket.ts",
+      "features": {
+        "churn": 106,
+        "authors": 16,
+        "ownershipRatio": 0.8301886792452831,
+        "busFactor": 1,
+        "coChangeScatter": 124,
+        "changeEntropy": 0.32247543807456835,
+        "knowledgeLoss": 0,
+        "priorDefect": 26,
+        "ageVolatility": 0.6479798470625827
+      },
+      "defective": true,
+      "fixCount": 12,
+      "nloc": 1098
+    },
+    {
+      "file": "lib/typed-events.ts",
+      "features": {
+        "churn": 11,
+        "authors": 3,
+        "ownershipRatio": 0.7272727272727273,
+        "busFactor": 1,
+        "coChangeScatter": 25,
+        "changeEntropy": 0.6913698302025114,
+        "knowledgeLoss": 0,
+        "priorDefect": 4,
+        "ageVolatility": 0.458615602774454
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 180
+    },
+    {
+      "file": "lib/uws.ts",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 6,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.49242876409664554
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 164
+    },
+    {
+      "file": "wrapper.mjs",
+      "features": {
+        "churn": 8,
+        "authors": 2,
+        "ownershipRatio": 0.875,
+        "busFactor": 1,
+        "coChangeScatter": 20,
+        "changeEntropy": 0.5435644431995964,
+        "knowledgeLoss": 0,
+        "priorDefect": 3,
+        "ageVolatility": 0.5144712671940048
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 3
+    }
+  ],
+  "total": 9,
+  "defective": 7,
+  "defectRate": 0.7777777777777778,
+  "fixCommits": 48,
+  "sweepingCommitsIgnored": 0,
+  "withNloc": 9
+}

@@ -1,0 +1,6933 @@
+{
+  "repo": "https://github.com/moment/moment",
+  "t0": "2023-01-01",
+  "windowEnd": "2024-01-01",
+  "t0Rev": "000ac1800e620f770f4eb31b5ae908f6167b0ab2",
+  "files": [
+    {
+      "file": "ender.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 0,
+        "knowledgeLoss": 1,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 1
+    },
+    {
+      "file": "Gruntfile.js",
+      "features": {
+        "churn": 89,
+        "authors": 16,
+        "ownershipRatio": 0.42696629213483145,
+        "busFactor": 2,
+        "coChangeScatter": 141,
+        "changeEntropy": 0.7160197118374992,
+        "knowledgeLoss": 0.48314606741573035,
+        "priorDefect": 14,
+        "ageVolatility": 0.6853590650702087
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 255
+    },
+    {
+      "file": "locale/af.js",
+      "features": {
+        "churn": 18,
+        "authors": 3,
+        "ownershipRatio": 0.7777777777777778,
+        "busFactor": 1,
+        "coChangeScatter": 30,
+        "changeEntropy": 0.595905918112551,
+        "knowledgeLoss": 0.05555555555555555,
+        "priorDefect": 3,
+        "ageVolatility": 0.5878677666003845
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 82
+    },
+    {
+      "file": "locale/ar-dz.js",
+      "features": {
+        "churn": 7,
+        "authors": 2,
+        "ownershipRatio": 0.7142857142857143,
+        "busFactor": 1,
+        "coChangeScatter": 28,
+        "changeEntropy": 0.863120568566631,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.46779772822152643
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 167
+    },
+    {
+      "file": "locale/ar-kw.js",
+      "features": {
+        "churn": 10,
+        "authors": 4,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.8609640474436812,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 0,
+        "ageVolatility": 0.5353485806812971
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 66
+    },
+    {
+      "file": "locale/ar-ly.js",
+      "features": {
+        "churn": 13,
+        "authors": 3,
+        "ownershipRatio": 0.38461538461538464,
+        "busFactor": 2,
+        "coChangeScatter": 50,
+        "changeEntropy": 0.9770455804590027,
+        "knowledgeLoss": 0.23076923076923078,
+        "priorDefect": 0,
+        "ageVolatility": 0.5146397107329118
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 182
+    },
+    {
+      "file": "locale/ar-ma.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.631578947368421,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6863534808509852,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 2,
+        "ageVolatility": 0.5077438979184915
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 67
+    },
+    {
+      "file": "locale/ar-sa.js",
+      "features": {
+        "churn": 21,
+        "authors": 4,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 24,
+        "changeEntropy": 0.650620392740731,
+        "knowledgeLoss": 0.09523809523809523,
+        "priorDefect": 4,
+        "ageVolatility": 0.5318570199494245
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 116
+    },
+    {
+      "file": "locale/ar-tn.js",
+      "features": {
+        "churn": 13,
+        "authors": 3,
+        "ownershipRatio": 0.6923076923076923,
+        "busFactor": 1,
+        "coChangeScatter": 34,
+        "changeEntropy": 0.7193329040881774,
+        "knowledgeLoss": 0.07692307692307693,
+        "priorDefect": 0,
+        "ageVolatility": 0.5249387351017143
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 66
+    },
+    {
+      "file": "locale/ar.js",
+      "features": {
+        "churn": 26,
+        "authors": 6,
+        "ownershipRatio": 0.6153846153846154,
+        "busFactor": 1,
+        "coChangeScatter": 75,
+        "changeEntropy": 0.6353560054684395,
+        "knowledgeLoss": 0.15384615384615385,
+        "priorDefect": 5,
+        "ageVolatility": 0.5609780539728528
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 200
+    },
+    {
+      "file": "locale/az.js",
+      "features": {
+        "churn": 24,
+        "authors": 5,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 47,
+        "changeEntropy": 0.6446863090125792,
+        "knowledgeLoss": 0.125,
+        "priorDefect": 4,
+        "ageVolatility": 0.5402997855710119
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 113
+    },
+    {
+      "file": "locale/be.js",
+      "features": {
+        "churn": 21,
+        "authors": 3,
+        "ownershipRatio": 0.7142857142857143,
+        "busFactor": 1,
+        "coChangeScatter": 38,
+        "changeEntropy": 0.6617451580014917,
+        "knowledgeLoss": 0.047619047619047616,
+        "priorDefect": 3,
+        "ageVolatility": 0.5536041940129443
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 153
+    },
+    {
+      "file": "locale/bg.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.631578947368421,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6863534808509852,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 2,
+        "ageVolatility": 0.4904312338303338
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 98
+    },
+    {
+      "file": "locale/bm.js",
+      "features": {
+        "churn": 5,
+        "authors": 2,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 28,
+        "changeEntropy": 0.9709505944546686,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5671171919952024
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 62
+    },
+    {
+      "file": "locale/bn-bd.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 140
+    },
+    {
+      "file": "locale/bn.js",
+      "features": {
+        "churn": 23,
+        "authors": 5,
+        "ownershipRatio": 0.6521739130434783,
+        "busFactor": 1,
+        "coChangeScatter": 64,
+        "changeEntropy": 0.6334489231494328,
+        "knowledgeLoss": 0.13043478260869565,
+        "priorDefect": 5,
+        "ageVolatility": 0.548820193863789
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 130
+    },
+    {
+      "file": "locale/bo.js",
+      "features": {
+        "churn": 20,
+        "authors": 3,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 43,
+        "changeEntropy": 0.6790681957683444,
+        "knowledgeLoss": 0.05,
+        "priorDefect": 4,
+        "ageVolatility": 0.5242716005634973
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 135
+    },
+    {
+      "file": "locale/br.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 28,
+        "changeEntropy": 0.6283898247235197,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 2,
+        "ageVolatility": 0.5825118912264633
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 179
+    },
+    {
+      "file": "locale/bs.js",
+      "features": {
+        "churn": 22,
+        "authors": 5,
+        "ownershipRatio": 0.6818181818181818,
+        "busFactor": 1,
+        "coChangeScatter": 34,
+        "changeEntropy": 0.6167315067566929,
+        "knowledgeLoss": 0.13636363636363635,
+        "priorDefect": 2,
+        "ageVolatility": 0.5600882594889732
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 161
+    },
+    {
+      "file": "locale/ca.js",
+      "features": {
+        "churn": 23,
+        "authors": 5,
+        "ownershipRatio": 0.6956521739130435,
+        "busFactor": 1,
+        "coChangeScatter": 30,
+        "changeEntropy": 0.6233020318880363,
+        "knowledgeLoss": 0.17391304347826086,
+        "priorDefect": 3,
+        "ageVolatility": 0.6077087252246539
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 111
+    },
+    {
+      "file": "locale/cs.js",
+      "features": {
+        "churn": 21,
+        "authors": 6,
+        "ownershipRatio": 0.6190476190476191,
+        "busFactor": 1,
+        "coChangeScatter": 21,
+        "changeEntropy": 0.6656253792470391,
+        "knowledgeLoss": 0.19047619047619047,
+        "priorDefect": 3,
+        "ageVolatility": 0.5519393892270118
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 191
+    },
+    {
+      "file": "locale/cv.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 23,
+        "changeEntropy": 0.6283898247235197,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 2,
+        "ageVolatility": 0.5432866196722734
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 74
+    },
+    {
+      "file": "locale/cy.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 33,
+        "changeEntropy": 0.5770078865364,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 2,
+        "ageVolatility": 0.5851516311339461
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 109
+    },
+    {
+      "file": "locale/da.js",
+      "features": {
+        "churn": 18,
+        "authors": 4,
+        "ownershipRatio": 0.7222222222222222,
+        "busFactor": 1,
+        "coChangeScatter": 28,
+        "changeEntropy": 0.6166123941101098,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 2,
+        "ageVolatility": 0.5775028931603232
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 64
+    },
+    {
+      "file": "locale/de-at.js",
+      "features": {
+        "churn": 22,
+        "authors": 5,
+        "ownershipRatio": 0.6818181818181818,
+        "busFactor": 1,
+        "coChangeScatter": 49,
+        "changeEntropy": 0.6167315067566929,
+        "knowledgeLoss": 0.13636363636363635,
+        "priorDefect": 2,
+        "ageVolatility": 0.5908056940624876
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 90
+    },
+    {
+      "file": "locale/de-ch.js",
+      "features": {
+        "churn": 10,
+        "authors": 3,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 47,
+        "changeEntropy": 0.9602297178607612,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 0,
+        "ageVolatility": 0.5721334345193522
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 87
+    },
+    {
+      "file": "locale/de.js",
+      "features": {
+        "churn": 22,
+        "authors": 5,
+        "ownershipRatio": 0.6818181818181818,
+        "busFactor": 1,
+        "coChangeScatter": 49,
+        "changeEntropy": 0.6167315067566929,
+        "knowledgeLoss": 0.13636363636363635,
+        "priorDefect": 2,
+        "ageVolatility": 0.5908056940624876
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 89
+    },
+    {
+      "file": "locale/dv.js",
+      "features": {
+        "churn": 9,
+        "authors": 2,
+        "ownershipRatio": 0.5555555555555556,
+        "busFactor": 1,
+        "coChangeScatter": 21,
+        "changeEntropy": 0.9910760598382222,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.45096127629523924
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 101
+    },
+    {
+      "file": "locale/el.js",
+      "features": {
+        "churn": 22,
+        "authors": 6,
+        "ownershipRatio": 0.6818181818181818,
+        "busFactor": 1,
+        "coChangeScatter": 28,
+        "changeEntropy": 0.6110383905522615,
+        "knowledgeLoss": 0.18181818181818182,
+        "priorDefect": 2,
+        "ageVolatility": 0.6016184763581356
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 117
+    },
+    {
+      "file": "locale/en-au.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 58,
+        "changeEntropy": 0.6283898247235197,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 2,
+        "ageVolatility": 0.5982600378394503
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "locale/en-ca.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.7368421052631579,
+        "busFactor": 1,
+        "coChangeScatter": 26,
+        "changeEntropy": 0.596125430117321,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 2,
+        "ageVolatility": 0.5905597071456038
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 75
+    },
+    {
+      "file": "locale/en-gb.js",
+      "features": {
+        "churn": 18,
+        "authors": 4,
+        "ownershipRatio": 0.7222222222222222,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0.6166123941101098,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 2,
+        "ageVolatility": 0.5833907617363642
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "locale/en-ie.js",
+      "features": {
+        "churn": 10,
+        "authors": 2,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 25,
+        "changeEntropy": 0.9709505944546686,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.44012761630980674
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "locale/en-il.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.48159581207457647
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 75
+    },
+    {
+      "file": "locale/en-in.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 28,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "locale/en-nz.js",
+      "features": {
+        "churn": 12,
+        "authors": 3,
+        "ownershipRatio": 0.5833333333333334,
+        "busFactor": 1,
+        "coChangeScatter": 39,
+        "changeEntropy": 0.8734790278701756,
+        "knowledgeLoss": 0.16666666666666666,
+        "priorDefect": 1,
+        "ageVolatility": 0.5796931021238699
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "locale/en-sg.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "locale/eo.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.6842105263157895,
+        "busFactor": 1,
+        "coChangeScatter": 24,
+        "changeEntropy": 0.6474975373577349,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 3,
+        "ageVolatility": 0.5133419531035232
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "locale/es-do.js",
+      "features": {
+        "churn": 10,
+        "authors": 2,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 28,
+        "changeEntropy": 0.9709505944546686,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.505106130127024
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 119
+    },
+    {
+      "file": "locale/es-mx.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 121
+    },
+    {
+      "file": "locale/es-us.js",
+      "features": {
+        "churn": 10,
+        "authors": 2,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 39,
+        "changeEntropy": 0.8812908992306927,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.512418598978734
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 121
+    },
+    {
+      "file": "locale/es.js",
+      "features": {
+        "churn": 26,
+        "authors": 6,
+        "ownershipRatio": 0.6153846153846154,
+        "busFactor": 1,
+        "coChangeScatter": 56,
+        "changeEntropy": 0.6636280199688734,
+        "knowledgeLoss": 0.19230769230769232,
+        "priorDefect": 3,
+        "ageVolatility": 0.6034974421539238
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 121
+    },
+    {
+      "file": "locale/et.js",
+      "features": {
+        "churn": 18,
+        "authors": 4,
+        "ownershipRatio": 0.7222222222222222,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6166123941101098,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 2,
+        "ageVolatility": 0.5679445796294156
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 89
+    },
+    {
+      "file": "locale/eu.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6283898247235197,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 2,
+        "ageVolatility": 0.5412885721414112
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 76
+    },
+    {
+      "file": "locale/fa.js",
+      "features": {
+        "churn": 23,
+        "authors": 5,
+        "ownershipRatio": 0.6521739130434783,
+        "busFactor": 1,
+        "coChangeScatter": 25,
+        "changeEntropy": 0.6334489231494328,
+        "knowledgeLoss": 0.13043478260869565,
+        "priorDefect": 3,
+        "ageVolatility": 0.5351319046601212
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 124
+    },
+    {
+      "file": "locale/fi.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.6842105263157895,
+        "busFactor": 1,
+        "coChangeScatter": 30,
+        "changeEntropy": 0.6474975373577349,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 2,
+        "ageVolatility": 0.5691320695561521
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 135
+    },
+    {
+      "file": "locale/fil.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 69
+    },
+    {
+      "file": "locale/fo.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.6842105263157895,
+        "busFactor": 1,
+        "coChangeScatter": 20,
+        "changeEntropy": 0.6474975373577349,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 2,
+        "ageVolatility": 0.5295602927426584
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "locale/fr-ca.js",
+      "features": {
+        "churn": 20,
+        "authors": 5,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 8,
+        "changeEntropy": 0.6111452277369959,
+        "knowledgeLoss": 0.15,
+        "priorDefect": 2,
+        "ageVolatility": 0.5863407103034205
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 81
+    },
+    {
+      "file": "locale/fr-ch.js",
+      "features": {
+        "churn": 11,
+        "authors": 3,
+        "ownershipRatio": 0.6363636363636364,
+        "busFactor": 1,
+        "coChangeScatter": 8,
+        "changeEntropy": 0.7827759528141421,
+        "knowledgeLoss": 0.09090909090909091,
+        "priorDefect": 0,
+        "ageVolatility": 0.5337639927566623
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 85
+    },
+    {
+      "file": "locale/fr.js",
+      "features": {
+        "churn": 22,
+        "authors": 5,
+        "ownershipRatio": 0.6363636363636364,
+        "busFactor": 1,
+        "coChangeScatter": 38,
+        "changeEntropy": 0.6498299702630145,
+        "knowledgeLoss": 0.13636363636363635,
+        "priorDefect": 2,
+        "ageVolatility": 0.5781808487878061
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 119
+    },
+    {
+      "file": "locale/fy.js",
+      "features": {
+        "churn": 14,
+        "authors": 3,
+        "ownershipRatio": 0.6428571428571429,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.8120406807941,
+        "knowledgeLoss": 0.14285714285714285,
+        "priorDefect": 0,
+        "ageVolatility": 0.5327615222286218
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 86
+    },
+    {
+      "file": "locale/ga.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 20,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 106
+    },
+    {
+      "file": "locale/gd.js",
+      "features": {
+        "churn": 9,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5347219679574641
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 106
+    },
+    {
+      "file": "locale/gl.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 33,
+        "changeEntropy": 0.5770078865364,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 2,
+        "ageVolatility": 0.5851516311339461
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 86
+    },
+    {
+      "file": "locale/gom-deva.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 22,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.3805902325204615
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 137
+    },
+    {
+      "file": "locale/gom-latn.js",
+      "features": {
+        "churn": 8,
+        "authors": 2,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 35,
+        "changeEntropy": 0.954434002924965,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4136306186115183
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 135
+    },
+    {
+      "file": "locale/gu.js",
+      "features": {
+        "churn": 9,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 47,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.49464741405642454
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 133
+    },
+    {
+      "file": "locale/he.js",
+      "features": {
+        "churn": 19,
+        "authors": 5,
+        "ownershipRatio": 0.631578947368421,
+        "busFactor": 1,
+        "coChangeScatter": 22,
+        "changeEntropy": 0.7012363042668347,
+        "knowledgeLoss": 0.21052631578947367,
+        "priorDefect": 2,
+        "ageVolatility": 0.5859110569979151
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 105
+    },
+    {
+      "file": "locale/hi.js",
+      "features": {
+        "churn": 22,
+        "authors": 4,
+        "ownershipRatio": 0.6363636363636364,
+        "busFactor": 1,
+        "coChangeScatter": 44,
+        "changeEntropy": 0.6657898112928896,
+        "knowledgeLoss": 0.09090909090909091,
+        "priorDefect": 3,
+        "ageVolatility": 0.5371677964652829
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 179
+    },
+    {
+      "file": "locale/hr.js",
+      "features": {
+        "churn": 23,
+        "authors": 5,
+        "ownershipRatio": 0.6956521739130435,
+        "busFactor": 1,
+        "coChangeScatter": 45,
+        "changeEntropy": 0.5999872160192362,
+        "knowledgeLoss": 0.13043478260869565,
+        "priorDefect": 2,
+        "ageVolatility": 0.5663237967108771
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 167
+    },
+    {
+      "file": "locale/hu.js",
+      "features": {
+        "churn": 21,
+        "authors": 4,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 32,
+        "changeEntropy": 0.650620392740731,
+        "knowledgeLoss": 0.09523809523809523,
+        "priorDefect": 3,
+        "ageVolatility": 0.5718536162953429
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 129
+    },
+    {
+      "file": "locale/hy-am.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 24,
+        "changeEntropy": 0.6283898247235197,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 3,
+        "ageVolatility": 0.5447233434817921
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 105
+    },
+    {
+      "file": "locale/id.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.631578947368421,
+        "busFactor": 1,
+        "coChangeScatter": 59,
+        "changeEntropy": 0.6863534808509852,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 3,
+        "ageVolatility": 0.5350534142902881
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 87
+    },
+    {
+      "file": "locale/is.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.7368421052631579,
+        "busFactor": 1,
+        "coChangeScatter": 21,
+        "changeEntropy": 0.596125430117321,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 2,
+        "ageVolatility": 0.5764761333973348
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 151
+    },
+    {
+      "file": "locale/it-ch.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 20,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 75
+    },
+    {
+      "file": "locale/it.js",
+      "features": {
+        "churn": 20,
+        "authors": 5,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 30,
+        "changeEntropy": 0.6849775297671233,
+        "knowledgeLoss": 0.15,
+        "priorDefect": 2,
+        "ageVolatility": 0.5830898277017937
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 117
+    },
+    {
+      "file": "locale/ja.js",
+      "features": {
+        "churn": 21,
+        "authors": 5,
+        "ownershipRatio": 0.6190476190476191,
+        "busFactor": 1,
+        "coChangeScatter": 53,
+        "changeEntropy": 0.7000124393269148,
+        "knowledgeLoss": 0.19047619047619047,
+        "priorDefect": 3,
+        "ageVolatility": 0.521949925753563
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 159
+    },
+    {
+      "file": "locale/jv.js",
+      "features": {
+        "churn": 14,
+        "authors": 4,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 45,
+        "changeEntropy": 0.7608203181716592,
+        "knowledgeLoss": 0.14285714285714285,
+        "priorDefect": 1,
+        "ageVolatility": 0.5230516439009509
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 87
+    },
+    {
+      "file": "locale/ka.js",
+      "features": {
+        "churn": 18,
+        "authors": 4,
+        "ownershipRatio": 0.7222222222222222,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6166123941101098,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 2,
+        "ageVolatility": 0.5679445796294156
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 103
+    },
+    {
+      "file": "locale/kk.js",
+      "features": {
+        "churn": 10,
+        "authors": 2,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9709505944546686,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.44219624709812116
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 93
+    },
+    {
+      "file": "locale/km.js",
+      "features": {
+        "churn": 18,
+        "authors": 4,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6677527782585486,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 2,
+        "ageVolatility": 0.5505988814710739
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 114
+    },
+    {
+      "file": "locale/kn.js",
+      "features": {
+        "churn": 8,
+        "authors": 2,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.954434002924965,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4180583484840672
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 135
+    },
+    {
+      "file": "locale/ko.js",
+      "features": {
+        "churn": 23,
+        "authors": 7,
+        "ownershipRatio": 0.6956521739130435,
+        "busFactor": 1,
+        "coChangeScatter": 71,
+        "changeEntropy": 0.5891655257659546,
+        "knowledgeLoss": 0.21739130434782608,
+        "priorDefect": 3,
+        "ageVolatility": 0.6145493323044745
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 86
+    },
+    {
+      "file": "locale/ku.js",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.3135510528835923
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 129
+    },
+    {
+      "file": "locale/ky.js",
+      "features": {
+        "churn": 9,
+        "authors": 2,
+        "ownershipRatio": 0.5555555555555556,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9910760598382222,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.44161068763166167
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 95
+    },
+    {
+      "file": "locale/lb.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 33,
+        "changeEntropy": 0.5770078865364,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 2,
+        "ageVolatility": 0.5851516311339461
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 148
+    },
+    {
+      "file": "locale/lo.js",
+      "features": {
+        "churn": 10,
+        "authors": 2,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.8812908992306927,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5095733338279435
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 77
+    },
+    {
+      "file": "locale/lt.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0.5770078865364,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 2,
+        "ageVolatility": 0.5857949887429208
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 136
+    },
+    {
+      "file": "locale/lv.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 23,
+        "changeEntropy": 0.5770078865364,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 2,
+        "ageVolatility": 0.585305088548201
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 105
+    },
+    {
+      "file": "locale/me.js",
+      "features": {
+        "churn": 14,
+        "authors": 2,
+        "ownershipRatio": 0.7142857142857143,
+        "busFactor": 1,
+        "coChangeScatter": 43,
+        "changeEntropy": 0.863120568566631,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.49845993775117015
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 128
+    },
+    {
+      "file": "locale/mi.js",
+      "features": {
+        "churn": 8,
+        "authors": 2,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 33,
+        "changeEntropy": 0.954434002924965,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4998020633617848
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 71
+    },
+    {
+      "file": "locale/mk.js",
+      "features": {
+        "churn": 18,
+        "authors": 4,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6677527782585486,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 2,
+        "ageVolatility": 0.4995340082616266
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 97
+    },
+    {
+      "file": "locale/ml.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.7368421052631579,
+        "busFactor": 1,
+        "coChangeScatter": 42,
+        "changeEntropy": 0.596125430117321,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 3,
+        "ageVolatility": 0.5855285533116618
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 93
+    },
+    {
+      "file": "locale/mn.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.0391203318594671
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 111
+    },
+    {
+      "file": "locale/mr.js",
+      "features": {
+        "churn": 28,
+        "authors": 5,
+        "ownershipRatio": 0.5357142857142857,
+        "busFactor": 1,
+        "coChangeScatter": 38,
+        "changeEntropy": 0.7518868772458804,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 6,
+        "ageVolatility": 0.5869399949323043
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 214
+    },
+    {
+      "file": "locale/ms-my.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.6842105263157895,
+        "busFactor": 1,
+        "coChangeScatter": 34,
+        "changeEntropy": 0.6474975373577349,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 4,
+        "ageVolatility": 0.5377564390018201
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 87
+    },
+    {
+      "file": "locale/ms.js",
+      "features": {
+        "churn": 10,
+        "authors": 3,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.8586727110732552,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 0,
+        "ageVolatility": 0.4233678943905761
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 86
+    },
+    {
+      "file": "locale/mt.js",
+      "features": {
+        "churn": 5,
+        "authors": 2,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9709505944546686,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.46532426223696643
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 67
+    },
+    {
+      "file": "locale/my.js",
+      "features": {
+        "churn": 20,
+        "authors": 3,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 50,
+        "changeEntropy": 0.6790681957683444,
+        "knowledgeLoss": 0.05,
+        "priorDefect": 3,
+        "ageVolatility": 0.5308262669115965
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 102
+    },
+    {
+      "file": "locale/nb.js",
+      "features": {
+        "churn": 29,
+        "authors": 7,
+        "ownershipRatio": 0.5172413793103449,
+        "busFactor": 1,
+        "coChangeScatter": 3,
+        "changeEntropy": 0.7451909560288904,
+        "knowledgeLoss": 0.3448275862068966,
+        "priorDefect": 4,
+        "ageVolatility": 0.6255013270568488
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 71
+    },
+    {
+      "file": "locale/ne.js",
+      "features": {
+        "churn": 21,
+        "authors": 4,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 32,
+        "changeEntropy": 0.650620392740731,
+        "knowledgeLoss": 0.09523809523809523,
+        "priorDefect": 3,
+        "ageVolatility": 0.5301974178035107
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 132
+    },
+    {
+      "file": "locale/nl-be.js",
+      "features": {
+        "churn": 9,
+        "authors": 2,
+        "ownershipRatio": 0.5555555555555556,
+        "busFactor": 1,
+        "coChangeScatter": 28,
+        "changeEntropy": 0.9910760598382222,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.47561503442510766
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 113
+    },
+    {
+      "file": "locale/nl.js",
+      "features": {
+        "churn": 23,
+        "authors": 4,
+        "ownershipRatio": 0.6956521739130435,
+        "busFactor": 1,
+        "coChangeScatter": 50,
+        "changeEntropy": 0.6180931416277062,
+        "knowledgeLoss": 0.08695652173913043,
+        "priorDefect": 2,
+        "ageVolatility": 0.5256771556037257
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 115
+    },
+    {
+      "file": "locale/nn.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6283898247235197,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 2,
+        "ageVolatility": 0.5605266734554284
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 70
+    },
+    {
+      "file": "locale/oc-lnc.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 96
+    },
+    {
+      "file": "locale/pa-in.js",
+      "features": {
+        "churn": 11,
+        "authors": 2,
+        "ownershipRatio": 0.5454545454545454,
+        "busFactor": 1,
+        "coChangeScatter": 23,
+        "changeEntropy": 0.9940302114769565,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.452399145164866
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 133
+    },
+    {
+      "file": "locale/pl.js",
+      "features": {
+        "churn": 21,
+        "authors": 4,
+        "ownershipRatio": 0.7142857142857143,
+        "busFactor": 1,
+        "coChangeScatter": 39,
+        "changeEntropy": 0.6103644510530045,
+        "knowledgeLoss": 0.09523809523809523,
+        "priorDefect": 2,
+        "ageVolatility": 0.5673308425596748
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 151
+    },
+    {
+      "file": "locale/pt-br.js",
+      "features": {
+        "churn": 23,
+        "authors": 4,
+        "ownershipRatio": 0.7391304347826086,
+        "busFactor": 1,
+        "coChangeScatter": 59,
+        "changeEntropy": 0.5772838410446854,
+        "knowledgeLoss": 0.08695652173913043,
+        "priorDefect": 2,
+        "ageVolatility": 0.5226423508695603
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 69
+    },
+    {
+      "file": "locale/pt.js",
+      "features": {
+        "churn": 23,
+        "authors": 4,
+        "ownershipRatio": 0.6956521739130435,
+        "busFactor": 1,
+        "coChangeScatter": 49,
+        "changeEntropy": 0.6180931416277062,
+        "knowledgeLoss": 0.08695652173913043,
+        "priorDefect": 2,
+        "ageVolatility": 0.5213041352797421
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 74
+    },
+    {
+      "file": "locale/ro.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.631578947368421,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6863534808509852,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 2,
+        "ageVolatility": 0.5077438979184915
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 87
+    },
+    {
+      "file": "locale/ru.js",
+      "features": {
+        "churn": 31,
+        "authors": 7,
+        "ownershipRatio": 0.5806451612903226,
+        "busFactor": 1,
+        "coChangeScatter": 63,
+        "changeEntropy": 0.6694026216843793,
+        "knowledgeLoss": 0.22580645161290322,
+        "priorDefect": 4,
+        "ageVolatility": 0.6266079288069751
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 224
+    },
+    {
+      "file": "locale/sd.js",
+      "features": {
+        "churn": 5,
+        "authors": 2,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9709505944546686,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5049680157546679
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 92
+    },
+    {
+      "file": "locale/se.js",
+      "features": {
+        "churn": 9,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.48319596483194305
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "locale/si.js",
+      "features": {
+        "churn": 13,
+        "authors": 2,
+        "ownershipRatio": 0.7692307692307693,
+        "busFactor": 1,
+        "coChangeScatter": 35,
+        "changeEntropy": 0.7793498372920851,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5357685216785542
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 80
+    },
+    {
+      "file": "locale/sk.js",
+      "features": {
+        "churn": 18,
+        "authors": 4,
+        "ownershipRatio": 0.7222222222222222,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6166123941101098,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 2,
+        "ageVolatility": 0.5679445796294156
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 156
+    },
+    {
+      "file": "locale/sl.js",
+      "features": {
+        "churn": 22,
+        "authors": 4,
+        "ownershipRatio": 0.7272727272727273,
+        "busFactor": 1,
+        "coChangeScatter": 43,
+        "changeEntropy": 0.5933521729550123,
+        "knowledgeLoss": 0.09090909090909091,
+        "priorDefect": 2,
+        "ageVolatility": 0.5587653558521445
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 182
+    },
+    {
+      "file": "locale/sq.js",
+      "features": {
+        "churn": 20,
+        "authors": 4,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 53,
+        "changeEntropy": 0.5770078865364,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 3,
+        "ageVolatility": 0.5982003767362841
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 76
+    },
+    {
+      "file": "locale/sr-cyrl.js",
+      "features": {
+        "churn": 23,
+        "authors": 4,
+        "ownershipRatio": 0.6956521739130435,
+        "busFactor": 1,
+        "coChangeScatter": 38,
+        "changeEntropy": 0.6180931416277062,
+        "knowledgeLoss": 0.08695652173913043,
+        "priorDefect": 2,
+        "ageVolatility": 0.5310366754163938
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 138
+    },
+    {
+      "file": "locale/sr.js",
+      "features": {
+        "churn": 23,
+        "authors": 4,
+        "ownershipRatio": 0.6956521739130435,
+        "busFactor": 1,
+        "coChangeScatter": 38,
+        "changeEntropy": 0.6180931416277062,
+        "knowledgeLoss": 0.08695652173913043,
+        "priorDefect": 2,
+        "ageVolatility": 0.5310366754163938
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 140
+    },
+    {
+      "file": "locale/ss.js",
+      "features": {
+        "churn": 10,
+        "authors": 2,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 33,
+        "changeEntropy": 0.8812908992306927,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5283090214103314
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 95
+    },
+    {
+      "file": "locale/sv.js",
+      "features": {
+        "churn": 19,
+        "authors": 4,
+        "ownershipRatio": 0.7368421052631579,
+        "busFactor": 1,
+        "coChangeScatter": 23,
+        "changeEntropy": 0.596125430117321,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 2,
+        "ageVolatility": 0.5889265788410006
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "locale/sw.js",
+      "features": {
+        "churn": 12,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 47,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5006715138398251
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 66
+    },
+    {
+      "file": "locale/ta.js",
+      "features": {
+        "churn": 22,
+        "authors": 4,
+        "ownershipRatio": 0.6818181818181818,
+        "busFactor": 1,
+        "coChangeScatter": 32,
+        "changeEntropy": 0.6339658227603625,
+        "knowledgeLoss": 0.09090909090909091,
+        "priorDefect": 3,
+        "ageVolatility": 0.5275357237189756
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 142
+    },
+    {
+      "file": "locale/te.js",
+      "features": {
+        "churn": 12,
+        "authors": 2,
+        "ownershipRatio": 0.5833333333333334,
+        "busFactor": 1,
+        "coChangeScatter": 20,
+        "changeEntropy": 0.9798687566511528,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.48913574549159233
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 99
+    },
+    {
+      "file": "locale/tet.js",
+      "features": {
+        "churn": 6,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5131441722855746
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "locale/tg.js",
+      "features": {
+        "churn": 5,
+        "authors": 2,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9709505944546686,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4446220211794959
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 128
+    },
+    {
+      "file": "locale/th.js",
+      "features": {
+        "churn": 23,
+        "authors": 5,
+        "ownershipRatio": 0.6956521739130435,
+        "busFactor": 1,
+        "coChangeScatter": 53,
+        "changeEntropy": 0.5999872160192362,
+        "knowledgeLoss": 0.13043478260869565,
+        "priorDefect": 5,
+        "ageVolatility": 0.5863574570894252
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 76
+    },
+    {
+      "file": "locale/tk.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 41,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 102
+    },
+    {
+      "file": "locale/tl-ph.js",
+      "features": {
+        "churn": 18,
+        "authors": 4,
+        "ownershipRatio": 0.7222222222222222,
+        "busFactor": 1,
+        "coChangeScatter": 33,
+        "changeEntropy": 0.6166123941101098,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 2,
+        "ageVolatility": 0.5821994690053747
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "locale/tlh.js",
+      "features": {
+        "churn": 10,
+        "authors": 2,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.8812908992306927,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5095733338279435
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 135
+    },
+    {
+      "file": "locale/tr.js",
+      "features": {
+        "churn": 22,
+        "authors": 4,
+        "ownershipRatio": 0.6363636363636364,
+        "busFactor": 1,
+        "coChangeScatter": 48,
+        "changeEntropy": 0.6657898112928896,
+        "knowledgeLoss": 0.09090909090909091,
+        "priorDefect": 2,
+        "ageVolatility": 0.5206697459716245
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 117
+    },
+    {
+      "file": "locale/tzl.js",
+      "features": {
+        "churn": 11,
+        "authors": 2,
+        "ownershipRatio": 0.7272727272727273,
+        "busFactor": 1,
+        "coChangeScatter": 45,
+        "changeEntropy": 0.8453509366224364,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5429390234337098
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 100
+    },
+    {
+      "file": "locale/tzm-latn.js",
+      "features": {
+        "churn": 17,
+        "authors": 4,
+        "ownershipRatio": 0.6470588235294118,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6892094263601618,
+        "knowledgeLoss": 0.11764705882352941,
+        "priorDefect": 2,
+        "ageVolatility": 0.5217367307638803
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 65
+    },
+    {
+      "file": "locale/tzm.js",
+      "features": {
+        "churn": 17,
+        "authors": 4,
+        "ownershipRatio": 0.6470588235294118,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.6892094263601618,
+        "knowledgeLoss": 0.11764705882352941,
+        "priorDefect": 2,
+        "ageVolatility": 0.5217367307638803
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 65
+    },
+    {
+      "file": "locale/ug-cn.js",
+      "features": {
+        "churn": 5,
+        "authors": 2,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 22,
+        "changeEntropy": 0.9709505944546686,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.44719226940962753
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 122
+    },
+    {
+      "file": "locale/uk.js",
+      "features": {
+        "churn": 21,
+        "authors": 4,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 43,
+        "changeEntropy": 0.650620392740731,
+        "knowledgeLoss": 0.09523809523809523,
+        "priorDefect": 3,
+        "ageVolatility": 0.5477951329107662
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 178
+    },
+    {
+      "file": "locale/ur.js",
+      "features": {
+        "churn": 5,
+        "authors": 2,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9709505944546686,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5049680157546679
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 93
+    },
+    {
+      "file": "locale/uz-latn.js",
+      "features": {
+        "churn": 7,
+        "authors": 2,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9852281360342515,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.433272407904117
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 65
+    },
+    {
+      "file": "locale/uz.js",
+      "features": {
+        "churn": 16,
+        "authors": 5,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 0.7005447220315794,
+        "knowledgeLoss": 0.1875,
+        "priorDefect": 2,
+        "ageVolatility": 0.5767419791363346
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 62
+    },
+    {
+      "file": "locale/vi.js",
+      "features": {
+        "churn": 22,
+        "authors": 4,
+        "ownershipRatio": 0.6818181818181818,
+        "busFactor": 1,
+        "coChangeScatter": 43,
+        "changeEntropy": 0.6339658227603625,
+        "knowledgeLoss": 0.09090909090909091,
+        "priorDefect": 2,
+        "ageVolatility": 0.5772245259140214
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 91
+    },
+    {
+      "file": "locale/x-pseudo.js",
+      "features": {
+        "churn": 9,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5022225142948212
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 84
+    },
+    {
+      "file": "locale/yo.js",
+      "features": {
+        "churn": 7,
+        "authors": 2,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 9,
+        "changeEntropy": 0.9852281360342515,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5555288896042266
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 64
+    },
+    {
+      "file": "locale/zh-cn.js",
+      "features": {
+        "churn": 24,
+        "authors": 5,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 74,
+        "changeEntropy": 0.6178317138437832,
+        "knowledgeLoss": 0.125,
+        "priorDefect": 3,
+        "ageVolatility": 0.6105345195331939
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 131
+    },
+    {
+      "file": "locale/zh-hk.js",
+      "features": {
+        "churn": 7,
+        "authors": 2,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 33,
+        "changeEntropy": 0.9852281360342515,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5351122683731314
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 112
+    },
+    {
+      "file": "locale/zh-mo.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 111
+    },
+    {
+      "file": "locale/zh-tw.js",
+      "features": {
+        "churn": 21,
+        "authors": 4,
+        "ownershipRatio": 0.7619047619047619,
+        "busFactor": 1,
+        "coChangeScatter": 53,
+        "changeEntropy": 0.559137580385488,
+        "knowledgeLoss": 0.09523809523809523,
+        "priorDefect": 3,
+        "ageVolatility": 0.6057137381764022
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 110
+    },
+    {
+      "file": "meteor/export.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 3,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 2,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 6
+    },
+    {
+      "file": "meteor/moment.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 0,
+        "knowledgeLoss": 1,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 0
+    },
+    {
+      "file": "meteor/package.js",
+      "features": {
+        "churn": 39,
+        "authors": 5,
+        "ownershipRatio": 0.46153846153846156,
+        "busFactor": 2,
+        "coChangeScatter": 13,
+        "changeEntropy": 0.7119268759429788,
+        "knowledgeLoss": 0.15384615384615385,
+        "priorDefect": 4,
+        "ageVolatility": 0.6390627644270211
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 27
+    },
+    {
+      "file": "meteor/test.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 8,
+        "changeEntropy": 0,
+        "knowledgeLoss": 1,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 5
+    },
+    {
+      "file": "min/locales.js",
+      "features": {
+        "churn": 42,
+        "authors": 4,
+        "ownershipRatio": 0.6190476190476191,
+        "busFactor": 1,
+        "coChangeScatter": 129,
+        "changeEntropy": 0.6067015497170605,
+        "knowledgeLoss": 0.047619047619047616,
+        "priorDefect": 3,
+        "ageVolatility": 0.6147137208731316
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 12570
+    },
+    {
+      "file": "min/moment-with-locales.js",
+      "features": {
+        "churn": 57,
+        "authors": 4,
+        "ownershipRatio": 0.7017543859649122,
+        "busFactor": 1,
+        "coChangeScatter": 130,
+        "changeEntropy": 0.5350372638400702,
+        "knowledgeLoss": 0.03508771929824561,
+        "priorDefect": 3,
+        "ageVolatility": 0.6545358040293467
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 18239
+    },
+    {
+      "file": "min/tests.js",
+      "features": {
+        "churn": 38,
+        "authors": 3,
+        "ownershipRatio": 0.5789473684210527,
+        "busFactor": 1,
+        "coChangeScatter": 126,
+        "changeEntropy": 0.7091383275675168,
+        "knowledgeLoss": 0.02631578947368421,
+        "priorDefect": 2,
+        "ageVolatility": 0.623799771835948
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 147360
+    },
+    {
+      "file": "moment.d.ts",
+      "features": {
+        "churn": 52,
+        "authors": 34,
+        "ownershipRatio": 0.21153846153846154,
+        "busFactor": 9,
+        "coChangeScatter": 16,
+        "changeEntropy": 0.9161628720415824,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 17,
+        "ageVolatility": 0.67741410183496
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 796
+    },
+    {
+      "file": "moment.js",
+      "features": {
+        "churn": 653,
+        "authors": 100,
+        "ownershipRatio": 0.2894333843797856,
+        "busFactor": 2,
+        "coChangeScatter": 350,
+        "changeEntropy": 0.570906302916156,
+        "knowledgeLoss": 0.7029096477794793,
+        "priorDefect": 85,
+        "ageVolatility": 0.8420765607327022
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 5685
+    },
+    {
+      "file": "package.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 0,
+        "knowledgeLoss": 1,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 11
+    },
+    {
+      "file": "scripts/locales.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 1,
+        "ageVolatility": 0.49988722722825174
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 146
+    },
+    {
+      "file": "src/lib/create/check-overflow.js",
+      "features": {
+        "churn": 7,
+        "authors": 2,
+        "ownershipRatio": 0.8571428571428571,
+        "busFactor": 1,
+        "coChangeScatter": 15,
+        "changeEntropy": 0.5916727785823275,
+        "knowledgeLoss": 0.14285714285714285,
+        "priorDefect": 1,
+        "ageVolatility": 0.6513149063861534
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 57
+    },
+    {
+      "file": "src/lib/create/date-from-array.js",
+      "features": {
+        "churn": 9,
+        "authors": 5,
+        "ownershipRatio": 0.4444444444444444,
+        "busFactor": 2,
+        "coChangeScatter": 11,
+        "changeEntropy": 0.8866828800015338,
+        "knowledgeLoss": 0.4444444444444444,
+        "priorDefect": 4,
+        "ageVolatility": 0.5081900362003064
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 35
+    },
+    {
+      "file": "src/lib/create/from-anything.js",
+      "features": {
+        "churn": 17,
+        "authors": 8,
+        "ownershipRatio": 0.4117647058823529,
+        "busFactor": 2,
+        "coChangeScatter": 35,
+        "changeEntropy": 0.8447156146017467,
+        "knowledgeLoss": 0.5294117647058824,
+        "priorDefect": 3,
+        "ageVolatility": 0.628224819261419
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 117
+    },
+    {
+      "file": "src/lib/create/from-array.js",
+      "features": {
+        "churn": 18,
+        "authors": 8,
+        "ownershipRatio": 0.6111111111111112,
+        "busFactor": 1,
+        "coChangeScatter": 28,
+        "changeEntropy": 0.6852759670546545,
+        "knowledgeLoss": 0.2777777777777778,
+        "priorDefect": 5,
+        "ageVolatility": 0.5647968387839664
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 187
+    },
+    {
+      "file": "src/lib/create/from-object.js",
+      "features": {
+        "churn": 6,
+        "authors": 3,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.7896900821428475,
+        "knowledgeLoss": 0.16666666666666666,
+        "priorDefect": 3,
+        "ageVolatility": 0.6230847011380082
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 20
+    },
+    {
+      "file": "src/lib/create/from-string-and-array.js",
+      "features": {
+        "churn": 6,
+        "authors": 4,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 19,
+        "changeEntropy": 0.8962406251802889,
+        "knowledgeLoss": 0.16666666666666666,
+        "priorDefect": 1,
+        "ageVolatility": 0.6282619065313654
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 67
+    },
+    {
+      "file": "src/lib/create/from-string-and-format.js",
+      "features": {
+        "churn": 12,
+        "authors": 9,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 3,
+        "coChangeScatter": 31,
+        "changeEntropy": 0.9206198357143051,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 1,
+        "ageVolatility": 0.5451685425861188
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 135
+    },
+    {
+      "file": "src/lib/create/from-string.js",
+      "features": {
+        "churn": 54,
+        "authors": 18,
+        "ownershipRatio": 0.4074074074074074,
+        "busFactor": 2,
+        "coChangeScatter": 43,
+        "changeEntropy": 0.7221138920277891,
+        "knowledgeLoss": 0.6111111111111112,
+        "priorDefect": 15,
+        "ageVolatility": 0.6722899362685414
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 258
+    },
+    {
+      "file": "src/lib/create/local.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4861501150203762
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 5
+    },
+    {
+      "file": "src/lib/create/parsing-flags.js",
+      "features": {
+        "churn": 7,
+        "authors": 6,
+        "ownershipRatio": 0.2857142857142857,
+        "busFactor": 3,
+        "coChangeScatter": 23,
+        "changeEntropy": 0.9755037590061086,
+        "knowledgeLoss": 0.8571428571428571,
+        "priorDefect": 0,
+        "ageVolatility": 0.4342598022308623
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 28
+    },
+    {
+      "file": "src/lib/create/utc.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4861501150203762
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 5
+    },
+    {
+      "file": "src/lib/create/valid.js",
+      "features": {
+        "churn": 11,
+        "authors": 6,
+        "ownershipRatio": 0.5454545454545454,
+        "busFactor": 1,
+        "coChangeScatter": 23,
+        "changeEntropy": 0.7928362876512272,
+        "knowledgeLoss": 0.45454545454545453,
+        "priorDefect": 4,
+        "ageVolatility": 0.529001280094488
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 51
+    },
+    {
+      "file": "src/lib/duration/abs.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 18
+    },
+    {
+      "file": "src/lib/duration/add-subtract.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4861501150203762
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 21
+    },
+    {
+      "file": "src/lib/duration/as.js",
+      "features": {
+        "churn": 8,
+        "authors": 3,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0.6695919455357793,
+        "knowledgeLoss": 0,
+        "priorDefect": 3,
+        "ageVolatility": 0.5098198772277099
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 88
+    },
+    {
+      "file": "src/lib/duration/bubble.js",
+      "features": {
+        "churn": 7,
+        "authors": 2,
+        "ownershipRatio": 0.8571428571428571,
+        "busFactor": 1,
+        "coChangeScatter": 11,
+        "changeEntropy": 0.5916727785823275,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.6680058775238367
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "src/lib/duration/clone.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 5
+    },
+    {
+      "file": "src/lib/duration/constructor.js",
+      "features": {
+        "churn": 11,
+        "authors": 5,
+        "ownershipRatio": 0.45454545454545453,
+        "busFactor": 2,
+        "coChangeScatter": 7,
+        "changeEntropy": 0.8491853220906186,
+        "knowledgeLoss": 0.18181818181818182,
+        "priorDefect": 1,
+        "ageVolatility": 0.49863293613969456
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 42
+    },
+    {
+      "file": "src/lib/duration/create.js",
+      "features": {
+        "churn": 22,
+        "authors": 13,
+        "ownershipRatio": 0.36363636363636365,
+        "busFactor": 3,
+        "coChangeScatter": 21,
+        "changeEntropy": 0.8611691011442438,
+        "knowledgeLoss": 0.45454545454545453,
+        "priorDefect": 4,
+        "ageVolatility": 0.5735251206304419
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 133
+    },
+    {
+      "file": "src/lib/duration/duration.js",
+      "features": {
+        "churn": 6,
+        "authors": 3,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 4,
+        "changeEntropy": 0.7896900821428475,
+        "knowledgeLoss": 0.16666666666666666,
+        "priorDefect": 1,
+        "ageVolatility": 0.5392042936949943
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 16
+    },
+    {
+      "file": "src/lib/duration/get.js",
+      "features": {
+        "churn": 5,
+        "authors": 2,
+        "ownershipRatio": 0.8,
+        "busFactor": 1,
+        "coChangeScatter": 5,
+        "changeEntropy": 0.7219280948873623,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.5122206378830007
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 27
+    },
+    {
+      "file": "src/lib/duration/humanize.js",
+      "features": {
+        "churn": 15,
+        "authors": 7,
+        "ownershipRatio": 0.5333333333333333,
+        "busFactor": 1,
+        "coChangeScatter": 6,
+        "changeEntropy": 0.7742367184132575,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 4,
+        "ageVolatility": 0.559515274884904
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 114
+    },
+    {
+      "file": "src/lib/duration/iso-string.js",
+      "features": {
+        "churn": 14,
+        "authors": 4,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0.805288621665821,
+        "knowledgeLoss": 0.6428571428571429,
+        "priorDefect": 7,
+        "ageVolatility": 0.6572039666608972
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "src/lib/duration/prototype.js",
+      "features": {
+        "churn": 8,
+        "authors": 4,
+        "ownershipRatio": 0.375,
+        "busFactor": 2,
+        "coChangeScatter": 8,
+        "changeEntropy": 0.9056390622295665,
+        "knowledgeLoss": 0.125,
+        "priorDefect": 3,
+        "ageVolatility": 0.4705068582186441
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 78
+    },
+    {
+      "file": "src/lib/duration/valid.js",
+      "features": {
+        "churn": 10,
+        "authors": 5,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 23,
+        "changeEntropy": 0.8445412464587145,
+        "knowledgeLoss": 0.1,
+        "priorDefect": 3,
+        "ageVolatility": 0.6579965627508041
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 55
+    },
+    {
+      "file": "src/lib/format/format.js",
+      "features": {
+        "churn": 14,
+        "authors": 7,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 20,
+        "changeEntropy": 0.7455662949228412,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 5,
+        "ageVolatility": 0.558693771876722
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 104
+    },
+    {
+      "file": "src/lib/locale/base-config.js",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 8,
+        "changeEntropy": 0.8112781244591328,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 0,
+        "ageVolatility": 0.5115432561126468
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 41
+    },
+    {
+      "file": "src/lib/locale/calendar.js",
+      "features": {
+        "churn": 4,
+        "authors": 3,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 11,
+        "changeEntropy": 0.9463946303571862,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 0,
+        "ageVolatility": 0.47319165610221775
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 15
+    },
+    {
+      "file": "src/lib/locale/constructor.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 8,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.39660469040309193
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 5
+    },
+    {
+      "file": "src/lib/locale/en.js",
+      "features": {
+        "churn": 8,
+        "authors": 4,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 23,
+        "changeEntropy": 0.7743974703476992,
+        "knowledgeLoss": 0.375,
+        "priorDefect": 2,
+        "ageVolatility": 0.47541510121078395
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 39
+    },
+    {
+      "file": "src/lib/locale/formats.js",
+      "features": {
+        "churn": 5,
+        "authors": 4,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 5,
+        "changeEntropy": 0.9609640474436811,
+        "knowledgeLoss": 0.4,
+        "priorDefect": 1,
+        "ageVolatility": 0.5316190732455395
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 36
+    },
+    {
+      "file": "src/lib/locale/invalid.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 5
+    },
+    {
+      "file": "src/lib/locale/lists.js",
+      "features": {
+        "churn": 6,
+        "authors": 2,
+        "ownershipRatio": 0.8333333333333334,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0.6500224216483541,
+        "knowledgeLoss": 0.16666666666666666,
+        "priorDefect": 1,
+        "ageVolatility": 0.5471820838537236
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 93
+    },
+    {
+      "file": "src/lib/locale/locale.js",
+      "features": {
+        "churn": 5,
+        "authors": 2,
+        "ownershipRatio": 0.8,
+        "busFactor": 1,
+        "coChangeScatter": 9,
+        "changeEntropy": 0.7219280948873623,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 0,
+        "ageVolatility": 0.5651754778945723
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 45
+    },
+    {
+      "file": "src/lib/locale/locales.js",
+      "features": {
+        "churn": 42,
+        "authors": 17,
+        "ownershipRatio": 0.5238095238095238,
+        "busFactor": 1,
+        "coChangeScatter": 30,
+        "changeEntropy": 0.6895058234222065,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 22,
+        "ageVolatility": 0.6560897126022622
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 248
+    },
+    {
+      "file": "src/lib/locale/ordinal.js",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.8112781244591328,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 1,
+        "ageVolatility": 0.42885099993789677
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 8
+    },
+    {
+      "file": "src/lib/locale/pre-post-format.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 3
+    },
+    {
+      "file": "src/lib/locale/prototype.js",
+      "features": {
+        "churn": 8,
+        "authors": 2,
+        "ownershipRatio": 0.875,
+        "busFactor": 1,
+        "coChangeScatter": 58,
+        "changeEntropy": 0.5435644431995964,
+        "knowledgeLoss": 0.125,
+        "priorDefect": 2,
+        "ageVolatility": 0.5125726299648832
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 88
+    },
+    {
+      "file": "src/lib/locale/relative.js",
+      "features": {
+        "churn": 7,
+        "authors": 5,
+        "ownershipRatio": 0.42857142857142855,
+        "busFactor": 2,
+        "coChangeScatter": 11,
+        "changeEntropy": 0.9165164431996026,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 1,
+        "ageVolatility": 0.45746690968315884
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 32
+    },
+    {
+      "file": "src/lib/locale/set.js",
+      "features": {
+        "churn": 10,
+        "authors": 5,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 26,
+        "changeEntropy": 0.8445412464587145,
+        "knowledgeLoss": 0.4,
+        "priorDefect": 2,
+        "ageVolatility": 0.6116372020504294
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 56
+    },
+    {
+      "file": "src/lib/moment/add-subtract.js",
+      "features": {
+        "churn": 11,
+        "authors": 5,
+        "ownershipRatio": 0.5454545454545454,
+        "busFactor": 1,
+        "coChangeScatter": 14,
+        "changeEntropy": 0.8043461359047005,
+        "knowledgeLoss": 0.45454545454545453,
+        "priorDefect": 3,
+        "ageVolatility": 0.5598489934587156
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 61
+    },
+    {
+      "file": "src/lib/moment/calendar.js",
+      "features": {
+        "churn": 14,
+        "authors": 8,
+        "ownershipRatio": 0.42857142857142855,
+        "busFactor": 2,
+        "coChangeScatter": 8,
+        "changeEntropy": 0.8522189024876079,
+        "knowledgeLoss": 0.42857142857142855,
+        "priorDefect": 4,
+        "ageVolatility": 0.6468065300465303
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 53
+    },
+    {
+      "file": "src/lib/moment/clone.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4861501150203762
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 5
+    },
+    {
+      "file": "src/lib/moment/compare.js",
+      "features": {
+        "churn": 10,
+        "authors": 6,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 21,
+        "changeEntropy": 0.8359750080865053,
+        "knowledgeLoss": 0.4,
+        "priorDefect": 1,
+        "ageVolatility": 0.5884398883723697
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 72
+    },
+    {
+      "file": "src/lib/moment/constructor.js",
+      "features": {
+        "churn": 14,
+        "authors": 7,
+        "ownershipRatio": 0.35714285714285715,
+        "busFactor": 2,
+        "coChangeScatter": 28,
+        "changeEntropy": 0.8889516976000678,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 3,
+        "ageVolatility": 0.6498458464029129
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 80
+    },
+    {
+      "file": "src/lib/moment/creation-data.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 0,
+        "ageVolatility": 0.45866019120063745
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 9
+    },
+    {
+      "file": "src/lib/moment/diff.js",
+      "features": {
+        "churn": 9,
+        "authors": 3,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0.7725068857142602,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 2,
+        "ageVolatility": 0.5987924249545379
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "src/lib/moment/format.js",
+      "features": {
+        "churn": 11,
+        "authors": 6,
+        "ownershipRatio": 0.45454545454545453,
+        "busFactor": 2,
+        "coChangeScatter": 11,
+        "changeEntropy": 0.8596610491977074,
+        "knowledgeLoss": 0.36363636363636365,
+        "priorDefect": 2,
+        "ageVolatility": 0.5309766722111577
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 78
+    },
+    {
+      "file": "src/lib/moment/from.js",
+      "features": {
+        "churn": 5,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.5921676325570755
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 20
+    },
+    {
+      "file": "src/lib/moment/get-set.js",
+      "features": {
+        "churn": 14,
+        "authors": 9,
+        "ownershipRatio": 0.35714285714285715,
+        "busFactor": 2,
+        "coChangeScatter": 36,
+        "changeEntropy": 0.8944179259831346,
+        "knowledgeLoss": 0.42857142857142855,
+        "priorDefect": 3,
+        "ageVolatility": 0.5324768216553731
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 73
+    },
+    {
+      "file": "src/lib/moment/locale.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4861501150203762
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 34
+    },
+    {
+      "file": "src/lib/moment/min-max.js",
+      "features": {
+        "churn": 9,
+        "authors": 5,
+        "ownershipRatio": 0.5555555555555556,
+        "busFactor": 1,
+        "coChangeScatter": 56,
+        "changeEntropy": 0.809656833416415,
+        "knowledgeLoss": 0.4444444444444444,
+        "priorDefect": 4,
+        "ageVolatility": 0.651611003691036
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 62
+    },
+    {
+      "file": "src/lib/moment/moment.js",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 6,
+        "changeEntropy": 0.8112781244591328,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 0,
+        "ageVolatility": 0.5220649697463317
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 28
+    },
+    {
+      "file": "src/lib/moment/now.js",
+      "features": {
+        "churn": 3,
+        "authors": 3,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 6,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.6666666666666666,
+        "priorDefect": 1,
+        "ageVolatility": 0.48643960137067505
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 3
+    },
+    {
+      "file": "src/lib/moment/prototype.js",
+      "features": {
+        "churn": 23,
+        "authors": 11,
+        "ownershipRatio": 0.4782608695652174,
+        "busFactor": 2,
+        "coChangeScatter": 58,
+        "changeEntropy": 0.7695821846452179,
+        "knowledgeLoss": 0.43478260869565216,
+        "priorDefect": 5,
+        "ageVolatility": 0.636538193419427
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 197
+    },
+    {
+      "file": "src/lib/moment/start-end-of.js",
+      "features": {
+        "churn": 10,
+        "authors": 5,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 45,
+        "changeEntropy": 0.8445412464587145,
+        "knowledgeLoss": 0.4,
+        "priorDefect": 5,
+        "ageVolatility": 0.5047200555316335
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 164
+    },
+    {
+      "file": "src/lib/moment/to-type.js",
+      "features": {
+        "churn": 11,
+        "authors": 5,
+        "ownershipRatio": 0.36363636363636365,
+        "busFactor": 2,
+        "coChangeScatter": 14,
+        "changeEntropy": 0.9417623012206596,
+        "knowledgeLoss": 0.6363636363636364,
+        "priorDefect": 3,
+        "ageVolatility": 0.686174197292902
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 42
+    },
+    {
+      "file": "src/lib/moment/to.js",
+      "features": {
+        "churn": 4,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 13,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5563153497088877
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 20
+    },
+    {
+      "file": "src/lib/moment/valid.js",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0.8112781244591328,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 0,
+        "ageVolatility": 0.5695354282770454
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 15
+    },
+    {
+      "file": "src/lib/parse/regex.js",
+      "features": {
+        "churn": 16,
+        "authors": 6,
+        "ownershipRatio": 0.5625,
+        "busFactor": 1,
+        "coChangeScatter": 30,
+        "changeEntropy": 0.7426555384335022,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 8,
+        "ageVolatility": 0.5714998527057567
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 80
+    },
+    {
+      "file": "src/lib/parse/token.js",
+      "features": {
+        "churn": 5,
+        "authors": 3,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 15,
+        "changeEntropy": 0.8649735207179273,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 0,
+        "ageVolatility": 0.4750749290305168
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 36
+    },
+    {
+      "file": "src/lib/units/aliases.js",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 16,
+        "changeEntropy": 0.8112781244591328,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 0,
+        "ageVolatility": 0.484875081826196
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 31
+    },
+    {
+      "file": "src/lib/units/constants.js",
+      "features": {
+        "churn": 4,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 4,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.5300957214023466
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 9
+    },
+    {
+      "file": "src/lib/units/day-of-month.js",
+      "features": {
+        "churn": 8,
+        "authors": 5,
+        "ownershipRatio": 0.375,
+        "busFactor": 2,
+        "coChangeScatter": 16,
+        "changeEntropy": 0.9283832117695864,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 2,
+        "ageVolatility": 0.45983533164595414
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 39
+    },
+    {
+      "file": "src/lib/units/day-of-week.js",
+      "features": {
+        "churn": 24,
+        "authors": 10,
+        "ownershipRatio": 0.5416666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 97,
+        "changeEntropy": 0.7266535932680727,
+        "knowledgeLoss": 0.375,
+        "priorDefect": 7,
+        "ageVolatility": 0.6128350982671955
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 443
+    },
+    {
+      "file": "src/lib/units/day-of-year.js",
+      "features": {
+        "churn": 10,
+        "authors": 5,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 27,
+        "changeEntropy": 0.8445412464587145,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 2,
+        "ageVolatility": 0.6206905705395929
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 37
+    },
+    {
+      "file": "src/lib/units/era.js",
+      "features": {
+        "churn": 3,
+        "authors": 3,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 16,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 2,
+        "ageVolatility": 0.40888739900198423
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 287
+    },
+    {
+      "file": "src/lib/units/hour.js",
+      "features": {
+        "churn": 12,
+        "authors": 6,
+        "ownershipRatio": 0.5833333333333334,
+        "busFactor": 1,
+        "coChangeScatter": 30,
+        "changeEntropy": 0.753333479941888,
+        "knowledgeLoss": 0.4166666666666667,
+        "priorDefect": 2,
+        "ageVolatility": 0.5684629757838427
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 159
+    },
+    {
+      "file": "src/lib/units/millisecond.js",
+      "features": {
+        "churn": 7,
+        "authors": 2,
+        "ownershipRatio": 0.8571428571428571,
+        "busFactor": 1,
+        "coChangeScatter": 19,
+        "changeEntropy": 0.5916727785823275,
+        "knowledgeLoss": 0.14285714285714285,
+        "priorDefect": 2,
+        "ageVolatility": 0.6195659813833985
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 76
+    },
+    {
+      "file": "src/lib/units/minute.js",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 16,
+        "changeEntropy": 0.8112781244591328,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 0,
+        "ageVolatility": 0.484875081826196
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 29
+    },
+    {
+      "file": "src/lib/units/month.js",
+      "features": {
+        "churn": 32,
+        "authors": 12,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 99,
+        "changeEntropy": 0.6237986981022932,
+        "knowledgeLoss": 0.3125,
+        "priorDefect": 6,
+        "ageVolatility": 0.7106335546284611
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 349
+    },
+    {
+      "file": "src/lib/units/offset.js",
+      "features": {
+        "churn": 20,
+        "authors": 11,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 25,
+        "changeEntropy": 0.833716066026851,
+        "knowledgeLoss": 0.55,
+        "priorDefect": 8,
+        "ageVolatility": 0.7299359295844858
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 249
+    },
+    {
+      "file": "src/lib/units/priorities.js",
+      "features": {
+        "churn": 4,
+        "authors": 3,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 24,
+        "changeEntropy": 0.9463946303571862,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 2,
+        "ageVolatility": 0.5853917973134114
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 21
+    },
+    {
+      "file": "src/lib/units/quarter.js",
+      "features": {
+        "churn": 5,
+        "authors": 3,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 18,
+        "changeEntropy": 0.8649735207179273,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 1,
+        "ageVolatility": 0.5443918466960088
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 34
+    },
+    {
+      "file": "src/lib/units/second.js",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 16,
+        "changeEntropy": 0.8112781244591328,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 0,
+        "ageVolatility": 0.484875081826196
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 29
+    },
+    {
+      "file": "src/lib/units/timestamp.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4861322424083622
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 20
+    },
+    {
+      "file": "src/lib/units/timezone.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4861501150203762
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 16
+    },
+    {
+      "file": "src/lib/units/units.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 20
+    },
+    {
+      "file": "src/lib/units/week-calendar-utils.js",
+      "features": {
+        "churn": 7,
+        "authors": 3,
+        "ownershipRatio": 0.7142857142857143,
+        "busFactor": 1,
+        "coChangeScatter": 18,
+        "changeEntropy": 0.72483409150576,
+        "knowledgeLoss": 0.14285714285714285,
+        "priorDefect": 0,
+        "ageVolatility": 0.6128232138987115
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 66
+    },
+    {
+      "file": "src/lib/units/week-year.js",
+      "features": {
+        "churn": 17,
+        "authors": 7,
+        "ownershipRatio": 0.5882352941176471,
+        "busFactor": 1,
+        "coChangeScatter": 40,
+        "changeEntropy": 0.7180212293982637,
+        "knowledgeLoss": 0.11764705882352941,
+        "priorDefect": 6,
+        "ageVolatility": 0.6377905336897552
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 138
+    },
+    {
+      "file": "src/lib/units/week.js",
+      "features": {
+        "churn": 8,
+        "authors": 5,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 74,
+        "changeEntropy": 0.8613531161467861,
+        "knowledgeLoss": 0.125,
+        "priorDefect": 2,
+        "ageVolatility": 0.4829961620048616
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 69
+    },
+    {
+      "file": "src/lib/units/year.js",
+      "features": {
+        "churn": 11,
+        "authors": 6,
+        "ownershipRatio": 0.45454545454545453,
+        "busFactor": 2,
+        "coChangeScatter": 21,
+        "changeEntropy": 0.8596610491977074,
+        "knowledgeLoss": 0.2727272727272727,
+        "priorDefect": 3,
+        "ageVolatility": 0.6299215394491349
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 85
+    },
+    {
+      "file": "src/lib/utils/abs-ceil.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 3,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 7
+    },
+    {
+      "file": "src/lib/utils/abs-floor.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.3235904221089894
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 8
+    },
+    {
+      "file": "src/lib/utils/abs-round.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 7
+    },
+    {
+      "file": "src/lib/utils/compare-arrays.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4861501150203762
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 18
+    },
+    {
+      "file": "src/lib/utils/defaults.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 10
+    },
+    {
+      "file": "src/lib/utils/deprecate.js",
+      "features": {
+        "churn": 15,
+        "authors": 8,
+        "ownershipRatio": 0.5333333333333333,
+        "busFactor": 1,
+        "coChangeScatter": 28,
+        "changeEntropy": 0.7689635318695062,
+        "knowledgeLoss": 0.26666666666666666,
+        "priorDefect": 3,
+        "ageVolatility": 0.6911532069642787
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 69
+    },
+    {
+      "file": "src/lib/utils/extend.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 19
+    },
+    {
+      "file": "src/lib/utils/has-own-prop.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 3
+    },
+    {
+      "file": "src/lib/utils/hooks.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 13
+    },
+    {
+      "file": "src/lib/utils/index-of.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 31,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 18
+    },
+    {
+      "file": "src/lib/utils/is-array.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 0,
+        "ageVolatility": 0.3779232931385734
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 6
+    },
+    {
+      "file": "src/lib/utils/is-calendar-spec.js",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 5,
+        "changeEntropy": 0.8112781244591328,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.5687375169177715
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 25
+    },
+    {
+      "file": "src/lib/utils/is-date.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 0,
+        "ageVolatility": 0.4775356352019209
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 6
+    },
+    {
+      "file": "src/lib/utils/is-function.js",
+      "features": {
+        "churn": 3,
+        "authors": 3,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 7,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 1,
+        "ageVolatility": 0.4993497304125773
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 6
+    },
+    {
+      "file": "src/lib/utils/is-leap-year.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 3,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 3
+    },
+    {
+      "file": "src/lib/utils/is-moment-input.js",
+      "features": {
+        "churn": 5,
+        "authors": 3,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 14,
+        "changeEntropy": 0.8649735207179273,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.6249869717991322
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 75
+    },
+    {
+      "file": "src/lib/utils/is-number.js",
+      "features": {
+        "churn": 3,
+        "authors": 3,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 6,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.6666666666666666,
+        "priorDefect": 1,
+        "ageVolatility": 0.49790885452022265
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 6
+    },
+    {
+      "file": "src/lib/utils/is-object-empty.js",
+      "features": {
+        "churn": 5,
+        "authors": 2,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 0.9709505944546686,
+        "knowledgeLoss": 0.4,
+        "priorDefect": 1,
+        "ageVolatility": 0.5632418406741242
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 15
+    },
+    {
+      "file": "src/lib/utils/is-object.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 8,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.390284940049928
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 8
+    },
+    {
+      "file": "src/lib/utils/is-string.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 4,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 3
+    },
+    {
+      "file": "src/lib/utils/is-undefined.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 5,
+        "changeEntropy": 0,
+        "knowledgeLoss": 1,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 3
+    },
+    {
+      "file": "src/lib/utils/keys.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 20
+    },
+    {
+      "file": "src/lib/utils/map.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 9,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.45267663349990267
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 9
+    },
+    {
+      "file": "src/lib/utils/mod.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 3
+    },
+    {
+      "file": "src/lib/utils/some.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 4,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 20
+    },
+    {
+      "file": "src/lib/utils/to-int.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 12
+    },
+    {
+      "file": "src/lib/utils/zero-fill.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 0,
+        "ageVolatility": 0.47145718808809967
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 10
+    },
+    {
+      "file": "src/locale/af.js",
+      "features": {
+        "churn": 9,
+        "authors": 4,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.7233083338141041,
+        "knowledgeLoss": 0.2222222222222222,
+        "priorDefect": 2,
+        "ageVolatility": 0.5294540526510123
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 71
+    },
+    {
+      "file": "src/locale/ar-dz.js",
+      "features": {
+        "churn": 5,
+        "authors": 5,
+        "ownershipRatio": 0.2,
+        "busFactor": 3,
+        "coChangeScatter": 48,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 1,
+        "ageVolatility": 0.37062434979948816
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 156
+    },
+    {
+      "file": "src/locale/ar-kw.js",
+      "features": {
+        "churn": 5,
+        "authors": 4,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 47,
+        "changeEntropy": 0.9609640474436811,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 2,
+        "ageVolatility": 0.26748887227030194
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 55
+    },
+    {
+      "file": "src/locale/ar-ly.js",
+      "features": {
+        "churn": 8,
+        "authors": 7,
+        "ownershipRatio": 0.25,
+        "busFactor": 3,
+        "coChangeScatter": 56,
+        "changeEntropy": 0.979569764547061,
+        "knowledgeLoss": 0.125,
+        "priorDefect": 2,
+        "ageVolatility": 0.372471998605943
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 171
+    },
+    {
+      "file": "src/locale/ar-ma.js",
+      "features": {
+        "churn": 11,
+        "authors": 5,
+        "ownershipRatio": 0.5454545454545454,
+        "busFactor": 1,
+        "coChangeScatter": 75,
+        "changeEntropy": 0.8043461359047005,
+        "knowledgeLoss": 0.09090909090909091,
+        "priorDefect": 4,
+        "ageVolatility": 0.44341704377665525
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 56
+    },
+    {
+      "file": "src/locale/ar-sa.js",
+      "features": {
+        "churn": 12,
+        "authors": 5,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 90,
+        "changeEntropy": 0.6826061944859853,
+        "knowledgeLoss": 0.08333333333333333,
+        "priorDefect": 4,
+        "ageVolatility": 0.4442390181607021
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 105
+    },
+    {
+      "file": "src/locale/ar-tn.js",
+      "features": {
+        "churn": 9,
+        "authors": 3,
+        "ownershipRatio": 0.7777777777777778,
+        "busFactor": 1,
+        "coChangeScatter": 46,
+        "changeEntropy": 0.6223659728744493,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 2,
+        "ageVolatility": 0.4860932267290686
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 55
+    },
+    {
+      "file": "src/locale/ar.js",
+      "features": {
+        "churn": 15,
+        "authors": 6,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 97,
+        "changeEntropy": 0.7240345888528968,
+        "knowledgeLoss": 0.06666666666666667,
+        "priorDefect": 6,
+        "ageVolatility": 0.5183684859442189
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 189
+    },
+    {
+      "file": "src/locale/az.js",
+      "features": {
+        "churn": 13,
+        "authors": 7,
+        "ownershipRatio": 0.5384615384615384,
+        "busFactor": 1,
+        "coChangeScatter": 84,
+        "changeEntropy": 0.7796616846003024,
+        "knowledgeLoss": 0.15384615384615385,
+        "priorDefect": 6,
+        "ageVolatility": 0.4434359909019255
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 102
+    },
+    {
+      "file": "src/locale/be.js",
+      "features": {
+        "churn": 15,
+        "authors": 8,
+        "ownershipRatio": 0.4666666666666667,
+        "busFactor": 2,
+        "coChangeScatter": 92,
+        "changeEntropy": 0.8211527662161012,
+        "knowledgeLoss": 0.4,
+        "priorDefect": 5,
+        "ageVolatility": 0.5191239608697233
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 142
+    },
+    {
+      "file": "src/locale/bg.js",
+      "features": {
+        "churn": 13,
+        "authors": 10,
+        "ownershipRatio": 0.3076923076923077,
+        "busFactor": 4,
+        "coChangeScatter": 89,
+        "changeEntropy": 0.9286941242059255,
+        "knowledgeLoss": 0.23076923076923078,
+        "priorDefect": 3,
+        "ageVolatility": 0.44805422675337314
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 87
+    },
+    {
+      "file": "src/locale/bm.js",
+      "features": {
+        "churn": 3,
+        "authors": 3,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 1,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 0,
+        "ageVolatility": 0.42107029949914326
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 52
+    },
+    {
+      "file": "src/locale/bn-bd.js",
+      "features": {
+        "churn": 3,
+        "authors": 3,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 20,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.4999735103159286
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 129
+    },
+    {
+      "file": "src/locale/bn.js",
+      "features": {
+        "churn": 15,
+        "authors": 9,
+        "ownershipRatio": 0.4666666666666667,
+        "busFactor": 2,
+        "coChangeScatter": 81,
+        "changeEntropy": 0.8191965522212984,
+        "knowledgeLoss": 0.26666666666666666,
+        "priorDefect": 6,
+        "ageVolatility": 0.47890278130100405
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 119
+    },
+    {
+      "file": "src/locale/bo.js",
+      "features": {
+        "churn": 12,
+        "authors": 5,
+        "ownershipRatio": 0.5833333333333334,
+        "busFactor": 1,
+        "coChangeScatter": 75,
+        "changeEntropy": 0.7668937437992748,
+        "knowledgeLoss": 0.08333333333333333,
+        "priorDefect": 4,
+        "ageVolatility": 0.4673584201373303
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 124
+    },
+    {
+      "file": "src/locale/br.js",
+      "features": {
+        "churn": 13,
+        "authors": 7,
+        "ownershipRatio": 0.5384615384615384,
+        "busFactor": 1,
+        "coChangeScatter": 85,
+        "changeEntropy": 0.7796616846003024,
+        "knowledgeLoss": 0.23076923076923078,
+        "priorDefect": 5,
+        "ageVolatility": 0.49120052936289893
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 168
+    },
+    {
+      "file": "src/locale/bs.js",
+      "features": {
+        "churn": 14,
+        "authors": 7,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 108,
+        "changeEntropy": 0.7455662949228412,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 5,
+        "ageVolatility": 0.514230250726904
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 150
+    },
+    {
+      "file": "src/locale/ca.js",
+      "features": {
+        "churn": 14,
+        "authors": 7,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 51,
+        "changeEntropy": 0.7455662949228412,
+        "knowledgeLoss": 0.35714285714285715,
+        "priorDefect": 3,
+        "ageVolatility": 0.5602911882183387
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 100
+    },
+    {
+      "file": "src/locale/cs.js",
+      "features": {
+        "churn": 15,
+        "authors": 7,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 65,
+        "changeEntropy": 0.7141724685362003,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 7,
+        "ageVolatility": 0.4812819536646529
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 180
+    },
+    {
+      "file": "src/locale/cv.js",
+      "features": {
+        "churn": 10,
+        "authors": 5,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 48,
+        "changeEntropy": 0.7627069065377662,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 2,
+        "ageVolatility": 0.4272589968159953
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 63
+    },
+    {
+      "file": "src/locale/cy.js",
+      "features": {
+        "churn": 10,
+        "authors": 4,
+        "ownershipRatio": 0.7,
+        "busFactor": 1,
+        "coChangeScatter": 46,
+        "changeEntropy": 0.6783898247235198,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 2,
+        "ageVolatility": 0.49249587016866037
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 98
+    },
+    {
+      "file": "src/locale/da.js",
+      "features": {
+        "churn": 9,
+        "authors": 6,
+        "ownershipRatio": 0.4444444444444444,
+        "busFactor": 2,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.8824252235446576,
+        "knowledgeLoss": 0.4444444444444444,
+        "priorDefect": 1,
+        "ageVolatility": 0.5143411954361451
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 53
+    },
+    {
+      "file": "src/locale/de-at.js",
+      "features": {
+        "churn": 14,
+        "authors": 7,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 70,
+        "changeEntropy": 0.7455662949228412,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 4,
+        "ageVolatility": 0.5683601676283611
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "src/locale/de-ch.js",
+      "features": {
+        "churn": 10,
+        "authors": 6,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 6,
+        "changeEntropy": 0.8982444017039272,
+        "knowledgeLoss": 0.3,
+        "priorDefect": 3,
+        "ageVolatility": 0.6065712566054237
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 78
+    },
+    {
+      "file": "src/locale/de.js",
+      "features": {
+        "churn": 14,
+        "authors": 7,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 70,
+        "changeEntropy": 0.7455662949228412,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 4,
+        "ageVolatility": 0.5683601676283611
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 78
+    },
+    {
+      "file": "src/locale/dv.js",
+      "features": {
+        "churn": 7,
+        "authors": 4,
+        "ownershipRatio": 0.42857142857142855,
+        "busFactor": 2,
+        "coChangeScatter": 50,
+        "changeEntropy": 0.9211854965885544,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 2,
+        "ageVolatility": 0.41707561494719797
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 90
+    },
+    {
+      "file": "src/locale/el.js",
+      "features": {
+        "churn": 14,
+        "authors": 7,
+        "ownershipRatio": 0.42857142857142855,
+        "busFactor": 2,
+        "coChangeScatter": 16,
+        "changeEntropy": 0.8406058707415688,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 2,
+        "ageVolatility": 0.5687749382071787
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 106
+    },
+    {
+      "file": "src/locale/en-au.js",
+      "features": {
+        "churn": 14,
+        "authors": 7,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 26,
+        "changeEntropy": 0.8053204460925903,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 2,
+        "ageVolatility": 0.4960444732300189
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "src/locale/en-ca.js",
+      "features": {
+        "churn": 12,
+        "authors": 6,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 14,
+        "changeEntropy": 0.8223773393621179,
+        "knowledgeLoss": 0.4166666666666667,
+        "priorDefect": 2,
+        "ageVolatility": 0.5766670166205742
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 64
+    },
+    {
+      "file": "src/locale/en-gb.js",
+      "features": {
+        "churn": 11,
+        "authors": 5,
+        "ownershipRatio": 0.5454545454545454,
+        "busFactor": 1,
+        "coChangeScatter": 14,
+        "changeEntropy": 0.8043461359047005,
+        "knowledgeLoss": 0.36363636363636365,
+        "priorDefect": 2,
+        "ageVolatility": 0.5582348305447531
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "src/locale/en-ie.js",
+      "features": {
+        "churn": 8,
+        "authors": 5,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 16,
+        "changeEntropy": 0.8613531161467861,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 3,
+        "ageVolatility": 0.3998909076656621
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "src/locale/en-il.js",
+      "features": {
+        "churn": 3,
+        "authors": 3,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 1,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 0,
+        "ageVolatility": 0.49843635176027856
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 64
+    },
+    {
+      "file": "src/locale/en-in.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.4726343358867509
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "src/locale/en-nz.js",
+      "features": {
+        "churn": 10,
+        "authors": 5,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 24,
+        "changeEntropy": 0.8445412464587145,
+        "knowledgeLoss": 0.4,
+        "priorDefect": 3,
+        "ageVolatility": 0.5849139831869242
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "src/locale/en-sg.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "src/locale/eo.js",
+      "features": {
+        "churn": 11,
+        "authors": 7,
+        "ownershipRatio": 0.36363636363636365,
+        "busFactor": 2,
+        "coChangeScatter": 48,
+        "changeEntropy": 0.9084496903145964,
+        "knowledgeLoss": 0.36363636363636365,
+        "priorDefect": 2,
+        "ageVolatility": 0.4780689207856856
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "src/locale/es-do.js",
+      "features": {
+        "churn": 11,
+        "authors": 7,
+        "ownershipRatio": 0.36363636363636365,
+        "busFactor": 2,
+        "coChangeScatter": 20,
+        "changeEntropy": 0.9084496903145964,
+        "knowledgeLoss": 0.45454545454545453,
+        "priorDefect": 4,
+        "ageVolatility": 0.5546785627705845
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 108
+    },
+    {
+      "file": "src/locale/es-mx.js",
+      "features": {
+        "churn": 3,
+        "authors": 3,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 18,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.49352208466038644
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 110
+    },
+    {
+      "file": "src/locale/es-us.js",
+      "features": {
+        "churn": 11,
+        "authors": 8,
+        "ownershipRatio": 0.2727272727272727,
+        "busFactor": 3,
+        "coChangeScatter": 62,
+        "changeEntropy": 0.9484503122074791,
+        "knowledgeLoss": 0.18181818181818182,
+        "priorDefect": 4,
+        "ageVolatility": 0.5136608837653506
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 110
+    },
+    {
+      "file": "src/locale/es.js",
+      "features": {
+        "churn": 24,
+        "authors": 12,
+        "ownershipRatio": 0.375,
+        "busFactor": 2,
+        "coChangeScatter": 77,
+        "changeEntropy": 0.8311311367731874,
+        "knowledgeLoss": 0.4583333333333333,
+        "priorDefect": 11,
+        "ageVolatility": 0.5745084668760446
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 110
+    },
+    {
+      "file": "src/locale/et.js",
+      "features": {
+        "churn": 9,
+        "authors": 4,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 38,
+        "changeEntropy": 0.7233083338141041,
+        "knowledgeLoss": 0.2222222222222222,
+        "priorDefect": 2,
+        "ageVolatility": 0.4708693218499421
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 78
+    },
+    {
+      "file": "src/locale/eu.js",
+      "features": {
+        "churn": 11,
+        "authors": 5,
+        "ownershipRatio": 0.6363636363636364,
+        "busFactor": 1,
+        "coChangeScatter": 79,
+        "changeEntropy": 0.7204930400545079,
+        "knowledgeLoss": 0.18181818181818182,
+        "priorDefect": 3,
+        "ageVolatility": 0.44823821013146903
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 65
+    },
+    {
+      "file": "src/locale/fa.js",
+      "features": {
+        "churn": 14,
+        "authors": 8,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 90,
+        "changeEntropy": 0.801225820342934,
+        "knowledgeLoss": 0.21428571428571427,
+        "priorDefect": 6,
+        "ageVolatility": 0.4798573053289583
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 113
+    },
+    {
+      "file": "src/locale/fi.js",
+      "features": {
+        "churn": 11,
+        "authors": 6,
+        "ownershipRatio": 0.5454545454545454,
+        "busFactor": 1,
+        "coChangeScatter": 65,
+        "changeEntropy": 0.7928362876512272,
+        "knowledgeLoss": 0.2727272727272727,
+        "priorDefect": 4,
+        "ageVolatility": 0.5142294199691879
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 124
+    },
+    {
+      "file": "src/locale/fil.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 58
+    },
+    {
+      "file": "src/locale/fo.js",
+      "features": {
+        "churn": 9,
+        "authors": 5,
+        "ownershipRatio": 0.5555555555555556,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.809656833416415,
+        "knowledgeLoss": 0.2222222222222222,
+        "priorDefect": 2,
+        "ageVolatility": 0.3750741107552998
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 57
+    },
+    {
+      "file": "src/locale/fr-ca.js",
+      "features": {
+        "churn": 14,
+        "authors": 6,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 55,
+        "changeEntropy": 0.7984806893213606,
+        "knowledgeLoss": 0.42857142857142855,
+        "priorDefect": 2,
+        "ageVolatility": 0.5733891280459549
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 70
+    },
+    {
+      "file": "src/locale/fr-ch.js",
+      "features": {
+        "churn": 11,
+        "authors": 5,
+        "ownershipRatio": 0.45454545454545453,
+        "busFactor": 2,
+        "coChangeScatter": 55,
+        "changeEntropy": 0.8491853220906186,
+        "knowledgeLoss": 0.45454545454545453,
+        "priorDefect": 2,
+        "ageVolatility": 0.5471128962978594
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 74
+    },
+    {
+      "file": "src/locale/fr.js",
+      "features": {
+        "churn": 17,
+        "authors": 8,
+        "ownershipRatio": 0.47058823529411764,
+        "busFactor": 2,
+        "coChangeScatter": 65,
+        "changeEntropy": 0.7986662901782805,
+        "knowledgeLoss": 0.35294117647058826,
+        "priorDefect": 3,
+        "ageVolatility": 0.5870306683639327
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 108
+    },
+    {
+      "file": "src/locale/fy.js",
+      "features": {
+        "churn": 13,
+        "authors": 5,
+        "ownershipRatio": 0.6153846153846154,
+        "busFactor": 1,
+        "coChangeScatter": 68,
+        "changeEntropy": 0.7323395250202962,
+        "knowledgeLoss": 0.3076923076923077,
+        "priorDefect": 5,
+        "ageVolatility": 0.5579266989180152
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 75
+    },
+    {
+      "file": "src/locale/ga.js",
+      "features": {
+        "churn": 6,
+        "authors": 4,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 3,
+        "changeEntropy": 0.9591479170272447,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.5340960897713285
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 95
+    },
+    {
+      "file": "src/locale/gd.js",
+      "features": {
+        "churn": 9,
+        "authors": 4,
+        "ownershipRatio": 0.5555555555555556,
+        "busFactor": 1,
+        "coChangeScatter": 4,
+        "changeEntropy": 0.8288713632524444,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 2,
+        "ageVolatility": 0.5531910828157929
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 95
+    },
+    {
+      "file": "src/locale/gl.js",
+      "features": {
+        "churn": 11,
+        "authors": 5,
+        "ownershipRatio": 0.6363636363636364,
+        "busFactor": 1,
+        "coChangeScatter": 50,
+        "changeEntropy": 0.7204930400545079,
+        "knowledgeLoss": 0.2727272727272727,
+        "priorDefect": 2,
+        "ageVolatility": 0.5156139141603906
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 75
+    },
+    {
+      "file": "src/locale/gom-deva.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 3,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.03707801221523507
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 126
+    },
+    {
+      "file": "src/locale/gom-latn.js",
+      "features": {
+        "churn": 9,
+        "authors": 3,
+        "ownershipRatio": 0.5555555555555556,
+        "busFactor": 1,
+        "coChangeScatter": 4,
+        "changeEntropy": 0.8527924884900404,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.4549429570301439
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 124
+    },
+    {
+      "file": "src/locale/gu.js",
+      "features": {
+        "churn": 7,
+        "authors": 5,
+        "ownershipRatio": 0.42857142857142855,
+        "busFactor": 2,
+        "coChangeScatter": 54,
+        "changeEntropy": 0.9165164431996026,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.4234975518526038
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 122
+    },
+    {
+      "file": "src/locale/he.js",
+      "features": {
+        "churn": 8,
+        "authors": 4,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.7743974703476992,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 1,
+        "ageVolatility": 0.4450754847745619
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 94
+    },
+    {
+      "file": "src/locale/hi.js",
+      "features": {
+        "churn": 12,
+        "authors": 6,
+        "ownershipRatio": 0.5833333333333334,
+        "busFactor": 1,
+        "coChangeScatter": 86,
+        "changeEntropy": 0.753333479941888,
+        "knowledgeLoss": 0.08333333333333333,
+        "priorDefect": 4,
+        "ageVolatility": 0.4669552866204157
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 168
+    },
+    {
+      "file": "src/locale/hr.js",
+      "features": {
+        "churn": 20,
+        "authors": 11,
+        "ownershipRatio": 0.45,
+        "busFactor": 2,
+        "coChangeScatter": 110,
+        "changeEntropy": 0.808069692483033,
+        "knowledgeLoss": 0.35,
+        "priorDefect": 7,
+        "ageVolatility": 0.5784803715824397
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 156
+    },
+    {
+      "file": "src/locale/hu.js",
+      "features": {
+        "churn": 14,
+        "authors": 8,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 65,
+        "changeEntropy": 0.801225820342934,
+        "knowledgeLoss": 0.35714285714285715,
+        "priorDefect": 5,
+        "ageVolatility": 0.552554290242485
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 118
+    },
+    {
+      "file": "src/locale/hy-am.js",
+      "features": {
+        "churn": 16,
+        "authors": 7,
+        "ownershipRatio": 0.4375,
+        "busFactor": 2,
+        "coChangeScatter": 92,
+        "changeEntropy": 0.8092251548780776,
+        "knowledgeLoss": 0.4375,
+        "priorDefect": 4,
+        "ageVolatility": 0.5443523179443889
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 94
+    },
+    {
+      "file": "src/locale/id.js",
+      "features": {
+        "churn": 9,
+        "authors": 6,
+        "ownershipRatio": 0.4444444444444444,
+        "busFactor": 2,
+        "coChangeScatter": 48,
+        "changeEntropy": 0.8824252235446576,
+        "knowledgeLoss": 0.2222222222222222,
+        "priorDefect": 2,
+        "ageVolatility": 0.4574752962551723
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 76
+    },
+    {
+      "file": "src/locale/is.js",
+      "features": {
+        "churn": 11,
+        "authors": 6,
+        "ownershipRatio": 0.5454545454545454,
+        "busFactor": 1,
+        "coChangeScatter": 65,
+        "changeEntropy": 0.7928362876512272,
+        "knowledgeLoss": 0.36363636363636365,
+        "priorDefect": 3,
+        "ageVolatility": 0.5154012346011142
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 140
+    },
+    {
+      "file": "src/locale/it-ch.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 64
+    },
+    {
+      "file": "src/locale/it.js",
+      "features": {
+        "churn": 13,
+        "authors": 10,
+        "ownershipRatio": 0.3076923076923077,
+        "busFactor": 4,
+        "coChangeScatter": 18,
+        "changeEntropy": 0.9286941242059255,
+        "knowledgeLoss": 0.3076923076923077,
+        "priorDefect": 1,
+        "ageVolatility": 0.47511812004449544
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 106
+    },
+    {
+      "file": "src/locale/ja.js",
+      "features": {
+        "churn": 17,
+        "authors": 12,
+        "ownershipRatio": 0.23529411764705882,
+        "busFactor": 4,
+        "coChangeScatter": 58,
+        "changeEntropy": 0.9308815198071853,
+        "knowledgeLoss": 0.4117647058823529,
+        "priorDefect": 5,
+        "ageVolatility": 0.5149240499549079
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 148
+    },
+    {
+      "file": "src/locale/jv.js",
+      "features": {
+        "churn": 7,
+        "authors": 5,
+        "ownershipRatio": 0.42857142857142855,
+        "busFactor": 2,
+        "coChangeScatter": 50,
+        "changeEntropy": 0.9165164431996026,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 2,
+        "ageVolatility": 0.3740903223584178
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 76
+    },
+    {
+      "file": "src/locale/ka.js",
+      "features": {
+        "churn": 17,
+        "authors": 10,
+        "ownershipRatio": 0.4117647058823529,
+        "busFactor": 2,
+        "coChangeScatter": 48,
+        "changeEntropy": 0.8470520818825236,
+        "knowledgeLoss": 0.4117647058823529,
+        "priorDefect": 5,
+        "ageVolatility": 0.5409717750216684
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 92
+    },
+    {
+      "file": "src/locale/kk.js",
+      "features": {
+        "churn": 7,
+        "authors": 6,
+        "ownershipRatio": 0.2857142857142857,
+        "busFactor": 3,
+        "coChangeScatter": 48,
+        "changeEntropy": 0.9755037590061086,
+        "knowledgeLoss": 0.42857142857142855,
+        "priorDefect": 1,
+        "ageVolatility": 0.3275275921900643
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 82
+    },
+    {
+      "file": "src/locale/km.js",
+      "features": {
+        "churn": 11,
+        "authors": 6,
+        "ownershipRatio": 0.45454545454545453,
+        "busFactor": 2,
+        "coChangeScatter": 20,
+        "changeEntropy": 0.8596610491977074,
+        "knowledgeLoss": 0.36363636363636365,
+        "priorDefect": 3,
+        "ageVolatility": 0.48974395120374015
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 103
+    },
+    {
+      "file": "src/locale/kn.js",
+      "features": {
+        "churn": 8,
+        "authors": 7,
+        "ownershipRatio": 0.25,
+        "busFactor": 3,
+        "coChangeScatter": 54,
+        "changeEntropy": 0.979569764547061,
+        "knowledgeLoss": 0.375,
+        "priorDefect": 2,
+        "ageVolatility": 0.42386516050601464
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 124
+    },
+    {
+      "file": "src/locale/ko.js",
+      "features": {
+        "churn": 13,
+        "authors": 8,
+        "ownershipRatio": 0.38461538461538464,
+        "busFactor": 2,
+        "coChangeScatter": 19,
+        "changeEntropy": 0.884514765676856,
+        "knowledgeLoss": 0.5384615384615384,
+        "priorDefect": 0,
+        "ageVolatility": 0.554907416171609
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 75
+    },
+    {
+      "file": "src/locale/ku.js",
+      "features": {
+        "churn": 4,
+        "authors": 3,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 20,
+        "changeEntropy": 0.9463946303571862,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.3150310551110152
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 118
+    },
+    {
+      "file": "src/locale/ky.js",
+      "features": {
+        "churn": 7,
+        "authors": 6,
+        "ownershipRatio": 0.2857142857142857,
+        "busFactor": 3,
+        "coChangeScatter": 48,
+        "changeEntropy": 0.9755037590061086,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 2,
+        "ageVolatility": 0.3852483753783913
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 84
+    },
+    {
+      "file": "src/locale/lb.js",
+      "features": {
+        "churn": 12,
+        "authors": 4,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 71,
+        "changeEntropy": 0.603759374819711,
+        "knowledgeLoss": 0.16666666666666666,
+        "priorDefect": 3,
+        "ageVolatility": 0.5394821619693229
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 137
+    },
+    {
+      "file": "src/locale/lo.js",
+      "features": {
+        "churn": 7,
+        "authors": 4,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 41,
+        "changeEntropy": 0.8322488896002307,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 2,
+        "ageVolatility": 0.4026682840292745
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 66
+    },
+    {
+      "file": "src/locale/lt.js",
+      "features": {
+        "churn": 17,
+        "authors": 6,
+        "ownershipRatio": 0.6470588235294118,
+        "busFactor": 1,
+        "coChangeScatter": 65,
+        "changeEntropy": 0.6697814876261822,
+        "knowledgeLoss": 0.29411764705882354,
+        "priorDefect": 3,
+        "ageVolatility": 0.6017718813959703
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 125
+    },
+    {
+      "file": "src/locale/lv.js",
+      "features": {
+        "churn": 13,
+        "authors": 6,
+        "ownershipRatio": 0.5384615384615384,
+        "busFactor": 1,
+        "coChangeScatter": 61,
+        "changeEntropy": 0.7872226051203909,
+        "knowledgeLoss": 0.38461538461538464,
+        "priorDefect": 5,
+        "ageVolatility": 0.5578147318128296
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 94
+    },
+    {
+      "file": "src/locale/me.js",
+      "features": {
+        "churn": 12,
+        "authors": 7,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 106,
+        "changeEntropy": 0.8165982976888231,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 4,
+        "ageVolatility": 0.48923812778698766
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 117
+    },
+    {
+      "file": "src/locale/mi.js",
+      "features": {
+        "churn": 5,
+        "authors": 3,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.8649735207179273,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 1,
+        "ageVolatility": 0.3561918829379336
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 60
+    },
+    {
+      "file": "src/locale/mk.js",
+      "features": {
+        "churn": 11,
+        "authors": 8,
+        "ownershipRatio": 0.36363636363636365,
+        "busFactor": 3,
+        "coChangeScatter": 78,
+        "changeEntropy": 0.9107196304548569,
+        "knowledgeLoss": 0.36363636363636365,
+        "priorDefect": 3,
+        "ageVolatility": 0.4075124898288997
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 85
+    },
+    {
+      "file": "src/locale/ml.js",
+      "features": {
+        "churn": 9,
+        "authors": 3,
+        "ownershipRatio": 0.7777777777777778,
+        "busFactor": 1,
+        "coChangeScatter": 36,
+        "changeEntropy": 0.6223659728744493,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 2,
+        "ageVolatility": 0.48124125689410335
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 82
+    },
+    {
+      "file": "src/locale/mn.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 1,
+        "ageVolatility": 0.05314944095531391
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 100
+    },
+    {
+      "file": "src/locale/mr.js",
+      "features": {
+        "churn": 18,
+        "authors": 7,
+        "ownershipRatio": 0.4444444444444444,
+        "busFactor": 2,
+        "coChangeScatter": 88,
+        "changeEntropy": 0.7806678181414528,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 6,
+        "ageVolatility": 0.5471087893067782
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 203
+    },
+    {
+      "file": "src/locale/ms-my.js",
+      "features": {
+        "churn": 8,
+        "authors": 4,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 49,
+        "changeEntropy": 0.7743974703476992,
+        "knowledgeLoss": 0.125,
+        "priorDefect": 2,
+        "ageVolatility": 0.4294779056822104
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 76
+    },
+    {
+      "file": "src/locale/ms.js",
+      "features": {
+        "churn": 7,
+        "authors": 4,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 49,
+        "changeEntropy": 0.8322488896002307,
+        "knowledgeLoss": 0.14285714285714285,
+        "priorDefect": 2,
+        "ageVolatility": 0.4304590660435636
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 75
+    },
+    {
+      "file": "src/locale/mt.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 3,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 1,
+        "ageVolatility": 0.09324002772144291
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 56
+    },
+    {
+      "file": "src/locale/my.js",
+      "features": {
+        "churn": 11,
+        "authors": 5,
+        "ownershipRatio": 0.6363636363636364,
+        "busFactor": 1,
+        "coChangeScatter": 80,
+        "changeEntropy": 0.7204930400545079,
+        "knowledgeLoss": 0.09090909090909091,
+        "priorDefect": 3,
+        "ageVolatility": 0.4859990115337979
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 91
+    },
+    {
+      "file": "src/locale/nb.js",
+      "features": {
+        "churn": 14,
+        "authors": 8,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 62,
+        "changeEntropy": 0.801225820342934,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 3,
+        "ageVolatility": 0.543659200871626
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 60
+    },
+    {
+      "file": "src/locale/ne.js",
+      "features": {
+        "churn": 13,
+        "authors": 6,
+        "ownershipRatio": 0.6153846153846154,
+        "busFactor": 1,
+        "coChangeScatter": 95,
+        "changeEntropy": 0.717335694993616,
+        "knowledgeLoss": 0.15384615384615385,
+        "priorDefect": 5,
+        "ageVolatility": 0.49328015785333706
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 121
+    },
+    {
+      "file": "src/locale/nl-be.js",
+      "features": {
+        "churn": 10,
+        "authors": 7,
+        "ownershipRatio": 0.3,
+        "busFactor": 2,
+        "coChangeScatter": 8,
+        "changeEntropy": 0.9426807148172599,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 4,
+        "ageVolatility": 0.5109345187903528
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 102
+    },
+    {
+      "file": "src/locale/nl.js",
+      "features": {
+        "churn": 19,
+        "authors": 10,
+        "ownershipRatio": 0.47368421052631576,
+        "busFactor": 2,
+        "coChangeScatter": 76,
+        "changeEntropy": 0.7950566232537821,
+        "knowledgeLoss": 0.3684210526315789,
+        "priorDefect": 6,
+        "ageVolatility": 0.5391893182741825
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 104
+    },
+    {
+      "file": "src/locale/nn.js",
+      "features": {
+        "churn": 12,
+        "authors": 8,
+        "ownershipRatio": 0.4166666666666667,
+        "busFactor": 2,
+        "coChangeScatter": 19,
+        "changeEntropy": 0.872497487061585,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 2,
+        "ageVolatility": 0.5056634448674041
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 59
+    },
+    {
+      "file": "src/locale/oc-lnc.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.17234546391002892
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 85
+    },
+    {
+      "file": "src/locale/pa-in.js",
+      "features": {
+        "churn": 9,
+        "authors": 7,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 3,
+        "coChangeScatter": 54,
+        "changeEntropy": 0.9409583900892993,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 4,
+        "ageVolatility": 0.41254607575991786
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 122
+    },
+    {
+      "file": "src/locale/pl.js",
+      "features": {
+        "churn": 17,
+        "authors": 10,
+        "ownershipRatio": 0.4117647058823529,
+        "busFactor": 2,
+        "coChangeScatter": 75,
+        "changeEntropy": 0.8470520818825236,
+        "knowledgeLoss": 0.35294117647058826,
+        "priorDefect": 6,
+        "ageVolatility": 0.5847480879064191
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 140
+    },
+    {
+      "file": "src/locale/pt-br.js",
+      "features": {
+        "churn": 20,
+        "authors": 13,
+        "ownershipRatio": 0.35,
+        "busFactor": 3,
+        "coChangeScatter": 42,
+        "changeEntropy": 0.8753970119514561,
+        "knowledgeLoss": 0.45,
+        "priorDefect": 2,
+        "ageVolatility": 0.5205541303206528
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 58
+    },
+    {
+      "file": "src/locale/pt.js",
+      "features": {
+        "churn": 15,
+        "authors": 10,
+        "ownershipRatio": 0.4,
+        "busFactor": 3,
+        "coChangeScatter": 53,
+        "changeEntropy": 0.8648307589022237,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 2,
+        "ageVolatility": 0.47704318812688995
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 63
+    },
+    {
+      "file": "src/locale/ro.js",
+      "features": {
+        "churn": 12,
+        "authors": 6,
+        "ownershipRatio": 0.5833333333333334,
+        "busFactor": 1,
+        "coChangeScatter": 86,
+        "changeEntropy": 0.753333479941888,
+        "knowledgeLoss": 0.08333333333333333,
+        "priorDefect": 3,
+        "ageVolatility": 0.47070890493287443
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 76
+    },
+    {
+      "file": "src/locale/ru.js",
+      "features": {
+        "churn": 25,
+        "authors": 13,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 79,
+        "changeEntropy": 0.8228453058716043,
+        "knowledgeLoss": 0.44,
+        "priorDefect": 8,
+        "ageVolatility": 0.6181664995070948
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 213
+    },
+    {
+      "file": "src/locale/sd.js",
+      "features": {
+        "churn": 4,
+        "authors": 3,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.9463946303571862,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 1,
+        "ageVolatility": 0.4626330748026345
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 81
+    },
+    {
+      "file": "src/locale/se.js",
+      "features": {
+        "churn": 6,
+        "authors": 4,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.8962406251802889,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 1,
+        "ageVolatility": 0.33248976986150053
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 57
+    },
+    {
+      "file": "src/locale/si.js",
+      "features": {
+        "churn": 10,
+        "authors": 5,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 80,
+        "changeEntropy": 0.7627069065377662,
+        "knowledgeLoss": 0.3,
+        "priorDefect": 4,
+        "ageVolatility": 0.5040818904192298
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 69
+    },
+    {
+      "file": "src/locale/sk.js",
+      "features": {
+        "churn": 14,
+        "authors": 6,
+        "ownershipRatio": 0.6428571428571429,
+        "busFactor": 1,
+        "coChangeScatter": 64,
+        "changeEntropy": 0.6845538347520727,
+        "knowledgeLoss": 0.21428571428571427,
+        "priorDefect": 6,
+        "ageVolatility": 0.571857244155061
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 145
+    },
+    {
+      "file": "src/locale/sl.js",
+      "features": {
+        "churn": 17,
+        "authors": 9,
+        "ownershipRatio": 0.5294117647058824,
+        "busFactor": 1,
+        "coChangeScatter": 109,
+        "changeEntropy": 0.7600391968754008,
+        "knowledgeLoss": 0.23529411764705882,
+        "priorDefect": 6,
+        "ageVolatility": 0.5298431377949163
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 171
+    },
+    {
+      "file": "src/locale/sq.js",
+      "features": {
+        "churn": 9,
+        "authors": 4,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 46,
+        "changeEntropy": 0.7233083338141041,
+        "knowledgeLoss": 0.2222222222222222,
+        "priorDefect": 1,
+        "ageVolatility": 0.5173214943642045
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 65
+    },
+    {
+      "file": "src/locale/sr-cyrl.js",
+      "features": {
+        "churn": 19,
+        "authors": 11,
+        "ownershipRatio": 0.47368421052631576,
+        "busFactor": 2,
+        "coChangeScatter": 109,
+        "changeEntropy": 0.7938830404717117,
+        "knowledgeLoss": 0.21052631578947367,
+        "priorDefect": 8,
+        "ageVolatility": 0.5388301977051629
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 127
+    },
+    {
+      "file": "src/locale/sr.js",
+      "features": {
+        "churn": 19,
+        "authors": 11,
+        "ownershipRatio": 0.47368421052631576,
+        "busFactor": 2,
+        "coChangeScatter": 109,
+        "changeEntropy": 0.7938830404717117,
+        "knowledgeLoss": 0.21052631578947367,
+        "priorDefect": 8,
+        "ageVolatility": 0.5388301977051629
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 129
+    },
+    {
+      "file": "src/locale/ss.js",
+      "features": {
+        "churn": 9,
+        "authors": 4,
+        "ownershipRatio": 0.4444444444444444,
+        "busFactor": 2,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.8763576394898522,
+        "knowledgeLoss": 0.4444444444444444,
+        "priorDefect": 2,
+        "ageVolatility": 0.5322912809747612
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 84
+    },
+    {
+      "file": "src/locale/sv.js",
+      "features": {
+        "churn": 10,
+        "authors": 6,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.8359750080865053,
+        "knowledgeLoss": 0.3,
+        "priorDefect": 0,
+        "ageVolatility": 0.5419644053148882
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "src/locale/sw.js",
+      "features": {
+        "churn": 9,
+        "authors": 5,
+        "ownershipRatio": 0.4444444444444444,
+        "busFactor": 2,
+        "coChangeScatter": 75,
+        "changeEntropy": 0.8866828800015338,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 3,
+        "ageVolatility": 0.4450106061638324
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 55
+    },
+    {
+      "file": "src/locale/ta.js",
+      "features": {
+        "churn": 12,
+        "authors": 6,
+        "ownershipRatio": 0.5833333333333334,
+        "busFactor": 1,
+        "coChangeScatter": 72,
+        "changeEntropy": 0.753333479941888,
+        "knowledgeLoss": 0.16666666666666666,
+        "priorDefect": 3,
+        "ageVolatility": 0.42329012076376155
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 131
+    },
+    {
+      "file": "src/locale/te.js",
+      "features": {
+        "churn": 9,
+        "authors": 6,
+        "ownershipRatio": 0.4444444444444444,
+        "busFactor": 2,
+        "coChangeScatter": 68,
+        "changeEntropy": 0.8824252235446576,
+        "knowledgeLoss": 0.2222222222222222,
+        "priorDefect": 3,
+        "ageVolatility": 0.3862184439899099
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 88
+    },
+    {
+      "file": "src/locale/tet.js",
+      "features": {
+        "churn": 7,
+        "authors": 5,
+        "ownershipRatio": 0.2857142857142857,
+        "busFactor": 2,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.9629610647945144,
+        "knowledgeLoss": 0.42857142857142855,
+        "priorDefect": 2,
+        "ageVolatility": 0.5406167051291433
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 68
+    },
+    {
+      "file": "src/locale/tg.js",
+      "features": {
+        "churn": 4,
+        "authors": 3,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 0.9463946303571862,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 1,
+        "ageVolatility": 0.34893556920860175
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 117
+    },
+    {
+      "file": "src/locale/th.js",
+      "features": {
+        "churn": 13,
+        "authors": 7,
+        "ownershipRatio": 0.5384615384615384,
+        "busFactor": 1,
+        "coChangeScatter": 60,
+        "changeEntropy": 0.7796616846003024,
+        "knowledgeLoss": 0.3076923076923077,
+        "priorDefect": 3,
+        "ageVolatility": 0.5325950537167561
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 65
+    },
+    {
+      "file": "src/locale/tk.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 91
+    },
+    {
+      "file": "src/locale/tl-ph.js",
+      "features": {
+        "churn": 10,
+        "authors": 5,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 10,
+        "changeEntropy": 0.8445412464587145,
+        "knowledgeLoss": 0.4,
+        "priorDefect": 1,
+        "ageVolatility": 0.5360736589570493
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 57
+    },
+    {
+      "file": "src/locale/tlh.js",
+      "features": {
+        "churn": 9,
+        "authors": 5,
+        "ownershipRatio": 0.5555555555555556,
+        "busFactor": 1,
+        "coChangeScatter": 69,
+        "changeEntropy": 0.809656833416415,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 4,
+        "ageVolatility": 0.5012208141715342
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 124
+    },
+    {
+      "file": "src/locale/tr.js",
+      "features": {
+        "churn": 14,
+        "authors": 10,
+        "ownershipRatio": 0.35714285714285715,
+        "busFactor": 3,
+        "coChangeScatter": 76,
+        "changeEntropy": 0.8964958912725173,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 3,
+        "ageVolatility": 0.483392651043121
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 106
+    },
+    {
+      "file": "src/locale/tzl.js",
+      "features": {
+        "churn": 9,
+        "authors": 3,
+        "ownershipRatio": 0.7777777777777778,
+        "busFactor": 1,
+        "coChangeScatter": 18,
+        "changeEntropy": 0.6223659728744493,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 2,
+        "ageVolatility": 0.547492269591362
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 89
+    },
+    {
+      "file": "src/locale/tzm-latn.js",
+      "features": {
+        "churn": 8,
+        "authors": 4,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 47,
+        "changeEntropy": 0.7743974703476992,
+        "knowledgeLoss": 0.125,
+        "priorDefect": 2,
+        "ageVolatility": 0.37561947467381807
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 54
+    },
+    {
+      "file": "src/locale/tzm.js",
+      "features": {
+        "churn": 8,
+        "authors": 4,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 47,
+        "changeEntropy": 0.7743974703476992,
+        "knowledgeLoss": 0.125,
+        "priorDefect": 2,
+        "ageVolatility": 0.37561947467381807
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 54
+    },
+    {
+      "file": "src/locale/ug-cn.js",
+      "features": {
+        "churn": 5,
+        "authors": 4,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.9609640474436811,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 1,
+        "ageVolatility": 0.46057440652169784
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 111
+    },
+    {
+      "file": "src/locale/uk.js",
+      "features": {
+        "churn": 19,
+        "authors": 9,
+        "ownershipRatio": 0.42105263157894735,
+        "busFactor": 2,
+        "coChangeScatter": 96,
+        "changeEntropy": 0.8087626634577497,
+        "knowledgeLoss": 0.42105263157894735,
+        "priorDefect": 6,
+        "ageVolatility": 0.5658931298868449
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 167
+    },
+    {
+      "file": "src/locale/ur.js",
+      "features": {
+        "churn": 7,
+        "authors": 3,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.8699155297736259,
+        "knowledgeLoss": 0.5714285714285714,
+        "priorDefect": 2,
+        "ageVolatility": 0.6053068220445873
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 82
+    },
+    {
+      "file": "src/locale/uz-latn.js",
+      "features": {
+        "churn": 5,
+        "authors": 4,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 50,
+        "changeEntropy": 0.9609640474436811,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 2,
+        "ageVolatility": 0.2581603548042042
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 54
+    },
+    {
+      "file": "src/locale/uz.js",
+      "features": {
+        "churn": 7,
+        "authors": 4,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0.8322488896002307,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 0,
+        "ageVolatility": 0.4888014214657387
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 51
+    },
+    {
+      "file": "src/locale/vi.js",
+      "features": {
+        "churn": 15,
+        "authors": 8,
+        "ownershipRatio": 0.5333333333333333,
+        "busFactor": 1,
+        "coChangeScatter": 60,
+        "changeEntropy": 0.7689635318695062,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 4,
+        "ageVolatility": 0.4850711383100229
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 80
+    },
+    {
+      "file": "src/locale/x-pseudo.js",
+      "features": {
+        "churn": 7,
+        "authors": 4,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.8322488896002307,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 2,
+        "ageVolatility": 0.4594208102102587
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 73
+    },
+    {
+      "file": "src/locale/yo.js",
+      "features": {
+        "churn": 5,
+        "authors": 4,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 1,
+        "changeEntropy": 0.9609640474436811,
+        "knowledgeLoss": 0.4,
+        "priorDefect": 1,
+        "ageVolatility": 0.48918288374137137
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 53
+    },
+    {
+      "file": "src/locale/zh-cn.js",
+      "features": {
+        "churn": 17,
+        "authors": 12,
+        "ownershipRatio": 0.23529411764705882,
+        "busFactor": 4,
+        "coChangeScatter": 62,
+        "changeEntropy": 0.9432680223653442,
+        "knowledgeLoss": 0.5294117647058824,
+        "priorDefect": 3,
+        "ageVolatility": 0.5581101113525594
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 120
+    },
+    {
+      "file": "src/locale/zh-hk.js",
+      "features": {
+        "churn": 9,
+        "authors": 7,
+        "ownershipRatio": 0.2222222222222222,
+        "busFactor": 3,
+        "coChangeScatter": 9,
+        "changeEntropy": 0.9708357627258161,
+        "knowledgeLoss": 0.5555555555555556,
+        "priorDefect": 1,
+        "ageVolatility": 0.5482506628351895
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 101
+    },
+    {
+      "file": "src/locale/zh-mo.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 100
+    },
+    {
+      "file": "src/locale/zh-tw.js",
+      "features": {
+        "churn": 15,
+        "authors": 11,
+        "ownershipRatio": 0.26666666666666666,
+        "busFactor": 4,
+        "coChangeScatter": 48,
+        "changeEntropy": 0.9366347672506405,
+        "knowledgeLoss": 0.6,
+        "priorDefect": 1,
+        "ageVolatility": 0.5500439439504579
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 99
+    },
+    {
+      "file": "src/moment.js",
+      "features": {
+        "churn": 61,
+        "authors": 11,
+        "ownershipRatio": 0.6065573770491803,
+        "busFactor": 1,
+        "coChangeScatter": 29,
+        "changeEntropy": 0.5232634622103621,
+        "knowledgeLoss": 0.11475409836065574,
+        "priorDefect": 4,
+        "ageVolatility": 0.6713714310594636
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 93
+    },
+    {
+      "file": "tasks/bump_version.js",
+      "features": {
+        "churn": 11,
+        "authors": 2,
+        "ownershipRatio": 0.9090909090909091,
+        "busFactor": 1,
+        "coChangeScatter": 10,
+        "changeEntropy": 0.4394969869215134,
+        "knowledgeLoss": 0.09090909090909091,
+        "priorDefect": 3,
+        "ageVolatility": 0.6534142292169735
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 81
+    },
+    {
+      "file": "tasks/check_sauce_creds.js",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 9,
+        "changeEntropy": 0.8112781244591328,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 2,
+        "ageVolatility": 0.36320186882521044
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 13
+    },
+    {
+      "file": "tasks/component.js",
+      "features": {
+        "churn": 8,
+        "authors": 3,
+        "ownershipRatio": 0.625,
+        "busFactor": 1,
+        "coChangeScatter": 9,
+        "changeEntropy": 0.8194483718728035,
+        "knowledgeLoss": 0.375,
+        "priorDefect": 3,
+        "ageVolatility": 0.6454703774114126
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 13
+    },
+    {
+      "file": "tasks/nuget.js",
+      "features": {
+        "churn": 7,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 4,
+        "ageVolatility": 0.5781072620663472
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 50
+    },
+    {
+      "file": "tasks/qtest.js",
+      "features": {
+        "churn": 13,
+        "authors": 2,
+        "ownershipRatio": 0.8461538461538461,
+        "busFactor": 1,
+        "coChangeScatter": 13,
+        "changeEntropy": 0.6193821946787638,
+        "knowledgeLoss": 0,
+        "priorDefect": 3,
+        "ageVolatility": 0.6701804396471704
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 56
+    },
+    {
+      "file": "tasks/transpile.js",
+      "features": {
+        "churn": 32,
+        "authors": 5,
+        "ownershipRatio": 0.84375,
+        "busFactor": 1,
+        "coChangeScatter": 22,
+        "changeEntropy": 0.3986185756947279,
+        "knowledgeLoss": 0.0625,
+        "priorDefect": 14,
+        "ageVolatility": 0.7165008539308295
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 362
+    },
+    {
+      "file": "tasks/update_index.js",
+      "features": {
+        "churn": 6,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.6649899681593536
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 32
+    },
+    {
+      "file": "templates/default.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 3,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 5
+    },
+    {
+      "file": "templates/empty.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 0
+    },
+    {
+      "file": "templates/locale-header.js",
+      "features": {
+        "churn": 5,
+        "authors": 3,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 3,
+        "changeEntropy": 0.8649735207179273,
+        "knowledgeLoss": 0.4,
+        "priorDefect": 0,
+        "ageVolatility": 0.21256770320224608
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 6
+    },
+    {
+      "file": "templates/test-header.js",
+      "features": {
+        "churn": 5,
+        "authors": 2,
+        "ownershipRatio": 0.8,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0.7219280948873623,
+        "knowledgeLoss": 0.2,
+        "priorDefect": 1,
+        "ageVolatility": 0.4222697908860282
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 6
+    },
+    {
+      "file": "ts3.1-typing-tests/moment-tests.ts",
+      "features": {
+        "churn": 8,
+        "authors": 5,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0.8613531161467861,
+        "knowledgeLoss": 0,
+        "priorDefect": 5,
+        "ageVolatility": 0.5962987174109601
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 549
+    },
+    {
+      "file": "ts3.1-typings/moment.d.ts",
+      "features": {
+        "churn": 8,
+        "authors": 5,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0.8613531161467861,
+        "knowledgeLoss": 0,
+        "priorDefect": 5,
+        "ageVolatility": 0.6130925073423946
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 785
+    },
+    {
+      "file": "typing-tests/moment-tests.ts",
+      "features": {
+        "churn": 16,
+        "authors": 8,
+        "ownershipRatio": 0.25,
+        "busFactor": 2,
+        "coChangeScatter": 11,
+        "changeEntropy": 0.9166666666666666,
+        "knowledgeLoss": 0.1875,
+        "priorDefect": 6,
+        "ageVolatility": 0.5510287439205444
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 557
+    }
+  ],
+  "total": 407,
+  "defective": 25,
+  "defectRate": 0.06142506142506143,
+  "fixCommits": 22,
+  "sweepingCommitsIgnored": 0,
+  "withNloc": 407
+}

@@ -55,6 +55,8 @@ export interface Dataset {
   readonly defective: number;
   /** `defective / total`, the base rate a fit must beat to be worth anything. */
   readonly defectRate: number;
+  /** Fix commits that labelled nothing because they touched more than the cap. */
+  readonly sweepingCommitsIgnored: number;
   /**
    * Bug-fix commits observed in the window — the real sample size.
    *
@@ -78,6 +80,8 @@ export interface DatasetOptions {
    * the first real run.
    */
   readonly includeFile?: (file: string) => boolean;
+  /** Override the sweeping-commit cap. Defaults to the measured 20 — see MAX_FILES_PER_FIX. */
+  readonly maxFilesPerFix?: number;
 }
 
 export class LeakageError extends Error {
@@ -107,16 +111,44 @@ export function assertDisjoint(
 }
 
 /**
+ * Above this, a "fix" commit labels nothing.
+ *
+ * MEASURED, not chosen. Across date-fns, scrapy, eslint and axios for 2023 — 233 fix commits:
+ *
+ *     1 file    45.9%        21-50 files    0.0%
+ *     2-5       44.6%        51-100         0.9%
+ *     6-20       8.2%        100+           0.4%
+ *
+ * 98.7% of fix commits touch 20 files or fewer, and the 21-50 bucket is EMPTY — a real gap, not
+ * a percentile I picked. The three commits above it produced 1458 of 2052 file-labels: 71% of
+ * the labels from 1.3% of the commits.
+ *
+ * The one that forced this: date-fns's `Get rid of export default, fix type resolution` touches
+ * 1323 files and contains the word "fix". It labelled all 1323 defective, which alone made
+ * date-fns 86% of the entire corpus's positives. It is a codemod. A commit that rewrites every
+ * file in a repository is not evidence that every file had a bug.
+ *
+ * Applied to LABELS ONLY, never to features. Churn from a codemod is a real change to the file;
+ * a defect label is a claim that something was WRONG there, and a sweeping mechanical rewrite
+ * does not establish that for any individual file it touched.
+ */
+const MAX_FILES_PER_FIX = 20;
+
+/**
  * Which files a window's bug-fix commits touched, and how often.
  *
  * Only `isFix` commits count. A file changed fifty times in the window by ordinary feature work
  * is not defective — that is churn, and churn is a FEATURE. Conflating the two is how a model
  * learns to predict its own input.
  */
-export function labelsFromWindow(window: readonly LabelCommit[]): Map<string, number> {
+export function labelsFromWindow(
+  window: readonly LabelCommit[],
+  maxFilesPerFix: number = MAX_FILES_PER_FIX,
+): Map<string, number> {
   const fixes = new Map<string, number>();
   for (const c of window) {
     if (!c.isFix) continue;
+    if (c.files.length === 0 || c.files.length > maxFilesPerFix) continue;
     for (const f of c.files) fixes.set(f, (fixes.get(f) ?? 0) + 1);
   }
   return fixes;
@@ -142,7 +174,7 @@ export function buildDataset(
 
   const include = options.includeFile ?? (() => true);
   const features = signalsFromCommits(historyBefore);
-  const fixes = labelsFromWindow(windowAfter);
+  const fixes = labelsFromWindow(windowAfter, options.maxFilesPerFix ?? MAX_FILES_PER_FIX);
 
   const files: LabelledFile[] = [];
   for (const [file, f] of features) {
@@ -158,7 +190,23 @@ export function buildDataset(
     total: files.length,
     defective,
     defectRate: files.length === 0 ? 0 : defective / files.length,
-    fixCommits: windowAfter.filter((c) => c.isFix).length,
+    // Fix commits that TOUCHED SOMETHING. A merge commit emits no file list, so it can label
+    // nothing — counting it would inflate the one number a caller uses to judge whether the
+    // sample is big enough. The hand-audit surfaced `Merge pull request #1081 from
+    // brianloveswords/fix-readme` doing exactly that.
+    // Only commits that actually LABELLED something: a merge emits no file list, and a
+    // sweeping commit is capped out above. Counting either would inflate the one number a
+    // caller uses to judge whether the sample is real.
+    fixCommits: windowAfter.filter(
+      (c) =>
+        c.isFix &&
+        c.files.length > 0 &&
+        c.files.length <= (options.maxFilesPerFix ?? MAX_FILES_PER_FIX),
+    ).length,
+    /** Fix commits ignored for touching too many files. Reported so the cap is never silent. */
+    sweepingCommitsIgnored: windowAfter.filter(
+      (c) => c.isFix && c.files.length > (options.maxFilesPerFix ?? MAX_FILES_PER_FIX),
+    ).length,
   };
 }
 

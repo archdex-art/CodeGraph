@@ -1,0 +1,128 @@
+{
+  "t0": "2023-01-01",
+  "windowEnd": "2024-01-01",
+  "repos": [
+    {
+      "repo": "axios__axios",
+      "historyCommits": 1389,
+      "fixCommits": 38,
+      "files": 63,
+      "defective": 16,
+      "defectRate": 25.4,
+      "sweepingIgnored": 0,
+      "withNloc": 63
+    },
+    {
+      "repo": "eslint__eslint",
+      "historyCommits": 8737,
+      "fixCommits": 50,
+      "files": 413,
+      "defective": 44,
+      "defectRate": 10.7,
+      "sweepingIgnored": 0,
+      "withNloc": 413
+    },
+    {
+      "repo": "socketio__socket.io",
+      "historyCommits": 7160,
+      "fixCommits": 48,
+      "files": 9,
+      "defective": 7,
+      "defectRate": 77.8,
+      "sweepingIgnored": 0,
+      "withNloc": 9
+    },
+    {
+      "repo": "moment__moment",
+      "historyCommits": 3980,
+      "fixCommits": 22,
+      "files": 407,
+      "defective": 25,
+      "defectRate": 6.1,
+      "sweepingIgnored": 0,
+      "withNloc": 407
+    },
+    {
+      "repo": "winstonjs__winston",
+      "historyCommits": 1505,
+      "fixCommits": 7,
+      "files": 19,
+      "defective": 5,
+      "defectRate": 26.3,
+      "sweepingIgnored": 0,
+      "withNloc": 19
+    },
+    {
+      "repo": "psf__requests",
+      "historyCommits": 6135,
+      "fixCommits": 13,
+      "files": 19,
+      "defective": 3,
+      "defectRate": 15.8,
+      "sweepingIgnored": 0,
+      "withNloc": 19
+    },
+    {
+      "repo": "pallets__flask",
+      "historyCommits": 4890,
+      "fixCommits": 21,
+      "files": 23,
+      "defective": 6,
+      "defectRate": 26.1,
+      "sweepingIgnored": 0,
+      "withNloc": 23
+    },
+    {
+      "repo": "pallets__click",
+      "historyCommits": 2207,
+      "fixCommits": 21,
+      "files": 17,
+      "defective": 5,
+      "defectRate": 29.4,
+      "sweepingIgnored": 0,
+      "withNloc": 17
+    },
+    {
+      "repo": "python-attrs__attrs",
+      "historyCommits": 1236,
+      "fixCommits": 23,
+      "files": 21,
+      "defective": 6,
+      "defectRate": 28.6,
+      "sweepingIgnored": 0,
+      "withNloc": 21
+    },
+    {
+      "repo": "encode__httpx",
+      "historyCommits": 1246,
+      "fixCommits": 17,
+      "files": 23,
+      "defective": 6,
+      "defectRate": 26.1,
+      "sweepingIgnored": 0,
+      "withNloc": 23
+    },
+    {
+      "repo": "psf__black",
+      "historyCommits": 1490,
+      "fixCommits": 59,
+      "files": 51,
+      "defective": 22,
+      "defectRate": 43.1,
+      "sweepingIgnored": 0,
+      "withNloc": 51
+    },
+    {
+      "repo": "scrapy__scrapy",
+      "historyCommits": 9591,
+      "fixCommits": 116,
+      "files": 174,
+      "defective": 47,
+      "defectRate": 27,
+      "sweepingIgnored": 0,
+      "withNloc": 174
+    }
+  ],
+  "totalFixCommits": 435,
+  "totalDefective": 192
+}

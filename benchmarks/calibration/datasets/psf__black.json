@@ -1,0 +1,881 @@
+{
+  "repo": "https://github.com/psf/black",
+  "t0": "2023-01-01",
+  "windowEnd": "2024-01-01",
+  "t0Rev": "37542e64855ce21bd580f973ae5ce1ed86812a7a",
+  "files": [
+    {
+      "file": "action/main.py",
+      "features": {
+        "churn": 5,
+        "authors": 4,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 49,
+        "changeEntropy": 0.9609640474436811,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4332435147495445
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 45
+    },
+    {
+      "file": "gallery/gallery.py",
+      "features": {
+        "churn": 8,
+        "authors": 7,
+        "ownershipRatio": 0.25,
+        "busFactor": 3,
+        "coChangeScatter": 64,
+        "changeEntropy": 0.979569764547061,
+        "knowledgeLoss": 0.375,
+        "priorDefect": 1,
+        "ageVolatility": 0.4829428191894278
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 296
+    },
+    {
+      "file": "profiling/dict_big.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 8001
+    },
+    {
+      "file": "profiling/dict_huge.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 41440
+    },
+    {
+      "file": "profiling/list_big.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 4000
+    },
+    {
+      "file": "profiling/list_huge.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 22431
+    },
+    {
+      "file": "profiling/mix_big.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 1002
+    },
+    {
+      "file": "profiling/mix_huge.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 7692
+    },
+    {
+      "file": "profiling/mix_small.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 102
+    },
+    {
+      "file": "scripts/__init__.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 0
+    },
+    {
+      "file": "scripts/check_pre_commit_rev_in_example.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 54
+    },
+    {
+      "file": "scripts/check_version_in_basics_example.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 47
+    },
+    {
+      "file": "scripts/diff_shades_gha_helper.py",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.4542965257488824
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 227
+    },
+    {
+      "file": "scripts/fuzz.py",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 92
+    },
+    {
+      "file": "scripts/migrate-black.py",
+      "features": {
+        "churn": 4,
+        "authors": 3,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 30,
+        "changeEntropy": 0.9463946303571862,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.399113188894891
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 96
+    },
+    {
+      "file": "src/black/__init__.py",
+      "features": {
+        "churn": 170,
+        "authors": 72,
+        "ownershipRatio": 0.13529411764705881,
+        "busFactor": 8,
+        "coChangeScatter": 189,
+        "changeEntropy": 0.8505703151813505,
+        "knowledgeLoss": 0.29411764705882354,
+        "priorDefect": 43,
+        "ageVolatility": 0.7032604761707171
+      },
+      "defective": true,
+      "fixCount": 5,
+      "nloc": 1426
+    },
+    {
+      "file": "src/black/__main__.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 1,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 3
+    },
+    {
+      "file": "src/black/brackets.py",
+      "features": {
+        "churn": 6,
+        "authors": 3,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 47,
+        "changeEntropy": 0.9206198357143051,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.4394806916295006
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 381
+    },
+    {
+      "file": "src/black/cache.py",
+      "features": {
+        "churn": 5,
+        "authors": 5,
+        "ownershipRatio": 0.2,
+        "busFactor": 3,
+        "coChangeScatter": 42,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.30112438017939896
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 97
+    },
+    {
+      "file": "src/black/comments.py",
+      "features": {
+        "churn": 12,
+        "authors": 7,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 53,
+        "changeEntropy": 0.8983741916842143,
+        "knowledgeLoss": 0,
+        "priorDefect": 6,
+        "ageVolatility": 0.48884989947308194
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 342
+    },
+    {
+      "file": "src/black/concurrency.py",
+      "features": {
+        "churn": 7,
+        "authors": 4,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 30,
+        "changeEntropy": 0.8322488896002307,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.531674875135199
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 187
+    },
+    {
+      "file": "src/black/const.py",
+      "features": {
+        "churn": 4,
+        "authors": 4,
+        "ownershipRatio": 0.25,
+        "busFactor": 2,
+        "coChangeScatter": 42,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.27004883688631576
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 4
+    },
+    {
+      "file": "src/black/debug.py",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 35,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 47
+    },
+    {
+      "file": "src/black/files.py",
+      "features": {
+        "churn": 19,
+        "authors": 14,
+        "ownershipRatio": 0.21052631578947367,
+        "busFactor": 5,
+        "coChangeScatter": 86,
+        "changeEntropy": 0.9498322694120631,
+        "knowledgeLoss": 0.10526315789473684,
+        "priorDefect": 4,
+        "ageVolatility": 0.48287720272730944
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 307
+    },
+    {
+      "file": "src/black/handle_ipynb_magics.py",
+      "features": {
+        "churn": 10,
+        "authors": 3,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 55,
+        "changeEntropy": 0.8173454221465103,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.5818571615462217
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 459
+    },
+    {
+      "file": "src/black/linegen.py",
+      "features": {
+        "churn": 39,
+        "authors": 16,
+        "ownershipRatio": 0.20512820512820512,
+        "busFactor": 3,
+        "coChangeScatter": 106,
+        "changeEntropy": 0.8756724301301104,
+        "knowledgeLoss": 0.02564102564102564,
+        "priorDefect": 10,
+        "ageVolatility": 0.6012240417006824
+      },
+      "defective": true,
+      "fixCount": 14,
+      "nloc": 1466
+    },
+    {
+      "file": "src/black/lines.py",
+      "features": {
+        "churn": 14,
+        "authors": 8,
+        "ownershipRatio": 0.21428571428571427,
+        "busFactor": 3,
+        "coChangeScatter": 59,
+        "changeEntropy": 0.92948348576943,
+        "knowledgeLoss": 0,
+        "priorDefect": 3,
+        "ageVolatility": 0.5384483273412396
+      },
+      "defective": true,
+      "fixCount": 6,
+      "nloc": 878
+    },
+    {
+      "file": "src/black/mode.py",
+      "features": {
+        "churn": 34,
+        "authors": 15,
+        "ownershipRatio": 0.20588235294117646,
+        "busFactor": 3,
+        "coChangeScatter": 109,
+        "changeEntropy": 0.8841689731410377,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.548420786866769
+      },
+      "defective": true,
+      "fixCount": 3,
+      "nloc": 227
+    },
+    {
+      "file": "src/black/nodes.py",
+      "features": {
+        "churn": 17,
+        "authors": 9,
+        "ownershipRatio": 0.23529411764705882,
+        "busFactor": 3,
+        "coChangeScatter": 76,
+        "changeEntropy": 0.9183158124216024,
+        "knowledgeLoss": 0,
+        "priorDefect": 3,
+        "ageVolatility": 0.4673057115372594
+      },
+      "defective": true,
+      "fixCount": 7,
+      "nloc": 862
+    },
+    {
+      "file": "src/black/numerics.py",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 39,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 60
+    },
+    {
+      "file": "src/black/output.py",
+      "features": {
+        "churn": 7,
+        "authors": 5,
+        "ownershipRatio": 0.42857142857142855,
+        "busFactor": 2,
+        "coChangeScatter": 60,
+        "changeEntropy": 0.9165164431996026,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.4977133417347331
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 105
+    },
+    {
+      "file": "src/black/parsing.py",
+      "features": {
+        "churn": 20,
+        "authors": 12,
+        "ownershipRatio": 0.35,
+        "busFactor": 3,
+        "coChangeScatter": 74,
+        "changeEntropy": 0.8757006165435995,
+        "knowledgeLoss": 0,
+        "priorDefect": 3,
+        "ageVolatility": 0.5720763942755364
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 277
+    },
+    {
+      "file": "src/black/report.py",
+      "features": {
+        "churn": 4,
+        "authors": 4,
+        "ownershipRatio": 0.25,
+        "busFactor": 2,
+        "coChangeScatter": 51,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.22523800502084673
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 106
+    },
+    {
+      "file": "src/black/rusty.py",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 35,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 27
+    },
+    {
+      "file": "src/black/strings.py",
+      "features": {
+        "churn": 7,
+        "authors": 4,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 51,
+        "changeEntropy": 0.8322488896002307,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.41588560477429887
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 238
+    },
+    {
+      "file": "src/black/trans.py",
+      "features": {
+        "churn": 28,
+        "authors": 9,
+        "ownershipRatio": 0.32142857142857145,
+        "busFactor": 2,
+        "coChangeScatter": 73,
+        "changeEntropy": 0.8231049040450186,
+        "knowledgeLoss": 0.03571428571428571,
+        "priorDefect": 11,
+        "ageVolatility": 0.6248982612937275
+      },
+      "defective": true,
+      "fixCount": 4,
+      "nloc": 2362
+    },
+    {
+      "file": "src/blackd/__init__.py",
+      "features": {
+        "churn": 13,
+        "authors": 9,
+        "ownershipRatio": 0.23076923076923078,
+        "busFactor": 3,
+        "coChangeScatter": 78,
+        "changeEntropy": 0.9549080284177108,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.4601691137760145
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 227
+    },
+    {
+      "file": "src/blackd/__main__.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 3
+    },
+    {
+      "file": "src/blackd/middlewares.py",
+      "features": {
+        "churn": 4,
+        "authors": 3,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 37,
+        "changeEntropy": 0.9463946303571862,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5388174448348109
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 45
+    },
+    {
+      "file": "src/blib2to3/__init__.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 24,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 1
+    },
+    {
+      "file": "src/blib2to3/pgen2/__init__.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 24,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 4
+    },
+    {
+      "file": "src/blib2to3/pgen2/conv.py",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 28,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 256
+    },
+    {
+      "file": "src/blib2to3/pgen2/driver.py",
+      "features": {
+        "churn": 6,
+        "authors": 5,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 58,
+        "changeEntropy": 0.9697238998682473,
+        "knowledgeLoss": 0.16666666666666666,
+        "priorDefect": 0,
+        "ageVolatility": 0.34375027883979636
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 326
+    },
+    {
+      "file": "src/blib2to3/pgen2/grammar.py",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 32,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.43714660591912013
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 227
+    },
+    {
+      "file": "src/blib2to3/pgen2/literals.py",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 24,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 68
+    },
+    {
+      "file": "src/blib2to3/pgen2/parse.py",
+      "features": {
+        "churn": 9,
+        "authors": 5,
+        "ownershipRatio": 0.5555555555555556,
+        "busFactor": 1,
+        "coChangeScatter": 45,
+        "changeEntropy": 0.809656833416415,
+        "knowledgeLoss": 0.1111111111111111,
+        "priorDefect": 1,
+        "ageVolatility": 0.5379303340240785
+      },
+      "defective": true,
+      "fixCount": 3,
+      "nloc": 393
+    },
+    {
+      "file": "src/blib2to3/pgen2/pgen.py",
+      "features": {
+        "churn": 4,
+        "authors": 4,
+        "ownershipRatio": 0.25,
+        "busFactor": 2,
+        "coChangeScatter": 34,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 1,
+        "ageVolatility": 0.22723798584734833
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 433
+    },
+    {
+      "file": "src/blib2to3/pgen2/token.py",
+      "features": {
+        "churn": 4,
+        "authors": 3,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 30,
+        "changeEntropy": 0.9463946303571862,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.40417467834605514
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 94
+    },
+    {
+      "file": "src/blib2to3/pgen2/tokenize.py",
+      "features": {
+        "churn": 4,
+        "authors": 4,
+        "ownershipRatio": 0.25,
+        "busFactor": 2,
+        "coChangeScatter": 41,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5482436233335466
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 688
+    },
+    {
+      "file": "src/blib2to3/pygram.py",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 34,
+        "changeEntropy": 0.8112781244591328,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4651926276545742
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 218
+    },
+    {
+      "file": "src/blib2to3/pytree.py",
+      "features": {
+        "churn": 9,
+        "authors": 8,
+        "ownershipRatio": 0.2222222222222222,
+        "busFactor": 4,
+        "coChangeScatter": 53,
+        "changeEntropy": 0.9825675930733633,
+        "knowledgeLoss": 0.2222222222222222,
+        "priorDefect": 3,
+        "ageVolatility": 0.3987690641026984
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 983
+    }
+  ],
+  "total": 51,
+  "defective": 22,
+  "defectRate": 0.43137254901960786,
+  "fixCommits": 59,
+  "sweepingCommitsIgnored": 0,
+  "withNloc": 51
+}

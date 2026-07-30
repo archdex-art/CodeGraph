@@ -42,9 +42,82 @@ const US = "\x1f";
  */
 const CO_CHANGE_MAX_FILES = 50;
 
-/** Recognises a commit that fixes something, for `priorDefect`. */
-const BUGFIX_RE =
-  /\b(fix(e[sd])?|bugfix|hotfix|patch(e[sd])?|resolve[sd]?|close[sd]?)\b|\brevert\b|#\d+/i;
+/**
+ * Conventional-commit types that are definitively NOT bug fixes.
+ *
+ * When a subject carries a type prefix, the type is authoritative and keyword matching is
+ * skipped entirely. `deps: bump qs minimum to 6.15.2 (#7305)` is a dependency bump whatever
+ * words follow it — and on express, `deps:` alone is 480 commits.
+ */
+const NON_FIX_TYPES = new Set([
+  "feat", "feature", "docs", "doc", "test", "tests", "chore", "build", "ci", "style",
+  "refactor", "perf", "deps", "dep", "release", "examples", "example", "lint", "bench",
+]);
+
+/** Conventional-commit types that ARE bug fixes. */
+const FIX_TYPES = new Set(["fix", "bugfix", "hotfix", "revert"]);
+
+/** `type:` or `type(scope):` or `type(scope)!:` at the start of a subject. */
+const CONVENTIONAL_RE = /^([a-zA-Z]+)(?:\([^)]*\))?!?:/;
+
+/**
+ * Fix keywords for subjects with no conventional prefix.
+ *
+ * A BARE `#\d+` IS NOT HERE, and removing it was the single biggest correctness fix in this
+ * file. GitHub squash-merges append `(#123)` to every commit, so matching it flagged features,
+ * docs, and dependency bumps as defects. Measured on express: of 1140 commits the old pattern
+ * called fixes, 282 (24.7%) matched ONLY on `#\d+` — `feat: allow conditional revalidation
+ * (#7366)`, `docs: use the new logo (#7316)`, `build(deps): bump actions/checkout (#7345)`.
+ * An issue reference means a commit is linked to a discussion, not that it repairs anything.
+ *
+ * An issue number still counts when a CLOSING VERB precedes it, which is the GitHub convention
+ * that actually carries meaning.
+ */
+const FIX_WORD_RE =
+  /\b(bug ?fix|hot ?fix|fix(e[sd])?|repair(e[sd])?|correct(e[sd])?|revert(e[sd])?)\b/i;
+/**
+ * `fixes #12` only — NOT `closes #12` or `resolves #12`.
+ *
+ * GitHub's closing keywords shut an issue of ANY kind, including feature requests. The
+ * hand-audit caught three false positives in twenty from exactly this: `Added
+ * \`app.routes.all()\`. Closes #803`, `Refactored router. Closes #639`, and `Updated
+ * express(1). Closes #365` — a feature, a refactor and a chore, all labelled defects because
+ * they closed a ticket. Only the "fix" verb says what the commit DID.
+ */
+const CLOSES_ISSUE_RE = /\bfix(e[sd])?\s+#\d+/i;
+
+/**
+ * Automated authors, excluded from BOTH features and labels.
+ *
+ * A dependabot commit is not a developer touching a file. Counting it inflates `authors`,
+ * `busFactor` and `changeEntropy` — the very signals meant to measure how many humans are
+ * involved — and its subjects are the largest single source of false fix labels.
+ */
+const BOT_AUTHOR_RE =
+  /\[bot\]$|^(dependabot|renovate|greenkeeper|snyk-bot|github-actions|semantic-release-bot)\b/i;
+
+export function isBotAuthor(author: string): boolean {
+  return BOT_AUTHOR_RE.test(author.trim());
+}
+
+/**
+ * Whether a commit subject describes a bug fix.
+ *
+ * Exported so the labelling harness and any hand-audit use the SAME classifier — a second
+ * implementation is a second definition of "defect", and the corpus would be labelled by one
+ * while the features were built by the other.
+ */
+export function isFixSubject(subject: string): boolean {
+  const conventional = CONVENTIONAL_RE.exec(subject.trim());
+  if (conventional) {
+    const type = conventional[1]!.toLowerCase();
+    if (FIX_TYPES.has(type)) return true;
+    // An explicit non-fix type is authoritative: no keyword rescue.
+    if (NON_FIX_TYPES.has(type)) return false;
+    // Unknown type — fall through to keywords.
+  }
+  return FIX_WORD_RE.test(subject) || CLOSES_ISSUE_RE.test(subject);
+}
 
 export interface FileSignals {
   /** Commits touching this file in the window. The pre-existing `churn`. */
@@ -105,7 +178,7 @@ export function parseGitLog(raw: string): Commit[] {
     commits.push({
       author,
       at: Number(at) || 0,
-      isFix: BUGFIX_RE.test(subject),
+      isFix: isFixSubject(subject),
       files,
     });
   }
@@ -113,8 +186,12 @@ export function parseGitLog(raw: string): Commit[] {
 }
 
 /** Compute every signal from parsed commits. Pure — the testable half. */
-export function signalsFromCommits(commits: readonly Commit[]): Map<string, FileSignals> {
+export function signalsFromCommits(all: readonly Commit[]): Map<string, FileSignals> {
   const out = new Map<string, FileSignals>();
+  // Automated commits are dropped before anything is computed. `authors`, `busFactor` and
+  // `changeEntropy` exist to measure how many HUMANS touch a file; a bot with 400 dependency
+  // bumps reads as the most involved contributor in the repository.
+  const commits = all.filter((c) => !isBotAuthor(c.author));
   if (commits.length === 0) return out;
 
   // The window's most recent third defines "still active", for knowledgeLoss.

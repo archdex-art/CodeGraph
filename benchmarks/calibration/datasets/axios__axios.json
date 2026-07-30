@@ -1,0 +1,1085 @@
+{
+  "repo": "https://github.com/axios/axios",
+  "t0": "2023-01-01",
+  "windowEnd": "2024-01-01",
+  "t0Rev": "abd2cb83a3bc3be81438763eb50efb809b2b5a94",
+  "files": [
+    {
+      "file": ".eslintrc.cjs",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 14
+    },
+    {
+      "file": "bin/check-build-version.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 9,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.252216162598311
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 29
+    },
+    {
+      "file": "bin/contributors.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 9,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 92
+    },
+    {
+      "file": "bin/injectContributorsList.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 9,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.4825090801587972
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 55
+    },
+    {
+      "file": "bin/ssl_hotfix.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 22
+    },
+    {
+      "file": "gulpfile.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 14,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.14948257968802497
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 93
+    },
+    {
+      "file": "index.d.ts",
+      "features": {
+        "churn": 104,
+        "authors": 71,
+        "ownershipRatio": 0.21153846153846154,
+        "busFactor": 19,
+        "coChangeScatter": 111,
+        "changeEntropy": 0.8829916469334232,
+        "knowledgeLoss": 0.2692307692307692,
+        "priorDefect": 24,
+        "ageVolatility": 0.6573543754493447
+      },
+      "defective": true,
+      "fixCount": 12,
+      "nloc": 516
+    },
+    {
+      "file": "index.js",
+      "features": {
+        "churn": 8,
+        "authors": 6,
+        "ownershipRatio": 0.25,
+        "busFactor": 2,
+        "coChangeScatter": 33,
+        "changeEntropy": 0.967132018086354,
+        "knowledgeLoss": 0.125,
+        "priorDefect": 4,
+        "ageVolatility": 0.695986936388574
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 41
+    },
+    {
+      "file": "karma.conf.cjs",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 250
+    },
+    {
+      "file": "lib/adapters/adapters.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 8,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 59
+    },
+    {
+      "file": "lib/adapters/http.js",
+      "features": {
+        "churn": 135,
+        "authors": 78,
+        "ownershipRatio": 0.1111111111111111,
+        "busFactor": 13,
+        "coChangeScatter": 133,
+        "changeEntropy": 0.8927772219568573,
+        "knowledgeLoss": 0.6148148148148148,
+        "priorDefect": 22,
+        "ageVolatility": 0.6344524344654741
+      },
+      "defective": true,
+      "fixCount": 8,
+      "nloc": 608
+    },
+    {
+      "file": "lib/adapters/xhr.js",
+      "features": {
+        "churn": 119,
+        "authors": 56,
+        "ownershipRatio": 0.1092436974789916,
+        "busFactor": 7,
+        "coChangeScatter": 130,
+        "changeEntropy": 0.8714805299916949,
+        "knowledgeLoss": 0.7310924369747899,
+        "priorDefect": 19,
+        "ageVolatility": 0.661536628676321
+      },
+      "defective": true,
+      "fixCount": 5,
+      "nloc": 249
+    },
+    {
+      "file": "lib/axios.js",
+      "features": {
+        "churn": 80,
+        "authors": 21,
+        "ownershipRatio": 0.275,
+        "busFactor": 2,
+        "coChangeScatter": 160,
+        "changeEntropy": 0.7667089939613521,
+        "knowledgeLoss": 0.7125,
+        "priorDefect": 8,
+        "ageVolatility": 0.7617548841506612
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 86
+    },
+    {
+      "file": "lib/cancel/CanceledError.js",
+      "features": {
+        "churn": 4,
+        "authors": 4,
+        "ownershipRatio": 0.25,
+        "busFactor": 2,
+        "coChangeScatter": 28,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.5060563818691868
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 25
+    },
+    {
+      "file": "lib/cancel/CancelToken.js",
+      "features": {
+        "churn": 7,
+        "authors": 5,
+        "ownershipRatio": 0.2857142857142857,
+        "busFactor": 2,
+        "coChangeScatter": 44,
+        "changeEntropy": 0.9629610647945144,
+        "knowledgeLoss": 0.14285714285714285,
+        "priorDefect": 1,
+        "ageVolatility": 0.6568973898832465
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 121
+    },
+    {
+      "file": "lib/cancel/isCancel.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 8,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 5
+    },
+    {
+      "file": "lib/core/Axios.js",
+      "features": {
+        "churn": 31,
+        "authors": 18,
+        "ownershipRatio": 0.1935483870967742,
+        "busFactor": 4,
+        "coChangeScatter": 62,
+        "changeEntropy": 0.9171707897765701,
+        "knowledgeLoss": 0.3870967741935484,
+        "priorDefect": 4,
+        "ageVolatility": 0.5257752864362443
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 197
+    },
+    {
+      "file": "lib/core/AxiosError.js",
+      "features": {
+        "churn": 7,
+        "authors": 4,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 40,
+        "changeEntropy": 0.8322488896002307,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.5434622597845122
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 100
+    },
+    {
+      "file": "lib/core/AxiosHeaders.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 16,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.39353418779069294
+      },
+      "defective": true,
+      "fixCount": 6,
+      "nloc": 274
+    },
+    {
+      "file": "lib/core/buildFullPath.js",
+      "features": {
+        "churn": 3,
+        "authors": 3,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 6,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 0,
+        "ageVolatility": 0.49220829911955455
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 21
+    },
+    {
+      "file": "lib/core/dispatchRequest.js",
+      "features": {
+        "churn": 36,
+        "authors": 18,
+        "ownershipRatio": 0.16666666666666666,
+        "busFactor": 4,
+        "coChangeScatter": 80,
+        "changeEntropy": 0.9158711855414233,
+        "knowledgeLoss": 0.6111111111111112,
+        "priorDefect": 3,
+        "ageVolatility": 0.636034557392855
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 81
+    },
+    {
+      "file": "lib/core/InterceptorManager.js",
+      "features": {
+        "churn": 8,
+        "authors": 6,
+        "ownershipRatio": 0.375,
+        "busFactor": 2,
+        "coChangeScatter": 23,
+        "changeEntropy": 0.9306282244165778,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 0,
+        "ageVolatility": 0.6226291731022062
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 71
+    },
+    {
+      "file": "lib/core/mergeConfig.js",
+      "features": {
+        "churn": 17,
+        "authors": 10,
+        "ownershipRatio": 0.35294117647058826,
+        "busFactor": 3,
+        "coChangeScatter": 40,
+        "changeEntropy": 0.8849767163807573,
+        "knowledgeLoss": 0.29411764705882354,
+        "priorDefect": 2,
+        "ageVolatility": 0.6006112442368685
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 105
+    },
+    {
+      "file": "lib/core/settle.js",
+      "features": {
+        "churn": 9,
+        "authors": 8,
+        "ownershipRatio": 0.2222222222222222,
+        "busFactor": 4,
+        "coChangeScatter": 37,
+        "changeEntropy": 0.9825675930733633,
+        "knowledgeLoss": 0.5555555555555556,
+        "priorDefect": 0,
+        "ageVolatility": 0.4622163916893119
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 27
+    },
+    {
+      "file": "lib/core/transformData.js",
+      "features": {
+        "churn": 6,
+        "authors": 4,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 20,
+        "changeEntropy": 0.8962406251802889,
+        "knowledgeLoss": 0.16666666666666666,
+        "priorDefect": 0,
+        "ageVolatility": 0.6063373351472263
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 28
+    },
+    {
+      "file": "lib/defaults/index.js",
+      "features": {
+        "churn": 11,
+        "authors": 2,
+        "ownershipRatio": 0.8181818181818182,
+        "busFactor": 1,
+        "coChangeScatter": 44,
+        "changeEntropy": 0.6840384356390417,
+        "knowledgeLoss": 0,
+        "priorDefect": 3,
+        "ageVolatility": 0.6081159268629588
+      },
+      "defective": true,
+      "fixCount": 3,
+      "nloc": 166
+    },
+    {
+      "file": "lib/defaults/transitional.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 5,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 7
+    },
+    {
+      "file": "lib/env/classes/FormData.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 16,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 2
+    },
+    {
+      "file": "lib/env/data.js",
+      "features": {
+        "churn": 24,
+        "authors": 3,
+        "ownershipRatio": 0.9166666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 40,
+        "changeEntropy": 0.31366684285007645,
+        "knowledgeLoss": 0,
+        "priorDefect": 2,
+        "ageVolatility": 0.5700878679362472
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 0
+    },
+    {
+      "file": "lib/helpers/AxiosTransformStream.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 191
+    },
+    {
+      "file": "lib/helpers/AxiosURLSearchParams.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 6,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.2268349312909148
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 58
+    },
+    {
+      "file": "lib/helpers/bind.js",
+      "features": {
+        "churn": 3,
+        "authors": 3,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 1,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 0,
+        "ageVolatility": 0.49151390110008913
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 7
+    },
+    {
+      "file": "lib/helpers/buildURL.js",
+      "features": {
+        "churn": 14,
+        "authors": 10,
+        "ownershipRatio": 0.2857142857142857,
+        "busFactor": 3,
+        "coChangeScatter": 44,
+        "changeEntropy": 0.9311066102039659,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 3,
+        "ageVolatility": 0.5411392064006821
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 63
+    },
+    {
+      "file": "lib/helpers/combineURLs.js",
+      "features": {
+        "churn": 4,
+        "authors": 4,
+        "ownershipRatio": 0.25,
+        "busFactor": 2,
+        "coChangeScatter": 1,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 0,
+        "ageVolatility": 0.5190044612736455
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 15
+    },
+    {
+      "file": "lib/helpers/cookies.js",
+      "features": {
+        "churn": 9,
+        "authors": 4,
+        "ownershipRatio": 0.4444444444444444,
+        "busFactor": 2,
+        "coChangeScatter": 30,
+        "changeEntropy": 0.9182958340544894,
+        "knowledgeLoss": 0.7777777777777778,
+        "priorDefect": 1,
+        "ageVolatility": 0.5885936237423408
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 52
+    },
+    {
+      "file": "lib/helpers/deprecatedMethod.js",
+      "features": {
+        "churn": 7,
+        "authors": 4,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 19,
+        "changeEntropy": 0.8322488896002307,
+        "knowledgeLoss": 0.7142857142857143,
+        "priorDefect": 0,
+        "ageVolatility": 0.6553630440401522
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 26
+    },
+    {
+      "file": "lib/helpers/formDataToJSON.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 7,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.22700485693262598
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 92
+    },
+    {
+      "file": "lib/helpers/fromDataURI.js",
+      "features": {
+        "churn": 4,
+        "authors": 2,
+        "ownershipRatio": 0.75,
+        "busFactor": 1,
+        "coChangeScatter": 19,
+        "changeEntropy": 0.8112781244591328,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.4079557927264637
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 53
+    },
+    {
+      "file": "lib/helpers/HttpStatusCode.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 3,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 71
+    },
+    {
+      "file": "lib/helpers/isAbsoluteURL.js",
+      "features": {
+        "churn": 4,
+        "authors": 4,
+        "ownershipRatio": 0.25,
+        "busFactor": 2,
+        "coChangeScatter": 1,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 0,
+        "ageVolatility": 0.5575337131989382
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 15
+    },
+    {
+      "file": "lib/helpers/isAxiosError.js",
+      "features": {
+        "churn": 4,
+        "authors": 4,
+        "ownershipRatio": 0.25,
+        "busFactor": 2,
+        "coChangeScatter": 6,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.45497203729894065
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 14
+    },
+    {
+      "file": "lib/helpers/isURLSameOrigin.js",
+      "features": {
+        "churn": 9,
+        "authors": 7,
+        "ownershipRatio": 0.2222222222222222,
+        "busFactor": 3,
+        "coChangeScatter": 26,
+        "changeEntropy": 0.9708357627258161,
+        "knowledgeLoss": 0.5555555555555556,
+        "priorDefect": 2,
+        "ageVolatility": 0.5331707056629403
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 67
+    },
+    {
+      "file": "lib/helpers/null.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 21,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 2
+    },
+    {
+      "file": "lib/helpers/parseHeaders.js",
+      "features": {
+        "churn": 10,
+        "authors": 8,
+        "ownershipRatio": 0.3,
+        "busFactor": 3,
+        "coChangeScatter": 34,
+        "changeEntropy": 0.9488131148903385,
+        "knowledgeLoss": 0.7,
+        "priorDefect": 1,
+        "ageVolatility": 0.5240240487356186
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 55
+    },
+    {
+      "file": "lib/helpers/parseProtocol.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 2,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 6
+    },
+    {
+      "file": "lib/helpers/speedometer.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 6,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 55
+    },
+    {
+      "file": "lib/helpers/spread.js",
+      "features": {
+        "churn": 7,
+        "authors": 5,
+        "ownershipRatio": 0.42857142857142855,
+        "busFactor": 2,
+        "coChangeScatter": 26,
+        "changeEntropy": 0.9165164431996026,
+        "knowledgeLoss": 0.7142857142857143,
+        "priorDefect": 0,
+        "ageVolatility": 0.642994969904897
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 28
+    },
+    {
+      "file": "lib/helpers/throttle.js",
+      "features": {
+        "churn": 1,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 0,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 33
+    },
+    {
+      "file": "lib/helpers/toFormData.js",
+      "features": {
+        "churn": 14,
+        "authors": 5,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 42,
+        "changeEntropy": 0.7783853970487746,
+        "knowledgeLoss": 0,
+        "priorDefect": 5,
+        "ageVolatility": 0.6180216561468508
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 229
+    },
+    {
+      "file": "lib/helpers/toURLEncodedForm.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.48447339480219603
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 18
+    },
+    {
+      "file": "lib/helpers/validator.js",
+      "features": {
+        "churn": 5,
+        "authors": 3,
+        "ownershipRatio": 0.4,
+        "busFactor": 2,
+        "coChangeScatter": 48,
+        "changeEntropy": 0.9602297178607612,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0.47128629284046064
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 91
+    },
+    {
+      "file": "lib/platform/browser/classes/FormData.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 16,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 3
+    },
+    {
+      "file": "lib/platform/browser/classes/URLSearchParams.js",
+      "features": {
+        "churn": 4,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 16,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.4673323387409771
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 4
+    },
+    {
+      "file": "lib/platform/browser/index.js",
+      "features": {
+        "churn": 7,
+        "authors": 2,
+        "ownershipRatio": 0.7142857142857143,
+        "busFactor": 1,
+        "coChangeScatter": 26,
+        "changeEntropy": 0.863120568566631,
+        "knowledgeLoss": 0,
+        "priorDefect": 4,
+        "ageVolatility": 0.5522658566544714
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 63
+    },
+    {
+      "file": "lib/platform/index.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 3
+    },
+    {
+      "file": "lib/platform/node/classes/FormData.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 16,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 3
+    },
+    {
+      "file": "lib/platform/node/classes/URLSearchParams.js",
+      "features": {
+        "churn": 2,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 12,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 4
+    },
+    {
+      "file": "lib/platform/node/index.js",
+      "features": {
+        "churn": 3,
+        "authors": 1,
+        "ownershipRatio": 1,
+        "busFactor": 1,
+        "coChangeScatter": 23,
+        "changeEntropy": 0,
+        "knowledgeLoss": 0,
+        "priorDefect": 1,
+        "ageVolatility": 0.4316608608222093
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 12
+    },
+    {
+      "file": "lib/utils.js",
+      "features": {
+        "churn": 59,
+        "authors": 31,
+        "ownershipRatio": 0.1864406779661017,
+        "busFactor": 5,
+        "coChangeScatter": 121,
+        "changeEntropy": 0.884658806150668,
+        "knowledgeLoss": 0.5254237288135594,
+        "priorDefect": 9,
+        "ageVolatility": 0.607629072102961
+      },
+      "defective": true,
+      "fixCount": 2,
+      "nloc": 677
+    },
+    {
+      "file": "rollup.config.js",
+      "features": {
+        "churn": 7,
+        "authors": 3,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 38,
+        "changeEntropy": 0.8699155297736259,
+        "knowledgeLoss": 0,
+        "priorDefect": 3,
+        "ageVolatility": 0.4462268860471578
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 117
+    },
+    {
+      "file": "sandbox/client.js",
+      "features": {
+        "churn": 2,
+        "authors": 2,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 14,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 0,
+        "ageVolatility": 0
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 19
+    },
+    {
+      "file": "sandbox/server.js",
+      "features": {
+        "churn": 4,
+        "authors": 4,
+        "ownershipRatio": 0.25,
+        "busFactor": 2,
+        "coChangeScatter": 14,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 0,
+        "ageVolatility": 0.44706267424260987
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 80
+    },
+    {
+      "file": "webpack.config.js",
+      "features": {
+        "churn": 15,
+        "authors": 10,
+        "ownershipRatio": 0.4,
+        "busFactor": 3,
+        "coChangeScatter": 21,
+        "changeEntropy": 0.8648307589022237,
+        "knowledgeLoss": 0.7333333333333333,
+        "priorDefect": 2,
+        "ageVolatility": 0.5795832931661432
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 26
+    }
+  ],
+  "total": 63,
+  "defective": 16,
+  "defectRate": 0.25396825396825395,
+  "fixCommits": 38,
+  "sweepingCommitsIgnored": 0,
+  "withNloc": 63
+}

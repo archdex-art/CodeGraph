@@ -1,0 +1,337 @@
+{
+  "repo": "https://github.com/psf/requests",
+  "t0": "2023-01-01",
+  "windowEnd": "2024-01-01",
+  "t0Rev": "ec553c275fe915ab8c179a530907b564892d2922",
+  "files": [
+    {
+      "file": "requests/__init__.py",
+      "features": {
+        "churn": 178,
+        "authors": 27,
+        "ownershipRatio": 0.6292134831460674,
+        "busFactor": 1,
+        "coChangeScatter": 74,
+        "changeEntropy": 0.49197103656586433,
+        "knowledgeLoss": 0.25842696629213485,
+        "priorDefect": 14,
+        "ageVolatility": 0.6561873226592558
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 180
+    },
+    {
+      "file": "requests/__version__.py",
+      "features": {
+        "churn": 40,
+        "authors": 5,
+        "ownershipRatio": 0.425,
+        "busFactor": 2,
+        "coChangeScatter": 49,
+        "changeEntropy": 0.7297880495206504,
+        "knowledgeLoss": 0.125,
+        "priorDefect": 1,
+        "ageVolatility": 0.5922401653850357
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 14
+    },
+    {
+      "file": "requests/_internal_utils.py",
+      "features": {
+        "churn": 6,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 44,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 0,
+        "ageVolatility": 0.6484500400265197
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 48
+    },
+    {
+      "file": "requests/adapters.py",
+      "features": {
+        "churn": 149,
+        "authors": 48,
+        "ownershipRatio": 0.18791946308724833,
+        "busFactor": 4,
+        "coChangeScatter": 51,
+        "changeEntropy": 0.7976808274857062,
+        "knowledgeLoss": 0.7516778523489933,
+        "priorDefect": 30,
+        "ageVolatility": 0.7152715647955339
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 584
+    },
+    {
+      "file": "requests/api.py",
+      "features": {
+        "churn": 139,
+        "authors": 56,
+        "ownershipRatio": 0.4676258992805755,
+        "busFactor": 3,
+        "coChangeScatter": 76,
+        "changeEntropy": 0.6885516111611006,
+        "knowledgeLoss": 0.48201438848920863,
+        "priorDefect": 20,
+        "ageVolatility": 0.718928897943227
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 157
+    },
+    {
+      "file": "requests/auth.py",
+      "features": {
+        "churn": 117,
+        "authors": 46,
+        "ownershipRatio": 0.2564102564102564,
+        "busFactor": 6,
+        "coChangeScatter": 66,
+        "changeEntropy": 0.8378876156721627,
+        "knowledgeLoss": 0.6923076923076923,
+        "priorDefect": 28,
+        "ageVolatility": 0.7533987322721046
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 315
+    },
+    {
+      "file": "requests/certs.py",
+      "features": {
+        "churn": 9,
+        "authors": 5,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 43,
+        "changeEntropy": 0.9462651872218009,
+        "knowledgeLoss": 0.4444444444444444,
+        "priorDefect": 0,
+        "ageVolatility": 0.558468755136793
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 17
+    },
+    {
+      "file": "requests/compat.py",
+      "features": {
+        "churn": 41,
+        "authors": 24,
+        "ownershipRatio": 0.24390243902439024,
+        "busFactor": 4,
+        "coChangeScatter": 64,
+        "changeEntropy": 0.8768362309535885,
+        "knowledgeLoss": 0.5853658536585366,
+        "priorDefect": 9,
+        "ageVolatility": 0.6414738860787869
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 79
+    },
+    {
+      "file": "requests/cookies.py",
+      "features": {
+        "churn": 79,
+        "authors": 30,
+        "ownershipRatio": 0.10126582278481013,
+        "busFactor": 8,
+        "coChangeScatter": 53,
+        "changeEntropy": 0.9305293886722588,
+        "knowledgeLoss": 0.8860759493670886,
+        "priorDefect": 13,
+        "ageVolatility": 0.7757678002880527
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 561
+    },
+    {
+      "file": "requests/exceptions.py",
+      "features": {
+        "churn": 51,
+        "authors": 23,
+        "ownershipRatio": 0.23529411764705882,
+        "busFactor": 4,
+        "coChangeScatter": 60,
+        "changeEntropy": 0.8663473452431835,
+        "knowledgeLoss": 0.5490196078431373,
+        "priorDefect": 9,
+        "ageVolatility": 0.643900239839396
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 141
+    },
+    {
+      "file": "requests/help.py",
+      "features": {
+        "churn": 13,
+        "authors": 6,
+        "ownershipRatio": 0.38461538461538464,
+        "busFactor": 2,
+        "coChangeScatter": 49,
+        "changeEntropy": 0.8479836109346183,
+        "knowledgeLoss": 0.15384615384615385,
+        "priorDefect": 2,
+        "ageVolatility": 0.6461170410331553
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 134
+    },
+    {
+      "file": "requests/hooks.py",
+      "features": {
+        "churn": 29,
+        "authors": 14,
+        "ownershipRatio": 0.3448275862068966,
+        "busFactor": 3,
+        "coChangeScatter": 54,
+        "changeEntropy": 0.859563898990245,
+        "knowledgeLoss": 0.5517241379310345,
+        "priorDefect": 5,
+        "ageVolatility": 0.724637117630789
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 33
+    },
+    {
+      "file": "requests/models.py",
+      "features": {
+        "churn": 716,
+        "authors": 200,
+        "ownershipRatio": 0.3715083798882682,
+        "busFactor": 4,
+        "coChangeScatter": 102,
+        "changeEntropy": 0.6720764502450063,
+        "knowledgeLoss": 0.5782122905027933,
+        "priorDefect": 144,
+        "ageVolatility": 0.7680842878766022
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 1034
+    },
+    {
+      "file": "requests/packages.py",
+      "features": {
+        "churn": 6,
+        "authors": 5,
+        "ownershipRatio": 0.3333333333333333,
+        "busFactor": 2,
+        "coChangeScatter": 71,
+        "changeEntropy": 0.9697238998682473,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 1,
+        "ageVolatility": 0.6177210465065329
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 28
+    },
+    {
+      "file": "requests/sessions.py",
+      "features": {
+        "churn": 331,
+        "authors": 105,
+        "ownershipRatio": 0.2930513595166163,
+        "busFactor": 3,
+        "coChangeScatter": 87,
+        "changeEntropy": 0.7113355020077679,
+        "knowledgeLoss": 0.6283987915407855,
+        "priorDefect": 75,
+        "ageVolatility": 0.7219195742896131
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 831
+    },
+    {
+      "file": "requests/status_codes.py",
+      "features": {
+        "churn": 32,
+        "authors": 20,
+        "ownershipRatio": 0.21875,
+        "busFactor": 5,
+        "coChangeScatter": 60,
+        "changeEntropy": 0.9225745521018917,
+        "knowledgeLoss": 0.65625,
+        "priorDefect": 9,
+        "ageVolatility": 0.6021764562048888
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 128
+    },
+    {
+      "file": "requests/structures.py",
+      "features": {
+        "churn": 41,
+        "authors": 20,
+        "ownershipRatio": 0.2926829268292683,
+        "busFactor": 4,
+        "coChangeScatter": 62,
+        "changeEntropy": 0.8684312530843559,
+        "knowledgeLoss": 0.6097560975609756,
+        "priorDefect": 10,
+        "ageVolatility": 0.6787852274972132
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 99
+    },
+    {
+      "file": "requests/utils.py",
+      "features": {
+        "churn": 268,
+        "authors": 102,
+        "ownershipRatio": 0.22761194029850745,
+        "busFactor": 7,
+        "coChangeScatter": 92,
+        "changeEntropy": 0.7927530726216774,
+        "knowledgeLoss": 0.6455223880597015,
+        "priorDefect": 52,
+        "ageVolatility": 0.6845643867535601
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 1086
+    },
+    {
+      "file": "setup.py",
+      "features": {
+        "churn": 158,
+        "authors": 40,
+        "ownershipRatio": 0.46835443037974683,
+        "busFactor": 2,
+        "coChangeScatter": 153,
+        "changeEntropy": 0.6213654294196699,
+        "knowledgeLoss": 0.36075949367088606,
+        "priorDefect": 13,
+        "ageVolatility": 0.6136229131632746
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 132
+    }
+  ],
+  "total": 19,
+  "defective": 3,
+  "defectRate": 0.15789473684210525,
+  "fixCommits": 13,
+  "sweepingCommitsIgnored": 0,
+  "withNloc": 19
+}

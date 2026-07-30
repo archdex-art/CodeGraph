@@ -1,0 +1,337 @@
+{
+  "repo": "https://github.com/winstonjs/winston",
+  "t0": "2023-01-01",
+  "windowEnd": "2024-01-01",
+  "t0Rev": "2489a3d13b20797d3dbc55d3daf560cf52c2e6a3",
+  "files": [
+    {
+      "file": "index.d.ts",
+      "features": {
+        "churn": 33,
+        "authors": 23,
+        "ownershipRatio": 0.21212121212121213,
+        "busFactor": 7,
+        "coChangeScatter": 11,
+        "changeEntropy": 0.9299022294544836,
+        "knowledgeLoss": 0.21212121212121213,
+        "priorDefect": 13,
+        "ageVolatility": 0.6249467276810323
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 219
+    },
+    {
+      "file": "lib/winston.js",
+      "features": {
+        "churn": 79,
+        "authors": 19,
+        "ownershipRatio": 0.6835443037974683,
+        "busFactor": 1,
+        "coChangeScatter": 136,
+        "changeEntropy": 0.49949931424634525,
+        "knowledgeLoss": 0.26582278481012656,
+        "priorDefect": 16,
+        "ageVolatility": 0.7326087091414982
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 176
+    },
+    {
+      "file": "lib/winston/common.js",
+      "features": {
+        "churn": 87,
+        "authors": 46,
+        "ownershipRatio": 0.367816091954023,
+        "busFactor": 5,
+        "coChangeScatter": 115,
+        "changeEntropy": 0.7759539796109899,
+        "knowledgeLoss": 0.6206896551724138,
+        "priorDefect": 33,
+        "ageVolatility": 0.6023253210152252
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 61
+    },
+    {
+      "file": "lib/winston/config/index.d.ts",
+      "features": {
+        "churn": 7,
+        "authors": 4,
+        "ownershipRatio": 0.5714285714285714,
+        "busFactor": 1,
+        "coChangeScatter": 9,
+        "changeEntropy": 0.8322488896002307,
+        "knowledgeLoss": 0.2857142857142857,
+        "priorDefect": 0,
+        "ageVolatility": 0.6810335658063486
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 99
+    },
+    {
+      "file": "lib/winston/config/index.js",
+      "features": {
+        "churn": 5,
+        "authors": 2,
+        "ownershipRatio": 0.6,
+        "busFactor": 1,
+        "coChangeScatter": 48,
+        "changeEntropy": 0.9709505944546686,
+        "knowledgeLoss": 0.6,
+        "priorDefect": 0,
+        "ageVolatility": 0.5459207558812166
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 35
+    },
+    {
+      "file": "lib/winston/container.js",
+      "features": {
+        "churn": 20,
+        "authors": 10,
+        "ownershipRatio": 0.45,
+        "busFactor": 2,
+        "coChangeScatter": 75,
+        "changeEntropy": 0.8000526782083357,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 8,
+        "ageVolatility": 0.5921627780992573
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 114
+    },
+    {
+      "file": "lib/winston/create-logger.js",
+      "features": {
+        "churn": 16,
+        "authors": 10,
+        "ownershipRatio": 0.25,
+        "busFactor": 3,
+        "coChangeScatter": 53,
+        "changeEntropy": 0.9265160001059999,
+        "knowledgeLoss": 0.5,
+        "priorDefect": 3,
+        "ageVolatility": 0.6509471474386822
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 104
+    },
+    {
+      "file": "lib/winston/exception-handler.js",
+      "features": {
+        "churn": 18,
+        "authors": 8,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 62,
+        "changeEntropy": 0.7736006946447654,
+        "knowledgeLoss": 0.2777777777777778,
+        "priorDefect": 9,
+        "ageVolatility": 0.5978956516344182
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 245
+    },
+    {
+      "file": "lib/winston/exception-stream.js",
+      "features": {
+        "churn": 6,
+        "authors": 4,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 37,
+        "changeEntropy": 0.8962406251802889,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 3,
+        "ageVolatility": 0.4098671845797338
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 54
+    },
+    {
+      "file": "lib/winston/logger.js",
+      "features": {
+        "churn": 182,
+        "authors": 58,
+        "ownershipRatio": 0.45054945054945056,
+        "busFactor": 2,
+        "coChangeScatter": 191,
+        "changeEntropy": 0.6605594819578808,
+        "knowledgeLoss": 0.4175824175824176,
+        "priorDefect": 61,
+        "ageVolatility": 0.7152736282923124
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 676
+    },
+    {
+      "file": "lib/winston/profiler.js",
+      "features": {
+        "churn": 11,
+        "authors": 4,
+        "ownershipRatio": 0.6363636363636364,
+        "busFactor": 1,
+        "coChangeScatter": 59,
+        "changeEntropy": 0.7455574250275929,
+        "knowledgeLoss": 0.18181818181818182,
+        "priorDefect": 3,
+        "ageVolatility": 0.6568067830011546
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 51
+    },
+    {
+      "file": "lib/winston/rejection-handler.js",
+      "features": {
+        "churn": 6,
+        "authors": 6,
+        "ownershipRatio": 0.16666666666666666,
+        "busFactor": 3,
+        "coChangeScatter": 14,
+        "changeEntropy": 1,
+        "knowledgeLoss": 0,
+        "priorDefect": 4,
+        "ageVolatility": 0.525971741368646
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 251
+    },
+    {
+      "file": "lib/winston/tail-file.js",
+      "features": {
+        "churn": 7,
+        "authors": 5,
+        "ownershipRatio": 0.42857142857142855,
+        "busFactor": 2,
+        "coChangeScatter": 32,
+        "changeEntropy": 0.9165164431996026,
+        "knowledgeLoss": 0.7142857142857143,
+        "priorDefect": 3,
+        "ageVolatility": 0.6160004110432296
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 124
+    },
+    {
+      "file": "lib/winston/transports/console.js",
+      "features": {
+        "churn": 70,
+        "authors": 32,
+        "ownershipRatio": 0.5142857142857142,
+        "busFactor": 1,
+        "coChangeScatter": 100,
+        "changeEntropy": 0.6769500318120695,
+        "knowledgeLoss": 0.44285714285714284,
+        "priorDefect": 19,
+        "ageVolatility": 0.7178147707229081
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 117
+    },
+    {
+      "file": "lib/winston/transports/file.js",
+      "features": {
+        "churn": 152,
+        "authors": 53,
+        "ownershipRatio": 0.3026315789473684,
+        "busFactor": 3,
+        "coChangeScatter": 119,
+        "changeEntropy": 0.7469990228973801,
+        "knowledgeLoss": 0.6381578947368421,
+        "priorDefect": 49,
+        "ageVolatility": 0.7027077094412467
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 695
+    },
+    {
+      "file": "lib/winston/transports/http.js",
+      "features": {
+        "churn": 49,
+        "authors": 20,
+        "ownershipRatio": 0.24489795918367346,
+        "busFactor": 3,
+        "coChangeScatter": 65,
+        "changeEntropy": 0.8276366146794142,
+        "knowledgeLoss": 0.6122448979591837,
+        "priorDefect": 14,
+        "ageVolatility": 0.5979019628763681
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 267
+    },
+    {
+      "file": "lib/winston/transports/index.d.ts",
+      "features": {
+        "churn": 12,
+        "authors": 7,
+        "ownershipRatio": 0.5,
+        "busFactor": 1,
+        "coChangeScatter": 8,
+        "changeEntropy": 0.8165982976888231,
+        "knowledgeLoss": 0.25,
+        "priorDefect": 3,
+        "ageVolatility": 0.6500608298429457
+      },
+      "defective": true,
+      "fixCount": 1,
+      "nloc": 104
+    },
+    {
+      "file": "lib/winston/transports/index.js",
+      "features": {
+        "churn": 3,
+        "authors": 2,
+        "ownershipRatio": 0.6666666666666666,
+        "busFactor": 1,
+        "coChangeScatter": 19,
+        "changeEntropy": 0.9182958340544896,
+        "knowledgeLoss": 0.3333333333333333,
+        "priorDefect": 1,
+        "ageVolatility": 0.18168983246013573
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 56
+    },
+    {
+      "file": "lib/winston/transports/stream.js",
+      "features": {
+        "churn": 13,
+        "authors": 5,
+        "ownershipRatio": 0.5384615384615384,
+        "busFactor": 1,
+        "coChangeScatter": 61,
+        "changeEntropy": 0.8101434166941021,
+        "knowledgeLoss": 0.38461538461538464,
+        "priorDefect": 3,
+        "ageVolatility": 0.6568606214545494
+      },
+      "defective": false,
+      "fixCount": 0,
+      "nloc": 63
+    }
+  ],
+  "total": 19,
+  "defective": 5,
+  "defectRate": 0.2631578947368421,
+  "fixCommits": 7,
+  "sweepingCommitsIgnored": 0,
+  "withNloc": 19
+}

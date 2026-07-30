@@ -23,6 +23,8 @@ export { churnByFile, cleanup, cloneRepo, resolveLocalDir } from "./acquire";
 export {
   gitLogRange,
   gitSignals,
+  isBotAuthor,
+  isFixSubject,
   parseGitLog,
   signalsFromCommits,
   type Commit,

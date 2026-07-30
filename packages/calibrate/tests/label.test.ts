@@ -184,3 +184,59 @@ describe("dataset scoping, learned from a real run", () => {
     expect(d.fixCommits).toBe(1);
   });
 });
+
+describe("sweeping commits cannot manufacture labels", () => {
+  /**
+   * THE ANOMALY THIS PREVENTS, found by running the real corpus rather than by reasoning.
+   *
+   * date-fns's `Get rid of export default, fix type resolution` touches 1323 files and contains
+   * the word "fix". It labelled all 1323 defective, which alone made date-fns 86% of the whole
+   * corpus's positives (1284 of 1491). It is a codemod.
+   *
+   * The cap is 20, and it is MEASURED: across date-fns, scrapy, eslint and axios for 2023, 233
+   * fix commits split 45.9% / 44.6% / 8.2% across 1, 2-5 and 6-20 files, with the 21-50 bucket
+   * EMPTY. The three commits above it produced 71% of all file-labels.
+   */
+  it("ignores a fix commit that touches more files than the cap", () => {
+    const wide = Array.from({ length: 40 }, (_, i) => `f${i}.ts`);
+    const history = wide.map((f, i) => c(i + 1, [f]));
+    const d = buildDataset(history, [c(50, wide, { fix: true })]);
+    expect(d.defective).toBe(0);
+    expect(d.sweepingCommitsIgnored).toBe(1);
+  });
+
+  it("still labels a normal multi-file fix", () => {
+    const history = [c(1, ["a.ts"]), c(2, ["b.ts"])];
+    const d = buildDataset(history, [c(50, ["a.ts", "b.ts"], { fix: true })]);
+    expect(d.defective).toBe(2);
+    expect(d.sweepingCommitsIgnored).toBe(0);
+  });
+
+  it("reports the cap rather than applying it silently", () => {
+    const wide = Array.from({ length: 30 }, (_, i) => `f${i}.ts`);
+    const d = buildDataset(wide.map((f, i) => c(i + 1, [f])), [
+      c(50, wide, { fix: true }),
+      c(51, wide, { fix: true }),
+    ]);
+    // A caller judging sample size must see that two "fixes" contributed nothing.
+    expect(d.sweepingCommitsIgnored).toBe(2);
+    expect(d.fixCommits).toBe(0);
+  });
+
+  it("honours an explicit cap override", () => {
+    const wide = Array.from({ length: 40 }, (_, i) => `f${i}.ts`);
+    const d = buildDataset(wide.map((f, i) => c(i + 1, [f])), [c(50, wide, { fix: true })], undefined, {
+      maxFilesPerFix: 100,
+    });
+    expect(d.defective).toBe(40);
+  });
+
+  it("does not count a merge commit as a fix", () => {
+    // A merge emits no file list, so it can label nothing — but it was inflating `fixCommits`.
+    // The audit found `Merge pull request #1081 from brianloveswords/fix-readme` doing exactly
+    // that.
+    const d = buildDataset([c(1, ["a.ts"])], [c(50, [], { fix: true })]);
+    expect(d.fixCommits).toBe(0);
+    expect(d.defective).toBe(0);
+  });
+});
