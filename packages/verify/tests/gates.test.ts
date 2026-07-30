@@ -226,4 +226,26 @@ describe("gate 4 — reanalysis", () => {
     );
     expect(r.status).toBe("passed");
   });
+
+  it("verifies only the no-new-findings half when no target is named", async () => {
+    // The batch path: `executeFixes` cannot attribute an edit to the finding it served, so
+    // there is no specific claim to check. Passing null says that, instead of inventing a
+    // target — which an earlier version did, and it failed a fix that had worked perfectly
+    // because the invented target was a finding no provider handles.
+    const r = await reanalysisGate(candidate(["a.ts"]), before, null, async () =>
+      new Set(["target-fp", "other-fp"])
+    );
+    expect(r.status).toBe("passed");
+    // And the reason must not let a reader infer the stronger claim.
+    expect(r.reason).toMatch(/does not prove a specific finding was fixed/);
+  });
+
+  it("still fails on newly-introduced findings when no target is named", async () => {
+    // The half it CAN check is not weakened by the missing target.
+    const r = await reanalysisGate(candidate(["a.ts"]), before, null, async () =>
+      new Set(["other-fp", "new-fp"])
+    );
+    expect(r.status).toBe("failed");
+    expect(r.reason).toMatch(/introduced 1 new finding/);
+  });
 });

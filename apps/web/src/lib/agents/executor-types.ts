@@ -1,3 +1,4 @@
+import type { VerificationRecord } from "@codegraph/verify";
 // M4 Remediation Executor domain types.
 
 export interface FileEdit {
@@ -41,7 +42,14 @@ export interface FixResult {
   scoreAfter: number;
   issuesBefore: number;
   issuesAfter: number;
-  verified: boolean; // re-index confirmed no score regression
+  /**
+   * Now decided by the four gates (LLD §7.2), not by "the score did not drop".
+   * Read `verification` for WHY — this stays a boolean only because existing callers
+   * branch on it.
+   */
+  verified: boolean;
+  /** The gate-by-gate record. Absent only on the paths that never ran verification. */
+  verification?: VerificationRecord;
   pr: PRDraft | null;
   steps: ExecutionStep[];
   message: string;

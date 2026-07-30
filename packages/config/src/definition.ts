@@ -57,6 +57,16 @@ export interface Config {
    * the commit that makes the worker deployable and passes the 512 MB
    * two-concurrent-job smoke test.
    */
+  /**
+   * Permit gate 3 to run the analysed repository's own test suite (LLD §10.3, §7.2).
+   *
+   * Default FALSE and it must stay that way: running a repo's suite executes arbitrary
+   * code from that repo. The process cannot detect whether the host's isolation makes
+   * that acceptable — only the operator knows — so this is a declaration, not a probe.
+   * Off means verification reports `level: "partial"` (SPIKES §2's Render case) rather
+   * than quietly executing a stranger's code.
+   */
+  readonly allowTestVerification: boolean;
   readonly useWorker: boolean;
   readonly workerConcurrency: number;
   readonly workerPollIntervalMs: number;
@@ -135,6 +145,7 @@ export function buildSchema(options: LoadOptions = {}): Schema {
      * which only grows — so raising this multiplies the exposure to the exact
      * failure the worker exists to contain. Raise it only with real headroom.
      */
+    allowTestVerification: boolVar("CG_ALLOW_TEST_VERIFICATION", () => false),
     useWorker: boolVar("CG_USE_WORKER", () => false),
 
     workerConcurrency: intVar("CG_WORKER_CONCURRENCY", { fallback: 1, min: 1, max: 8 }),

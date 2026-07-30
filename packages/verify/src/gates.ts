@@ -202,12 +202,27 @@ export async function testsGate(
 export async function reanalysisGate(
   candidate: FixCandidate,
   fingerprintsBefore: ReadonlySet<string>,
-  targetFingerprint: string,
+  /**
+   * The finding this fix claims to remove, or NULL when the caller cannot name one.
+   *
+   * Null is not a loophole, it is the honest state of the batch path that exists today:
+   * `executeFixes` collects edits repo-wide and cannot say which finding each edit served,
+   * so there is no target to check. The alternative — picking one, e.g. the
+   * highest-severity issue — manufactures a claim the fix never made, and fails whenever no
+   * provider handles that particular finding. That is exactly what happened when this was
+   * typed `string`: the gate reported "target still present" for a fix that had worked
+   * perfectly on the three classes it does handle.
+   *
+   * With null the gate verifies the half it can — that nothing new was introduced — and its
+   * reason says so, so the record cannot be read as proving more. Review C1's per-finding
+   * `/fix` is what supplies a real target and unlocks the stronger claim.
+   */
+  targetFingerprint: string | null,
   reanalyse: () => Promise<ReadonlySet<string>>
 ): Promise<GateResult> {
   const { value: after, ms } = await timed(reanalyse);
 
-  if (after.has(targetFingerprint)) {
+  if (targetFingerprint !== null && after.has(targetFingerprint)) {
     return result("reanalysis", "failed", ms, {
       reason: `the target finding is still present after the fix (fingerprint ${targetFingerprint.slice(0, 12)}…)`,
     });
@@ -222,6 +237,11 @@ export async function reanalysisGate(
   }
 
   return result("reanalysis", "passed", ms, {
-    reason: `target fingerprint absent, no new findings (candidate ${candidate.providerId})`,
+    reason:
+      targetFingerprint === null
+        ? // Deliberately explicit about the weaker claim. A reader must not infer that a
+          // specific finding was proven fixed when no finding was named.
+          `no new findings introduced; no target finding was named, so this does not prove a specific finding was fixed (candidate ${candidate.providerId})`
+        : `target fingerprint absent, no new findings (candidate ${candidate.providerId})`,
   });
 }

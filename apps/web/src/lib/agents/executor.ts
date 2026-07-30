@@ -11,7 +11,20 @@ import { isGithubHost } from "@codegraph/vcs";
 import { parseGithubRepo, getDefaultBranch, createPullRequest, GitHubApiError } from "@codegraph/vcs";
 import { FIXERS } from "./fixers";
 import type { ExecutionStep, FileEdit, FixResult, PRDraft } from "./executor-types";
+import type { VerificationRecord } from "@codegraph/verify";
 import { logger } from "@codegraph/observability";
+import { fingerprint, normalizeSnippet } from "@codegraph/core-domain";
+import {
+  buildRecord,
+  describeRecord,
+  reanalysisGate,
+  syntaxGate,
+  testsGate,
+  typesGate,
+  type FixCandidate,
+  type GateResult,
+} from "@codegraph/verify";
+import { canIsolateTests, createSandbox, detectTestRunner, hasTypeConfig } from "./sandbox";
 
 const SKIP: Record<string, true> = {
   ".git": true, node_modules: true, dist: true, build: true, ".next": true,
@@ -173,11 +186,60 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
       };
     }
 
-    // 4. verify (re-index the patched sandbox)
+    // 4. verify — the four gates (LLD §7.2, review C3)
+    //
+    // This replaced `after.score >= before.score && after.issues.length <= before.issues.length`,
+    // which graded a fix by the metric it was built to move. Two ways that said yes when the
+    // honest answer was no: an unrelated improvement in the same re-index masked a fix that
+    // changed nothing, and a fix trading its target for a worse finding still passed.
     t = now();
-    const after = await indexRepo(work);
-    const verified = after.score >= before.score && after.issues.length <= before.issues.length;
-    rec("verify", `Post-fix Health Score ${after.score}, ${after.issues.length} issues — ${verified ? "no regression" : "REGRESSION"}`, verified, t);
+    // `work` is `string | null` in the declaration above and non-null by here, but a real
+    // check beats an assertion: if a future edit reorders the acquire step, this fails loudly
+    // at the top of verification instead of handing gates a sandbox rooted at "null".
+    if (!work) throw new Error("verification requires a sandbox; no workspace was acquired");
+    const tree = work;
+    const sandbox = createSandbox({ root: tree });
+    const beforeFingerprints = fingerprintsOf(before.issues);
+    // One id per run. Review C4's publish step keys on this, so it has to be stable across
+    // the record and the draft rather than regenerated per consumer.
+    const candidateId = `${repo.id}:${Date.now()}`;
+    // NO TARGET FINDING, deliberately. This path applies every applicable fixer across the
+    // repo and cannot attribute an edit to the finding it served, so there is no specific
+    // claim for gate 4 to check. An earlier version picked the highest-severity issue as a
+    // stand-in and the gate correctly rejected it: the fixers handle debug output, TODO
+    // markers and empty catches, so a security finding at the top of the list was never
+    // going to disappear, and the fix was reported unverified for doing exactly what it
+    // said. Review C1's per-finding route supplies a real target.
+    const targetFingerprint = null;
+
+    const gates: GateResult[] = [];
+    const candidate = candidateFor(allEdits);
+
+    gates.push(
+      await syntaxGate(candidate, sandbox, parseCheck, async (abs) => readFileSync(abs, "utf8"))
+    );
+    gates.push(await typesGate(sandbox, () => hasTypeConfig(tree)));
+    gates.push(
+      await testsGate(sandbox, {
+        allowed: canIsolateTests(),
+        canIsolate: canIsolateTests(),
+        detectRunner: () => detectTestRunner(tree),
+      })
+    );
+
+    // Gate 4 re-indexes once and reuses that result for the score fields below, so the
+    // patched tree is analysed exactly once rather than once per consumer.
+    let after = before;
+    gates.push(
+      await reanalysisGate(candidate, beforeFingerprints, targetFingerprint, async () => {
+        after = await indexRepo(tree);
+        return fingerprintsOf(after.issues);
+      })
+    );
+
+    const record = buildRecord(candidateId, gates);
+    const verified = record.verified;
+    rec("verify", describeRecord(record), verified, t);
 
     // 5. diff
     t = now();
@@ -188,7 +250,7 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
 
     // 6. record + PR draft
     t = now();
-    let pr = verified ? buildPR(repo, before.score, after.score, allEdits, changed.size, diff) : null;
+    let pr = verified ? buildPR(repo, before.score, after.score, allEdits, changed.size, diff, record) : null;
     
     if (pr && githubToken && repo.sourceType === "git" && isGithubHost(repo.url) && work) {
       try {
@@ -258,6 +320,7 @@ export async function executeFixes(repo: RepoDetail, githubToken?: string): Prom
       issuesBefore: before.issues.length,
       issuesAfter: after.issues.length,
       verified,
+      verification: record,
       pr,
       steps,
       message: verified
@@ -282,7 +345,8 @@ function buildPR(
   scoreAfter: number,
   edits: FileEdit[],
   filesChanged: number,
-  diff: string
+  diff: string,
+  record: VerificationRecord
 ): PRDraft {
   const byFixer = new Map<string, number>();
   for (const e of edits) byFixer.set(e.fixer, (byFixer.get(e.fixer) || 0) + 1);
@@ -290,7 +354,25 @@ function buildPR(
   const body = [
     `## Automated remediation by CodeGraph`,
     ``,
-    `This PR applies **safe, deterministic fixes** identified by the CodeGraph agent swarm and **verified by re-indexing**.`,
+    // The claim is now generated from the record instead of asserted. It previously read
+    // "verified by re-indexing", which a reader hears as "the tests were run" — and for a
+    // `partial` record they were not. Review C3.
+    `This PR applies **safe, deterministic fixes** identified by the CodeGraph agent swarm.`,
+    ``,
+    `### Verification`,
+    ``,
+    describeRecord(record),
+    ``,
+    // Gate-by-gate, so a reviewer can see which evidence exists rather than trusting a word.
+    `| Gate | Result | Detail |`,
+    `|---|---|---|`,
+    ...record.gates.map(
+      (g) => `| \`${g.gate}\` | ${g.status} | ${(g.reason ?? "").replace(/\|/g, "\\|")} |`
+    ),
+    ``,
+    record.level === "partial"
+      ? `> **No test suite ran for this fix.** The changes re-parse cleanly and the target finding is gone, but this is not test-backed. See \`CG_ALLOW_TEST_VERIFICATION\`.`
+      : `> The project's own test suite ran and passed against these changes.`,
     ``,
     `**Health Score:** ${scoreBefore} → **${scoreAfter}**  ·  **Files changed:** ${filesChanged}  ·  **Edits:** ${edits.length}`,
     ``,
@@ -309,4 +391,110 @@ function buildPR(
     branch: `codegraph/auto-remediation`,
     diff,
   };
+}
+
+/**
+ * Fingerprint a v1 issue the same way `persistence` does, so before/after sets are
+ * comparable (migration 003, LLD §2.1).
+ *
+ * GRANULARITY LIMIT, and it changes what gate 4 can prove. v1 stores no snippet, so the
+ * fingerprint is rule+FILE — every occurrence of one rule in one file collapses to a single
+ * identity (measured during the P1-8 backfill and recorded in REVIEW_2026-07-29 §P1-8).
+ *
+ * The consequence is specific: gate 4 asks "is this fingerprint gone", so for a file with
+ * two `console.log`s it passes only when BOTH are removed. That is stricter than "was this
+ * occurrence fixed", never weaker, so it cannot manufacture a false pass — a fix that
+ * removes one of two occurrences reports NOT verified, which is a false negative and the
+ * safe direction to be wrong in. Per-occurrence identity needs the multi-factor
+ * fingerprint from LLD §2.1, which is P5's structural-hash work.
+ */
+function fingerprintsOf(issues: readonly { title?: string; file?: string }[]): ReadonlySet<string> {
+  const out = new Set<string>();
+  for (const issue of issues) out.add(fingerprintOf(issue));
+  return out;
+}
+
+function fingerprintOf(issue: { title?: string; file?: string }): string {
+  const title = issue.title ?? "Unknown finding";
+  const ruleId = `legacy/${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unknown"}`;
+  const parts = (issue.file ?? "").split("/");
+  const scope = parts[parts.length - 1] || (issue.file ?? "");
+  return fingerprint({ ruleId, scope, normalizedSnippet: normalizeSnippet("") });
+}
+
+/**
+ * Adapt the applied edits into a `FixCandidate` for the gates.
+ *
+ * INTERIM. Review C1 wants one candidate per finding, carrying its `findingId`, produced by
+ * a provider bound to the rule it fixes (`FixProvider.handles`). Today's executor collects
+ * edits repo-wide and cannot say which finding each one served, so this reports the batch as
+ * a single candidate. Gates 1-3 are unaffected — they judge the patched tree, not the
+ * attribution. Gate 4 is weakened to "the batch removed this finding", which is why the
+ * per-finding `/fix` route is the next piece of P3 rather than a later nicety.
+ */
+function candidateFor(edits: readonly FileEdit[]): FixCandidate {
+  const files = [...new Set(edits.map((e) => e.file))];
+  return {
+    findingId: "" as FixCandidate["findingId"],
+    providerId: "legacy-batch",
+    edits: files.map((file) => ({
+      range: { file, startLine: 1, startCol: 0, endLine: 1, endCol: 0 },
+      newText: "",
+    })),
+    explanation: `${edits.length} deterministic edit(s) across ${files.length} file(s)`,
+    confidence: 1,
+  };
+}
+
+/**
+ * Gate 1's parse check.
+ *
+ * Deliberately NOT a full parser. `@codegraph/verify` takes `parse` injected precisely so it
+ * depends on no language plugin, and the plugin that would answer properly arrives in P5
+ * (`lang-typescript` at `full` tier). What is checkable now without one is balance of
+ * brackets and quotes, which is exactly the damage a line-deleting fixer does — review B1
+ * shipped an edit that left `if (x)` with no body.
+ *
+ * It is honest about being weak: it reports `ok` for anything it cannot disprove, so it
+ * catches the destructive case and never blocks a valid fix it does not understand.
+ */
+function parseCheck(file: string, text: string): { ok: boolean; error?: string } {
+  if (!/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file)) return { ok: true };
+
+  let depth = 0;
+  let inString: string | null = null;
+  let inLineComment = false;
+  let inBlockComment = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    const next = text[i + 1];
+
+    if (inLineComment) {
+      if (c === "\n") inLineComment = false;
+      continue;
+    }
+    if (inBlockComment) {
+      if (c === "*" && next === "/") { inBlockComment = false; i++; }
+      continue;
+    }
+    if (inString) {
+      if (c === "\\") { i++; continue; }
+      if (c === inString) inString = null;
+      continue;
+    }
+    if (c === "/" && next === "/") { inLineComment = true; i++; continue; }
+    if (c === "/" && next === "*") { inBlockComment = true; i++; continue; }
+    if (c === '"' || c === "'" || c === "`") { inString = c; continue; }
+    if (c === "{" || c === "(" || c === "[") depth++;
+    if (c === "}" || c === ")" || c === "]") {
+      depth--;
+      if (depth < 0) return { ok: false, error: "unbalanced closing bracket" };
+    }
+  }
+
+  if (depth !== 0) return { ok: false, error: `unbalanced brackets (depth ${depth})` };
+  if (inString) return { ok: false, error: "unterminated string literal" };
+  if (inBlockComment) return { ok: false, error: "unterminated block comment" };
+  return { ok: true };
 }
