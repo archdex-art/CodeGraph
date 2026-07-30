@@ -61,6 +61,7 @@ The libraries, and why each boundary exists:
 | `analysis` · `analysis-model` · `core-graph` | Scan, symbol graph, rules, scoring. Transitional; P5 splits them per LLD §13 |
 | `remediate-engine` | Fix providers and the apply loop, shared by `apps/web` and `apps/cli` |
 | `verify` | The four verification gates and the `VerificationRecord` |
+| `calibrate` | Offline defect labelling for score calibration (PLAN.md §5.3). Depends on `vcs` and nothing else — a calibration run must not be able to reach the scorer it is fitting weights for |
 
 The last two `process.env` and `console.*` rules are enforced by `scripts/check_boundaries.py`,
 which dependency-cruiser structurally cannot see.

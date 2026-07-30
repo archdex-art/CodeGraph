@@ -73,11 +73,17 @@ export interface FileSignals {
   ageVolatility: number;
 }
 
-interface Commit {
-  author: string;
-  at: number;
-  isFix: boolean;
-  files: string[];
+/**
+ * One commit, as parsed from `git log`.
+ *
+ * Exported and `readonly` so `@codegraph/calibrate` can hold the same shape without a cast.
+ * Readonly is the honest signature anyway: `signalsFromCommits` only reads.
+ */
+export interface Commit {
+  readonly author: string;
+  readonly at: number;
+  readonly isFix: boolean;
+  readonly files: readonly string[];
 }
 
 /** Parse one `git log` payload into commits. Exported for tests — no git required. */
@@ -107,7 +113,7 @@ export function parseGitLog(raw: string): Commit[] {
 }
 
 /** Compute every signal from parsed commits. Pure — the testable half. */
-export function signalsFromCommits(commits: Commit[]): Map<string, FileSignals> {
+export function signalsFromCommits(commits: readonly Commit[]): Map<string, FileSignals> {
   const out = new Map<string, FileSignals>();
   if (commits.length === 0) return out;
 
@@ -229,18 +235,50 @@ function volatility(times: number[]): number {
  * Returns an empty map when the directory is not a git repository or git is unavailable —
  * the same failure posture as `churnByFile`, which these supersede.
  */
-export function gitSignals(root: string, sinceMonths = 6): Map<string, FileSignals> {
+export interface GitWindow {
+  /** Inclusive lower bound — anything `git log --since` accepts. */
+  readonly since: string;
+  /** Exclusive upper bound — anything `git log --until` accepts. Omit for "now". */
+  readonly until?: string;
+}
+
+/**
+ * Raw `git log` output for a window. Separated from parsing so the T0 boundary is one
+ * auditable place: calibration correctness depends entirely on which commits are in scope.
+ */
+export function gitLogRange(root: string, window: GitWindow): string {
+  const until = window.until === undefined ? "" : ` --until="${window.until}"`;
+  return execSync(
+    `git log --since="${window.since}"${until} --name-only --format="${RS}%H${US}%an${US}%at${US}%s"`,
+    {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      maxBuffer: 64 * 1024 * 1024,
+    },
+  );
+}
+
+/**
+ * Read organisational signals for a working tree.
+ *
+ * Returns an empty map when the directory is not a git repository or git is unavailable —
+ * the same failure posture as `churnByFile`, which these supersede.
+ *
+ * `window` exists for calibration (PLAN.md §5.3), which must compute features from history
+ * STRICTLY BEFORE a chosen T0 while labels come from after it. Passing a bare month count
+ * cannot express that boundary.
+ */
+export function gitSignals(
+  root: string,
+  windowOrMonths: GitWindow | number = 6,
+): Map<string, FileSignals> {
+  const window: GitWindow =
+    typeof windowOrMonths === "number"
+      ? { since: `${windowOrMonths}.months.ago` }
+      : windowOrMonths;
   try {
-    const raw = execSync(
-      `git log --since="${sinceMonths}.months.ago" --name-only --format="${RS}%H${US}%an${US}%at${US}%s"`,
-      {
-        cwd: root,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-        maxBuffer: 64 * 1024 * 1024,
-      },
-    );
-    return signalsFromCommits(parseGitLog(raw));
+    return signalsFromCommits(parseGitLog(gitLogRange(root, window)));
   } catch {
     return new Map();
   }

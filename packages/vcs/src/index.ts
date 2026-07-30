@@ -21,10 +21,13 @@ export { redactCredentials, redactError } from "./redact";
  */
 export { churnByFile, cleanup, cloneRepo, resolveLocalDir } from "./acquire";
 export {
+  gitLogRange,
   gitSignals,
   parseGitLog,
   signalsFromCommits,
+  type Commit,
   type FileSignals,
+  type GitWindow,
 } from "./signals";
 
 export {

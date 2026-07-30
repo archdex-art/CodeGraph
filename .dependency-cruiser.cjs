@@ -66,6 +66,11 @@ const ALLOWED = {
   // Process-execution mechanics for verification (see child-process-only-in-vcs below).
   sandbox: ["core-domain", "config", "observability", "verify"],
 
+  // Offline defect-prediction calibration (PLAN.md §5.3). Depends on `vcs` for git history
+  // and nothing else — deliberately NOT on `analysis`, so a calibration run cannot accidentally
+  // reach the scorer it is meant to be fitting weights for.
+  calibrate: ["core-domain", "vcs"],
+
   // P2's transitional package, split by P5 per LLD §13.2.
   analysis: ["core-domain", "core-graph", "config", "vcs", "analysis-model"],
   "analysis-model": ["core-graph"],
