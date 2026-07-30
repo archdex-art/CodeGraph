@@ -1,0 +1,24 @@
+{
+  "name": "@codegraph/analysis",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@codegraph/analysis-model": "*",
+    "@codegraph/config": "*",
+    "@codegraph/core-domain": "*",
+    "@codegraph/core-graph": "*",
+    "@codegraph/vcs": "*",
+    "@typescript-eslint/parser": "^8.65.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-security": "^4.0.1"
+  }
+}

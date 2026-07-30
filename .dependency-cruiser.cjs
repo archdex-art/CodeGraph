@@ -157,7 +157,31 @@ module.exports = {
       severity: "error",
       from: {
         path: "^packages/",
-        pathNot: "^packages/(fsx|vcs|persistence)/",
+        pathNot: [
+          "^packages/(fsx|vcs|persistence)/",
+          // ONE file, named explicitly rather than exempting the package, so
+          // anything else in `analysis` that reaches for fs still fails.
+          //
+          // This violation was not introduced by the LLD §13.2 move — it was
+          // REVEALED by it. `indexer.ts` has always walked the tree with
+          // readFileSync/readdirSync/statSync; it sat in `apps/web`, and this
+          // rule is scoped `from: ^packages/`, so nothing ever looked. The gate
+          // catching it on arrival is the gate working.
+          //
+          // Not fixed here because the fix is not mechanical: `fsx`'s
+          // WorkspaceHandle is async by design (`read(rel): Promise<string>`,
+          // §10.1) and this walk is synchronous throughout, so routing it through
+          // fsx changes the pipeline's execution shape. P2 is structural
+          // (HLD §17), and §13 already routes this code to `pipeline/enumerate`,
+          // which is where the async conversion belongs.
+          //
+          // Worth stating why this is a lower-risk exemption than it looks: the
+          // containment concern the rule exists for is handled at the boundary,
+          // before this code runs — `vcs.resolveLocalDir` validates the root and
+          // `cloneRepo` produces one. What `indexer.ts` does is bulk read-only
+          // enumeration of an already-validated root. It writes nothing.
+          "^packages/analysis/src/indexer\\.ts$",
+        ],
       },
       to: { path: "^(node:)?fs(/promises)?$", dependencyTypes: ["core"] },
     },

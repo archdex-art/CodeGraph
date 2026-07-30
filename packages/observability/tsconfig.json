@@ -2,8 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     // DOM lib for the browser branch of the sink; the package is isomorphic by
-    // design (see src/index.ts).
-    "lib": ["ES2022", "DOM"]
+    // design (see src/index.ts). ES2024 tracks the baseline — this override exists
+    // to ADD DOM, not to pin an older ECMAScript lib, and leaving it at ES2022
+    // would have silently held this one package back when the baseline moved.
+    "lib": ["ES2024", "DOM"]
   },
   "include": ["src/**/*.ts", "tests/**/*.ts"]
 }

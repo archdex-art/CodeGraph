@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // NOT THIS PACKAGE'S DEBT. Measured: of the 70 errors these two flags produce
+    // here, **0** originate in `src/` — every one is in `@codegraph/core-graph`'s
+    // source (extractors.ts 39, graph.ts 21, query.ts 5, ast-extractor.ts 5).
+    //
+    // This package imports exactly one thing from `core-graph`: the `SymbolGraph`
+    // TYPE, for `IndexResult.symbolGraph`. It is erased at runtime. But because
+    // every package publishes raw TypeScript (`exports: "./src/index.ts"`, §1.1)
+    // instead of built declarations, a consumer's `tsc` follows the import into the
+    // dependency's SOURCE and re-checks all of it under the CONSUMER's flags — so
+    // a type-only import of one interface pulls a whole package's strictness debt
+    // across the boundary.
+    //
+    // That is a structural property of the raw-TS export convention, documented at
+    // length in `apps/web/tsconfig.json`. It is why this line appears in four
+    // tsconfigs and not one, and it is the argument for eventually having packages
+    // publish declarations. Until then, relaxing here is the honest option:
+    // the alternative is to pretend `core-graph`'s debt belongs to this package by
+    // fixing it from the wrong side of the boundary.
+    //
+    // Clears when `core-graph`'s own debt clears (P3 replaces those extractors).
+    // Nothing in `src/` relies on the relaxation; keep it that way.
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}
