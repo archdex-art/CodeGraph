@@ -29,6 +29,21 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # This gate was DEAD, not passing. `no-console` was configured as
+      # `["error", { allow: [] }]`, which ESLint 9 rejects (`allow` needs >= 1
+      # item), so eslint exited 2 before linting a file — and CI never ran it,
+      # so nothing surfaced the crash. Both halves were needed to hide it, and
+      # 17 react-hooks@7 violations accumulated behind it.
+      #
+      # Ratcheted the same way as the layering gate above: --max-warnings is
+      # pinned to the exact current total (22) in apps/web's lint script, with
+      # the known sites downgraded to warnings in eslint.config.mjs and
+      # inventoried in docs/LINT_DEBT.md. A violation in a NEW file is a hard
+      # error; one more warning anywhere pushes the count past the pin. Both
+      # directions verified to fail before this was committed.
+      - name: Lint
+        run: npm run lint
+
       # Layering gate (HLD §6.1). Runs with --ignore-known: the four
       # pre-existing cycles in apps/web are baselined in
       # .dependency-cruiser-known-violations.json and documented as P1-1 in
