@@ -16,38 +16,66 @@ A single Next.js 16 (App Router) application at `apps/web/` that:
 |---|---|
 | Framework | Next.js 16 (App Router), React 19, TypeScript |
 | Persistence | `node:sqlite` (built into Node ≥22) — one file, `data/codegraph.sqlite` |
-| Parsing | `web-tree-sitter` (WASM) for TS/JS when memory budget allows, regex-based extractors as the default/fallback (see Known Constraints) |
+| Parsing | TypeScript compiler API and `web-tree-sitter` (WASM) for TS/JS, regex extractors as the fallback. The old `CG_TREE_SITTER_MAX_RSS_BYTES` budget gate is gone — see Known constraints |
 | Editor | Monaco, loaded from a CDN at runtime (not bundled) |
-| Deployment | Docker (`node:24-slim`), single container, no queue/orchestrator/message bus |
+| Deployment | Docker (`node:24-slim`), **one container** running two processes: the Next.js server and `apps/worker`. The job queue is a **SQLite table**, not a broker — no NATS, no Redis, no orchestrator |
 | Auth | None by default; optional HTTP Basic Auth gate (app-wide) + optional GitHub OAuth (per-user, unlocks private-repo import) — see Security |
 
 No Postgres, no pgvector, no NATS, no Temporal, no runtime/OTel domain — all of that was scoped in the legacy design docs but never built. This app trades graph sophistication for "actually ships and runs on a single small container."
 
 ## Request flow
+
+An npm-workspaces monorepo: `apps/*` are deployment units, `packages/*` are libraries, and the
+dependency direction between packages is enforced in CI by `.dependency-cruiser.cjs` (HLD §6.1)
+rather than by convention.
+
 ```
-Browser (Next.js client pages, src/app/*)
+Browser (Next.js client pages, apps/web/src/app/*)
         │  fetch
         ▼
-API routes (src/app/api/*/route.ts)   ← 14 routes, thin HTTP glue
+API routes (apps/web/src/app/api/*/route.ts)   ← 27 routes, thin HTTP glue
         │
         ▼
-Backend lib (src/lib/*)
-  ├─ store.ts        job orchestration + SQLite persistence (fire-and-forget in-process jobs)
-  ├─ indexer.ts       clone/scan/score a repo → IndexResult
-  ├─ codeintel/       tree-sitter + regex extractors → symbol graph, health-score dimensions
-  ├─ agents/          specialists → critic → judge → (optional) sandboxed fixer
-  ├─ workspace.ts      path-safe fs ops scoped to a repo's workspace dir
-  ├─ trash.ts          soft-delete layer for editor deletes (restorable)
-  ├─ gitops.ts          thin, argv-only wrapper over `git` (no shell interpolation)
-  ├─ localAccess.ts     gates local-folder indexing / server-side folder browsing
-  ├─ urlSafety.ts        SSRF guard for user-supplied git URLs
-  ├─ basicAuth.ts         pure credential-check for the optional app-wide auth gate
-  ├─ session.ts            stateless, encrypted session cookie for GitHub sign-in
-  ├─ githubOAuth.ts         GitHub OAuth client (authorize URL, token exchange, repo listing)
-  └─ authz.ts               per-repo ownership check (repoAccessDenied/viewerId) enforced on every repos/[id]/* route
+apps/web/src/lib/*        web-only concerns: session, authz, store, agents, editor, timeline
+        │
+        │  enqueue (a row in the `jobs` table)
+        ▼
+apps/worker               poll · lease · heartbeat · spawn a CHILD PROCESS per job
+        │
+        ▼
+packages/*                the analysis itself — see below
 ```
 
-Jobs are fire-and-forget within the same Node process (`void runJob(...)` in `store.ts`) — there's no external queue. This is simple and fine for single-instance deployment; it does mean an unhandled crash mid-job takes the whole server down with it (see `docs/postmortems/`).
+The libraries, and why each boundary exists:
+
+| Package | Owns |
+|---|---|
+| `core-domain` | Pure types and fingerprints. Zero dependencies, zero I/O |
+| `config` | Typed environment, validated at boot. The **only** module that reads `process.env` |
+| `observability` | Structured logging. The **only** module allowed `console.*` |
+| `fsx` | Path-safe workspace file operations (was `lib/workspace.ts`) |
+| `vcs` | Everything that shells out to `git`, plus the GitHub client and the SSRF guard (was `lib/urlSafety.ts`) |
+| `sandbox` | Process execution for verification gates — timeout, no shell, scrubbed env |
+| `persistence` | The **only** module that speaks SQL |
+| `jobs` | Queue semantics: lease, heartbeat, retry, cancellation |
+| `analysis` · `analysis-model` · `core-graph` | Scan, symbol graph, rules, scoring. Transitional; P5 splits them per LLD §13 |
+| `remediate-engine` | Fix providers and the apply loop, shared by `apps/web` and `apps/cli` |
+| `verify` | The four verification gates and the `VerificationRecord` |
+
+The last two `process.env` and `console.*` rules are enforced by `scripts/check_boundaries.py`,
+which dependency-cruiser structurally cannot see.
+
+**Two dispatch paths, chosen by `CG_USE_WORKER`.** The shipped image sets it to `true`: routes
+write a row to the `jobs` table and return `202`, and the worker claims it and spawns a child
+process that exits when the job ends. `npm run dev` leaves it off and calls `void runJob(...)`
+inline, so a developer does not need two processes to see a repo index.
+
+That child-per-job structure is not tidiness — it is the fix for the OOM in Known constraints
+below, and it is what makes an unhandled crash mid-job kill one job rather than the server.
+
+Note that `apps/web/src/lib/indexer.ts` and `apps/web/src/lib/codeintel/*` still exist as
+**re-export shims** pointing at the packages. They are deleted once no importers remain
+(LLD §13.1 step 3); the real code is not there.
 
 ## Security model
 - **No authentication by default.** Optional HTTP Basic Auth: set `CG_BASIC_AUTH_PASSWORD` (and optionally `CG_BASIC_AUTH_USER`, default `codegraph`) to gate the whole app except `/api/health`. See `apps/web/src/proxy.ts`.

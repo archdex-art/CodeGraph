@@ -163,3 +163,82 @@ describe("the test-suite claim counts what exists", () => {
     expect(claimed).toBe(all - 1);
   });
 });
+
+describe("ARCHITECTURE.md describes the architecture that exists", () => {
+  /**
+   * Review C6. The document CONTRADICTED ITSELF before this: the Stack table said "no
+   * queue/orchestrator/message bus" and the request flow said "jobs are fire-and-forget within
+   * the same Node process … there's no external queue", while the Known-constraints section
+   * three paragraphs later correctly described `apps/worker` spawning a child process per job.
+   *
+   * That is what a stale doc looks like in practice — not wholly wrong, but updated in the one
+   * place someone happened to be editing.
+   */
+  const ARCH = read("ARCHITECTURE.md");
+
+  it("does not still claim there is no queue", () => {
+    expect(ARCH).not.toMatch(/no queue\/orchestrator\/message bus/);
+    expect(ARCH).not.toMatch(/there's no external queue/);
+    expect(ARCH).not.toMatch(/fire-and-forget within the same Node process/);
+  });
+
+  it("states the real route count", () => {
+    const claimed = Number(ARCH.match(/←\s*(\d+) routes/)?.[1]);
+    const { readdirSync, statSync } = require("node:fs") as typeof import("node:fs");
+    let actual = 0;
+    const walk = (dir: string): void => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) walk(full);
+        else if (e.name === "route.ts") actual++;
+      }
+    };
+    walk(path.join(root, "apps/web/src/app/api"));
+    expect(claimed).toBe(actual);
+  });
+
+  it("lists every package that exists, in the package TABLE", () => {
+    // A package table is only useful if it is complete — an omitted one is a boundary nobody
+    // reading this doc knows about.
+    //
+    // Scoped to table rows, not the whole document. The first version used
+    // `expect(ARCH).toContain(pkg)` and a mutation deleting the `sandbox` row still passed,
+    // because "sandbox" also appears in the security section's "sandboxed fixer". A test that
+    // matches prose proves nothing about the table.
+    const { readdirSync } = require("node:fs") as typeof import("node:fs");
+    const onDisk = readdirSync(path.join(root, "packages"), { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
+
+    // Every backticked name in the row's FIRST cell — some rows legitimately group packages
+    // that are split together later (`analysis` · `analysis-model` · `core-graph`, LLD §13).
+    const tableCells = ARCH.split("\n")
+      .filter((l) => l.startsWith("| `"))
+      .flatMap((l) => [...(l.split("|")[1] ?? "").matchAll(/`([^`]+)`/g)].map((m) => m[1]!));
+
+    for (const pkg of onDisk) {
+      expect(tableCells, `ARCHITECTURE.md's package table should list ${pkg}`).toContain(pkg);
+    }
+  });
+
+  it("names both dispatch paths and the flag that selects them", () => {
+    expect(ARCH).toMatch(/CG_USE_WORKER/);
+    expect(ARCH).toMatch(/void runJob/);
+    // And the flag it names must be real.
+    expect(read("apps/web/src/lib/store.ts")).toMatch(/config\.useWorker/);
+  });
+
+  it("warns that the old lib paths are re-export shims", () => {
+    // `apps/web/src/lib/indexer.ts` still exists but is three lines of re-export; a reader
+    // following the old diagram would look for the pipeline there and find nothing.
+    expect(ARCH).toMatch(/re-export shims/);
+    expect(read("apps/web/src/lib/indexer.ts")).toMatch(/Re-export shim/);
+  });
+
+  it("does not claim a budget gate that no longer exists", () => {
+    // Verified: zero config entries read CG_TREE_SITTER_MAX_RSS_BYTES; the only occurrence in
+    // the codebase is a comment in apps/worker/src/supervise.ts explaining its absence.
+    expect(read("packages/config/src/definition.ts")).not.toMatch(/TREE_SITTER/);
+    expect(ARCH).toMatch(/budget gate is gone|no longer exists in the code/);
+  });
+});
