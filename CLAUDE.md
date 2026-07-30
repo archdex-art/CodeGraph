@@ -26,14 +26,20 @@ The short version:
 
 If a change would make a user of another tool say *"oh, this is that product's feature"* — stop.
 
+**Licence boundary:** adjacent projects in this space are AGPL (e.g. repowise). CodeGraph is MIT.
+Learn from published methodology and cite it; **never copy, adapt, or vendor AGPL code** — it
+would force CodeGraph to relicense.
+
 ## 2. Design docs
 
 | Doc | What it settles |
 |---|---|
 | `docs/design/IDENTITY.md` | What CodeGraph is. Binding. |
-| `docs/design/HLD.md` | Target architecture, ADRs, phased plan |
+| `docs/design/PLAN.md` | **Delivery plan — supersedes HLD §17.** Phase order, exits, prior-art ledger |
+| `docs/design/HLD.md` | Target architecture, ADRs |
 | `docs/design/LLD.md` | Package layout, module contracts, schema, migration map |
 | `docs/design/DETECTION_ENGINE.md` | Detection research + proposed engine *(pending identity revision)* |
+| `docs/design/SPIKES.md` | Monorepo + Render isolation experiments |
 | `docs/REVIEW_2026-07-29.md` | Findings that motivated the above |
 
 Design decisions live in these docs. Don't relitigate a settled ADR in a PR description.

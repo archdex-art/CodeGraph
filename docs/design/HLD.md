@@ -601,7 +601,23 @@ effort is supporting detail, never a competing verdict ([`IDENTITY.md`](./IDENTI
 
 ---
 
-## 17. Phased delivery
+## 17. Phased delivery — SUPERSEDED
+
+> **This section is superseded by [`PLAN.md`](./PLAN.md) (v2.0, 2026-07-30).** Follow that
+> document. The table below is retained because §18's traceability rows and several ADRs cite
+> its phase numbers, and because the resequence is easier to judge against what it replaced.
+>
+> **What changed:** the order, plus one addition. Same work, same architecture, same exit
+> criteria. Old P3 (detection) and P4 (remediation) swap, and a score-credibility phase is
+> inserted — so P3 is now the verification harness, P4 is calibration, and detection becomes P5.
+> **Phase numbers below do not match PLAN.md's from P3 onward.**
+>
+> The reason is a sequencing fact rather than a change of mind: the four-gate harness operates on
+> a patch and a sandbox, so it depends on nothing detection produces and runs against the three
+> fixers that already exist. It sat behind two phases of detection work because of document
+> order. Meanwhile review item C3 — `verified = after.score >= before.score`, graded by the very
+> metric the fix was built to move — is live in shipped code, so every week it stays is a week
+> the README claims something the code does not do.
 
 Each phase is independently shippable and leaves the product working. Two phases have a
 dependency on P3 that the table above does not show — see the notes below §17's table.
