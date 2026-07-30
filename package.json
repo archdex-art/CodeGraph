@@ -16,7 +16,8 @@
     "depcruise": "depcruise . --config .dependency-cruiser.cjs --ignore-known",
     "depcruise:all": "depcruise . --config .dependency-cruiser.cjs --no-ignore-known",
     "boundaries": "python3 scripts/check_boundaries.py",
-    "dev:worker": "npm run start --workspace @codegraph/worker"
+    "dev:worker": "npm run start --workspace @codegraph/worker",
+    "bench": "tsx scripts/bench.mts"
   },
   "devDependencies": {
     "dependency-cruiser": "^17.0.1",

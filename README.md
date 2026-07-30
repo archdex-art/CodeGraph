@@ -70,7 +70,7 @@ flowchart TB
     WORKSPACE -.commit/push.-> GITREMOTE
 ```
 
-**Request flow, in one line:** *Browser → API route → backend lib → SQLite*, with jobs run fire-and-forget in the same Node process (no external queue — see [Known constraints](./ARCHITECTURE.md#known-constraints-learned-the-hard-way--see-docspostmortems)). Full detail, including the security model: [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+**Request flow, in one line:** *Browser → API route → SQLite-backed job queue → worker process → SQLite*. Analysis runs in a **separate `apps/worker` process** that spawns a child per job, not inline in the web server — that is what keeps `web-tree-sitter`'s ever-growing WASM heap from OOM-killing a 512 MB host ([ADR-001](./docs/design/HLD.md), [postmortem](./docs/postmortems/2026-07-10-tree-sitter-oom.md)). Still one container and one SQLite file: the queue is a table, not a broker. `npm run dev` analyses inline for convenience; the shipped image sets `CG_USE_WORKER=true`. Full detail, including the security model: [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ### The agent swarm, specifically
 
@@ -100,13 +100,24 @@ npm run dev              # http://localhost:4000
 Requires **Node ≥ 22** (uses the built-in `node:sqlite` — no native modules) and **`git`** on `PATH`.
 
 Open `http://localhost:4000`, paste a public repo URL — e.g. `https://github.com/expressjs/express` — and hit **Start Indexing**. In well under a minute you get:
-- A **Health Score** (0–100, blast-radius-weighted, explainable)
+- A **Health Score** (0–100, blast-radius-weighted, explainable) — this is **defect risk**: *how likely is this code to break?* Maintainability and performance risk are reported beside it and never averaged in, so a tidy codebase cannot flatter a fragile one. The score also states the coverage it was computed over, because one measured across 55% of files is a different claim from one across 98%
 - Three visualizations: **Architecture** flowchart, zoomable **Circle-pack**, force-directed **Network**
 - A **Code Intelligence** tab: symbol search, callers/callees, impact analysis, circular-dependency detection, dead-code, Graph-RAG context generation
 - An **Agents** tab: run the swarm, get a ranked remediation plan, click **Generate verified fix PR** on any finding
 - An **Editor** tab: full Git-integrated file browser + Monaco editor, commit/push, restorable trash, optional AI Assistant chat panel (Claude or your own local model)
 
 No sign-up, no API key, nothing to configure for this path.
+
+**Feature status.** Not everything here is equally finished, and the difference is worth stating
+rather than leaving you to discover it:
+
+| Area | Status | What that means |
+|---|---|---|
+| Indexing · graph · Health Score · Code Intelligence | **stable** | Covered by tests, exercised on every push by the Docker smoke test |
+| Agent swarm · verified remediation · Editor | **stable** | Same, with the verification limits spelled out in the CLI section above |
+| CLI (`codegraph fix`) | **beta** | One command. Works and is tested end to end, but `index` and `score` do not exist yet, so it is a remediation tool rather than the whole workbench |
+| Desktop (Electron) | **beta** | Builds and tests in CI; not published as a signed release |
+| Fleet · Timeline | **experimental** | Useful, thinner test coverage, and the API may change without ceremony |
 
 ### The CLI — where `verified` means the most
 
@@ -165,18 +176,27 @@ Full env-var reference, OAuth App setup walkthrough, backup/restore, and scaling
 Real numbers from real runs against real repos — not synthetic targets.
 
 Every repo-dependent row below is pinned to the exact commit it was measured against, because these
-numbers move when the target repo moves. Re-measured 2026-07-29 against
-`expressjs/express@a371447`; the previous figures had been carried forward from an older snapshot of
-express and no longer reproduced.
+numbers move when the target repo moves — and, as it turns out, when *ours* does.
+
+Re-measured 2026-07-30 with `npm run bench`, which reproduces every figure in this table from a
+fresh clone. Three had drifted since the last pass, all because the product changed rather than the
+target: the Health Score moved 77 → 74 when the score was split into pillars (defect risk is now
+surfaced alone), and the priority buckets moved from `P0:21 · P1:38 · P2:0` to `P0:8 · P1:16 · P2:35`
+when judge calibration was fixed — the table used to describe that empty P2 as a known calibration
+issue, long after it was closed. The fix count (31 across 27 files) and issue counts (87 → 56) were
+unchanged.
+
+That is the whole argument for `npm run bench` existing: numbers nobody can re-derive go stale
+quietly, and a README is the last place that should happen.
 
 | What | Result | Source |
 |---|---|---|
-| **Symbol graph extraction** (`expressjs/express@a371447`) | 123 symbols across 159 files; 11 resolved call edges; 0 call cycles. **Call resolution is weak on this target** — express is CommonJS (`exports.foo = function`), which the extractor largely fails to link, so edge count is low and `deadCode()` returns 110 of 123 symbols. Typed extraction (tier `full`) is where this improves; tracked as an open detection-quality item, not presented as a strength | [`apps/web/CODE_INTELLIGENCE.md`](./apps/web/CODE_INTELLIGENCE.md) |
-| **Agent swarm** (`expressjs/express@a371447`, live) | 59 findings across 6 active specialists (P0:21 · P1:38 · P2:0 · P3:0); Health Score 77, *simulated* **77 → 88** if P0+P1 are fixed. The projection re-runs the real scorer over the issues that would remain, so it is a simulation of the shipped model rather than an estimate — but it is still a simulation, not a measurement. The measured result is the row below. The empty P2/P3 buckets are a judge-calibration issue, tracked openly | [`apps/web/AGENTS.md`](./apps/web/AGENTS.md) |
-| **Verified remediation** (`expressjs/express@a371447`, live) | 31 real fixes applied across 27 files; Health Score **77 → 82** and issues **87 → 56**, both from an actual re-index of the fixed tree rather than a projection; verification gate passed; valid, applyable unified git diff | [`apps/web/AGENTS.md`](./apps/web/AGENTS.md) |
+| **Symbol graph extraction** (`expressjs/express@a371447`) | 123 symbols across 159 files; 11 resolved call edges; 0 call cycles. **Call resolution is weak on this target** — express is CommonJS (`exports.foo = function`), which the extractor largely fails to link, so edge count is low and `deadCode()` returns 110 of 123 symbols. Typed extraction (tier `full`) is where this improves; tracked as an open detection-quality item, not presented as a strength | `npm run bench` |
+| **Agent swarm** (`expressjs/express@a371447`) | 59 findings across 6 active specialists (P0:8 · P1:16 · P2:35 · P3:0); Health Score 74, *simulated* **74 → 85** if P0+P1 are fixed. The projection re-runs the real scorer over the issues that would remain, so it simulates the shipped model rather than estimating — but it is a simulation, not a measurement. The measured result is the row below | `npm run bench` |
+| **Verified remediation** (`expressjs/express@a371447`) | 31 fixes across 27 files; Health Score **74 → 81** and issues **87 → 56**, both from an actual re-index of the fixed tree rather than a projection. Verification level **`partial`** — syntax and re-analysis passed, types and tests skipped (express ships no `tsconfig.json`, and gate 3 runs only under `--verify`). Valid, applyable unified git diff | `npm run bench` |
 | **Graph-RAG context generation** | Query *"render a view template"* → 5 seeds, 11 slices, ~647 tokens, structured prompt | [`apps/web/CODE_INTELLIGENCE.md`](./apps/web/CODE_INTELLIGENCE.md) |
 | **Memory ceiling under Render's real constraints** | Full pipeline survives indexing `octocat/Hello-World` **and** `expressjs/express` end-to-end inside a container capped at `--memory=512m --cpus=0.5` — the exact config that OOM-killed the server before the fix in [`docs/postmortems/2026-07-10-tree-sitter-oom.md`](./docs/postmortems/2026-07-10-tree-sitter-oom.md) | CI `docker-smoke-test` job, runs on every push |
-| **Test suite** | 479/479 passing across 34 files in the workspace (security ×4, indexer, scoring, codeintel, executor, orchestrator, specialists, fleet, migrations, viewer-scoping, tenant-isolation, and more), plus 28/28 across 7 files for the Electron app | `npm run test`; `cd desktop && npm test` |
+| **Test suite** | **60 test files** in the workspace and **8** for the Electron app, plus a Playwright e2e spec run separately (security, indexer, scoring, pillars, coverage, dependencies, codeintel, executor, verify gates, orchestrator, specialists, migrations, tenant-isolation, CLI, README claims, and more). 785 and 35 cases respectively as of 2026-07-30 — the file counts are asserted by a test, the case counts are a point-in-time figure that moves with every commit | `npm run test`; `npm test --workspace @codegraph/desktop` |
 | **Security posture (self-audited, tracked openly)** | Baseline **3/10 → 9.1/10**. Phases 0–3 hardening (SSRF guard, local-access gate, security headers, auth gate, cross-tenant isolation fix), then Phase 7 closed **17 of 27** findings from a follow-up deep audit that surfaced **99 issues (5 critical)** across the full stack. Remaining items are tracked, not hidden — plus an independent pen-test pass that verified every control live and fixed a rate-limit `X-Forwarded-For` bypass | [`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md), [`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md) |
 
 ## Comparison with existing tools
@@ -203,7 +223,7 @@ Tracked live in [`docs/IMPROVEMENT_PLAN.md`](./docs/IMPROVEMENT_PLAN.md) (the pl
 - [x] **Phase 2 — Test coverage**: 265 regression tests locking the security/reliability/accuracy fixes
 - [x] **Phase 3 — Documentation cleanup**: this README, `ARCHITECTURE.md`, legacy docs archived
 - [x] **Phase 0.6 — Multi-tenant isolation** *(pulled forward, was live-severity)*: per-repo ownership, cross-tenant data leak closed
-- [ ] **Phase 4 — Close the agent loop** *(next up)*: real PR creation (branch → commit → push → open PR via GitHub API) from a verified fix, with an explicit confirmation gate and a visible audit trail
+- [~] **Phase 4 — Close the agent loop** *(partly shipped)*: the **explicit confirmation gate exists** — every remote mutation now requires `PublishConsent { confirmed: true }`, and no route constructs one, so nothing publishes as shipped. What remains is the endpoint that takes that consent and performs the branch → commit → push → PR, plus the audit trail
 - [ ] **Phase 5 — Scale & domains** *(stretch)*: a second Tree-sitter language extractor (Python) for AST-grade precision beyond regex, runtime/observability domain (OTel ingestion)
 
 ### Known issues / security status

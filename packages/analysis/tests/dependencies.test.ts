@@ -168,3 +168,55 @@ describe("hygiene findings", () => {
     expect(r.issues.filter((i) => i.title === "No lockfile committed")).toEqual([]);
   });
 });
+
+describe("self-index invariant — against this actual repository", () => {
+  /**
+   * The synthetic fixtures above all pass on the broken implementation too, because each one
+   * builds the tree it expects. What was missing — and what let "root manifest only" survive
+   * for the life of the monorepo — is a check against a REAL repo whose answer is known
+   * independently.
+   *
+   * The expected value is derived by a DIFFERENT mechanism (walk the workspace globs directly,
+   * parse, subtract internals) rather than by calling the code under test. A test that
+   * re-implements the aggregation and compares it to itself proves only that the function is
+   * deterministic.
+   */
+  it("finds exactly the external dependencies this repo's manifests declare", async () => {
+    const { readdirSync, readFileSync, existsSync } = await import("node:fs");
+
+    const manifestPaths = ["package.json"];
+    for (const group of ["apps", "packages"]) {
+      if (!existsSync(group)) continue;
+      for (const entry of readdirSync(group, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const p = path.join(group, entry.name, "package.json");
+        if (existsSync(p)) manifestPaths.push(p);
+      }
+    }
+    // If this ever collapses to just the root, the derivation is broken, not the code.
+    expect(manifestPaths.length).toBeGreaterThan(5);
+
+    const declared = new Set<string>();
+    const internal = new Set<string>();
+    for (const p of manifestPaths) {
+      const pkg = JSON.parse(readFileSync(p, "utf8")) as {
+        name?: string;
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      if (pkg.name) internal.add(pkg.name);
+      for (const d of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })) declared.add(d);
+    }
+    for (const n of internal) declared.delete(n);
+
+    const r = await indexRepo(".");
+    expect([...r.dependencies].sort()).toEqual([...declared].sort());
+  });
+
+  it("does not attribute a nested clone's dependencies to this repo", async () => {
+    // `apps/web/data/workspaces/` really does contain cloned repositories on a working
+    // checkout. This asserts the exclusion holds on the real tree, not just a fixture.
+    const r = await indexRepo(".");
+    expect(r.issues.filter((i) => i.file.startsWith("apps/web/data/workspaces/"))).toEqual([]);
+  });
+});
