@@ -28,6 +28,8 @@ export type {
 } from "@codegraph/analysis-model";
 export { DIMENSION_META } from "@codegraph/analysis-model";
 
+export type { PipelineContext } from "./context";
+export { throwIfAborted } from "./context";
 export { indexRepo, scoreIssues } from "./indexer";
 
 export type { EslintSecurityFinding } from "./eslintSecurity";

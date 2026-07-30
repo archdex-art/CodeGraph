@@ -2,6 +2,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { config } from "@codegraph/config";
 import { churnByFile as gitChurnByFile } from "@codegraph/vcs";
+import { throwIfAborted, type PipelineContext } from "./context";
 import type {
   Dimension,
   DimensionScore,
@@ -169,14 +170,17 @@ function yieldToEventLoop(): Promise<void> {
 }
 
 /** Walk the repo, build per-file records + language stats. */
-async function scan(root: string): Promise<{ files: ScannedFile[]; languages: LanguageStat[]; loc: number }> {
+async function scan(root: string, ctx?: PipelineContext): Promise<{ files: ScannedFile[]; languages: LanguageStat[]; loc: number }> {
   const paths = walk(root);
   const files: ScannedFile[] = [];
   const langMap = new Map<string, { files: number; loc: number }>();
   let totalLoc = 0;
 
   for (let idx = 0; idx < paths.length; idx++) {
-    if (idx > 0 && idx % YIELD_EVERY === 0) await yieldToEventLoop();
+    if (idx > 0 && idx % YIELD_EVERY === 0) {
+      await yieldToEventLoop();
+      throwIfAborted(ctx);
+    }
     const full = paths[idx];
     const ext = path.extname(full).toLowerCase();
     const lang = LANG_BY_EXT[ext];
@@ -215,7 +219,7 @@ interface ImportGraph {
   fanIn: Map<string, number>;
   importEdges: Array<{ from: string; to: string }>;
 }
-async function computeImportGraph(files: ScannedFile[]): Promise<ImportGraph> {
+async function computeImportGraph(files: ScannedFile[], ctx?: PipelineContext): Promise<ImportGraph> {
   const toPosix = (r: string) => r.split(path.sep).join("/");
   const byNoExt = new Map<string, string>();      // JS/TS: path (with/without ext) -> rel
   const goDirs = new Map<string, string[]>();       // Go: repo dir -> .go files in it
@@ -250,7 +254,10 @@ async function computeImportGraph(files: ScannedFile[]): Promise<ImportGraph> {
   };
 
   for (let idx = 0; idx < files.length; idx++) {
-    if (idx > 0 && idx % YIELD_EVERY === 0) await yieldToEventLoop();
+    if (idx > 0 && idx % YIELD_EVERY === 0) {
+      await yieldToEventLoop();
+      throwIfAborted(ctx);
+    }
     const f = files[idx];
     const rel = toPosix(f.rel);
     const dir = path.posix.dirname(rel);
@@ -335,10 +342,13 @@ function mkIssue(dim: Dimension, sev: number, title: string, file: string, line:
   return { id: `iss_${_issueSeq++}`, dimension: dim, severity: sev, confidence: conf, title, file, line, blastRadius: br, churn: churn ?? 1 };
 }
 
-async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, churnByFile: Map<string, number>): Promise<Issue[]> {
+async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, churnByFile: Map<string, number>, ctx?: PipelineContext): Promise<Issue[]> {
   const issues: Issue[] = [];
   for (let idx = 0; idx < files.length; idx++) {
-    if (idx > 0 && idx % YIELD_EVERY === 0) await yieldToEventLoop();
+    if (idx > 0 && idx % YIELD_EVERY === 0) {
+      await yieldToEventLoop();
+      throwIfAborted(ctx);
+    }
     const f = files[idx];
     if (!f.text) continue;
     const br = 1 + (fanIn.get(f.rel) || 0); // blast radius from graph fan-in
@@ -754,14 +764,14 @@ function buildModuleGraph(
 }
 
 /** Full pipeline: scan a repo/folder dir → result (graph + score + viz). */
-export async function indexRepo(root: string): Promise<IndexResult> {
+export async function indexRepo(root: string, ctx?: PipelineContext): Promise<IndexResult> {
   _issueSeq = 0;
   const churnMap = gitChurnByFile(root);
-  const { files, languages, loc } = await scan(root);
-  const { fanIn, importEdges } = await computeImportGraph(files);
+  const { files, languages, loc } = await scan(root, ctx);
+  const { fanIn, importEdges } = await computeImportGraph(files, ctx);
   
   const dep = analyzeDependencies(root);
-  const codeIssues = await analyzeFiles(files, fanIn, churnMap);
+  const codeIssues = await analyzeFiles(files, fanIn, churnMap, ctx);
   const testIssues = analyzeTests(files);
   const issues = [...codeIssues, ...dep.issues, ...testIssues];
 

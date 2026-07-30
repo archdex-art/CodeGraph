@@ -178,4 +178,47 @@ describe("runWorker", () => {
 
     expect(findQueuedJob("job-2")!.status).toBe("queued");
   });
+
+  it("quarantines a job after a SECOND signal death, per HLD §419", async () => {
+    // One OOM kill is worth retrying: the next attempt may not land beside whatever
+    // else was resident. Two is evidence the repository does not fit this host's
+    // memory, and a third spawn only buys another OOM.
+    enqueueJob({
+      id: "job-oom",
+      repoId: "repo-oom",
+      kind: "analyze",
+      payload: { repoId: "repo-oom", source: "x", sourceType: "local" },
+      maxAttempts: 5,
+    });
+    const oom = stubExecutor(`process.kill(process.pid, "SIGKILL");`);
+
+    // Two claims, so `attempts` reaches 2 on the second.
+    await runWorker({ queue: createJobQueue(), logger, maxJobs: 2, executorPath: oom });
+
+    const job = findQueuedJob("job-oom")!;
+    expect(job.attempts).toBe(2);
+    // Terminal despite a budget of 5 — the OOM rule, not the budget, stopped it.
+    expect(job.status).toBe("failed");
+  }, 30_000);
+
+  it("still retries the FIRST signal death", async () => {
+    enqueueJob({
+      id: "job-oom1",
+      repoId: "repo-oom1",
+      kind: "analyze",
+      payload: { repoId: "repo-oom1", source: "x", sourceType: "local" },
+      maxAttempts: 5,
+    });
+
+    await runWorker({
+      queue: createJobQueue(),
+      logger,
+      maxJobs: 1,
+      executorPath: stubExecutor(`process.kill(process.pid, "SIGKILL");`),
+    });
+
+    const job = findQueuedJob("job-oom1")!;
+    expect(job.attempts).toBe(1);
+    expect(job.status).toBe("queued");
+  });
 });

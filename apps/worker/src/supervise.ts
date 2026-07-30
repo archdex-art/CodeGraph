@@ -131,6 +131,21 @@ export async function runInChild(
     if (code === EXIT_BAD_PAYLOAD && !signal) {
       Object.assign(error, { permanent: true });
     }
+
+    // HLD §419: "a job that OOM-kills its worker twice is quarantined rather than
+    // retried forever." A single signal death is worth retrying — the next attempt may
+    // not land beside whatever else was resident — but a second one is evidence the
+    // repository does not fit the memory this host has, and a third spawn only buys
+    // another OOM. `attempts` is incremented on claim, so on the second attempt it
+    // reads 2.
+    if (signal && ctx.attempts >= 2) {
+      Object.assign(error, { permanent: true });
+      logger.warn("quarantining after repeated signal deaths", {
+        jobId,
+        attempts: ctx.attempts,
+        signal,
+      });
+    }
     throw error;
   } finally {
     clearInterval(watch);

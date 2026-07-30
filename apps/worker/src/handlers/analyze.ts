@@ -99,7 +99,10 @@ export async function analyze(
 
     report(55, "indexing", "Building knowledge graph…");
     setRepoStatus(repoId, "indexing");
-    const result = await indexRepo(root);
+    // The signal goes INTO the pipeline, not just around it: without this a cancel
+    // during indexing waits for every remaining file, and on a large repo that is the
+    // whole run. indexRepo checks it at its existing per-15-file yield points.
+    const result = await indexRepo(root, { signal });
     checkpoint(signal);
 
     report(85, "scoring", "Computing Health Score…");
