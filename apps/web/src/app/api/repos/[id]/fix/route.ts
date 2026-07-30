@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRepo } from "@/lib/store";
-import { repoAccessDenied, publishCredential, viewerId } from "@/lib/authz";
+import { repoAccessDenied, viewerId } from "@/lib/authz";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
 import { executeFixes } from "@/lib/agents/executor";
 import { logger } from "@codegraph/observability";
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (repo.status !== "done") return NextResponse.json({ error: "Repo not indexed yet" }, { status: 409 });
 
   try {
-    const result = await executeFixes(repo, publishCredential(req, id));
+    const result = await executeFixes(repo);
     return NextResponse.json(result);
   } catch (e) {
     // Never echo the raw exception: executor failures can embed clone paths and

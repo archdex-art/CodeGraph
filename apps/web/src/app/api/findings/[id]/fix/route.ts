@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@codegraph/observability";
 import { findingById, repoIdForFinding } from "@codegraph/persistence";
-import { publishCredential, repoAccessDenied, viewerId } from "@/lib/authz";
+import { repoAccessDenied, viewerId } from "@/lib/authz";
 import { executeFixes } from "@/lib/agents/executor";
 import { fixersForRule } from "@/lib/agents/fixers";
 import { clientIp, rateLimit } from "@/lib/rateLimit";
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   try {
-    const result = await executeFixes(repo, publishCredential(req, repoId), {
+    const result = await executeFixes(repo, {
       file: finding.file,
       fixerIds: fixers.map((f) => f.id),
       targetFingerprint: finding.fingerprint,

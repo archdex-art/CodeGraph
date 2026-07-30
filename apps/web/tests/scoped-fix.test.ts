@@ -81,7 +81,7 @@ describe("executeFixes with a scope (review C1)", () => {
     expect(target).toBeDefined();
 
     const wide = await executeFixes(repo as never);
-    const scoped = await executeFixes(repo as never, undefined, {
+    const scoped = await executeFixes(repo as never, {
       file: target!.file,
       fixerIds: fixersForRule(target!.rule_id).map((f) => f.id),
       targetFingerprint: target!.fingerprint,
@@ -106,7 +106,7 @@ describe("executeFixes with a scope (review C1)", () => {
     const { repo } = await seed(root);
     const target = P.findingsForRun("run-1").find((f) => f.rule_id === "legacy/empty-catch-block")!;
 
-    const scoped = await executeFixes(repo as never, undefined, {
+    const scoped = await executeFixes(repo as never, {
       file: target.file,
       fixerIds: fixersForRule(target.rule_id).map((f) => f.id),
       targetFingerprint: target.fingerprint,
@@ -126,7 +126,7 @@ describe("executeFixes with a scope (review C1)", () => {
     const { repo } = await seed(root);
     const target = P.findingsForRun("run-1").find((f) => f.rule_id === "legacy/empty-catch-block")!;
 
-    const scoped = await executeFixes(repo as never, undefined, {
+    const scoped = await executeFixes(repo as never, {
       file: target.file,
       fixerIds: fixersForRule(target.rule_id).map((f) => f.id),
       targetFingerprint: target.fingerprint,
@@ -144,7 +144,7 @@ describe("executeFixes with a scope (review C1)", () => {
     const target = P.findingsForRun("run-1").find((f) => f.rule_id === "legacy/empty-catch-block")!;
     const before = readFileSync(path.join(root, "other3.js"), "utf8");
 
-    await executeFixes(repo as never, undefined, {
+    await executeFixes(repo as never, {
       file: target.file,
       fixerIds: fixersForRule(target.rule_id).map((f) => f.id),
       targetFingerprint: target.fingerprint,

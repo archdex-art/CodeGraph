@@ -133,10 +133,32 @@ export interface FixScope {
   readonly targetFingerprint: string;
 }
 
+/**
+ * Explicit consent to mutate the user's remote (review C4, LLD §7.3).
+ *
+ * `AgentSwarm.tsx` tells the user "Your source is never modified." That was FALSE: this
+ * executor did `git push -u origin <branch>` to their real repository and opened a PR as a
+ * SIDE EFFECT of asking for a fix. Sandbox purity held for the working copy and not for the
+ * remote, which is the half that is hard to undo.
+ *
+ * Publishing is now unreachable without this object. No route constructs one today, so the
+ * UI's claim is true as shipped, and the capability is opt-in rather than silent.
+ *
+ * LLD §7.3 wants publishing to be a SEPARATE request (`POST /api/fixes/:candidateId/publish`),
+ * which additionally lets a user read the diff before anything leaves the machine. That needs
+ * the candidate persisted so a later request can find it, and is the follow-up. This closes
+ * the consent hole without pretending to be that design.
+ */
+export interface PublishConsent {
+  /** Must be literally true. There is no other accepted value. */
+  readonly confirmed: true;
+  readonly githubToken: string;
+}
+
 export async function executeFixes(
   repo: RepoDetail,
-  githubToken?: string,
-  scope?: FixScope
+  scope?: FixScope,
+  publish?: PublishConsent
 ): Promise<FixResult> {
   const steps: ExecutionStep[] = [];
   let n = 0;
@@ -287,7 +309,11 @@ export async function executeFixes(
     t = now();
     let pr = verified ? buildPR(repo, before.score, after.score, allEdits, changed.size, diff, record) : null;
     
-    if (pr && githubToken && repo.sourceType === "git" && isGithubHost(repo.url) && work) {
+    // `publish?.confirmed` gates every remote mutation. Without it the run produces a diff
+    // and a PR DRAFT and stops — nothing leaves the machine. `githubToken` alone is
+    // deliberately no longer sufficient: possessing a credential is not consent to use it.
+    if (publish?.confirmed && pr && repo.sourceType === "git" && isGithubHost(repo.url) && work) {
+      const githubToken = publish.githubToken;
       try {
         const wd = work;
         const runGit = async (args: string[]) => exec("git", args, { cwd: wd });

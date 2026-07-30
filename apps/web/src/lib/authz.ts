@@ -53,6 +53,13 @@ export function repoAccessDenied(req: NextRequest, id: string): NextResponse | n
  *     claimed, so publishing requires OWNERSHIP, not merely access.
  *
  * Callers denied a credential still get the full verified diff as a draft.
+ *
+ * CURRENTLY UNCALLED, deliberately. Publishing became opt-in behind `PublishConsent`
+ * (review C4), and no route constructs that object yet — so nothing publishes as shipped and
+ * this has no caller. It is kept rather than deleted because the OWNERSHIP rule above is the
+ * non-obvious half of P0's B8 fix, and re-deriving it later is exactly how a security
+ * property gets quietly weakened to "has a token". `POST /api/fixes/:candidateId/publish`
+ * (LLD §7.3) is what will call it.
  */
 export function publishCredential(req: NextRequest, repoId: string): string | undefined {
   const session = getSession(req);
