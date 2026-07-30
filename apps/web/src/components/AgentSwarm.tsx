@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Loader2, Play, ShieldAlert, Gauge, Wrench, Skull, Package, Network, FlaskConical, ChevronRight, TrendingUp, GitPullRequest, Copy, Check, ShieldCheck } from "lucide-react";
+import { Bot, Loader2, Play, ShieldAlert, Gauge, Wrench, Skull, Package, Network, FlaskConical, ChevronRight, TrendingUp, GitPullRequest, Copy, Check } from "lucide-react";
 import { runAgents, runFix } from "@/lib/api";
 import type { AgentId, Finding, Priority, RemediationPlan } from "@/lib/agents/types";
 import type { FixResult } from "@/lib/agents/executor-types";
+import { VerificationVerdict } from "./VerificationVerdict";
 
 const AGENT_ICON: Record<AgentId, React.ReactNode> = {
   security: <ShieldAlert className="w-4 h-4 text-rose-400" />,
@@ -226,18 +227,14 @@ function RemediationExecutor({ repoId }: { repoId: string }) {
             ))}
           </div>
 
-          {/* verdict */}
-          <div className={`flex items-center gap-3 rounded-lg border p-3 ${res.verified ? "border-emerald-500/20 bg-emerald-500/[0.06]" : "border-amber-500/20 bg-amber-500/[0.06]"}`}>
-            <ShieldCheck className={`w-5 h-5 ${res.verified ? "text-emerald-400" : "text-amber-400"}`} />
-            <div className="text-sm text-gray-200">{res.message}</div>
-            {res.applied > 0 && (
-              <div className="ml-auto flex items-center gap-2 text-sm shrink-0">
-                <span className="text-gray-400">{res.scoreBefore}</span>
-                <TrendingUp className="w-4 h-4 text-emerald-400" />
-                <span className="font-bold text-emerald-400">{res.scoreAfter}</span>
-              </div>
-            )}
-          </div>
+          {/* verdict — `full` vs `partial` must look different (PLAN.md §4) */}
+          <VerificationVerdict
+            record={res.verification}
+            message={res.message}
+            scoreBefore={res.scoreBefore}
+            scoreAfter={res.scoreAfter}
+            showScores={res.applied > 0}
+          />
 
           {res.pr && (
             <>
