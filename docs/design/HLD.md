@@ -603,17 +603,32 @@ effort is supporting detail, never a competing verdict ([`IDENTITY.md`](./IDENTI
 
 ## 17. Phased delivery
 
-Each phase is independently shippable and leaves the product working.
+Each phase is independently shippable and leaves the product working. Two phases have a
+dependency on P3 that the table above does not show — see the notes below §17's table.
 
 | Phase | Theme | Key outcomes | Exit criteria |
 |---|---|---|---|
 | **P0** *(days)* | Stop the bleeding | Brace-less-JS fixer bug; PR `res.ok` + default-branch detection; token from session only; rate-limit `/fix` | Review items P0 closed, regression tests green |
 | **P1** *(1–2 wk)* | Extract the seams | `core-domain`, `persistence`, `fsx`, `vcs`, `config`, `observability` packages; dependency-cruiser gate; findings → rows + fingerprints | No analysis logic left in `src/app/**`; dependency graph acyclic |
-| **P2** *(1–2 wk)* | Get the work off the request path | `jobs` + worker process; SSE progress; cancellation; per-repo mutex | `/fix` and `/agents` are 202 + poll; p99 route latency < 500 ms |
+| **P2** *(1–2 wk)* | Get the work off the request path | `jobs` + worker process; SSE progress; cancellation; per-repo mutex; staged extraction per LLD §13.2 (`core-domain`, `vcs`, `core-graph`, transitional `analysis`) | `/fix` and `/agents` are 202 + poll; p99 route latency < 500 ms; no analysis runs in the web process |
 | **P3** *(2–3 wk)* | Make detection real | `detect-engine` with rule registry + intraprocedural dataflow; `lang-typescript` at `full` tier; SARIF export; benchmark harness + CI gate | Precision ≥ 0.85 on benchmark; regex tier demoted to fallback; `Edge.resolution: "exact"` call-edge coverage measured and reported (no numeric target set — the benchmark corpus this needs doesn't exist yet, see the note below) |
 | **P4** *(2 wk)* | Make remediation honest | Finding-scoped fix providers; 4-gate verification; explicit publish step | 100 % of patches carry `findingId` + `VerificationRecord` |
 | **P5** *(2 wk)* | Scale & incrementality | Content-addressed cache; interprocedural taint; PR-scoped/baseline mode | Warm re-index < 5 % of cold; new-findings-only view works |
 | **P6** *(1 wk)* | Close the docs gap | `desktop/` in CI; feature status labels; README claims reconciled with code | Every README claim maps to a passing test |
+
+**P2 has a structural dependency on P3's package layout, and it is not optional.** `apps/worker`
+(LLD §1) cannot import `apps/web`: `no-cross-app-imports` forbids it, and that rule is exactly
+what makes the process boundary structural instead of a convention someone can quietly bypass.
+But the analyse handler needs `indexRepo`, which still lives in `apps/web/src/lib` and which
+LLD §13 routes to six packages P3 creates. So P2 cannot ship a worker without moving code the
+plan assigns to P3, and neither obvious escape works: doing P3's five-way split early means
+cutting a 901-line file inside a phase whose constraint is *no behaviour change*, while leaving
+the worker inside `apps/web` delivers the process boundary without the enforcement — `store.ts`
+could still call `indexRepo` in-process and the next route to copy it silently reintroduces the
+OOM that ADR-001 exists to retire. **LLD §13.2 records the resolution:** P2 moves only what
+already has a home (`types.ts` → `core-domain`, the `git` calls → `vcs`, which also closes a P1
+layering gap) plus one transitional `analysis` package that P3 splits. The staging is a
+consequence of this dependency, not a shortcut around it.
 
 **P5 depends on P3's call-resolution quality, not just its calendar completion.** P5's cache
 (LLD §5.3.1) is only sound if it invalidates every stale summary, which requires walking resolved

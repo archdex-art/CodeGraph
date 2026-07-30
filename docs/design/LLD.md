@@ -1310,7 +1310,8 @@ individually wrong; the aggregate is why it cannot be tested in pieces.
 
 | v1 file | Lines | Destination | Change |
 |---|---|---|---|
-| `lib/indexer.ts` | 803 | split 5 ways | `vcs` (clone) · `pipeline/enumerate` (walk) · `lang-*` (imports) · `detect-engine` (RULES) · `score-engine` (score) · `viz` (buildVizGraph) |
+| `lib/indexer.ts` | 901 | **P2:** `vcs` (git) + `analysis` (rest) · **P3:** five-way split | See §13.2. P2 moves the git calls to `vcs` and the remainder to a transitional `analysis` package; P3 splits that into `pipeline/enumerate` (walk) · `lang-*` (imports) · `detect-engine` (RULES) · `score-engine` (score) · `viz` (buildVizGraph) |
+| `lib/types.ts` | 318 | `core-domain` | Pure models, zero dependencies — already `core-domain`'s charter. Its 36 importers stay untouched behind an `export * from` shim (§13.1 step 1) |
 | `lib/store.ts` | 259 | `persistence` + `jobs` + `apps/worker` | `runJob` becomes a worker handler; SQL moves to repositories |
 | `lib/db.ts` | 137 | `persistence/db.ts` + `migrations/` | ad-hoc ALTERs → numbered migrations |
 | `lib/codeintel/graph.ts` | 265 | `core-graph` | + CFG construction |
@@ -1344,6 +1345,45 @@ Do not stop shipping. Each step keeps `main` green:
    findings from each are tagged and the benchmark harness compares them. Cut over per-rule,
    when that rule's F1 beats v1's on the corpus.
 5. **Old engine deleted** only when every rule has crossed over.
+
+### 13.2 Staging `lib/indexer.ts` — P2 needs a worker before P3 has packages
+
+**The phase table implies P2 is independent of P3. It is not.** `apps/worker` (§1) cannot
+import `apps/web` — `no-cross-app-imports` in `.dependency-cruiser.cjs` forbids it, and that
+rule is the mechanism that makes process separation structural rather than conventional. But
+the analyse handler needs `indexRepo`, which is still in `apps/web/src/lib`. So P2 cannot ship
+a worker without moving code that §13 routes to six packages P3 creates.
+
+Resolving it by doing P3's split early would mean cutting a 901-line file four ways inside a
+phase whose constraint is *no behaviour change*, and drawing `detect-engine`'s boundary before
+the detection work that reveals where that boundary belongs. Resolving it by leaving the worker
+inside `apps/web` would deliver the process boundary without the enforcement: `store.ts` could
+still call `indexRepo` in-process, and the next route to do the same would quietly reintroduce
+the OOM.
+
+So P2 moves only what already has a home, plus one honest transitional package:
+
+| Move | Destination | Why it is not new work |
+|---|---|---|
+| `types.ts` | `core-domain` *(exists)* | 318 lines of pure models, zero dependencies — already this package's charter. Finishes P1. |
+| `cloneRepo`, `resolveLocalDir`, `cleanup`, churn scan | `vcs` *(exists)* | `indexer.ts:1,4,99,452` runs `git clone` and `git log --since` through `child_process`, which contradicts "only `vcs` shells out" (§10.2). Moving it **closes a P1 layering gap**, it does not open a new seam. |
+| `codeintel/{graph,query}.ts` | `core-graph` *(new)* | §13 already routes both here and the name stays correct through P3. |
+| remainder of `indexer.ts`, `extractors.ts`, `ast-extractor.ts`, `eslintSecurity.ts` | `analysis` *(new, **transitional**)* | The genuinely unsettled surface. P3 splits it per the §13 row. |
+
+**`analysis` is deliberately not called `score-engine`.** `scoreIssues` is one of five exports;
+the same file also walks the tree, extracts imports, runs the rule array, and builds the viz
+graph. A package named `score-engine` holding all of that is a name that lies, and P3 has to
+dismantle it regardless — so the misnomer would be paid for twice and corrupt the taxonomy in
+between. Its README states the split it is waiting for.
+
+**A gate hole found while sizing this.** The three rules that encode §1.1's I/O constraints —
+`child-process-only-in-vcs`, `sqlite-only-in-persistence`, `raw-fs-only-in-io-packages` — are
+all scoped `from: { path: "^packages/" }`. They never look at `apps/`, which is precisely where
+un-migrated v1 code lives, so `indexer.ts` shelling out to git has always passed. Measured
+today: 4 files under `apps/web` import `child_process` and 6 import `node:fs` (0 import
+`node:sqlite` — the persistence extraction did land). The scope widens as each extraction
+removes the violations it would otherwise report; widening it before that would only add
+ignores, which is how a gate stops meaning anything.
 
 ---
 
