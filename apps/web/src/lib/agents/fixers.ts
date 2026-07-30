@@ -55,6 +55,8 @@ export function legacyRuleIdFor(title: string): string {
   return `legacy/${slug || "unknown"}`;
 }
 
+import { deletableDebugLines } from "./ast-guards";
+
 const JS_EXTS: Record<string, true> = { ".ts": true, ".tsx": true, ".js": true, ".jsx": true, ".mjs": true, ".cjs": true };
 
 function indentOf(line: string): number {
@@ -119,24 +121,7 @@ function protectPythonBlockBodies(lines: string[], candidateDelete: Set<number>)
  * are themselves being deleted — otherwise a run of consecutive semicolon-less
  * `console.log(...)` lines would protect each other for no reason.
  */
-const JS_BRACELESS_OPENER_END_RE = /(\)|=>|\belse\b|\bdo\b)\s*$/;
-const JS_COMMENT_ONLY_RE = /^(\/\/|\/\*|\*)/;
 
-function protectJsBracelessBodies(lines: string[], candidateDelete: Set<number>): void {
-  for (const i of [...candidateDelete].sort((a, b) => a - b)) {
-    let j = i - 1;
-    while (j >= 0) {
-      const t = lines[j].trim();
-      if (t === "" || JS_COMMENT_ONLY_RE.test(t) || candidateDelete.has(j)) { j--; continue; }
-      break;
-    }
-    if (j < 0) continue; // start of file — nothing can be holding this as a body
-    // Strip a trailing line comment before testing the terminator, so
-    // `if (x) // guard` is still recognised as a brace-less opener.
-    const effective = lines[j].replace(/\/\/.*$/, "").trimEnd();
-    if (JS_BRACELESS_OPENER_END_RE.test(effective)) candidateDelete.delete(i);
-  }
-}
 
 // Remove standalone debug output / debugger statements (leftover from development).
 // Matches ONLY whole-line statements so we never split an expression, and never
@@ -151,14 +136,23 @@ const debugFixer: Fixer = {
     const isJs = JS_EXTS[ext];
     const isPy = ext === ".py";
     const candidateDelete = new Set<number>();
-    for (let i = 0; i < lines.length; i++) {
-      const t = lines[i].trim();
-      const jsDebug = isJs && (/^console\.(log|debug|info)\(.*\)\s*;?\s*$/.test(t) || /^debugger\s*;?\s*$/.test(t));
-      const pyDebug = isPy && /^print\(.*\)\s*$/.test(t);
-      if (jsDebug || pyDebug) candidateDelete.add(i);
+
+    if (isJs) {
+      // AST, not a line scan (review B1, LLD §7.1). The regex version deleted a
+      // `console.log(...)` line INSIDE A TEMPLATE LITERAL — silently rewriting a user-visible
+      // help string while reporting "no production behavior" — and the result still parsed, so
+      // neither its own guard nor verification gate 1 caught it. See ast-guards.ts.
+      const { deletable } = deletableDebugLines(lines.join("\n"), rel);
+      for (const line of deletable) candidateDelete.add(line);
+    } else if (isPy) {
+      // Python keeps the line-based path: there is no Python parser in this process, and
+      // `protectPythonBlockBodies` below is indentation-aware, which is the property that
+      // matters for a language where indentation IS the block structure.
+      for (let i = 0; i < lines.length; i++) {
+        if (/^print\(.*\)\s*$/.test(lines[i].trim())) candidateDelete.add(i);
+      }
+      protectPythonBlockBodies(lines, candidateDelete);
     }
-    if (isPy) protectPythonBlockBodies(lines, candidateDelete);
-    if (isJs) protectJsBracelessBodies(lines, candidateDelete);
 
     const edits: FileEdit[] = [];
     const out: string[] = [];
