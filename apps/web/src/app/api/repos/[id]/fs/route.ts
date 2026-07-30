@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceDir } from "@/lib/store";
-import { repoAccessDenied } from "@/lib/authz";
+import { requireWorkspace } from "@/lib/authz";
+import { logger } from "@codegraph/observability";
 import {
   listDir,
   readWorkspaceFile,
@@ -18,14 +18,16 @@ import { moveToTrash } from "@/lib/trash";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function workspaceOr404(id: string) {
-  return getWorkspaceDir(id);
-}
-
 function err(e: unknown, fallback = 500) {
-  const msg = e instanceof Error ? e.message : String(e);
-  const status = e instanceof WorkspacePathError ? 400 : fallback;
-  return NextResponse.json({ error: msg }, { status });
+  // WorkspacePathError messages are authored to be client-safe (no absolute
+  // paths); everything else (raw ENOENT/EISDIR from node:fs) embeds the
+  // server's absolute workspace path — log it server-side, return a generic
+  // message to the client (F023).
+  if (e instanceof WorkspacePathError) {
+    return NextResponse.json({ error: e.message }, { status: 400 });
+  }
+  logger.warn("fs route error", { error: e instanceof Error ? e.message : String(e) });
+  return NextResponse.json({ error: "File operation failed" }, { status: fallback });
 }
 
 // GET /api/repos/:id/fs?op=list&path=src         -> FsEntry[]
@@ -33,10 +35,8 @@ function err(e: unknown, fallback = 500) {
 // GET /api/repos/:id/fs?op=download&path=a/b.png  -> raw file bytes (download)
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const denied = repoAccessDenied(req, id);
+  const { denied, ws } = requireWorkspace(req, id);
   if (denied) return denied;
-  const ws = workspaceOr404(id);
-  if (!ws) return NextResponse.json({ error: "Workspace not ready" }, { status: 404 });
   const { searchParams } = new URL(req.url);
   const op = searchParams.get("op") || "list";
   const relPath = searchParams.get("path") || ".";
@@ -45,10 +45,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (op === "read") return NextResponse.json(readWorkspaceFile(ws.dir, relPath));
     if (op === "download") {
       const { bytes, name } = readWorkspaceBytes(ws.dir, relPath);
+      // A filename with `"`, `\`, or non-ASCII bytes corrupts a quoted
+      // Content-Disposition header (Next.js rejects it -> 500, and raw CR/LF
+      // would enable header injection). Emit an ASCII-sanitized fallback plus
+      // an RFC 5987 UTF-8 encoded `filename*` for correct clients.
+      //
+      // Kept from main (PR #24/#25) on top of this branch's `readWorkspaceBytes`:
+      // the fsx capability returns `path.basename(full)` UNSANITIZED, so dropping
+      // this in favour of "our" side would have silently reintroduced the
+      // injection. The sanitization belongs at the header, not in fsx — fsx
+      // returns a filename, and only this caller puts one in a header.
+      const asciiFallback = name.replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "_");
       return new NextResponse(bytes, {
         headers: {
           "Content-Type": "application/octet-stream",
-          "Content-Disposition": `attachment; filename="${name}"`,
+          "Content-Disposition": `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(name)}`,
         },
       });
     }
@@ -62,10 +73,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 // { op: "write"|"create"|"rename"|"duplicate"|"upload", path, to?, type?, content?, contentBase64? }
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const denied = repoAccessDenied(req, id);
+  const { denied, ws } = requireWorkspace(req, id);
   if (denied) return denied;
-  const ws = workspaceOr404(id);
-  if (!ws) return NextResponse.json({ error: "Workspace not ready" }, { status: 404 });
   const body = await req.json().catch(() => ({}));
   const { op, path: relPath, to, type, content, contentBase64 } = body as {
     op: string; path: string; to?: string; type?: "file" | "dir"; content?: string; contentBase64?: string;
@@ -114,10 +123,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 // trash (restorable via /api/repos/:id/trash) instead of erasing it.
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const denied = repoAccessDenied(req, id);
+  const { denied, ws } = requireWorkspace(req, id);
   if (denied) return denied;
-  const ws = workspaceOr404(id);
-  if (!ws) return NextResponse.json({ error: "Workspace not ready" }, { status: 404 });
   const { searchParams } = new URL(req.url);
   const relPath = searchParams.get("path");
   if (!relPath) return NextResponse.json({ error: "Missing path" }, { status: 400 });

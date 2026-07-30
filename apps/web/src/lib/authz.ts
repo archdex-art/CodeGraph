@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { viewerId as brandViewerId, type ViewerId } from "@codegraph/core-domain";
 import { getSession } from "./session";
-import { getRepoOwnerId } from "./store";
+import { getRepoOwnerId, getWorkspaceDir } from "./store";
 
 /**
  * Current viewer for scoping persistence reads, or `null` when signed out.
@@ -34,6 +34,39 @@ export function repoAccessDenied(req: NextRequest, id: string): NextResponse | n
   if (ownerId === undefined) return NextResponse.json({ error: "Repo not found" }, { status: 404 });
   if (ownerId === null) return null; // public bucket — open to everyone
   return viewerId(req) === ownerId ? null : NextResponse.json({ error: "Repo not found" }, { status: 404 });
+}
+
+/**
+ * Access check + workspace resolution as ONE step, because doing them separately is what
+ * caused a cross-tenant leak.
+ *
+ * Ported from `main` (PR #25). The `repoAccessDenied()` then `getWorkspaceDir()`-or-404
+ * sequence was hand-copied across 8 call sites in 4 route files, and a hand-copied access
+ * check is one someone eventually copies incompletely — which is exactly the Phase 0.6
+ * cross-tenant leak. Collapsing it means a route cannot obtain a workspace directory WITHOUT
+ * having passed the tenant check, so the unsafe order stops being expressible.
+ *
+ * The 404-for-a-not-ready-workspace is deliberate and matches `repoAccessDenied`: a caller who
+ * may not see this repo and a caller whose clone has not finished get the same answer, so
+ * neither response distinguishes "exists but not yours" from "not there".
+ *
+ * Returns a discriminated union so `if (denied) return denied;` narrows `ws` to defined —
+ * the compiler enforces the check at every call site rather than trusting the caller to look.
+ */
+/** Whatever `getWorkspaceDir` returns when it succeeds — derived so the two cannot drift. */
+type Workspace = NonNullable<ReturnType<typeof getWorkspaceDir>>;
+
+export function requireWorkspace(
+  req: NextRequest,
+  id: string
+):
+  | { denied: NextResponse; ws?: undefined }
+  | { denied?: undefined; ws: Workspace } {
+  const denied = repoAccessDenied(req, id);
+  if (denied) return { denied };
+  const ws = getWorkspaceDir(id);
+  if (!ws) return { denied: NextResponse.json({ error: "Workspace not ready" }, { status: 404 }) };
+  return { ws };
 }
 
 /**
