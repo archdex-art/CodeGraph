@@ -135,7 +135,16 @@ export async function runJob(
     // hardest failures to diagnose. Caught by the compiler, not by a test.
     const serialized = serializeError(error);
     const reason = typeof serialized === "string" ? serialized : serialized.message;
-    const { willRetry } = queue.fail(job.id, job.workerId, reason);
+    // A handler may mark a failure as permanent when retrying provably cannot change
+    // the outcome — a malformed payload deserialises identically every time. Read off
+    // the error rather than added to `JobHandler`'s signature: only a handler that has
+    // one of these cases needs to know the concept exists, and every other handler
+    // stays a plain `(payload, ctx) => Promise<void>`.
+    const permanent =
+      typeof error === "object" && error !== null && "permanent" in error
+        ? (error as { permanent?: unknown }).permanent === true
+        : false;
+    const { willRetry } = queue.fail(job.id, job.workerId, reason, permanent);
     logger.error("job failed", {
       jobId: job.id,
       attempts: job.attempts,

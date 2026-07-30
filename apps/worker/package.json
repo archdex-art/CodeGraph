@@ -1,0 +1,24 @@
+{
+  "name": "@codegraph/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/start.ts",
+  "scripts": {
+    "start": "tsx src/start.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@codegraph/analysis": "*",
+    "@codegraph/analysis-model": "*",
+    "@codegraph/config": "*",
+    "@codegraph/core-domain": "*",
+    "@codegraph/core-graph": "*",
+    "@codegraph/jobs": "*",
+    "@codegraph/observability": "*",
+    "@codegraph/persistence": "*",
+    "@codegraph/vcs": "*",
+    "tsx": "^4"
+  }
+}

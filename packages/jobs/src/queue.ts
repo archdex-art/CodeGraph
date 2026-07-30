@@ -35,7 +35,7 @@ export interface JobQueue {
     message: string
   ): boolean;
   succeed(jobId: string, workerId: string, message: string): void;
-  fail(jobId: string, workerId: string, error: string): { willRetry: boolean };
+  fail(jobId: string, workerId: string, error: string, permanent?: boolean): { willRetry: boolean };
   cancel(jobId: string): boolean;
   isCancelled(jobId: string): boolean;
   /** The per-repo mutex read (HLD §17 P2). */
@@ -142,8 +142,8 @@ export function createJobQueue(): JobQueue {
       succeedJob(jobId, workerId, message);
     },
 
-    fail(jobId, workerId, error) {
-      return failJob(jobId, workerId, error);
+    fail(jobId, workerId, error, permanent) {
+      return failJob(jobId, workerId, error, permanent ?? false);
     },
 
     cancel(jobId) {

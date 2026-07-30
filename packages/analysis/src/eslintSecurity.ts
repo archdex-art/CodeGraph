@@ -1,3 +1,4 @@
+/// <reference path="./types/eslint-plugin-security.d.ts" />
 import { Linter } from "eslint";
 import security from "eslint-plugin-security";
 import tsParser from "@typescript-eslint/parser";

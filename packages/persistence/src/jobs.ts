@@ -219,16 +219,27 @@ export function succeedJob(id: string, workerId: string, message: string): void 
  * value the caller passes in, so a worker that has lost its lease cannot talk the
  * queue into giving a job a fresh budget.
  */
-export function failJob(id: string, workerId: string, error: string): { willRetry: boolean } {
+export function failJob(
+  id: string,
+  workerId: string,
+  error: string,
+  permanent = false
+): { willRetry: boolean } {
+  // `permanent` skips the attempt budget entirely, for failures where retrying cannot
+  // change the outcome — a malformed payload deserialises identically every time. The
+  // budget still governs everything else, so this cannot be used to make ordinary
+  // failures terminal by accident: the caller has to ask for it.
   const row = db()
     .prepare(
       `UPDATE jobs
-          SET status = CASE WHEN attempts < max_attempts THEN 'queued' ELSE 'failed' END,
+          SET status = CASE WHEN ? THEN 'failed'
+                            WHEN attempts < max_attempts THEN 'queued'
+                            ELSE 'failed' END,
               error=?, lease_until=NULL, worker_id=NULL, updated_at=?
         WHERE id=? AND worker_id=?
         RETURNING status`
     )
-    .get(error, Date.now(), id, workerId) as { status: string } | undefined;
+    .get(permanent ? 1 : 0, error, Date.now(), id, workerId) as { status: string } | undefined;
   return { willRetry: row?.status === "queued" };
 }
 

@@ -119,6 +119,28 @@ module.exports = {
     },
 
     {
+      name: "supervisor-loads-no-parser",
+      comment:
+        "The worker SUPERVISOR must not import the analysis packages. It holds the " +
+        "job lease for the whole run, so if it loads a parser its own memory grows " +
+        "with the work — and web-tree-sitter's WASM arena only ever grows " +
+        "(postmortem 2026-07-10, ~26MB per parsed file). The entire point of " +
+        "ADR-001's per-job child process is that the long-lived process never " +
+        "touches a parser and the short-lived one dies with its heap. An import " +
+        "here would not fail a test or a build; it would quietly restore the OOM " +
+        "this architecture exists to remove, which is exactly the class of " +
+        "regression a gate has to catch. src/execute.ts and src/handlers/** ARE " +
+        "the child and may import freely.",
+      severity: "error",
+      from: {
+        path: "^apps/worker/src/(main|start|supervise)\\.ts$",
+      },
+      to: {
+        path: "^packages/(analysis|core-graph)/",
+      },
+    },
+
+    {
       name: "no-deep-import-across-packages",
       comment:
         "src/index.ts is a package's ONLY public surface (LLD §1.1). Reaching " +
