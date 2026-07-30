@@ -1,11 +1,7 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { mkdtempSync, mkdirSync, rmSync, readFileSync, existsSync, readdirSync, statSync } from "node:fs";
-import { execSync } from "node:child_process";
-import { tmpdir } from "node:os";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
-import { childEnv, config } from "@codegraph/config";
-import { redactError } from "@codegraph/vcs";
+import { config } from "@codegraph/config";
+import { churnByFile as gitChurnByFile } from "@codegraph/vcs";
 import type {
   Dimension,
   DimensionScore,
@@ -26,8 +22,6 @@ import { DIMENSION_META } from "./types";
 import { buildSymbolGraph } from "./codeintel/graph";
 import { extractorFor } from "./codeintel/extractors";
 import { lintForSecurity } from "./eslintSecurity";
-
-const exec = promisify(execFile);
 
 const LANG_BY_EXT: Record<string, string> = {
   ".ts": "TypeScript", ".tsx": "TypeScript", ".js": "JavaScript", ".jsx": "JavaScript",
@@ -76,54 +70,6 @@ interface ScannedFile {
 }
 
 
-/**
- * Clone a public git repo. With no `destDir`, clones into a disposable temp
- * dir (single-branch, depth 1 — fastest path for one-shot indexing/fix
- * sandboxes; caller must rm it). With `destDir`, clones into that exact path
- * — used for the editor's persistent workspace, so it fetches all branches
- * (bounded depth) to support real branch switching + history.
- */
-export async function cloneRepo(url: string, destDir?: string): Promise<string> {
-  // Allows an optional `user:token@` userinfo component — used for
-  // authenticated clones (see gitops.withToken); the token itself is never
-  // logged or persisted by this function, only passed through to `git clone`'s argv.
-  if (!/^https?:\/\/(?:[^@/]+@)?[\w.-]+\/[\w./~-]+/.test(url)) {
-    throw new Error("Invalid repository URL. Use a public https git URL.");
-  }
-  const dir = destDir ?? mkdtempSync(path.join(tmpdir(), "cg-"));
-  if (destDir) mkdirSync(path.dirname(destDir), { recursive: true });
-  const args = destDir
-    ? ["clone", "--depth", "50", url, dir]
-    : ["clone", "--depth", "1", "--single-branch", url, dir];
-  try {
-    await exec("git", args, {
-      timeout: config.cloneTimeoutMs,
-      maxBuffer: 1024 * 1024 * 16,
-      // childEnv, not a config value: `git` needs the whole inherited
-      // environment (PATH, HOME, SSH_AUTH_SOCK, proxy vars) to run at all.
-      // GIT_TERMINAL_PROMPT=0 stops it blocking forever on a credential prompt.
-      env: childEnv({ GIT_TERMINAL_PROMPT: "0" }),
-    });
-  } catch (e) {
-    // Same redaction as every other git error path, from the one place that
-    // owns it (LLD §10.2). redactError also covers `.stdout`, which the
-    // hand-rolled version here missed.
-    throw redactError(e);
-  }
-  return dir;
-}
-
-/** Validate and resolve a local folder path for indexing (no clone). */
-export function resolveLocalDir(inputPath: string): string {
-  const resolved = path.resolve(inputPath.replace(/^~(?=$|\/)/, config.homeDir ?? "~"));
-  if (!existsSync(resolved)) {
-    throw new Error(`Path does not exist: ${resolved}`);
-  }
-  if (!statSync(resolved).isDirectory()) {
-    throw new Error(`Not a directory: ${resolved}`);
-  }
-  return resolved;
-}
 
 function walk(root: string): string[] {
   const out: string[] = [];
@@ -443,21 +389,6 @@ async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, ch
     }
   }
   return issues;
-}
-
-/** Extract recent commit counts per file. */
-function computeChurn(root: string): Map<string, number> {
-  const churn = new Map<string, number>();
-  try {
-    const out = execSync(`git log --since="6.months.ago" --name-only --format=""`, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-    for (const line of out.split("\n")) {
-      const f = line.trim();
-      if (f) churn.set(f, (churn.get(f) || 0) + 1);
-    }
-  } catch {
-    // Not a git repo, or git not installed
-  }
-  return churn;
 }
 
 /** Dependency hygiene from manifests actually present in the repo. */
@@ -826,7 +757,7 @@ function buildModuleGraph(
 /** Full pipeline: scan a repo/folder dir → result (graph + score + viz). */
 export async function indexRepo(root: string): Promise<IndexResult> {
   _issueSeq = 0;
-  const churnMap = computeChurn(root);
+  const churnMap = gitChurnByFile(root);
   const { files, languages, loc } = await scan(root);
   const { fanIn, importEdges } = await computeImportGraph(files);
   
@@ -892,10 +823,13 @@ export async function indexRepo(root: string): Promise<IndexResult> {
   };
 }
 
-export function cleanup(dir: string) {
-  try {
-    rmSync(dir, { recursive: true, force: true });
-  } catch {
-    /* best effort */
-  }
-}
+/**
+ * Re-export shim (LLD §13.1 step 1, §13.2).
+ *
+ * `cloneRepo`, `resolveLocalDir`, `cleanup`, and the churn scan now live in
+ * `@codegraph/vcs` — they shell out to git, which §10.2 makes that package's
+ * exclusive job, and `apps/worker` needs them without importing `apps/web`.
+ * Existing importers keep working through these names; the shim is deleted in
+ * §13.1 step 3 once none remain.
+ */
+export { cleanup, cloneRepo, resolveLocalDir } from "@codegraph/vcs";

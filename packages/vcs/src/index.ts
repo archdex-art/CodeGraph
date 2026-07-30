@@ -12,6 +12,15 @@
  */
 export { redactCredentials, redactError } from "./redact";
 
+/**
+ * Acquiring and reading a working tree (LLD §13.2). Moved out of
+ * `apps/web/src/lib/indexer.ts`, which was shelling out to git directly in
+ * contradiction of §10.2 — so this closes a P1 layering gap rather than opening
+ * a new seam, and it is what lets `apps/worker` acquire a tree without importing
+ * `apps/web`.
+ */
+export { churnByFile, cleanup, cloneRepo, resolveLocalDir } from "./acquire";
+
 export {
   checkoutBranch,
   commit,
