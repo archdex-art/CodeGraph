@@ -26,8 +26,33 @@
     // says to turn this on package-by-package for exactly this reason).
     //
     // Every packages/* workspace inherits the baseline unrelaxed, so all new
-    // code is written under the strict rules from its first line. These two
-    // lines get deleted when the code they cover moves out of this workspace.
+    // code is written under the strict rules from its first line.
+    //
+    // CORRECTION, measured after the LLD §13.2 move of codeintel/* to
+    // `@codegraph/core-graph`. An earlier version of this comment ended "these
+    // two lines get deleted when the code they cover moves out of this
+    // workspace." That is not how it works, and the count proves it: still
+    // exactly 275 after the move, with 58 of them now reported against
+    // `../../packages/core-graph/src/{extractors,graph}.ts`.
+    //
+    // Because every package publishes raw TypeScript (`"exports": {
+    // ".": "./src/index.ts" }`, LLD §1.1) rather than built declarations, a
+    // consumer's `tsc` follows the workspace symlink and re-checks the
+    // package's SOURCE under the CONSUMER's flags. Per-package strictness
+    // therefore governs `npm run typecheck --workspace <pkg>` only; it does not
+    // isolate a consumer, and the inverse case is the one to watch — a workspace
+    // stricter than a package it imports will fail on that package's code, not
+    // on its own.
+    //
+    // So these lines are cleared by FIXING the indexed-access sites, not by
+    // relocating them. Post-move ownership of the 275:
+    //   src/lib/layout.ts                 53   (no §13 destination — needs one)
+    //   src/lib/indexer.ts                45   (→ `analysis`, still to move)
+    //   packages/core-graph/extractors.ts 39   (→ `lang-typescript` in P3)
+    //   packages/core-graph/graph.ts      19   (P3, with the §3 model)
+    //   src/lib/agents/fixers.ts          15   (→ `remediate-engine` in P4)
+    //   tests + components                ~60
+    //   remainder                         ~44
     "noUncheckedIndexedAccess": false,
     "exactOptionalPropertyTypes": false
   },

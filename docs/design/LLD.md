@@ -1311,7 +1311,7 @@ individually wrong; the aggregate is why it cannot be tested in pieces.
 | v1 file | Lines | Destination | Change |
 |---|---|---|---|
 | `lib/indexer.ts` | 901 | **P2:** `vcs` (git) + `analysis` (rest) · **P3:** five-way split | See §13.2. P2 moves the git calls to `vcs` and the remainder to a transitional `analysis` package; P3 splits that into `pipeline/enumerate` (walk) · `lang-*` (imports) · `detect-engine` (RULES) · `score-engine` (score) · `viz` (buildVizGraph) |
-| `lib/types.ts` | 318 | `core-domain` | Pure models, zero dependencies — already `core-domain`'s charter. Its 36 importers stay untouched behind an `export * from` shim (§13.1 step 1) |
+| `lib/types.ts` | 318 | `core-graph` (symbol-graph types) + `analysis` (rest) | **Not `core-domain`** — see §13.2's taxonomy note. Its 36 importers stay untouched behind `export * from` shims (§13.1 step 1) |
 | `lib/store.ts` | 259 | `persistence` + `jobs` + `apps/worker` | `runJob` becomes a worker handler; SQL moves to repositories |
 | `lib/db.ts` | 137 | `persistence/db.ts` + `migrations/` | ad-hoc ALTERs → numbered migrations |
 | `lib/codeintel/graph.ts` | 265 | `core-graph` | + CFG construction |
@@ -1365,10 +1365,43 @@ So P2 moves only what already has a home, plus one honest transitional package:
 
 | Move | Destination | Why it is not new work |
 |---|---|---|
-| `types.ts` | `core-domain` *(exists)* | 318 lines of pure models, zero dependencies — already this package's charter. Finishes P1. |
+| `types.ts` symbol-graph types (`SymbolKind`, `CodeSymbol`, `SymbolEdge`, `SymbolEdgeKind`, `SymbolGraph`) | `core-graph` *(new)* | §3's charter names exactly these. `graph.ts`, `query.ts`, and `extractors.ts` are their only consumers, so they travel together. |
+| `types.ts` remainder (`Dimension`, `Issue`, `IndexResult`, `RepoDetail`, viz/tree/module/fleet models) | `analysis` *(new, transitional)* | **Deliberately NOT `core-domain`.** See the taxonomy note below. |
 | `cloneRepo`, `resolveLocalDir`, `cleanup`, churn scan | `vcs` *(exists)* | `indexer.ts:1,4,99,452` runs `git clone` and `git log --since` through `child_process`, which contradicts "only `vcs` shells out" (§10.2). Moving it **closes a P1 layering gap**, it does not open a new seam. |
-| `codeintel/{graph,query}.ts` | `core-graph` *(new)* | §13 already routes both here and the name stays correct through P3. |
-| remainder of `indexer.ts`, `extractors.ts`, `ast-extractor.ts`, `eslintSecurity.ts` | `analysis` *(new, **transitional**)* | The genuinely unsettled surface. P3 splits it per the §13 row. |
+| `codeintel/{graph,query}.ts` + `extractors.ts` + `ast-extractor.ts` | `core-graph` *(new)* | §13 routes graph/query here and the name stays correct through P3. The two extractors come along to avoid a package cycle — see the note below. |
+| remainder of `indexer.ts`, `eslintSecurity.ts` | `analysis` *(new, **transitional**)* | The genuinely unsettled surface. P3 splits it per the §13 row. |
+
+**Why the extractors go to `core-graph` and not to `analysis`.** §13 routes them to
+`lang-typescript`/`lang-python`, which P3 creates. Until then they cannot sit in `analysis`,
+because the import graph forbids it: `graph.ts` imports `extractorFor` from `extractors.ts`,
+while `indexer.ts` imports `buildSymbolGraph` from `graph.ts`. Splitting them across the two
+packages therefore gives `core-graph → analysis → core-graph` — a cycle, which `no-circular`
+rejects and which is a genuine layering error rather than a lint technicality. They are the
+language front end that produces graph input, so `core-graph` is the honest interim home; P3
+lifts them out to `lang-*` with the interface preserved, as §13 already specifies.
+
+**Why `types.ts` does not go to `core-domain`, despite being pure dependency-free models.**
+`core-domain` already declares the v2 model, and the two taxonomies have diverged:
+
+| | `core-domain` (v2, §2) | `lib/types.ts` (v1, live) |
+|---|---|---|
+| `Dimension` | 6 members, includes `"performance"` | **5 members, no `"performance"`** |
+| `DimensionScore` | `findingCount`, all `readonly` | `issueCount`, mutable |
+
+That is not a merge conflict to tidy away — it is a **scoring change**. `indexer.ts:533`
+enumerates dimensions with `Object.keys(DIMENSION_META)` and `:549` computes the overall score as
+`Σ score × weight`, with the five weights summing to exactly 1.0. Adopting the 6-member type
+makes `DIMENSION_META` (a `Record<Dimension, …>`) a type error until a sixth entry exists, and
+giving `performance` a weight requires taking it from the other five — moving **every repo's
+Health Score**. P2 is structural; it may not do that.
+
+Note that `performance` is not missing by oversight: it is an *agent*, not a scored dimension.
+The swarm's `Finding` carries `agent: AgentId` and has no `dimension` field at all
+(`lib/agents/types.ts:14`), so the performance specialist already reports without a dimension
+weight. Reconciling the two taxonomies is a real task with a real design question behind it
+(does `performance` earn score weight, and taken from where?) — it belongs with P3's detection
+work, and the v1 models travel to the transitional `analysis` package until then. Migrating
+callers from these models to `core-domain`'s is what "P3 splits it" means.
 
 **`analysis` is deliberately not called `score-engine`.** `scoreIssues` is one of five exports;
 the same file also walks the tree, extracts imports, runs the rule array, and builds the viz

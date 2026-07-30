@@ -33,38 +33,6 @@
   },
   {
     "type": "cycle",
-    "from": "apps/web/src/lib/codeintel/ast-extractor.ts",
-    "to": "apps/web/src/lib/codeintel/extractors.ts",
-    "unresolvedTo": "./extractors",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "apps/web/src/lib/codeintel/extractors.ts",
-        "dependencyTypes": [
-          "local",
-          "type-only",
-          "import"
-        ]
-      },
-      {
-        "name": "apps/web/src/lib/codeintel/ast-extractor.ts",
-        "dependencyTypes": [
-          "local",
-          "import"
-        ]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
     "from": "apps/web/src/lib/gitops/evolutionEngine.ts",
     "to": "apps/web/src/lib/gitops/graphDiff.ts",
     "unresolvedTo": "./graphDiff",

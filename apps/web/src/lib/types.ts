@@ -1,5 +1,9 @@
 // Shared types between backend (API routes) and frontend.
 
+// A re-export alone would not bring these into local scope, and `IndexResult` /
+// `RepoDetail` below both reference `SymbolGraph`.
+import type { ContextSlice, SymbolGraph } from "@codegraph/core-graph";
+
 export type JobStatus = "queued" | "cloning" | "indexing" | "scoring" | "done" | "error";
 
 export type Dimension =
@@ -178,58 +182,19 @@ export interface IndexResult {
 }
 
 // --- Code intelligence: symbol-level knowledge graph ---
-export type SymbolKind =
-  | "function"
-  | "method"
-  | "class"
-  | "interface"
-  | "type"
-  | "enum"
-  | "struct"
-  | "constant"
-  | "component";
+// Moved to `@codegraph/core-graph` (LLD §13.2 — §3's charter names exactly these
+// types, and the graph/query/extractor modules that consume them moved with
+// them). Re-exported here so all 36 importers of this module keep working;
+// deleted in §13.1 step 3 once none remain.
+export type {
+  CodeSymbol,
+  ContextSlice,
+  SymbolEdge,
+  SymbolEdgeKind,
+  SymbolGraph,
+  SymbolKind,
+} from "@codegraph/core-graph";
 
-export interface CodeSymbol {
-  id: string; // stable: `${file}#${name}@${line}`
-  name: string;
-  kind: SymbolKind;
-  file: string;
-  line: number; // 1-indexed start
-  endLine: number;
-  signature: string;
-  doc: string | null; // leading doc comment, trimmed
-  exported: boolean;
-  loc: number; // approximate lines of code for the symbol itself
-  complexity?: number; // cyclomatic/branching complexity (if computable)
-  language: string;
-  container: string | null; // enclosing symbol id (method -> class)
-  fanIn: number; // resolved incoming references (callers)
-  fanOut: number; // resolved outgoing references (callees)
-  issues: number;
-  tags: string[]; // semantic tags (auth, db, http, test, …)
-}
-
-export type SymbolEdgeKind = "calls" | "references" | "contains" | "imports" | "extends" | "implements";
-
-export interface SymbolEdge {
-  source: string; // symbol id
-  target: string; // symbol id
-  kind: SymbolEdgeKind;
-}
-
-export interface SymbolGraph {
-  symbols: CodeSymbol[];
-  edges: SymbolEdge[];
-  truncated: boolean;
-  stats: { symbols: number; edges: number; resolvedCalls: number };
-}
-
-// AI context (Graph-RAG) output.
-export interface ContextSlice {
-  symbol: CodeSymbol;
-  reason: string; // why included: "seed" | "caller" | "callee" | "sibling" | "import"
-  score: number;
-}
 export interface AIContext {
   query: string;
   seeds: string[]; // seed symbol ids

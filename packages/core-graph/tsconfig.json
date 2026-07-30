@@ -1,0 +1,38 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // `graph.ts:76` uses `Promise.withResolvers`, which lands in ES2024. It ran
+    // under `apps/web`'s `esnext` lib and is available on every Node this project
+    // supports (Node 22+, and CI pins 24) — the baseline is ES2022 only because
+    // nothing had needed more. Raising `lib` alone, not `target`, so the emitted
+    // syntax level is unchanged and this stays a declaration-only widening.
+    "lib": ["ES2024"],
+
+    // INHERITED DEBT, not a standard for new code in this package.
+    //
+    // These two relaxations arrived with the code, not with the package. The
+    // modules here moved verbatim from `apps/web/src/lib/codeintel/*` (LLD §13.2),
+    // and that workspace relaxes exactly the same two flags for exactly the same
+    // reason — see the comment in `apps/web/tsconfig.json`. Measured on the moved
+    // files with the baseline unrelaxed (`tsc --noEmit`, no other change):
+    //
+    //   noUncheckedIndexedAccess + exactOptionalPropertyTypes → 67 errors
+    //     extractors.ts 39 · graph.ts 20 · query.ts 6 · ast-extractor.ts 2
+    //   every other baseline flag                             →  0 errors
+    //
+    // The 67 are the `lines[i]` / `parts[0]` pattern that LLD §1.2 predicts by
+    // name for this exact file set. The compiler is telling the truth about them,
+    // and REVIEW_2026-07-29 B1 is one of that class reaching production — but
+    // clearing them means deciding what the extractor DOES on out-of-range input,
+    // which is a behaviour change. P2 is structural (HLD §17), so it may not make
+    // one. The relaxation moves with the debt so that the move itself stays
+    // provably behaviour-preserving.
+    //
+    // P3 owns clearing this: §13 replaces these extractors with `lang-typescript`
+    // at `full` tier, and new code written there is under the unrelaxed baseline.
+    // Delete these two lines then, not by suppressing errors individually.
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}
