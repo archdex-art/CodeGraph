@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, Gauge, Boxes, Network, FileWarning, Share2, LayoutGrid, CircleDot, BrainCircuit, Bot, Code2, AlertTriangle, History } from "lucide-react";
 import { fetchRepo } from "@/lib/api";
 import type { RepoDetail, Dimension } from "@/lib/types";
-import { DIMENSION_META } from "@/lib/types";
+import { DIMENSION_META, PILLAR_META, pillarsFrom } from "@/lib/types";
 import { NetworkView } from "@/components/NetworkView";
 import { CirclePackView } from "@/components/CirclePackView";
 import { ArchitectureView } from "@/components/ArchitectureView";
@@ -66,7 +66,22 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
     );
   }
 
-  const overall = repo.score ?? 0;
+  // Derived, never stored — see pillarsFrom. Same function the scorer uses, same data.
+  const pillars = pillarsFrom(repo.dimensions ?? []);
+  const surfaced = pillars.find((p) => PILLAR_META[p.pillar].surfaced);
+  /**
+   * The headline is DERIVED from the stored dimensions, not read from the stored `score`.
+   *
+   * That column holds whatever the model produced when the repo was indexed — for anything
+   * indexed before the pillar split, a blend that included maintainability. Reading it would
+   * put an old-model headline directly above new-model pillar numbers computed from the same
+   * row, which is the worst of both: inconsistent AND unexplainable.
+   *
+   * Deriving makes every existing repo show the correct number with no re-index. Falls back to
+   * the stored score only when dimensions are missing entirely (a row from before that column
+   * existed), where there is nothing to derive from.
+   */
+  const overall = surfaced?.score ?? repo.score ?? 0;
   const wide = view === "editor";
 
   return (
@@ -97,6 +112,28 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
             {overall}<span className="text-2xl text-gray-600">/100</span>
           </div>
           <div className="mt-2 text-sm text-gray-400">Codebase Health Score</div>
+          {/* Naming what the number measures. It is the defect-risk pillar alone (PLAN.md
+              §5.1) — maintainability used to be 22% of it, which made the headline partly a
+              tidiness score while being read as risk. */}
+          <div className="mt-1 text-[11px] text-gray-500">
+            {PILLAR_META.defect_risk.question}
+          </div>
+          {pillars.some((p) => !PILLAR_META[p.pillar].surfaced) && (
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-[11px]">
+              {pillars
+                .filter((p) => !PILLAR_META[p.pillar].surfaced)
+                .map((p) => (
+                  <span key={p.pillar} className="text-gray-500" title={PILLAR_META[p.pillar].question}>
+                    {PILLAR_META[p.pillar].label}{" "}
+                    {/* Not folded into the headline, and not rendered as a pass when nothing
+                        was measured — an unscored pillar reads "n/a", never 100. */}
+                    <span className={p.score === null ? "text-gray-600" : "font-mono text-gray-300"}>
+                      {p.score === null ? "n/a" : p.score}
+                    </span>
+                  </span>
+                ))}
+            </div>
+          )}
         </motion.div>
 
         <motion.div

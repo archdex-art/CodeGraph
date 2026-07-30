@@ -30,6 +30,8 @@
 
 export type {
   Dimension,
+  Pillar,
+  PillarScore,
   DimensionScore,
   GraphEdge,
   GraphNode,
@@ -44,4 +46,10 @@ export type {
   TreeNode,
   VizGraph,
 } from "./models";
-export { DIMENSION_META } from "./models";
+export {
+  DIMENSION_META,
+  DIMENSION_PILLAR,
+  PILLAR_META,
+  pillarsFrom,
+  weightWithinPillar,
+} from "./models";

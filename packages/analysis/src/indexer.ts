@@ -19,7 +19,12 @@ import type {
   ModuleEdge,
 } from "@codegraph/analysis-model";
 import type { SymbolGraph } from "@codegraph/core-graph";
-import { DIMENSION_META } from "@codegraph/analysis-model";
+import {
+  DIMENSION_META,
+  PILLAR_META,
+  pillarsFrom,
+  type PillarScore,
+} from "@codegraph/analysis-model";
 import { buildSymbolGraph, extractorFor } from "@codegraph/core-graph";
 import { lintForSecurity } from "./eslintSecurity";
 
@@ -525,17 +530,26 @@ function volumeMultiplier(occurrences: number | undefined): number {
  *
  * Larger codebases tolerate more raw penalty (normalised by LOC).
  *
- * Exported so the swarm's projected score can be a real simulation through this
- * exact function rather than a parallel guess at it (review item C5).
+ * ONE KERNEL, THREE PILLARS (PLAN.md §5.1). The formula above runs per dimension exactly as
+ * it always did; what changed is the aggregation above it. `overall` used to blend all five
+ * dimensions, which meant the headline mixed "how likely is this to break" with "how hard is
+ * this to work in" — maintainability alone was 0.22 of a number presented as risk.
  *
- * `depCount` used to be a third parameter and was never read in the body — the
- * dependency count reaches the score only through the findings it produces.
- * Removed rather than left standing as a claim about what the model weighs.
+ * `overall` is now the DEFECT RISK pillar alone. The other pillars are returned beside it and
+ * are never averaged in. This moves every repository's headline number, deliberately: the old
+ * one answered a question nobody asked.
+ *
+ * Exported so the swarm's projected score is a real simulation through this exact function
+ * rather than a parallel guess at it (review item C5).
+ *
+ * `depCount` used to be a third parameter and was never read in the body — the dependency
+ * count reaches the score only through the findings it produces. Removed rather than left
+ * standing as a claim about what the model weighs.
  */
 export function scoreIssues(
   issues: Issue[],
   loc: number,
-): { dimensions: DimensionScore[]; overall: number } {
+): { dimensions: DimensionScore[]; overall: number; pillars: PillarScore[] } {
   const sizeFactor = Math.max(1, Math.log10(Math.max(loc, 10)) ** 2); // ~1 small → ~10 huge
   const k = 0.06;
 
@@ -555,8 +569,11 @@ export function scoreIssues(
     };
   });
 
-  const overall = dims.reduce((s, d) => s + d.score * DIMENSION_META[d.dimension].weight, 0);
-  return { dimensions: dims, overall: Math.round(overall) };
+  const pillars = pillarsFrom(dims);
+
+  // The surfaced number is the defect-risk pillar, and only it.
+  const surfaced = pillars.find((p) => PILLAR_META[p.pillar].surfaced);
+  return { dimensions: dims, overall: surfaced?.score ?? 0, pillars };
 }
 
 const VIZ_NODE_CAP = 350;

@@ -158,3 +158,124 @@ export const DIMENSION_META: Record<
   dependency_hygiene: { label: "Dependency hygiene", weight: 0.16, color: "#fbbf24" },
   test_integrity: { label: "Test integrity", weight: 0.12, color: "#22d3ee" },
 };
+
+/**
+ * Pillars — three independent claims, reported side by side and NEVER averaged together
+ * (PLAN.md §5.1).
+ *
+ * THE PROBLEM THIS FIXES. `overall` used to be `Σ dimension.score × weight` across all five
+ * dimensions, so a codebase that was ugly but correct and one that was tidy but exploitable
+ * could land on the same headline number. Blending "how likely is this to break" with "how
+ * unpleasant is this to work in" answers neither question, and the second quietly discounts
+ * the first: maintainability alone carried 0.22 of the headline, so 22% of what was presented
+ * as risk was about tidiness.
+ *
+ * Defect risk is the surfaced number (IDENTITY.md §4.2 — 0-100, still the ONLY headline). The
+ * other two are co-equal and separately reported: not sub-scores, not tie-breakers.
+ *
+ * WHAT THIS IS NOT. Splitting the pillars does not make the weights *correct* — they are the
+ * same hand-picked constants, renormalised within each pillar. PLAN.md §5.3 is what replaces
+ * them with constants fitted against a labelled defect corpus. This makes the score answer one
+ * question instead of three; it does not yet make the answer calibrated.
+ */
+export type Pillar = "defect_risk" | "maintainability" | "performance_risk";
+
+export const PILLAR_META: Record<
+  Pillar,
+  { label: string; surfaced: boolean; question: string }
+> = {
+  // The headline. `surfaced` is true for exactly one pillar, by design.
+  defect_risk: {
+    label: "Defect risk",
+    surfaced: true,
+    question: "How likely is this code to break?",
+  },
+  maintainability: {
+    label: "Maintainability",
+    surfaced: false,
+    question: "How hard is this code to change?",
+  },
+  performance_risk: {
+    label: "Performance risk",
+    surfaced: false,
+    question: "How likely is this code to be slow?",
+  },
+};
+
+/**
+ * Which pillar each dimension answers to.
+ *
+ * `performance_risk` has NO dimensions mapped to it today, and that is the honest state: no
+ * rule in the analyser emits a performance finding, so there is nothing to score. It exists
+ * here because `core-domain`'s v2 `Dimension` already includes `"performance"` and the two
+ * models must reconcile (LLD §13.2) — this is the answer to that open question. Performance
+ * does not take weight FROM the other dimensions, which is what made it unanswerable while
+ * everything shared one blended total; it is its own pillar, currently unmeasured.
+ */
+export const DIMENSION_PILLAR: Record<Dimension, Pillar> = {
+  correctness: "defect_risk",
+  security: "defect_risk",
+  dependency_hygiene: "defect_risk",
+  test_integrity: "defect_risk",
+  maintainability: "maintainability",
+};
+
+/**
+ * A dimension's weight WITHIN its own pillar, renormalised so each pillar sums to 1.
+ *
+ * Derived from `DIMENSION_META` rather than written out again: a hardcoded copy is a second
+ * set of numbers to keep in step, and the UI renders these as percentages, so drift between
+ * them is drift in something a user reads.
+ */
+export function weightWithinPillar(dimension: Dimension): number {
+  const pillar = DIMENSION_PILLAR[dimension];
+  let total = 0;
+  for (const d of Object.keys(DIMENSION_META) as Dimension[]) {
+    if (DIMENSION_PILLAR[d] === pillar) total += DIMENSION_META[d].weight;
+  }
+  return total === 0 ? 0 : DIMENSION_META[dimension].weight / total;
+}
+
+/**
+ * Aggregate scored dimensions into pillars.
+ *
+ * A PURE FUNCTION OF `dimensions`, and deliberately not a stored column. Pillars are entirely
+ * determined by the dimension scores plus the static mapping above, so persisting them would
+ * create a second copy that can disagree with the first — and a stored pillar that has drifted
+ * from its own dimensions is a number nobody can debug. The UI and the scorer call this same
+ * function on the same data instead.
+ */
+export function pillarsFrom(dimensions: DimensionScore[]): PillarScore[] {
+  const byDimension = new Map(dimensions.map((d) => [d.dimension, d]));
+  return (Object.keys(PILLAR_META) as Pillar[]).map((pillar) => {
+    const members = (Object.keys(DIMENSION_META) as Dimension[]).filter(
+      (d) => DIMENSION_PILLAR[d] === pillar,
+    );
+    // Nothing measured. Null, not 100 — see PillarScore.score.
+    if (members.length === 0) return { pillar, score: null, dimensions: [], issueCount: 0 };
+    const score = members.reduce(
+      (sum, d) => sum + (byDimension.get(d)?.score ?? 0) * weightWithinPillar(d),
+      0,
+    );
+    return {
+      pillar,
+      score: Math.round(score),
+      dimensions: members,
+      issueCount: members.reduce((sum, d) => sum + (byDimension.get(d)?.issueCount ?? 0), 0),
+    };
+  });
+}
+
+export interface PillarScore {
+  pillar: Pillar;
+  /**
+   * 0-100, or NULL when the pillar has no dimensions to score.
+   *
+   * Null rather than 100. A pillar nothing was measured for is not a pillar that passed, and
+   * rendering "Performance risk: 100" for "we ran no performance rules" is the exact shape of
+   * claim this project keeps removing.
+   */
+  score: number | null;
+  dimensions: Dimension[];
+  issueCount: number;
+}

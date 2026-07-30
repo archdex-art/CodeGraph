@@ -38,7 +38,8 @@ export type {
   TreeNode,
   VizGraph,
 } from "@codegraph/analysis-model";
-export { DIMENSION_META } from "@codegraph/analysis-model";
+export { DIMENSION_META, PILLAR_META, pillarsFrom } from "@codegraph/analysis-model";
+export type { Pillar, PillarScore } from "@codegraph/analysis-model";
 
 export type JobStatus = "queued" | "cloning" | "indexing" | "scoring" | "done" | "error";
 
