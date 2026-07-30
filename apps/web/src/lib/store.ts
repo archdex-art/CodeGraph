@@ -6,6 +6,7 @@ import { config } from "@codegraph/config";
 import { createJobQueue } from "@codegraph/jobs";
 import {
   completeRepoIndex,
+  recordRun,
   dataDir,
   deleteRepo as deleteRepoRow,
   findQueuedJob,
@@ -396,6 +397,7 @@ async function runJob(
   sourceType: SourceType,
   githubToken?: string,
 ): Promise<void> {
+  const jobStartedAt = Date.now();
   try {
     let root: string;
     if (sourceType === "git") {
@@ -448,6 +450,28 @@ async function runJob(
       headHash,
       finishedAt: Date.now(),
     });
+
+    // Record the run and its findings as ROWS, alongside the JSON blob above.
+    //
+    // Not decoration: migration 002 created these tables and 003 backfilled them, after
+    // which nothing ever wrote to them — so `latestRunId()` returned null for every
+    // repository indexed since, and anything built on the rows (`newFindingsSince`, the
+    // fingerprint column P6's baseline mode keys on, review C1's per-finding `/fix`) was
+    // reading data that stopped at the migration. Measured before this line existed: 4
+    // issues in the blob, 0 rows in `findings`.
+    recordRun(
+      {
+        id: randomUUID(),
+        repoId,
+        commitSha: headHash,
+        score: result.score,
+        loc: result.loc,
+        startedAt: jobStartedAt,
+        finishedAt: Date.now(),
+      },
+      result.issues
+    );
+
     setJob(jobId, "done", 100, `Done — Health Score ${result.score}/100`);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

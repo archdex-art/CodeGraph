@@ -66,6 +66,9 @@ export {
   findLiveJobForRepo,
 } from "./jobs";
 
+export type { AnalysedIssue, NewRun } from "./runs";
+export { findingById, legacyRuleId, recordRun, repoIdForFinding } from "./runs";
+
 export { readSetting, writeSetting } from "./settings";
 
 export type { FindingRow } from "./findings";

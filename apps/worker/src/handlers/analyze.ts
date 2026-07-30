@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { indexRepo } from "@codegraph/analysis";
 import { initTreeSitter } from "@codegraph/core-graph";
 import {
   completeRepoIndex,
+  recordRun,
   dataDir,
   setRepoError,
   setRepoStatus,
@@ -72,6 +74,7 @@ export async function analyze(
   signal: AbortSignal
 ): Promise<void> {
   const { repoId, source, sourceType, githubToken } = payload;
+  const startedAt = Date.now();
 
   try {
     let root: string;
@@ -131,6 +134,28 @@ export async function analyze(
       headHash,
       finishedAt: Date.now(),
     });
+
+    // Record the run and its findings as ROWS, alongside the JSON blob above.
+    //
+    // Not decoration: migration 002 created these tables and 003 backfilled them, after
+    // which nothing ever wrote to them — so `latestRunId()` returned null for every
+    // repository indexed since, and anything built on the rows (`newFindingsSince`, the
+    // fingerprint column P6's baseline mode keys on, review C1's per-finding `/fix`) was
+    // reading data that stopped at the migration. Measured before this line existed: 4
+    // issues in the blob, 0 rows in `findings`.
+    recordRun(
+      {
+        id: randomUUID(),
+        repoId,
+        commitSha: headHash,
+        score: result.score,
+        loc: result.loc,
+        startedAt: startedAt,
+        finishedAt: Date.now(),
+      },
+      result.issues
+    );
+
     report(100, "done", `Done — Health Score ${result.score}/100`);
   } catch (e) {
     // The REPO's status is this handler's to own — it is the thing being analysed,
