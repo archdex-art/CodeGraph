@@ -754,8 +754,9 @@ It does not fit. Retaining that program retains every `SourceFile` and the check
 
 The deployment target is a **512 MB** host — ADR-001's reason for a separate worker process, the
 `--memory 512m` Docker smoke gate, and the constraint `web-tree-sitter` already broke once. A
-real run peaks at 341.8 MiB inside it. Adding ~500 MB of *retained* heap does not overshoot the
-budget, it multiplies it.
+real run peaks at **313.9 MiB / 61.3%** inside it — measured by CI on 2026-07-31 indexing
+`express` under `--memory=512m`, not estimated. Adding ~500 MB of *retained* heap does not
+overshoot the budget, it multiplies it.
 
 The distinction that decides it: a cold run *allocates* comparable memory transiently and gives
 it back between runs. Reuse means never giving it back — the worker sits at that RSS for its
@@ -765,3 +766,27 @@ whole life, which is precisely what a 512 MB box cannot do.
 size — the work is maybe a day. It is the one optimisation whose benefit is proven and whose
 cost the product cannot pay. It becomes available if the deployment target grows, and that is
 the trigger to revisit, not new profiling.
+
+## Desktop e2e — CI was red for 12 runs while the summaries said green
+
+Recorded because the failure mode is more useful than the bugs.
+
+`main` is green. This branch introduced both the desktop app and its CI job, and that job had
+**never passed** — twelve consecutive runs — while every progress note here reported
+"desktop 43/43". That figure is the vitest UNIT suite. The Playwright/Electron E2E job is a
+separate job that no local gate ran.
+
+Both failures were in the tests, not the app:
+
+- **Boot screen** — polled `window.content()` for the loading text some moments after launch, a
+  state the app is designed to leave as fast as it can. On a fast runner the honest answer is
+  "no longer booting". Now recorded via `framenavigated` and asserted as an ORDER, which cannot
+  race.
+- **`fs.pathExists`** — asserted `true` for the runner's cwd. The service returns `ok(false)`
+  for any ungranted path on purpose ("existence is information too"), and at boot nothing is
+  granted. The test required the capability boundary to be broken. Rewritten to assert the
+  boundary holds, which tests strictly more.
+
+The lesson is not the two bugs. **A local gate list assembled by the person being gated is not
+the gates the project runs**, and it was trusted for twelve commits. CI is now watched to
+completion rather than assumed.
