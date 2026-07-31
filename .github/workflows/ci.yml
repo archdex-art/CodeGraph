@@ -141,6 +141,41 @@ jobs:
           curl -sf http://localhost:4000/api/health | grep -q '"status":"ok"' \
             || { echo "server unhealthy after indexing (residual crash?)"; exit 1; }
 
+      # Report peak memory as a NUMBER, and gate on headroom rather than on death.
+      #
+      # The step above already enforces the 512MB budget, but only as a cliff: the container
+      # OOM-dies and the poll notices. That catches a catastrophe and is blind to erosion —
+      # a change taking the peak from 342 MiB to 500 MiB passes silently, and the next small
+      # change is the one that looks guilty.
+      #
+      # This exists because a measured optimisation was rejected on exactly this budget
+      # (holding a `ts.Program` for reuse: 67% faster warm indexes, ~500 MB of RETAINED heap —
+      # see docs/design/PLAN.md). A number every run is what makes that tradeoff checkable by
+      # someone who was not there for the measurement.
+      - name: Peak memory headroom
+        run: |
+          set -e
+          # cgroup v2 on GitHub's Ubuntu runners; v1 path kept for a self-hosted runner.
+          PEAK=$(docker exec ci-smoke cat /sys/fs/cgroup/memory.peak 2>/dev/null \
+              || docker exec ci-smoke cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes)
+          LIMIT=$(docker exec ci-smoke cat /sys/fs/cgroup/memory.max 2>/dev/null \
+              || docker exec ci-smoke cat /sys/fs/cgroup/memory/memory.limit_in_bytes)
+          python3 - "$PEAK" "$LIMIT" <<'EOF'
+          import sys
+          peak, limit = int(sys.argv[1]), int(sys.argv[2])
+          pct = peak / limit * 100
+          mib = lambda b: b / 1024 / 1024
+          print(f"peak {mib(peak):.1f} MiB of {mib(limit):.0f} MiB limit "
+                f"({pct:.1f}%, {mib(limit - peak):.1f} MiB headroom)")
+          # 85%: the observed peak indexing express is ~67%, so this trips on a real regression
+          # while tolerating run-to-run variation. Deliberately below 100 — a gate that fires
+          # only at the cliff is the OOM check above, which already exists.
+          if pct > 85:
+              print(f"FAIL: peak memory {pct:.1f}% of the 512MB budget exceeds the 85% gate.")
+              print("The budget is the product constraint (ADR-001), not a CI setting.")
+              sys.exit(1)
+          EOF
+
       # Assert the database landed on the MOUNTED path, not somewhere
       # container-ephemeral.
       #

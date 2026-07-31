@@ -723,7 +723,45 @@ Two candidate optimisations, both dead:
    same-named functions across snapshots is phantom churn — a diff showing a change that never
    happened. Timeline is the one caller that can least afford it.
 
-Pinned by `packages/core-graph/tests/typed-resolution.test.ts`. What remains of the idea is
-genuine incrementality — reusing a program across runs and re-checking only changed files —
-which is the large, risky version, and unchanged in status: **large, and still the only path
-below a 60% warm re-index.**
+Pinned by `packages/core-graph/tests/typed-resolution.test.ts`.
+
+### The third version: reuse the program across runs
+
+The surviving idea was genuine incrementality — hold the `ts.Program` and pass it as
+`oldProgram`, so unchanged files keep their parsed and bound state. **It works, and it does not
+fit.** Both halves measured 2026-07-30.
+
+It works. With a persistent host returning identical `SourceFile` objects,
+`structureIsReused` reaches `Completely` and, with the checker fully exercised (12,643 call
+resolutions — identical answers every run):
+
+| run | program | checker | total |
+|---|---|---|---|
+| cold | 558ms | 567ms | 1,125ms |
+| reuse, 0 files changed | 6ms | 312ms | **318ms** |
+| reuse, 27 of 327 changed | 15ms | 356ms | **371ms** |
+
+~67% off the warm path, which independently reproduces the ~26%-of-total-run ceiling estimated
+earlier by a different method. The executor indexes twice per fix and Timeline indexes dozens of
+commits, so both would collect it.
+
+It does not fit. Retaining that program retains every `SourceFile` and the checker:
+
+| | RSS | heap |
+|---|---|---|
+| baseline | 213 MB | 46 MB |
+| program held + exercised | **842 MB** | **528 MB** |
+
+The deployment target is a **512 MB** host — ADR-001's reason for a separate worker process, the
+`--memory 512m` Docker smoke gate, and the constraint `web-tree-sitter` already broke once. A
+real run peaks at 341.8 MiB inside it. Adding ~500 MB of *retained* heap does not overshoot the
+budget, it multiplies it.
+
+The distinction that decides it: a cold run *allocates* comparable memory transiently and gives
+it back between runs. Reuse means never giving it back — the worker sits at that RSS for its
+whole life, which is precisely what a 512 MB box cannot do.
+
+**Status changed from "large" to "measured; blocked by the memory budget."** Not deferred for
+size — the work is maybe a day. It is the one optimisation whose benefit is proven and whose
+cost the product cannot pay. It becomes available if the deployment target grows, and that is
+the trigger to revisit, not new profiling.

@@ -133,6 +133,12 @@ export async function buildSymbolGraph(files: FileInput[], issuesByFile: Map<str
    * Also measured, for the neighbouring idea: parsing all 329 TS files costs 58ms while the
    * program costs ~802ms, so caching extracted symbols per content hash cannot pay — parsing
    * was never the expense.
+   *
+   * And for the idea after that: passing this program as `oldProgram` on the next run DOES
+   * work — `structureIsReused` reaches `Completely`, warm cost 1,125ms -> ~320ms with identical
+   * resolutions. It is not done because holding the program holds every `SourceFile` and the
+   * checker: 528 MB of retained heap, 842 MB RSS, on a 512 MB target. A cold run allocates
+   * comparable memory and gives it back; reuse never gives it back. See PLAN.md.
    */
   const tsFiles = files.filter(f => /\.(ts|tsx|js|jsx|cjs|mjs)$/.test(f.ext));
   const base = (root ? resolvePath(root) : "/__codegraph__").split(pathSep).join("/");
