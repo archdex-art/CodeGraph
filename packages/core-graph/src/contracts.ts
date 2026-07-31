@@ -56,6 +56,13 @@ export interface ExtractContext {
   text: string;
   relPath: string;
   /**
+   * The key by which `program` knows this file - absolute, because module resolution
+   * normalises against the current directory. `relPath` stays repo-relative for symbol ids;
+   * these are deliberately two different strings and conflating them is what silently
+   * disabled type-aware resolution.
+   */
+  programPath?: string;
+  /**
    * Present only when the caller built a TypeScript program, which is what lets
    * the AST extractor resolve a call to a declaration instead of matching on name.
    *

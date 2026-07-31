@@ -1048,7 +1048,11 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
         text: f.text,
         language: LANG_BY_EXT[f.ext] || "unknown",
       })),
-    issuesByFile
+    issuesByFile,
+    // The repo root, so the TS program resolves against real paths - which also gets
+    // `node_modules` and `@types` in scope. Without it resolution falls back to a synthetic
+    // base that only knows the files handed in.
+    root,
   );
 
   return {

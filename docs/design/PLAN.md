@@ -263,6 +263,27 @@ stores and ignores.
 > are "marked low-confidence", but nothing sets confidence from tier. Until it does, the ladder's
 > confidence claim is decorative. This change is what would make wiring it mean something.
 
+> **P5 premise corrected 2026-07-30, measured before any of P5 was built.**
+>
+> P5's exit criterion is "precision >= 0.85 on benchmark", which assumes a labelled corpus.
+> For call resolution no corpus is needed: **for TypeScript the compiler IS ground truth for
+> what a call refers to**, so the heuristic can be scored against it directly. Done on this
+> repository, over the 2,159 calls where both resolvers had an answer:
+>
+> **The name-based heuristic is already right 98.4% of the time.** All 35 disagreements were
+> same-name shadowing, and the checker won every one.
+>
+> So typed extraction is NOT a precision play - the precision is already there. Two defects in
+> how the TS program was constructed meant type-aware resolution was silently losing to the
+> fallback (1,094 -> 2,167 hits once fixed), but total call edges moved 1,912 -> 1,914. The
+> remaining gap is RECALL, and it is not the checker's to close: 47% of symbols on this repo
+> and 89% on express have no inbound edge, and the checker resolved nothing the heuristic
+> missed - it added 0 project targets the heuristic did not also find.
+>
+> **Decide P5's real exit criterion before building it.** "Precision >= 0.85" is already met
+> and would pass without any work. The honest open question is recall, and nothing measured so
+> far says typed extraction answers it.
+
 ### 5.3 Calibrate against a defect corpus
 
 Standard defect-prediction methodology, applied honestly:

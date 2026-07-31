@@ -55,7 +55,7 @@ export const astTsExtractor = (fallback: LanguageExtractor): LanguageExtractor =
     // program does not know about.
     const standalone = (): ts.SourceFile =>
       ts.createSourceFile(ctx.relPath, ctx.text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-    const fromProgram = ctx.program?.getSourceFile(ctx.relPath);
+    const fromProgram = ctx.program?.getSourceFile(ctx.programPath ?? ctx.relPath);
     const sourceFile: ts.SourceFile = fromProgram ?? standalone();
     // Only keep the checker when it can actually answer questions about THIS file.
     const checker = ctx.program && fromProgram ? ctx.program.getTypeChecker() : null;
@@ -201,7 +201,24 @@ export const astTsExtractor = (fallback: LanguageExtractor): LanguageExtractor =
         if (name) {
           let resolvedTargetId: string | undefined;
           if (checker) {
-            const sym = checker.getSymbolAtLocation(refNode);
+            let sym = checker.getSymbolAtLocation(refNode);
+            /**
+             * Follow the import alias to the real declaration.
+             *
+             * For `import { target } from "./a"; target();` the symbol at the call site is an
+             * ALIAS whose sole declaration is the import specifier - in the CALLING file, on
+             * the import line. Without this hop the id came out as `b.ts#target@1`, naming a
+             * symbol that exists in no file's symbol table, so `symbolById.get()` missed and
+             * every cross-file call quietly fell through to name-based heuristics.
+             *
+             * That is the failure mode worth naming: type-aware resolution was not producing
+             * wrong edges, it was producing unusable ids and losing to the fallback in
+             * silence. It looked like it worked because the heuristic caught most of them.
+             */
+            if (sym && sym.flags & ts.SymbolFlags.Alias) {
+              const aliased = checker.getAliasedSymbol(sym);
+              if (aliased.declarations?.length) sym = aliased;
+            }
             if (sym && sym.declarations && sym.declarations.length > 0) {
               const decl = sym.declarations[0];
               const targetFile = decl.getSourceFile();

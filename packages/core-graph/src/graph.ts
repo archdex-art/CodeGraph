@@ -1,5 +1,5 @@
 import type { CodeSymbol, SymbolEdge, SymbolGraph, SymbolKind } from "./symbol";
-import { posix } from "node:path";
+import { posix, resolve as resolvePath, sep as pathSep } from "node:path";
 import ts from "typescript";
 import { extractorFor, type RawImport, type RawReference } from "./extractors";
 
@@ -78,7 +78,7 @@ function yieldToEventLoop(): Promise<void> {
   return promise;
 }
 
-export async function buildSymbolGraph(files: FileInput[], issuesByFile: Map<string, number>): Promise<SymbolGraph> {
+export async function buildSymbolGraph(files: FileInput[], issuesByFile: Map<string, number>, root?: string): Promise<SymbolGraph> {
   const symbols: CodeSymbol[] = [];
   const edges: SymbolEdge[] = [];
   // name -> symbol ids (for cross-file resolution; multiple defs possible)
@@ -89,21 +89,49 @@ export async function buildSymbolGraph(files: FileInput[], issuesByFile: Map<str
 
   // per-file: list of (symbol, localName) to resolve container + own refs
   const fileRefs: Array<{ file: string; refs: RawReference[]; imports: RawImport[]; symbolsInFile: CodeSymbol[] }> = [];
-  // Optional: Build a TS program for type-aware resolution
-  const tsFiles = files.filter(f => /.(ts|tsx|js|jsx|cjs|mjs)$/.test(f.ext));
+  /**
+   * Build a TS program for type-aware resolution.
+   *
+   * **Two defects that only matter together.** Measured on this repository, type-aware
+   * resolutions that actually hit a symbol: 1,094 before, 2,167 after.
+   *
+   * 1. `createProgram` was given RELATIVE rootNames while `getCurrentDirectory()` reported the
+   *    real cwd, so module resolution probed paths the in-memory map was not keyed by and
+   *    cross-file imports did not resolve. Fixing this alone: 1,094 -> 1,700.
+   * 2. `getSymbolAtLocation` on an imported identifier yields an ALIAS whose declaration is
+   *    the import statement in the CALLING file (see `ast-extractor.ts`). Fixing this alone:
+   *    1,094 -> 1,099 - nearly nothing, because without (1) there was no resolution to
+   *    de-alias. Together: 2,167.
+   *
+   * A `directoryExists` override was tried here and REMOVED: it changed the count by exactly
+   * 0. An isolated `ts.resolveModuleName` call does need it, which is why it looked necessary;
+   * inside `createProgram` every file is already a root name, so the probe never happens.
+   *
+   * The result was not wrong edges - it was `resolvedTargetId`s naming symbols that exist in
+   * no file, missing the map, and falling through to name-based heuristics in total silence.
+   * The heuristics are good enough that the graph looked fine, which is why this survived.
+   *
+   * `root` is the repo directory. Given it, paths are real, so `node_modules` and `@types`
+   * resolve too. Absent (unit tests construct files in memory), a synthetic base keeps
+   * resolution working between the supplied files, which is all such a test has.
+   */
+  const tsFiles = files.filter(f => /\.(ts|tsx|js|jsx|cjs|mjs)$/.test(f.ext));
+  const base = (root ? resolvePath(root) : "/__codegraph__").split(pathSep).join("/");
+  const absOf = (rel: string) => `${base}/${rel}`;
   let program: ts.Program | undefined;
   if (tsFiles.length > 0) {
     const options: ts.CompilerOptions = { allowJs: true, target: ts.ScriptTarget.Latest, moduleResolution: ts.ModuleResolutionKind.Node10 };
     const host = ts.createCompilerHost(options);
-    const fileMap = new Map(files.map(f => [f.rel, f.text]));
+    const fileMap = new Map(files.map(f => [absOf(f.rel), f.text]));
     const origGetSourceFile = host.getSourceFile;
+    host.getCurrentDirectory = () => base;
     host.getSourceFile = (fileName, languageVersion, onError, shouldCreateNewSourceFile) => {
       if (fileMap.has(fileName)) return ts.createSourceFile(fileName, fileMap.get(fileName)!, languageVersion);
       return origGetSourceFile(fileName, languageVersion, onError, shouldCreateNewSourceFile);
     };
-    host.readFile = (fileName) => fileMap.get(fileName) || ts.sys.readFile(fileName);
+    host.readFile = (fileName) => fileMap.get(fileName) ?? ts.sys.readFile(fileName);
     host.fileExists = (fileName) => fileMap.has(fileName) || ts.sys.fileExists(fileName);
-    program = ts.createProgram(tsFiles.map(f => f.rel), options, host);
+    program = ts.createProgram(tsFiles.map(f => absOf(f.rel)), options, host);
   }
 
   for (let idx = 0; idx < files.length; idx++) {
@@ -112,7 +140,7 @@ export async function buildSymbolGraph(files: FileInput[], issuesByFile: Map<str
     knownFiles.add(f.rel);
     const ex = extractorFor(f.ext);
     if (!ex) continue;
-    const { symbols: raws, references, imports } = ex.extract({ text: f.text, relPath: f.rel, program });
+    const { symbols: raws, references, imports } = ex.extract({ text: f.text, relPath: f.rel, programPath: absOf(f.rel), program });
     const inFile: CodeSymbol[] = [];
     // container name -> id within this file
     const containerId = new Map<string, string>();
@@ -198,9 +226,14 @@ export async function buildSymbolGraph(files: FileInput[], issuesByFile: Map<str
       const name = ref.name;
       let targetSym: CodeSymbol | null = null;
 
-      // 0. Type-aware resolution (bypasses heuristics if TS compiler found the exact target)
+      // 0. Type-aware resolution (bypasses heuristics if TS compiler found the exact target).
+      // The id the extractor emits is keyed by the program's absolute path; symbol ids are
+      // keyed by repo-relative path. Strip the base rather than making either side guess.
       if (ref.resolvedTargetId) {
-        targetSym = symbolById.get(ref.resolvedTargetId) || null;
+        const id = ref.resolvedTargetId.startsWith(`${base}/`)
+          ? ref.resolvedTargetId.slice(base.length + 1)
+          : ref.resolvedTargetId;
+        targetSym = symbolById.get(id) || null;
       }
 
       // 1. Same-file local
