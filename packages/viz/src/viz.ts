@@ -4,6 +4,9 @@ import type {
   GraphEdge,
   GraphNode,
   Issue,
+  ModuleEdge,
+  ModuleGraph,
+  ModuleNode,
   ScannedFile,
   TreeNode,
   VizGraph,
@@ -137,4 +140,88 @@ export function buildTree(files: ScannedFile[], issuesByFile: Map<string, number
     });
   }
   return root;
+}
+
+/** Aggregate files into top-level modules + inter-module import edges (flowchart). */
+export function buildModuleGraph(
+  files: ScannedFile[],
+  importEdges: Array<{ from: string; to: string }>,
+  issuesByFile: Map<string, number>
+): ModuleGraph {
+  // Count files per top-level dir; big top dirs get expanded to 2 levels so the
+  // architecture graph stays meaningful instead of a few giant blobs.
+  const topCount = new Map<string, number>();
+  for (const f of files) {
+    const seg = f.rel.split(path.sep).join("/").split("/");
+    const top = seg.length > 1 ? seg[0] : "(root)";
+    topCount.set(top, (topCount.get(top) || 0) + 1);
+  }
+  const EXPAND_THRESHOLD = 12;
+  const moduleOf = (rel: string): string => {
+    const seg = rel.split(path.sep).join("/").split("/");
+    if (seg.length <= 1) return "(root)";
+    const top = seg[0];
+    if (seg.length >= 3 && (topCount.get(top) || 0) > EXPAND_THRESHOLD) {
+      return top + "/" + seg[1];
+    }
+    return top;
+  };
+
+  const mods = new Map<string, ModuleNode>();
+  const langCount = new Map<string, Map<string, number>>();
+  for (const f of files) {
+    const id = moduleOf(f.rel);
+    let m = mods.get(id);
+    if (!m) {
+      m = { id, label: id, files: 0, loc: 0, issues: 0, language: null, tier: 0 };
+      mods.set(id, m);
+      langCount.set(id, new Map());
+    }
+    m.files += 1;
+    m.loc += f.loc;
+    m.issues += issuesByFile.get(f.rel) || 0;
+    const lang = LANG_BY_EXT[f.ext];
+    if (lang) {
+      const lc = langCount.get(id)!;
+      lc.set(lang, (lc.get(lang) || 0) + 1);
+    }
+  }
+  for (const [id, m] of mods) {
+    const lc = langCount.get(id)!;
+    let best: string | null = null;
+    let bestN = 0;
+    for (const [lang, n] of lc) if (n > bestN) { bestN = n; best = lang; }
+    m.language = best;
+  }
+
+  const edgeW = new Map<string, ModuleEdge>();
+  for (const e of importEdges) {
+    const s = moduleOf(e.from);
+    const t = moduleOf(e.to);
+    if (s === t) continue;
+    const key = s + "→" + t;
+    const ex = edgeW.get(key);
+    if (ex) ex.weight += 1;
+    else edgeW.set(key, { source: s, target: t, weight: 1 });
+  }
+  const edges = [...edgeW.values()];
+
+  // Assign tiers by longest-path depth (cycles broken by visited guard).
+  const adj = new Map<string, string[]>();
+  for (const m of mods.keys()) adj.set(m, []);
+  for (const e of edges) adj.get(e.source)?.push(e.target);
+  const tierOf = new Map<string, number>();
+  function depth(node: string, seen: Set<string>): number {
+    if (tierOf.has(node)) return tierOf.get(node)!;
+    if (seen.has(node)) return 0;
+    seen.add(node);
+    let d = 0;
+    for (const next of adj.get(node) || []) d = Math.max(d, 1 + depth(next, seen));
+    seen.delete(node);
+    tierOf.set(node, d);
+    return d;
+  }
+  for (const m of mods.keys()) m && (mods.get(m)!.tier = depth(m, new Set()));
+
+  return { nodes: [...mods.values()].sort((a, b) => a.tier - b.tier || b.loc - a.loc), edges };
 }

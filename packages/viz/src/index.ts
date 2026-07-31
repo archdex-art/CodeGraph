@@ -1,1 +1,1 @@
-export { buildVizGraph, buildTree, VIZ_NODE_CAP } from "./viz";
+export { buildVizGraph, buildTree, buildModuleGraph, VIZ_NODE_CAP } from "./viz";

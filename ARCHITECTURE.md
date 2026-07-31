@@ -59,6 +59,7 @@ The libraries, and why each boundary exists:
 | `persistence` | The **only** module that speaks SQL |
 | `jobs` | Queue semantics: lease, heartbeat, retry, cancellation |
 | `analysis` · `analysis-model` · `core-graph` | Scan, symbol graph, detection rules. Still transitional; LLD §13 splits `analysis` further into `pipeline`/`lang-*`/`detect-engine`/`viz` |
+| `imports` | File-level import edges: which syntax declares a dependency and how a specifier maps onto a file. Deliberately NOT named `lang-*` — that rule requires leaves, and this needs the pipeline contracts. Distinct from `core-graph`'s extractors, which resolve symbols; this resolves files and feeds fan-in |
 | `detect-engine` | Everything that decides WHETHER something is a finding and how much to believe it: the rule table, the syntactic context gate, the taint verdict, the analysis tier, the value-shape signal on secrets. Deliberately holds no scoring — keeping the two apart is what stops a rule being tuned to move a number |
 | `viz` | The renderable file/directory graph. Split from the pipeline because it answers a different question — the symbol graph is what the product reasons over, this is what a person looks at, and its node cap has nothing to do with detection being correct |
 | `score-engine` | The Health Score model — pure functions of findings plus LOC, no I/O. Split out first because the swarm's projected score re-runs the REAL scorer (review C5), which meant importing it from the indexer and dragging in the walker, the ESLint layer and the TypeScript program |

@@ -30,7 +30,8 @@ import type { AnalysisTier, TaintQuery, TaintVerdict } from "@codegraph/core-gra
 import type { ScanCoverage, ScannedFile } from "@codegraph/analysis-model";
 import { CODE_EXTS, LANG_BY_EXT, YIELD_EVERY, yieldToEventLoop } from "@codegraph/analysis-model";
 import { HITS_PER_RULE_PER_FILE, expectedHarm, scoreIssues } from "@codegraph/score-engine";
-import { buildTree, buildVizGraph } from "@codegraph/viz";
+import { buildModuleGraph, buildTree, buildVizGraph } from "@codegraph/viz";
+import { computeImportGraph, extractImports } from "@codegraph/imports";
 import {
   analyzeFiles,
   analyzeTests,
@@ -172,68 +173,8 @@ function walk(root: string): { files: string[]; coverage: WalkCoverage } {
   };
 }
 
-function extractImports(text: string, ext: string): string[] {
-  const imports: string[] = [];
+// Import extraction and resolution moved to `@codegraph/imports` (LLD §13).
 
-  // Go: `import "pkg/path"` and grouped `import ( "a" \n alias "b" )`.
-  if (ext === ".go") {
-    const block = /import\s*\(([\s\S]*?)\)/g;
-    let bm;
-    while ((bm = block.exec(text))) {
-      const sre = /"([^"]+)"/g;
-      let sm;
-      while ((sm = sre.exec(bm[1]))) imports.push(sm[1]);
-    }
-    const single = /import\s+(?:[A-Za-z0-9_.]+\s+)?"([^"]+)"/g;
-    let sm;
-    while ((sm = single.exec(text))) imports.push(sm[1]);
-    return imports;
-  }
-
-  // Python: `import a.b.c`, `from a.b import c, d`, and relative `from .m import x`.
-  if (ext === ".py") {
-    for (const rawLine of text.split("\n")) {
-      const line = rawLine.split("#")[0];
-      let m;
-      if ((m = /^\s*from\s+(\.*[A-Za-z0-9_.]*)\s+import\s+(.+)$/.exec(line))) {
-        const base = m[1];
-        imports.push(base);
-        for (const part of m[2].split(",")) {
-          const name = part.trim().split(/\s+as\s+/)[0].trim().replace(/[()]/g, "");
-          if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-            imports.push(base.endsWith(".") || base === "" ? base + name : base + "." + name);
-          }
-        }
-      } else if ((m = /^\s*import\s+(.+)$/.exec(line))) {
-        for (const part of m[1].split(",")) {
-          const mod = part.trim().split(/\s+as\s+/)[0].trim();
-          if (mod) imports.push(mod);
-        }
-      }
-    }
-    return imports;
-  }
-
-  // JS/TS (and other C-family): relative specifiers, resolved against the file dir.
-  if (CODE_EXTS[ext]) {
-    const re = /(?:import\s+[^'"]*from\s+|require\(\s*|import\s*\(\s*|from\s+)['"]([^'"]+)['"]/g;
-    let m;
-    while ((m = re.exec(text))) {
-      if (m[1].startsWith(".")) imports.push(m[1]);
-    }
-  }
-  return imports;
-}
-
-// Every CPU-bound per-file loop below yields back to the event loop every
-// YIELD_EVERY files. Without this, indexRepo() runs as one long synchronous
-// call — on a large repo (thousands of files, TS type-checking, ESLint AST
-// parsing per file) that can block the whole Node process for tens of
-// seconds, during which NOTHING else can be served: not the dashboard, not
-// other API routes, not even Render's health check -- which is exactly what
-// produces the "stuck on an old page, then 502 Bad Gateway" symptom on a
-// large first-time index. Yielding periodically lets the event loop drain
-// other pending requests between chunks of indexing work.
 
 /** Walk the repo, build per-file records + language stats. */
 async function scan(
@@ -309,178 +250,12 @@ async function scan(
   };
 }
 
-/** Resolve import edges between scanned files + fan-in centrality. */
-interface ImportGraph {
-  fanIn: Map<string, number>;
-  importEdges: Array<{ from: string; to: string }>;
-}
-async function computeImportGraph(files: ScannedFile[], ctx?: PipelineContext): Promise<ImportGraph> {
-  const toPosix = (r: string) => r.split(path.sep).join("/");
-  const byNoExt = new Map<string, string>();      // JS/TS: path (with/without ext) -> rel
-  const goDirs = new Map<string, string[]>();       // Go: repo dir -> .go files in it
-  const pyByDotted = new Map<string, string>();     // Python: dotted module -> rel
-
-  for (const f of files) {
-    const rel = toPosix(f.rel);
-    const noExt = rel.replace(/\.[^./]+$/, "");
-    byNoExt.set(noExt, f.rel);
-    byNoExt.set(rel, f.rel);
-
-    if (f.ext === ".go") {
-      const dir = path.posix.dirname(rel);
-      (goDirs.get(dir) ?? goDirs.set(dir, []).get(dir)!).push(f.rel);
-    } else if (f.ext === ".py") {
-      if (path.posix.basename(noExt) === "__init__") {
-        const pkg = path.posix.dirname(rel).split("/").filter(Boolean).join(".");
-        if (pkg) pyByDotted.set(pkg, f.rel);
-      } else {
-        pyByDotted.set(noExt.split("/").filter(Boolean).join("."), f.rel);
-      }
-    }
-  }
-
-  const fanIn = new Map<string, number>();
-  const importEdges: Array<{ from: string; to: string }> = [];
-  const link = (from: string, to: string) => {
-    if (to && to !== from) {
-      fanIn.set(to, (fanIn.get(to) || 0) + 1);
-      importEdges.push({ from, to });
-    }
-  };
-
-  for (let idx = 0; idx < files.length; idx++) {
-    if (idx > 0 && idx % YIELD_EVERY === 0) {
-      await yieldToEventLoop();
-      throwIfAborted(ctx);
-    }
-    const f = files[idx];
-    const rel = toPosix(f.rel);
-    const dir = path.posix.dirname(rel);
-
-    for (const imp of f.imports) {
-      if (f.ext === ".go") {
-        // Local Go imports share the repo's module prefix; match the longest
-        // trailing path segment run against an actual repo directory.
-        const segs = imp.split("/").filter(Boolean);
-        for (let k = Math.min(segs.length, 8); k >= 1; k--) {
-          const suffix = segs.slice(segs.length - k).join("/");
-          const pkgFiles = goDirs.get(suffix);
-          if (pkgFiles && suffix !== dir) {
-            for (const target of pkgFiles) link(f.rel, target);
-            break;
-          }
-        }
-      } else if (f.ext === ".py") {
-        let target: string | undefined;
-        if (imp.startsWith(".")) {
-          const m = /^(\.+)(.*)$/.exec(imp)!;
-          const baseParts = dir.split("/").filter(Boolean);
-          const upParts = baseParts.slice(0, Math.max(0, baseParts.length - (m[1].length - 1)));
-          const full = [...upParts, ...m[2].split(".").filter(Boolean)].join(".");
-          target = pyByDotted.get(full);
-        } else {
-          target = pyByDotted.get(imp);
-        }
-        if (target) link(f.rel, target);
-      } else {
-        // JS/TS relative import.
-        const t = path.posix.normalize(path.posix.join(dir, imp)).replace(/^\.\//, "");
-        const cand = byNoExt.get(t) || byNoExt.get(t + "/index") || byNoExt.get(t.replace(/\/$/, ""));
-        if (cand) link(f.rel, cand);
-      }
-    }
-  }
-  return { fanIn, importEdges };
-}
-
-
-// Detection moved to `@codegraph/detect-engine` (LLD §13).
 
 
 
-/** Aggregate files into top-level modules + inter-module import edges (flowchart). */
-function buildModuleGraph(
-  files: ScannedFile[],
-  importEdges: Array<{ from: string; to: string }>,
-  issuesByFile: Map<string, number>
-): ModuleGraph {
-  // Count files per top-level dir; big top dirs get expanded to 2 levels so the
-  // architecture graph stays meaningful instead of a few giant blobs.
-  const topCount = new Map<string, number>();
-  for (const f of files) {
-    const seg = f.rel.split(path.sep).join("/").split("/");
-    const top = seg.length > 1 ? seg[0] : "(root)";
-    topCount.set(top, (topCount.get(top) || 0) + 1);
-  }
-  const EXPAND_THRESHOLD = 12;
-  const moduleOf = (rel: string): string => {
-    const seg = rel.split(path.sep).join("/").split("/");
-    if (seg.length <= 1) return "(root)";
-    const top = seg[0];
-    if (seg.length >= 3 && (topCount.get(top) || 0) > EXPAND_THRESHOLD) {
-      return top + "/" + seg[1];
-    }
-    return top;
-  };
+// The module-level architecture graph moved to `@codegraph/viz` (LLD §13): it is display
+// structure, the same category as `buildVizGraph` and `buildTree`.
 
-  const mods = new Map<string, ModuleNode>();
-  const langCount = new Map<string, Map<string, number>>();
-  for (const f of files) {
-    const id = moduleOf(f.rel);
-    let m = mods.get(id);
-    if (!m) {
-      m = { id, label: id, files: 0, loc: 0, issues: 0, language: null, tier: 0 };
-      mods.set(id, m);
-      langCount.set(id, new Map());
-    }
-    m.files += 1;
-    m.loc += f.loc;
-    m.issues += issuesByFile.get(f.rel) || 0;
-    const lang = LANG_BY_EXT[f.ext];
-    if (lang) {
-      const lc = langCount.get(id)!;
-      lc.set(lang, (lc.get(lang) || 0) + 1);
-    }
-  }
-  for (const [id, m] of mods) {
-    const lc = langCount.get(id)!;
-    let best: string | null = null;
-    let bestN = 0;
-    for (const [lang, n] of lc) if (n > bestN) { bestN = n; best = lang; }
-    m.language = best;
-  }
-
-  const edgeW = new Map<string, ModuleEdge>();
-  for (const e of importEdges) {
-    const s = moduleOf(e.from);
-    const t = moduleOf(e.to);
-    if (s === t) continue;
-    const key = s + "→" + t;
-    const ex = edgeW.get(key);
-    if (ex) ex.weight += 1;
-    else edgeW.set(key, { source: s, target: t, weight: 1 });
-  }
-  const edges = [...edgeW.values()];
-
-  // Assign tiers by longest-path depth (cycles broken by visited guard).
-  const adj = new Map<string, string[]>();
-  for (const m of mods.keys()) adj.set(m, []);
-  for (const e of edges) adj.get(e.source)?.push(e.target);
-  const tierOf = new Map<string, number>();
-  function depth(node: string, seen: Set<string>): number {
-    if (tierOf.has(node)) return tierOf.get(node)!;
-    if (seen.has(node)) return 0;
-    seen.add(node);
-    let d = 0;
-    for (const next of adj.get(node) || []) d = Math.max(d, 1 + depth(next, seen));
-    seen.delete(node);
-    tierOf.set(node, d);
-    return d;
-  }
-  for (const m of mods.keys()) m && (mods.get(m)!.tier = depth(m, new Set()));
-
-  return { nodes: [...mods.values()].sort((a, b) => a.tier - b.tier || b.loc - a.loc), edges };
-}
 
 /**
  * Dependency hygiene. Stays in the pipeline rather than `detect-engine` because it READS

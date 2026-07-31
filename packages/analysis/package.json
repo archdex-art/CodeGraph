@@ -22,6 +22,7 @@
     "eslint-plugin-security": "^4.0.1",
     "@codegraph/score-engine": "*",
     "@codegraph/viz": "*",
-    "@codegraph/detect-engine": "*"
+    "@codegraph/detect-engine": "*",
+    "@codegraph/imports": "*"
   }
 }

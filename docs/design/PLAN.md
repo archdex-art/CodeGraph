@@ -626,6 +626,26 @@ injection classes; regex tier demoted to an explicitly low-confidence fallback.
 > **Remaining to clear the 600 threshold: 104 lines.** `pipeline/enumerate` (the walk) and
 > `lang-*` (import extraction) are the last two slices.
 
+> **Split complete 2026-07-30: `indexer.ts` 1,259 -> 478, and the finding CLEARS.** The last two
+> moves were `buildModuleGraph` -> `viz` (it is display structure, the same category as
+> `buildVizGraph` and `buildTree`) and import extraction/resolution -> `@codegraph/imports`.
+>
+> **The gate corrected the name.** That package was created as `lang-imports` and
+> `lang-packages-are-leaves` rejected it on the spot: a `lang-*` package "knows its own syntax
+> and nothing about detection, scoring, or storage", which is what makes adding a language
+> additive. This stage needs `ScannedFile` and `PipelineContext`, so it is a pipeline stage
+> containing per-language syntax, not a language plugin. Renamed to `imports`.
+>
+> What remains in `indexer.ts` is coherent rather than residual: walk, scan, dependency hygiene
+> (which reads package.json, so it stays with the I/O), and `indexRepo` orchestrating the
+> stages. Splitting further would be ceremony - the point was cohesion, and the threshold
+> clearing is a consequence of that, not the goal.
+>
+> Five packages out: `score-engine`, `viz`, `detect-engine`, `imports`, plus the shared
+> contracts (`ScannedFile`, `PipelineContext`, `LANG_BY_EXT`, `CODE_EXTS`) in `analysis-model`.
+> Express 89, projected 89 -> 90, remediation 89 -> 95, 920/920 - identical through all four
+> refactoring commits.
+
 ## 7. P6 — Scale & incrementality *(~2 weeks)*
 
 Content-addressed per-file cache (`contentHash + extractorVersion → FileFacts`); PR-scoped and
