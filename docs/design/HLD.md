@@ -299,6 +299,18 @@ Rather than one binary `truncated` flag, the run records an explicit analysis *t
 | `lexical` | Regex/token scan only | Syntactic rules only; **findings marked low-confidence** |
 | `skipped` | Too large / binary / budget exhausted | none — reported as coverage gap |
 
+**Implemented 2026-07-30.** `tierForExt` assigns the tier, `ScanCoverage.tierLoc` reports LOC per
+tier, and a `lexical` finding's confidence is scaled by 0.45 — which now reaches the score,
+because confidence multiplies into `expectedHarm`. On this repository 56.7% of LOC is at tier
+`full`; the rest is Python, scanned by regex, and now says so.
+
+Two honest notes. **`ast` is defined and never produced**: every language with an AST path here
+is TypeScript-family and goes through the compiler (`full`), while Python's extractor is
+regex-based (`lexical`). The rung is real in the design and empty in the code until a
+tree-sitter grammar for a non-TS language fills it. And the downgrade **never deletes** — an
+incomplete picture of a file is a reason to weigh its findings less, not to go silent on every
+non-TypeScript file in the repository.
+
 The health report publishes **analysis coverage** (`% of LOC at tier ≥ ast`) next to the
 score. A 92/100 over 40 % coverage is a different claim than 92/100 over 98 %, and the product
 should never conflate them. This is the single highest-integrity change available at low cost.

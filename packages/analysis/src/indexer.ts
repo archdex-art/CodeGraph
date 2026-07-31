@@ -25,8 +25,9 @@ import {
   pillarsFrom,
   type PillarScore,
 } from "@codegraph/analysis-model";
-import { buildSymbolGraph, callAt, classifyTaint, contextAt, extractorFor, syntacticSpans } from "@codegraph/core-graph";
-import type { TaintQuery, TaintVerdict } from "@codegraph/core-graph";
+import { buildSymbolGraph, callAt, classifyTaint, contextAt, extractorFor, syntacticSpans, tierForExt } from "@codegraph/core-graph";
+import type { AnalysisTier, TaintQuery, TaintVerdict } from "@codegraph/core-graph";
+import type { ScanCoverage } from "@codegraph/analysis-model";
 import ts from "typescript";
 import type { SourceContext } from "@codegraph/core-graph";
 import { lintForSecurity } from "./eslintSecurity";
@@ -126,28 +127,6 @@ interface WalkCoverage {
    * kind of thing ADR-008 says the score must disclose.
    */
   skippedNestedRepos: number;
-}
-
-/**
- * Walk coverage plus what the scan itself dropped.
- *
- * Split from `WalkCoverage` so each stage returns exactly what it knows: the walk cannot see
- * language mapping, and the scan cannot see directories the walk never visited. A single type
- * spanning both would force one of them to invent a number.
- */
-export interface ScanCoverage extends WalkCoverage {
-  /**
-   * Files kept by the walk but skipped by the scan for having no language mapping.
-   *
-   * Usually the largest single category and usually benign — images, lockfiles, binaries. It
-   * is reported anyway because "benign" is a judgement the operator should make: a repository
-   * that is 90% an unsupported language reads as well-covered otherwise.
-   */
-  skippedNoLanguage: number;
-  /** Lines of code across the files that were actually scanned. */
-  locAnalysed: number;
-  /** Files that were actually read and scanned — `filesKept` minus `skippedNoLanguage`. */
-  filesAnalysed: number;
 }
 
 function walk(root: string): { files: string[]; coverage: WalkCoverage } {
@@ -326,6 +305,17 @@ async function scan(
     .map(([language, v]) => ({ language, ...v }))
     .sort((a, b) => b.loc - a.loc);
 
+  /**
+   * LOC by analysis tier (HLD §8.3), so "% of LOC at tier >= ast" is derivable. A repository
+   * that is mostly Python should say it was regex-scanned rather than score as though it had
+   * been parsed.
+   */
+  const tierLoc: Partial<Record<AnalysisTier, number>> = {};
+  for (const f of files) {
+    const t = tierForExt(f.ext);
+    tierLoc[t] = (tierLoc[t] ?? 0) + f.loc;
+  }
+
   return {
     files,
     languages,
@@ -335,6 +325,7 @@ async function scan(
       skippedNoLanguage,
       locAnalysed: totalLoc,
       filesAnalysed: walkCoverage.filesKept - skippedNoLanguage,
+      tierLoc,
     },
   };
 }
@@ -537,6 +528,25 @@ function adjustForTaint(base: number, verdict: TaintVerdict): number {
   }
 }
 
+/**
+ * How far a `lexical`-tier finding's confidence is cut (HLD §8.3).
+ *
+ * A regex hit in a file nobody parsed might be in a comment, a string, or real code - the
+ * distinction the context gate makes for TypeScript and cannot make for Python. Measured on
+ * express and this repository, 35-64% of raw regex matches sit in a context where the rule
+ * cannot hold, so a little over half is the honest discount for not knowing which.
+ *
+ * Not zero, and not a filter: the finding may well be real, and hiding it would trade visible
+ * noise for silent blindness on every non-TypeScript file in the repository.
+ */
+const LEXICAL_CONFIDENCE_FACTOR = 0.45;
+
+/** Absent confidence means "unqualified", so it stays unqualified rather than becoming 0. */
+function scaleConfidence(base: number | undefined, factor: number): number | undefined {
+  if (base === undefined) return undefined;
+  return factor === 1 ? base : Math.max(0.05, Math.round(base * factor * 1000) / 1000);
+}
+
 let _issueSeq = 0;
 function mkIssue(dim: Dimension, sev: number, title: string, file: string, line: number, br: number, conf?: number, churn?: number): Issue {
   return { id: `iss_${_issueSeq++}`, dimension: dim, severity: sev, confidence: conf, title, file, line, blastRadius: br, churn: churn ?? 1 };
@@ -553,6 +563,16 @@ async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, ch
     if (!f.text) continue;
     const br = 1 + (fanIn.get(f.rel) || 0); // blast radius from graph fan-in
     const ch = churnByFile.get(f.rel) || 1;
+    /**
+     * HLD §8.3: a `lexical`-tier file was matched by regex alone - no parse, so no idea
+     * whether a hit sits in a comment, a string, or running code. The design always said those
+     * findings are "marked low-confidence"; nothing did it until now.
+     *
+     * This is the same boundary as `syntacticSpans`, and deliberately so: the files that get
+     * no context gating are exactly the files whose findings cannot be trusted as far.
+     */
+    const tier = tierForExt(f.ext);
+    const tierPenalty = tier === "lexical" ? LEXICAL_CONFIDENCE_FACTOR : 1;
     const lines = f.text.split("\n");
     /**
      * Comment/string ranges for this file, computed ONCE and shared by all 12 rules. Empty for
@@ -586,7 +606,10 @@ async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, ch
         if (emitted < HITS_PER_RULE_PER_FILE) {
           if (firstIssueIndex === -1) firstIssueIndex = issues.length;
           issues.push(
-            mkIssue(rule.dimension, rule.severity, rule.title, f.rel, lineIndex + 1, br, rule.confidence, ch),
+            mkIssue(
+              rule.dimension, rule.severity, rule.title, f.rel, lineIndex + 1, br,
+              scaleConfidence(rule.confidence, tierPenalty), ch,
+            ),
           );
           emitted++;
         }
@@ -613,7 +636,7 @@ async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, ch
         const arg = call?.arguments[0];
         if (arg) confidence = adjustForTaint(confidence, classifyTaint(arg, TAINT_QUERY));
       }
-      issues.push(mkIssue("security", f2.severity, f2.title, f.rel, f2.line, br, confidence, ch));
+      issues.push(mkIssue("security", f2.severity, f2.title, f.rel, f2.line, br, scaleConfidence(confidence, tierPenalty), ch));
     }
 
     // God-file: very large source file → maintainability penalty scaled by fan-in.

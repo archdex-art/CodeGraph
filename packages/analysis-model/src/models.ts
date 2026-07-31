@@ -62,10 +62,26 @@ export interface ScanCoverage {
   unvisitedDirs: number;
   /** Nested git repositories skipped — clones, vendored checkouts, submodules. */
   skippedNestedRepos: number;
+  /**
+   * Files kept by the walk but skipped by the scan for having no language mapping.
+   *
+   * Usually the largest single category and usually benign - images, lockfiles, binaries. It is
+   * reported anyway because "benign" is a judgement the operator should make: a repository that
+   * is 90% an unsupported language reads as well-covered otherwise.
+   */
   skippedNoLanguage: number;
+  /** Lines of code across the files that were actually scanned. */
   locAnalysed: number;
-  /** Files actually read and scanned. */
+  /** Files actually read and scanned - `filesKept` minus `skippedNoLanguage`. */
   filesAnalysed: number;
+  /**
+   * LOC by analysis tier (HLD §8.3). Optional so runs indexed before this keep deserialising.
+   *
+   * The health report publishes "% of LOC at tier >= ast" from this, so a repository that is
+   * mostly Python is honest about being scanned by regex rather than quietly scoring as though
+   * it had been parsed. `ast` is defined but not currently produced - see `AnalysisTier`.
+   */
+  tierLoc?: Partial<Record<"full" | "ast" | "lexical" | "skipped", number>>;
 }
 
 export interface DimensionScore {
