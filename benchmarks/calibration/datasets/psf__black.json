@@ -19,7 +19,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 45
+      "nloc": 45,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.021739130434782608,
+        "longestBlock": 18
+      }
     },
     {
       "file": "gallery/gallery.py",
@@ -36,7 +43,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 296
+      "nloc": 296,
+      "structure": {
+        "cyclomatic": 28,
+        "maxNesting": 4,
+        "functions": 16,
+        "commentRatio": 0.010101010101010102,
+        "longestBlock": 31
+      }
     },
     {
       "file": "profiling/dict_big.py",
@@ -53,7 +67,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 8001
+      "nloc": 8001,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 8001
+      }
     },
     {
       "file": "profiling/dict_huge.py",
@@ -70,7 +91,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 41440
+      "nloc": 41440,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 41440
+      }
     },
     {
       "file": "profiling/list_big.py",
@@ -87,7 +115,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 4000
+      "nloc": 4000,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 4000
+      }
     },
     {
       "file": "profiling/list_huge.py",
@@ -104,7 +139,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 22431
+      "nloc": 22431,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 22431
+      }
     },
     {
       "file": "profiling/mix_big.py",
@@ -121,7 +163,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 1002
+      "nloc": 1002,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 1002
+      }
     },
     {
       "file": "profiling/mix_huge.py",
@@ -138,7 +187,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 7692
+      "nloc": 7692,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 7692
+      }
     },
     {
       "file": "profiling/mix_small.py",
@@ -155,7 +211,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 102
+      "nloc": 102,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 102
+      }
     },
     {
       "file": "scripts/__init__.py",
@@ -172,7 +235,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 0
+      "nloc": 0,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 0
+      }
     },
     {
       "file": "scripts/check_pre_commit_rev_in_example.py",
@@ -189,7 +259,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 54
+      "nloc": 54,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 4,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "scripts/check_version_in_basics_example.py",
@@ -206,7 +283,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 47
+      "nloc": 47,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 4,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "scripts/diff_shades_gha_helper.py",
@@ -223,7 +307,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 227
+      "nloc": 227,
+      "structure": {
+        "cyclomatic": 23,
+        "maxNesting": 3,
+        "functions": 9,
+        "commentRatio": 0.039473684210526314,
+        "longestBlock": 35
+      }
     },
     {
       "file": "scripts/fuzz.py",
@@ -240,7 +331,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 92
+      "nloc": 92,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 3,
+        "functions": 1,
+        "commentRatio": 0.21505376344086022,
+        "longestBlock": 28
+      }
     },
     {
       "file": "scripts/migrate-black.py",
@@ -257,7 +355,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 96
+      "nloc": 96,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 4,
+        "functions": 2,
+        "commentRatio": 0.041237113402061855,
+        "longestBlock": 35
+      }
     },
     {
       "file": "src/black/__init__.py",
@@ -274,7 +379,14 @@
       },
       "defective": true,
       "fixCount": 5,
-      "nloc": 1426
+      "nloc": 1426,
+      "structure": {
+        "cyclomatic": 176,
+        "maxNesting": 7,
+        "functions": 32,
+        "commentRatio": 0.02242466713384723,
+        "longestBlock": 257
+      }
     },
     {
       "file": "src/black/__main__.py",
@@ -291,7 +403,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 3
+      "nloc": 3,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 1
+      }
     },
     {
       "file": "src/black/brackets.py",
@@ -308,7 +427,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 381
+      "nloc": 381,
+      "structure": {
+        "cyclomatic": 51,
+        "maxNesting": 5,
+        "functions": 19,
+        "commentRatio": 0.010471204188481676,
+        "longestBlock": 31
+      }
     },
     {
       "file": "src/black/cache.py",
@@ -325,7 +451,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 97
+      "nloc": 97,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 3,
+        "functions": 7,
+        "commentRatio": 0.04081632653061224,
+        "longestBlock": 14
+      }
     },
     {
       "file": "src/black/comments.py",
@@ -342,7 +475,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 342
+      "nloc": 342,
+      "structure": {
+        "cyclomatic": 58,
+        "maxNesting": 6,
+        "functions": 12,
+        "commentRatio": 0.07871720116618076,
+        "longestBlock": 40
+      }
     },
     {
       "file": "src/black/concurrency.py",
@@ -359,7 +499,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 187
+      "nloc": 187,
+      "structure": {
+        "cyclomatic": 31,
+        "maxNesting": 5,
+        "functions": 7,
+        "commentRatio": 0.0851063829787234,
+        "longestBlock": 44
+      }
     },
     {
       "file": "src/black/const.py",
@@ -376,7 +523,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 4
+      "nloc": 4,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 4
+      }
     },
     {
       "file": "src/black/debug.py",
@@ -393,7 +547,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 47
+      "nloc": 47,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 4,
+        "functions": 2,
+        "commentRatio": 0.041666666666666664,
+        "longestBlock": 10
+      }
     },
     {
       "file": "src/black/files.py",
@@ -410,7 +571,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 307
+      "nloc": 307,
+      "structure": {
+        "cyclomatic": 51,
+        "maxNesting": 5,
+        "functions": 10,
+        "commentRatio": 0.03896103896103896,
+        "longestBlock": 22
+      }
     },
     {
       "file": "src/black/handle_ipynb_magics.py",
@@ -427,7 +595,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 459
+      "nloc": 459,
+      "structure": {
+        "cyclomatic": 35,
+        "maxNesting": 6,
+        "functions": 16,
+        "commentRatio": 0.013043478260869565,
+        "longestBlock": 31
+      }
     },
     {
       "file": "src/black/linegen.py",
@@ -444,7 +619,14 @@
       },
       "defective": true,
       "fixCount": 14,
-      "nloc": 1466
+      "nloc": 1466,
+      "structure": {
+        "cyclomatic": 215,
+        "maxNesting": 7,
+        "functions": 52,
+        "commentRatio": 0.10974778459441036,
+        "longestBlock": 63
+      }
     },
     {
       "file": "src/black/lines.py",
@@ -461,7 +643,14 @@
       },
       "defective": true,
       "fixCount": 6,
-      "nloc": 878
+      "nloc": 878,
+      "structure": {
+        "cyclomatic": 30,
+        "maxNesting": 6,
+        "functions": 11,
+        "commentRatio": 0.07736063708759955,
+        "longestBlock": 48
+      }
     },
     {
       "file": "src/black/mode.py",
@@ -478,7 +667,14 @@
       },
       "defective": true,
       "fixCount": 3,
-      "nloc": 227
+      "nloc": 227,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 5,
+        "functions": 4,
+        "commentRatio": 0.021929824561403508,
+        "longestBlock": 79
+      }
     },
     {
       "file": "src/black/nodes.py",
@@ -495,7 +691,14 @@
       },
       "defective": true,
       "fixCount": 7,
-      "nloc": 862
+      "nloc": 862,
+      "structure": {
+        "cyclomatic": 138,
+        "maxNesting": 5,
+        "functions": 41,
+        "commentRatio": 0.038238702201622246,
+        "longestBlock": 92
+      }
     },
     {
       "file": "src/black/numerics.py",
@@ -512,7 +715,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 60
+      "nloc": 60,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 2,
+        "functions": 5,
+        "commentRatio": 0.01639344262295082,
+        "longestBlock": 14
+      }
     },
     {
       "file": "src/black/output.py",
@@ -529,7 +739,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 105
+      "nloc": 105,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 4,
+        "functions": 8,
+        "commentRatio": 0.02830188679245283,
+        "longestBlock": 15
+      }
     },
     {
       "file": "src/black/parsing.py",
@@ -546,7 +763,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 277
+      "nloc": 277,
+      "structure": {
+        "cyclomatic": 42,
+        "maxNesting": 6,
+        "functions": 10,
+        "commentRatio": 0.12589928057553956,
+        "longestBlock": 15
+      }
     },
     {
       "file": "src/black/report.py",
@@ -563,7 +787,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 106
+      "nloc": 106,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 5,
+        "functions": 5,
+        "commentRatio": 0.018691588785046728,
+        "longestBlock": 17
+      }
     },
     {
       "file": "src/black/rusty.py",
@@ -580,7 +811,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 27
+      "nloc": 27,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "src/black/strings.py",
@@ -597,7 +835,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 238
+      "nloc": 238,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 4,
+        "functions": 2,
+        "commentRatio": 0.0794979079497908,
+        "longestBlock": 25
+      }
     },
     {
       "file": "src/black/trans.py",
@@ -614,7 +859,14 @@
       },
       "defective": true,
       "fixCount": 4,
-      "nloc": 2362
+      "nloc": 2362,
+      "structure": {
+        "cyclomatic": 152,
+        "maxNesting": 7,
+        "functions": 37,
+        "commentRatio": 0.12441811256876852,
+        "longestBlock": 35
+      }
     },
     {
       "file": "src/blackd/__init__.py",
@@ -631,7 +883,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 227
+      "nloc": 227,
+      "structure": {
+        "cyclomatic": 27,
+        "maxNesting": 6,
+        "functions": 6,
+        "commentRatio": 0.03508771929824561,
+        "longestBlock": 31
+      }
     },
     {
       "file": "src/blackd/__main__.py",
@@ -648,7 +907,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 3
+      "nloc": 3,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 1
+      }
     },
     {
       "file": "src/blackd/middlewares.py",
@@ -665,7 +931,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 45
+      "nloc": 45,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 4,
+        "functions": 2,
+        "commentRatio": 0.043478260869565216,
+        "longestBlock": 10
+      }
     },
     {
       "file": "src/blib2to3/__init__.py",
@@ -682,7 +955,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 1
+      "nloc": 1,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0.5,
+        "longestBlock": 1
+      }
     },
     {
       "file": "src/blib2to3/pgen2/__init__.py",
@@ -699,7 +979,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 4
+      "nloc": 4,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0.4,
+        "longestBlock": 2
+      }
     },
     {
       "file": "src/blib2to3/pgen2/conv.py",
@@ -716,7 +1003,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 256
+      "nloc": 256,
+      "structure": {
+        "cyclomatic": 19,
+        "maxNesting": 6,
+        "functions": 4,
+        "commentRatio": 0.05058365758754864,
+        "longestBlock": 38
+      }
     },
     {
       "file": "src/blib2to3/pgen2/driver.py",
@@ -733,7 +1027,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 326
+      "nloc": 326,
+      "structure": {
+        "cyclomatic": 46,
+        "maxNesting": 6,
+        "functions": 19,
+        "commentRatio": 0.0581039755351682,
+        "longestBlock": 51
+      }
     },
     {
       "file": "src/blib2to3/pgen2/grammar.py",
@@ -750,7 +1051,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 227
+      "nloc": 227,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 5,
+        "functions": 7,
+        "commentRatio": 0.06578947368421052,
+        "longestBlock": 50
+      }
     },
     {
       "file": "src/blib2to3/pgen2/literals.py",
@@ -767,7 +1075,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 68
+      "nloc": 68,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0.028985507246376812,
+        "longestBlock": 20
+      }
     },
     {
       "file": "src/blib2to3/pgen2/parse.py",
@@ -784,7 +1099,14 @@
       },
       "defective": true,
       "fixCount": 3,
-      "nloc": 393
+      "nloc": 393,
+      "structure": {
+        "cyclomatic": 40,
+        "maxNesting": 7,
+        "functions": 17,
+        "commentRatio": 0.08883248730964467,
+        "longestBlock": 18
+      }
     },
     {
       "file": "src/blib2to3/pgen2/pgen.py",
@@ -801,7 +1123,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 433
+      "nloc": 433,
+      "structure": {
+        "cyclomatic": 73,
+        "maxNesting": 7,
+        "functions": 27,
+        "commentRatio": 0.08064516129032258,
+        "longestBlock": 33
+      }
     },
     {
       "file": "src/blib2to3/pgen2/token.py",
@@ -818,7 +1147,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 94
+      "nloc": 94,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 2,
+        "functions": 3,
+        "commentRatio": 0.042105263157894736,
+        "longestBlock": 64
+      }
     },
     {
       "file": "src/blib2to3/pgen2/tokenize.py",
@@ -835,7 +1171,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 688
+      "nloc": 688,
+      "structure": {
+        "cyclomatic": 76,
+        "maxNesting": 8,
+        "functions": 10,
+        "commentRatio": 0.03483309143686502,
+        "longestBlock": 52
+      }
     },
     {
       "file": "src/blib2to3/pygram.py",
@@ -852,7 +1195,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 218
+      "nloc": 218,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 3,
+        "functions": 2,
+        "commentRatio": 0.0684931506849315,
+        "longestBlock": 105
+      }
     },
     {
       "file": "src/blib2to3/pytree.py",
@@ -869,7 +1219,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 983
+      "nloc": 983,
+      "structure": {
+        "cyclomatic": 121,
+        "maxNesting": 8,
+        "functions": 68,
+        "commentRatio": 0.029471544715447155,
+        "longestBlock": 37
+      }
     }
   ],
   "total": 51,

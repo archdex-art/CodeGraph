@@ -11,7 +11,7 @@
     "dev": "npm run dev --workspace @codegraph/web",
     "start": "npm run start --workspace @codegraph/web",
     "test": "vitest run",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p scripts/tsconfig.json",
     "lint": "npm run lint --workspaces --if-present",
     "depcruise": "depcruise . --config .dependency-cruiser.cjs --ignore-known",
     "depcruise:all": "depcruise . --config .dependency-cruiser.cjs --no-ignore-known",

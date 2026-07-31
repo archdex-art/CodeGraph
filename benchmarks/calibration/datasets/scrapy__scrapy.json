@@ -19,7 +19,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 80
+      "nloc": 80,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 3,
+        "functions": 7,
+        "commentRatio": 0.09876543209876543,
+        "longestBlock": 8
+      }
     },
     {
       "file": "extras/qps-bench-server.py",
@@ -36,7 +43,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 59
+      "nloc": 59,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 3,
+        "functions": 5,
+        "commentRatio": 0.03333333333333333,
+        "longestBlock": 6
+      }
     },
     {
       "file": "extras/qpsclient.py",
@@ -53,7 +67,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 55
+      "nloc": 55,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0.07142857142857142,
+        "longestBlock": 9
+      }
     },
     {
       "file": "scrapy/__init__.py",
@@ -70,7 +91,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 42
+      "nloc": 42,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.09302325581395349,
+        "longestBlock": 5
+      }
     },
     {
       "file": "scrapy/__main__.py",
@@ -87,7 +115,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 4
+      "nloc": 4,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 2
+      }
     },
     {
       "file": "scrapy/cmdline.py",
@@ -104,7 +139,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 183
+      "nloc": 183,
+      "structure": {
+        "cyclomatic": 31,
+        "maxNesting": 8,
+        "functions": 14,
+        "commentRatio": 0.03804347826086957,
+        "longestBlock": 13
+      }
     },
     {
       "file": "scrapy/commands/__init__.py",
@@ -121,7 +163,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 167
+      "nloc": 167,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 8,
+        "functions": 14,
+        "commentRatio": 0.005952380952380952,
+        "longestBlock": 18
+      }
     },
     {
       "file": "scrapy/commands/bench.py",
@@ -138,7 +187,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 58
+      "nloc": 58,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 9,
+        "functions": 6,
+        "commentRatio": 0,
+        "longestBlock": 7
+      }
     },
     {
       "file": "scrapy/commands/check.py",
@@ -155,7 +211,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 96
+      "nloc": 96,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 7,
+        "functions": 5,
+        "commentRatio": 0.030927835051546393,
+        "longestBlock": 12
+      }
     },
     {
       "file": "scrapy/commands/crawl.py",
@@ -172,7 +235,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 33
+      "nloc": 33,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 4,
+        "functions": 3,
+        "commentRatio": 0,
+        "longestBlock": 6
+      }
     },
     {
       "file": "scrapy/commands/edit.py",
@@ -189,7 +259,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 39
+      "nloc": 39,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 4,
+        "functions": 5,
+        "commentRatio": 0,
+        "longestBlock": 5
+      }
     },
     {
       "file": "scrapy/commands/fetch.py",
@@ -206,7 +283,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 70
+      "nloc": 70,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 7,
+        "functions": 8,
+        "commentRatio": 0.028169014084507043,
+        "longestBlock": 11
+      }
     },
     {
       "file": "scrapy/commands/genspider.py",
@@ -223,7 +307,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 166
+      "nloc": 166,
+      "structure": {
+        "cyclomatic": 24,
+        "maxNesting": 7,
+        "functions": 11,
+        "commentRatio": 0.017964071856287425,
+        "longestBlock": 24
+      }
     },
     {
       "file": "scrapy/commands/list.py",
@@ -240,7 +331,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 14
+      "nloc": 14,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 3,
+        "functions": 2,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "scrapy/commands/parse.py",
@@ -257,7 +355,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 268
+      "nloc": 268,
+      "structure": {
+        "cyclomatic": 48,
+        "maxNesting": 9,
+        "functions": 22,
+        "commentRatio": 0.026022304832713755,
+        "longestBlock": 24
+      }
     },
     {
       "file": "scrapy/commands/runspider.py",
@@ -274,7 +379,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 59
+      "nloc": 59,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 3,
+        "functions": 5,
+        "commentRatio": 0,
+        "longestBlock": 14
+      }
     },
     {
       "file": "scrapy/commands/settings.py",
@@ -291,7 +403,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 47
+      "nloc": 47,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 7,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 16
+      }
     },
     {
       "file": "scrapy/commands/shell.py",
@@ -308,7 +427,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 80
+      "nloc": 80,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 11,
+        "functions": 7,
+        "commentRatio": 0.04938271604938271,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/commands/startproject.py",
@@ -325,7 +451,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 125
+      "nloc": 125,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 6,
+        "functions": 8,
+        "commentRatio": 0,
+        "longestBlock": 11
+      }
     },
     {
       "file": "scrapy/commands/version.py",
@@ -342,7 +475,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 29
+      "nloc": 29,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 7,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/commands/view.py",
@@ -359,7 +499,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 19
+      "nloc": 19,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "scrapy/contracts/__init__.py",
@@ -376,7 +523,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 180
+      "nloc": 180,
+      "structure": {
+        "cyclomatic": 31,
+        "maxNesting": 5,
+        "functions": 16,
+        "commentRatio": 0.027624309392265192,
+        "longestBlock": 15
+      }
     },
     {
       "file": "scrapy/contracts/default.py",
@@ -393,7 +547,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 108
+      "nloc": 108,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 5,
+        "functions": 5,
+        "commentRatio": 0.009174311926605505,
+        "longestBlock": 7
+      }
     },
     {
       "file": "scrapy/core/__init__.py",
@@ -410,7 +571,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 3
+      "nloc": 3,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "scrapy/core/downloader/__init__.py",
@@ -427,7 +595,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 201
+      "nloc": 201,
+      "structure": {
+        "cyclomatic": 23,
+        "maxNesting": 10,
+        "functions": 21,
+        "commentRatio": 0.054455445544554455,
+        "longestBlock": 13
+      }
     },
     {
       "file": "scrapy/core/downloader/contextfactory.py",
@@ -444,7 +619,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 147
+      "nloc": 147,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 9,
+        "functions": 9,
+        "commentRatio": 0.12162162162162163,
+        "longestBlock": 26
+      }
     },
     {
       "file": "scrapy/core/downloader/handlers/__init__.py",
@@ -461,7 +643,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 81
+      "nloc": 81,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 6,
+        "functions": 5,
+        "commentRatio": 0,
+        "longestBlock": 23
+      }
     },
     {
       "file": "scrapy/core/downloader/handlers/datauri.py",
@@ -478,7 +667,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 22
+      "nloc": 22,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 4,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 5
+      }
     },
     {
       "file": "scrapy/core/downloader/handlers/file.py",
@@ -495,7 +691,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 17
+      "nloc": 17,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 6
+      }
     },
     {
       "file": "scrapy/core/downloader/handlers/ftp.py",
@@ -512,7 +715,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 119
+      "nloc": 119,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 12,
+        "functions": 10,
+        "commentRatio": 0,
+        "longestBlock": 10
+      }
     },
     {
       "file": "scrapy/core/downloader/handlers/http.py",
@@ -529,7 +739,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 4
+      "nloc": 4,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 4
+      }
     },
     {
       "file": "scrapy/core/downloader/handlers/http10.py",
@@ -546,7 +763,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 36
+      "nloc": 36,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 4,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 11
+      }
     },
     {
       "file": "scrapy/core/downloader/handlers/http11.py",
@@ -563,7 +787,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 575
+      "nloc": 575,
+      "structure": {
+        "cyclomatic": 42,
+        "maxNesting": 7,
+        "functions": 35,
+        "commentRatio": 0.052083333333333336,
+        "longestBlock": 30
+      }
     },
     {
       "file": "scrapy/core/downloader/handlers/http2.py",
@@ -580,7 +811,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 117
+      "nloc": 117,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 4,
+        "functions": 9,
+        "commentRatio": 0.00847457627118644,
+        "longestBlock": 12
+      }
     },
     {
       "file": "scrapy/core/downloader/handlers/s3.py",
@@ -597,7 +835,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 73
+      "nloc": 73,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 4,
+        "functions": 3,
+        "commentRatio": 0.04054054054054054,
+        "longestBlock": 19
+      }
     },
     {
       "file": "scrapy/core/downloader/middleware.py",
@@ -614,7 +859,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 88
+      "nloc": 88,
+      "structure": {
+        "cyclomatic": 15,
+        "maxNesting": 6,
+        "functions": 6,
+        "commentRatio": 0,
+        "longestBlock": 14
+      }
     },
     {
       "file": "scrapy/core/downloader/tls.py",
@@ -631,7 +883,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 75
+      "nloc": 75,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 7,
+        "functions": 2,
+        "commentRatio": 0,
+        "longestBlock": 18
+      }
     },
     {
       "file": "scrapy/core/downloader/webclient.py",
@@ -648,7 +907,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 216
+      "nloc": 216,
+      "structure": {
+        "cyclomatic": 21,
+        "maxNesting": 7,
+        "functions": 21,
+        "commentRatio": 0.10599078341013825,
+        "longestBlock": 12
+      }
     },
     {
       "file": "scrapy/core/engine.py",
@@ -665,7 +931,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 423
+      "nloc": 423,
+      "structure": {
+        "cyclomatic": 52,
+        "maxNesting": 10,
+        "functions": 33,
+        "commentRatio": 0.0023584905660377358,
+        "longestBlock": 22
+      }
     },
     {
       "file": "scrapy/core/http2/__init__.py",
@@ -682,7 +955,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 0
+      "nloc": 0,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 0
+      }
     },
     {
       "file": "scrapy/core/http2/agent.py",
@@ -699,7 +979,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 157
+      "nloc": 157,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 3,
+        "functions": 13,
+        "commentRatio": 0.0759493670886076,
+        "longestBlock": 18
+      }
     },
     {
       "file": "scrapy/core/http2/protocol.py",
@@ -716,7 +1003,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 418
+      "nloc": 418,
+      "structure": {
+        "cyclomatic": 30,
+        "maxNesting": 4,
+        "functions": 34,
+        "commentRatio": 0.11217183770883055,
+        "longestBlock": 20
+      }
     },
     {
       "file": "scrapy/core/http2/stream.py",
@@ -733,7 +1027,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 468
+      "nloc": 468,
+      "structure": {
+        "cyclomatic": 44,
+        "maxNesting": 7,
+        "functions": 20,
+        "commentRatio": 0.14285714285714285,
+        "longestBlock": 17
+      }
     },
     {
       "file": "scrapy/core/scheduler.py",
@@ -750,7 +1051,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 341
+      "nloc": 341,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 7,
+        "functions": 24,
+        "commentRatio": 0.008771929824561403,
+        "longestBlock": 22
+      }
     },
     {
       "file": "scrapy/core/scraper.py",
@@ -767,7 +1075,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 310
+      "nloc": 310,
+      "structure": {
+        "cyclomatic": 26,
+        "maxNesting": 8,
+        "functions": 22,
+        "commentRatio": 0.012861736334405145,
+        "longestBlock": 26
+      }
     },
     {
       "file": "scrapy/core/spidermw.py",
@@ -784,7 +1099,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 270
+      "nloc": 270,
+      "structure": {
+        "cyclomatic": 47,
+        "maxNesting": 16,
+        "functions": 24,
+        "commentRatio": 0.08856088560885608,
+        "longestBlock": 53
+      }
     },
     {
       "file": "scrapy/crawler.py",
@@ -801,7 +1123,14 @@
       },
       "defective": true,
       "fixCount": 3,
-      "nloc": 381
+      "nloc": 381,
+      "structure": {
+        "cyclomatic": 30,
+        "maxNesting": 5,
+        "functions": 22,
+        "commentRatio": 0.02617801047120419,
+        "longestBlock": 23
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/__init__.py",
@@ -818,7 +1147,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 0
+      "nloc": 0,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 0
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/ajaxcrawl.py",
@@ -835,7 +1171,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 93
+      "nloc": 93,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 5,
+        "functions": 5,
+        "commentRatio": 0.10638297872340426,
+        "longestBlock": 11
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/cookies.py",
@@ -852,7 +1195,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 137
+      "nloc": 137,
+      "structure": {
+        "cyclomatic": 26,
+        "maxNesting": 8,
+        "functions": 10,
+        "commentRatio": 0.014492753623188406,
+        "longestBlock": 22
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/decompression.py",
@@ -869,7 +1219,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 92
+      "nloc": 92,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 7,
+        "functions": 6,
+        "commentRatio": 0,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/defaultheaders.py",
@@ -886,7 +1243,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 22
+      "nloc": 22,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0,
+        "longestBlock": 4
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/downloadtimeout.py",
@@ -903,7 +1267,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 26
+      "nloc": 26,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 3,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 5
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/httpauth.py",
@@ -920,7 +1291,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 50
+      "nloc": 50,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 7,
+        "functions": 3,
+        "commentRatio": 0,
+        "longestBlock": 15
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/httpcache.py",
@@ -937,7 +1315,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 133
+      "nloc": 133,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 6,
+        "functions": 8,
+        "commentRatio": 0.06716417910447761,
+        "longestBlock": 11
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/httpcompression.py",
@@ -954,7 +1339,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 100
+      "nloc": 100,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 8,
+        "functions": 5,
+        "commentRatio": 0.0891089108910891,
+        "longestBlock": 21
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/httpproxy.py",
@@ -971,7 +1363,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 84
+      "nloc": 84,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 5,
+        "functions": 6,
+        "commentRatio": 0.03529411764705882,
+        "longestBlock": 18
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/redirect.py",
@@ -988,7 +1387,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 131
+      "nloc": 131,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 10,
+        "functions": 8,
+        "commentRatio": 0.007575757575757576,
+        "longestBlock": 14
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/retry.py",
@@ -1005,7 +1411,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 170
+      "nloc": 170,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 6,
+        "functions": 6,
+        "commentRatio": 0.05263157894736842,
+        "longestBlock": 22
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/robotstxt.py",
@@ -1022,7 +1435,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 108
+      "nloc": 108,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 6,
+        "functions": 9,
+        "commentRatio": 0.009174311926605505,
+        "longestBlock": 13
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/stats.py",
@@ -1039,7 +1459,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 50
+      "nloc": 50,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 4,
+        "functions": 7,
+        "commentRatio": 0.0392156862745098,
+        "longestBlock": 7
+      }
     },
     {
       "file": "scrapy/downloadermiddlewares/useragent.py",
@@ -1056,7 +1483,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 23
+      "nloc": 23,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 3,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 5
+      }
     },
     {
       "file": "scrapy/dupefilters.py",
@@ -1073,7 +1507,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 125
+      "nloc": 125,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 4,
+        "functions": 12,
+        "commentRatio": 0.007936507936507936,
+        "longestBlock": 18
+      }
     },
     {
       "file": "scrapy/exceptions.py",
@@ -1090,7 +1531,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 89
+      "nloc": 89,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 3,
+        "commentRatio": 0.044444444444444446,
+        "longestBlock": 6
+      }
     },
     {
       "file": "scrapy/exporters.py",
@@ -1107,7 +1555,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 355
+      "nloc": 355,
+      "structure": {
+        "cyclomatic": 49,
+        "maxNesting": 11,
+        "functions": 38,
+        "commentRatio": 0.011235955056179775,
+        "longestBlock": 19
+      }
     },
     {
       "file": "scrapy/extension.py",
@@ -1124,7 +1579,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 16
+      "nloc": 16,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 4
+      }
     },
     {
       "file": "scrapy/extensions/__init__.py",
@@ -1141,7 +1603,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 0
+      "nloc": 0,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 0
+      }
     },
     {
       "file": "scrapy/extensions/closespider.py",
@@ -1158,7 +1627,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 68
+      "nloc": 68,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 9,
+        "functions": 7,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "scrapy/extensions/corestats.py",
@@ -1175,7 +1651,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 46
+      "nloc": 46,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 7,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "scrapy/extensions/debug.py",
@@ -1192,7 +1675,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 64
+      "nloc": 64,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 5,
+        "functions": 6,
+        "commentRatio": 0.03076923076923077,
+        "longestBlock": 9
+      }
     },
     {
       "file": "scrapy/extensions/feedexport.py",
@@ -1209,7 +1699,14 @@
       },
       "defective": true,
       "fixCount": 5,
-      "nloc": 556
+      "nloc": 556,
+      "structure": {
+        "cyclomatic": 51,
+        "maxNesting": 7,
+        "functions": 47,
+        "commentRatio": 0.02154398563734291,
+        "longestBlock": 25
+      }
     },
     {
       "file": "scrapy/extensions/httpcache.py",
@@ -1226,7 +1723,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 372
+      "nloc": 372,
+      "structure": {
+        "cyclomatic": 54,
+        "maxNesting": 5,
+        "functions": 31,
+        "commentRatio": 0.10455764075067024,
+        "longestBlock": 27
+      }
     },
     {
       "file": "scrapy/extensions/logstats.py",
@@ -1243,7 +1747,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 52
+      "nloc": 52,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 5,
+        "functions": 5,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "scrapy/extensions/memdebug.py",
@@ -1260,7 +1771,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 33
+      "nloc": 33,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 4,
+        "functions": 3,
+        "commentRatio": 0,
+        "longestBlock": 7
+      }
     },
     {
       "file": "scrapy/extensions/memusage.py",
@@ -1277,7 +1795,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 127
+      "nloc": 127,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 6,
+        "functions": 9,
+        "commentRatio": 0.015625,
+        "longestBlock": 16
+      }
     },
     {
       "file": "scrapy/extensions/postprocessing.py",
@@ -1294,7 +1819,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 154
+      "nloc": 154,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 8,
+        "functions": 16,
+        "commentRatio": 0.01935483870967742,
+        "longestBlock": 12
+      }
     },
     {
       "file": "scrapy/extensions/spiderstate.py",
@@ -1311,7 +1843,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 40
+      "nloc": 40,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 4,
+        "functions": 5,
+        "commentRatio": 0,
+        "longestBlock": 6
+      }
     },
     {
       "file": "scrapy/extensions/statsmailer.py",
@@ -1328,7 +1867,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 35
+      "nloc": 35,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "scrapy/extensions/telnet.py",
@@ -1345,7 +1891,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 114
+      "nloc": 114,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 5,
+        "functions": 8,
+        "commentRatio": 0.02608695652173913,
+        "longestBlock": 18
+      }
     },
     {
       "file": "scrapy/extensions/throttle.py",
@@ -1362,7 +1915,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 93
+      "nloc": 93,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 5,
+        "functions": 9,
+        "commentRatio": 0.11702127659574468,
+        "longestBlock": 17
+      }
     },
     {
       "file": "scrapy/http/__init__.py",
@@ -1379,7 +1939,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 18
+      "nloc": 18,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 4
+      }
     },
     {
       "file": "scrapy/http/common.py",
@@ -1396,7 +1963,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 6
+      "nloc": 6,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 2,
+        "commentRatio": 0,
+        "longestBlock": 6
+      }
     },
     {
       "file": "scrapy/http/cookies.py",
@@ -1413,7 +1987,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 193
+      "nloc": 193,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 6,
+        "functions": 32,
+        "commentRatio": 0.02577319587628866,
+        "longestBlock": 11
+      }
     },
     {
       "file": "scrapy/http/headers.py",
@@ -1430,7 +2011,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 98
+      "nloc": 98,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 4,
+        "functions": 16,
+        "commentRatio": 0,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/http/request/__init__.py",
@@ -1447,7 +2035,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 206
+      "nloc": 206,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 5,
+        "functions": 15,
+        "commentRatio": 0.028985507246376812,
+        "longestBlock": 23
+      }
     },
     {
       "file": "scrapy/http/request/form.py",
@@ -1464,7 +2059,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 243
+      "nloc": 243,
+      "structure": {
+        "cyclomatic": 50,
+        "maxNesting": 6,
+        "functions": 10,
+        "commentRatio": 0.05327868852459016,
+        "longestBlock": 15
+      }
     },
     {
       "file": "scrapy/http/request/json_request.py",
@@ -1481,7 +2083,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 62
+      "nloc": 62,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 4,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 6
+      }
     },
     {
       "file": "scrapy/http/request/rpc.py",
@@ -1498,7 +2107,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 35
+      "nloc": 35,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 3,
+        "functions": 1,
+        "commentRatio": 0.08333333333333333,
+        "longestBlock": 4
+      }
     },
     {
       "file": "scrapy/http/response/__init__.py",
@@ -1515,7 +2131,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 214
+      "nloc": 214,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 7,
+        "functions": 16,
+        "commentRatio": 0,
+        "longestBlock": 24
+      }
     },
     {
       "file": "scrapy/http/response/html.py",
@@ -1532,7 +2155,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 12
+      "nloc": 12,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "scrapy/http/response/text.py",
@@ -1549,7 +2179,14 @@
       },
       "defective": true,
       "fixCount": 4,
-      "nloc": 262
+      "nloc": 262,
+      "structure": {
+        "cyclomatic": 25,
+        "maxNesting": 10,
+        "functions": 19,
+        "commentRatio": 0.045627376425855515,
+        "longestBlock": 36
+      }
     },
     {
       "file": "scrapy/http/response/xml.py",
@@ -1566,7 +2203,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 12
+      "nloc": 12,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "scrapy/interfaces.py",
@@ -1583,7 +2227,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 18
+      "nloc": 18,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "scrapy/item.py",
@@ -1600,7 +2251,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 120
+      "nloc": 120,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 4,
+        "functions": 13,
+        "commentRatio": 0,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/link.py",
@@ -1617,7 +2275,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 53
+      "nloc": 53,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 5,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/linkextractors/__init__.py",
@@ -1634,7 +2299,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 47
+      "nloc": 47,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 1,
+        "functions": 2,
+        "commentRatio": 0.16666666666666666,
+        "longestBlock": 4
+      }
     },
     {
       "file": "scrapy/linkextractors/lxmlhtml.py",
@@ -1651,7 +2323,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 213
+      "nloc": 213,
+      "structure": {
+        "cyclomatic": 45,
+        "maxNesting": 10,
+        "functions": 15,
+        "commentRatio": 0.018691588785046728,
+        "longestBlock": 30
+      }
     },
     {
       "file": "scrapy/loader/__init__.py",
@@ -1668,7 +2347,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 91
+      "nloc": 91,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 4,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/loader/common.py",
@@ -1685,7 +2371,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 21
+      "nloc": 21,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 10
+      }
     },
     {
       "file": "scrapy/loader/processors.py",
@@ -1702,7 +2395,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 21
+      "nloc": 21,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "scrapy/logformatter.py",
@@ -1719,7 +2419,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 147
+      "nloc": 147,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 7,
+        "functions": 7,
+        "commentRatio": 0.02702702702702703,
+        "longestBlock": 17
+      }
     },
     {
       "file": "scrapy/mail.py",
@@ -1736,7 +2443,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 145
+      "nloc": 145,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 6,
+        "functions": 7,
+        "commentRatio": 0.02054794520547945,
+        "longestBlock": 13
+      }
     },
     {
       "file": "scrapy/middleware.py",
@@ -1753,7 +2467,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 80
+      "nloc": 80,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 8,
+        "functions": 9,
+        "commentRatio": 0.024691358024691357,
+        "longestBlock": 17
+      }
     },
     {
       "file": "scrapy/pipelines/__init__.py",
@@ -1770,7 +2491,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 26
+      "nloc": 26,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0,
+        "longestBlock": 4
+      }
     },
     {
       "file": "scrapy/pipelines/files.py",
@@ -1787,7 +2515,14 @@
       },
       "defective": true,
       "fixCount": 4,
-      "nloc": 520
+      "nloc": 520,
+      "structure": {
+        "cyclomatic": 40,
+        "maxNesting": 9,
+        "functions": 33,
+        "commentRatio": 0.015355086372360844,
+        "longestBlock": 40
+      }
     },
     {
       "file": "scrapy/pipelines/images.py",
@@ -1804,7 +2539,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 218
+      "nloc": 218,
+      "structure": {
+        "cyclomatic": 26,
+        "maxNesting": 9,
+        "functions": 11,
+        "commentRatio": 0.0273972602739726,
+        "longestBlock": 17
+      }
     },
     {
       "file": "scrapy/pipelines/media.py",
@@ -1821,7 +2563,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 251
+      "nloc": 251,
+      "structure": {
+        "cyclomatic": 27,
+        "maxNesting": 9,
+        "functions": 21,
+        "commentRatio": 0.11507936507936507,
+        "longestBlock": 24
+      }
     },
     {
       "file": "scrapy/pqueues.py",
@@ -1838,7 +2587,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 231
+      "nloc": 231,
+      "structure": {
+        "cyclomatic": 29,
+        "maxNesting": 7,
+        "functions": 24,
+        "commentRatio": 0.02586206896551724,
+        "longestBlock": 12
+      }
     },
     {
       "file": "scrapy/resolver.py",
@@ -1855,7 +2611,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 124
+      "nloc": 124,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 4,
+        "functions": 15,
+        "commentRatio": 0.04,
+        "longestBlock": 19
+      }
     },
     {
       "file": "scrapy/responsetypes.py",
@@ -1872,7 +2635,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 120
+      "nloc": 120,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 4,
+        "functions": 8,
+        "commentRatio": 0,
+        "longestBlock": 17
+      }
     },
     {
       "file": "scrapy/robotstxt.py",
@@ -1889,7 +2659,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 129
+      "nloc": 129,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 3,
+        "functions": 15,
+        "commentRatio": 0.015384615384615385,
+        "longestBlock": 17
+      }
     },
     {
       "file": "scrapy/selector/__init__.py",
@@ -1906,7 +2683,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 6
+      "nloc": 6,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0.14285714285714285,
+        "longestBlock": 3
+      }
     },
     {
       "file": "scrapy/selector/unified.py",
@@ -1923,7 +2707,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 82
+      "nloc": 82,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 7,
+        "functions": 3,
+        "commentRatio": 0.03614457831325301,
+        "longestBlock": 5
+      }
     },
     {
       "file": "scrapy/settings/__init__.py",
@@ -1940,7 +2731,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 473
+      "nloc": 473,
+      "structure": {
+        "cyclomatic": 42,
+        "maxNesting": 7,
+        "functions": 37,
+        "commentRatio": 0.010548523206751054,
+        "longestBlock": 14
+      }
     },
     {
       "file": "scrapy/settings/default_settings.py",
@@ -1957,7 +2755,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 311
+      "nloc": 311,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 1,
+        "functions": 1,
+        "commentRatio": 0.02564102564102564,
+        "longestBlock": 28
+      }
     },
     {
       "file": "scrapy/shell.py",
@@ -1974,7 +2779,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 194
+      "nloc": 194,
+      "structure": {
+        "cyclomatic": 21,
+        "maxNesting": 8,
+        "functions": 12,
+        "commentRatio": 0.03076923076923077,
+        "longestBlock": 38
+      }
     },
     {
       "file": "scrapy/signalmanager.py",
@@ -1991,7 +2803,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 68
+      "nloc": 68,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 6,
+        "commentRatio": 0,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/signals.py",
@@ -2008,7 +2827,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 33
+      "nloc": 33,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0.029411764705882353,
+        "longestBlock": 17
+      }
     },
     {
       "file": "scrapy/spiderloader.py",
@@ -2025,7 +2851,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 92
+      "nloc": 92,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 6,
+        "functions": 8,
+        "commentRatio": 0,
+        "longestBlock": 16
+      }
     },
     {
       "file": "scrapy/spidermiddlewares/__init__.py",
@@ -2042,7 +2875,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 0
+      "nloc": 0,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 0
+      }
     },
     {
       "file": "scrapy/spidermiddlewares/depth.py",
@@ -2059,7 +2899,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 66
+      "nloc": 66,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 8,
+        "functions": 6,
+        "commentRatio": 0.014925373134328358,
+        "longestBlock": 20
+      }
     },
     {
       "file": "scrapy/spidermiddlewares/httperror.py",
@@ -2076,7 +2923,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 57
+      "nloc": 57,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 4,
+        "functions": 5,
+        "commentRatio": 0,
+        "longestBlock": 15
+      }
     },
     {
       "file": "scrapy/spidermiddlewares/offsite.py",
@@ -2093,7 +2947,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 91
+      "nloc": 91,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 6,
+        "functions": 8,
+        "commentRatio": 0.010869565217391304,
+        "longestBlock": 23
+      }
     },
     {
       "file": "scrapy/spidermiddlewares/referer.py",
@@ -2110,7 +2971,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 367
+      "nloc": 367,
+      "structure": {
+        "cyclomatic": 34,
+        "maxNesting": 6,
+        "functions": 23,
+        "commentRatio": 0.02717391304347826,
+        "longestBlock": 20
+      }
     },
     {
       "file": "scrapy/spidermiddlewares/urllength.py",
@@ -2127,7 +2995,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 44
+      "nloc": 44,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 4,
+        "functions": 5,
+        "commentRatio": 0,
+        "longestBlock": 10
+      }
     },
     {
       "file": "scrapy/spiders/__init__.py",
@@ -2144,7 +3019,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 98
+      "nloc": 98,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 4,
+        "functions": 12,
+        "commentRatio": 0.010101010101010102,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/spiders/crawl.py",
@@ -2161,7 +3043,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 144
+      "nloc": 144,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 5,
+        "functions": 17,
+        "commentRatio": 0,
+        "longestBlock": 17
+      }
     },
     {
       "file": "scrapy/spiders/feed.py",
@@ -2178,7 +3067,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 135
+      "nloc": 135,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 4,
+        "functions": 12,
+        "commentRatio": 0,
+        "longestBlock": 13
+      }
     },
     {
       "file": "scrapy/spiders/init.py",
@@ -2195,7 +3091,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 31
+      "nloc": 31,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 3,
+        "commentRatio": 0,
+        "longestBlock": 7
+      }
     },
     {
       "file": "scrapy/spiders/sitemap.py",
@@ -2212,7 +3115,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 99
+      "nloc": 99,
+      "structure": {
+        "cyclomatic": 25,
+        "maxNesting": 7,
+        "functions": 7,
+        "commentRatio": 0.1,
+        "longestBlock": 19
+      }
     },
     {
       "file": "scrapy/squeues.py",
@@ -2229,7 +3139,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 185
+      "nloc": 185,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 4,
+        "functions": 16,
+        "commentRatio": 0.021505376344086023,
+        "longestBlock": 27
+      }
     },
     {
       "file": "scrapy/statscollectors.py",
@@ -2246,7 +3163,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 82
+      "nloc": 82,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 6,
+        "functions": 20,
+        "commentRatio": 0,
+        "longestBlock": 5
+      }
     },
     {
       "file": "scrapy/templates/project/module/__init__.py",
@@ -2263,7 +3187,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 0
+      "nloc": 0,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 0
+      }
     },
     {
       "file": "scrapy/templates/project/module/spiders/__init__.py",
@@ -2280,7 +3211,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 4
+      "nloc": 4,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0.8,
+        "longestBlock": 4
+      }
     },
     {
       "file": "scrapy/utils/__init__.py",
@@ -2297,7 +3235,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 0
+      "nloc": 0,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 0
+      }
     },
     {
       "file": "scrapy/utils/asyncgen.py",
@@ -2314,7 +3259,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 18
+      "nloc": 18,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 3,
+        "functions": 2,
+        "commentRatio": 0,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/utils/benchserver.py",
@@ -2331,7 +3283,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 44
+      "nloc": 44,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 6,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 13
+      }
     },
     {
       "file": "scrapy/utils/boto.py",
@@ -2348,7 +3307,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 9
+      "nloc": 9,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 6
+      }
     },
     {
       "file": "scrapy/utils/conf.py",
@@ -2365,7 +3331,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 206
+      "nloc": 206,
+      "structure": {
+        "cyclomatic": 31,
+        "maxNesting": 9,
+        "functions": 12,
+        "commentRatio": 0.004830917874396135,
+        "longestBlock": 18
+      }
     },
     {
       "file": "scrapy/utils/console.py",
@@ -2382,7 +3355,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 104
+      "nloc": 104,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 4,
+        "functions": 11,
+        "commentRatio": 0.05714285714285714,
+        "longestBlock": 16
+      }
     },
     {
       "file": "scrapy/utils/curl.py",
@@ -2399,7 +3379,14 @@
       },
       "defective": true,
       "fixCount": 5,
-      "nloc": 106
+      "nloc": 106,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 10,
+        "functions": 3,
+        "commentRatio": 0.056074766355140186,
+        "longestBlock": 12
+      }
     },
     {
       "file": "scrapy/utils/datatypes.py",
@@ -2416,7 +3403,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 119
+      "nloc": 119,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 4,
+        "functions": 21,
+        "commentRatio": 0,
+        "longestBlock": 5
+      }
     },
     {
       "file": "scrapy/utils/decorators.py",
@@ -2433,7 +3427,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 45
+      "nloc": 45,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 4,
+        "functions": 7,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "scrapy/utils/defer.py",
@@ -2450,7 +3451,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 352
+      "nloc": 352,
+      "structure": {
+        "cyclomatic": 36,
+        "maxNesting": 4,
+        "functions": 22,
+        "commentRatio": 0.042492917847025496,
+        "longestBlock": 20
+      }
     },
     {
       "file": "scrapy/utils/deprecate.py",
@@ -2467,7 +3475,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 173
+      "nloc": 173,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 12,
+        "functions": 10,
+        "commentRatio": 0.07471264367816093,
+        "longestBlock": 25
+      }
     },
     {
       "file": "scrapy/utils/display.py",
@@ -2484,7 +3499,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 48
+      "nloc": 48,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 2,
+        "functions": 5,
+        "commentRatio": 0.061224489795918366,
+        "longestBlock": 11
+      }
     },
     {
       "file": "scrapy/utils/engine.py",
@@ -2501,7 +3523,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 47
+      "nloc": 47,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0.020833333333333332,
+        "longestBlock": 18
+      }
     },
     {
       "file": "scrapy/utils/ftp.py",
@@ -2518,7 +3547,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 36
+      "nloc": 36,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 3,
+        "functions": 2,
+        "commentRatio": 0.02702702702702703,
+        "longestBlock": 17
+      }
     },
     {
       "file": "scrapy/utils/gz.py",
@@ -2535,7 +3571,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 34
+      "nloc": 34,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 5,
+        "functions": 3,
+        "commentRatio": 0.11428571428571428,
+        "longestBlock": 22
+      }
     },
     {
       "file": "scrapy/utils/httpobj.py",
@@ -2552,7 +3595,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 19
+      "nloc": 19,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 7
+      }
     },
     {
       "file": "scrapy/utils/iterators.py",
@@ -2569,7 +3619,14 @@
       },
       "defective": true,
       "fixCount": 3,
-      "nloc": 159
+      "nloc": 159,
+      "structure": {
+        "cyclomatic": 29,
+        "maxNesting": 7,
+        "functions": 9,
+        "commentRatio": 0,
+        "longestBlock": 16
+      }
     },
     {
       "file": "scrapy/utils/job.py",
@@ -2586,7 +3643,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 11
+      "nloc": 11,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 5
+      }
     },
     {
       "file": "scrapy/utils/log.py",
@@ -2603,7 +3667,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 225
+      "nloc": 225,
+      "structure": {
+        "cyclomatic": 22,
+        "maxNesting": 5,
+        "functions": 16,
+        "commentRatio": 0.01327433628318584,
+        "longestBlock": 18
+      }
     },
     {
       "file": "scrapy/utils/misc.py",
@@ -2620,7 +3691,14 @@
       },
       "defective": true,
       "fixCount": 3,
-      "nloc": 273
+      "nloc": 273,
+      "structure": {
+        "cyclomatic": 37,
+        "maxNesting": 6,
+        "functions": 12,
+        "commentRatio": 0.010948905109489052,
+        "longestBlock": 25
+      }
     },
     {
       "file": "scrapy/utils/ossignal.py",
@@ -2637,7 +3715,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 25
+      "nloc": 25,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 3,
+        "functions": 1,
+        "commentRatio": 0.038461538461538464,
+        "longestBlock": 14
+      }
     },
     {
       "file": "scrapy/utils/project.py",
@@ -2654,7 +3739,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 83
+      "nloc": 83,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 5,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 15
+      }
     },
     {
       "file": "scrapy/utils/python.py",
@@ -2671,7 +3763,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 327
+      "nloc": 327,
+      "structure": {
+        "cyclomatic": 49,
+        "maxNesting": 6,
+        "functions": 27,
+        "commentRatio": 0.012195121951219513,
+        "longestBlock": 25
+      }
     },
     {
       "file": "scrapy/utils/reactor.py",
@@ -2688,7 +3787,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 136
+      "nloc": 136,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 4,
+        "functions": 11,
+        "commentRatio": 0.029197080291970802,
+        "longestBlock": 17
+      }
     },
     {
       "file": "scrapy/utils/reqser.py",
@@ -2705,7 +3811,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 22
+      "nloc": 22,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 2,
+        "commentRatio": 0,
+        "longestBlock": 6
+      }
     },
     {
       "file": "scrapy/utils/request.py",
@@ -2722,7 +3835,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 328
+      "nloc": 328,
+      "structure": {
+        "cyclomatic": 28,
+        "maxNesting": 6,
+        "functions": 12,
+        "commentRatio": 0.00911854103343465,
+        "longestBlock": 74
+      }
     },
     {
       "file": "scrapy/utils/response.py",
@@ -2739,7 +3859,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 98
+      "nloc": 98,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 6,
+        "functions": 5,
+        "commentRatio": 0.010101010101010102,
+        "longestBlock": 25
+      }
     },
     {
       "file": "scrapy/utils/serialize.py",
@@ -2756,7 +3883,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 39
+      "nloc": 39,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 3,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 20
+      }
     },
     {
       "file": "scrapy/utils/signal.py",
@@ -2773,7 +3907,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 78
+      "nloc": 78,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 7,
+        "functions": 4,
+        "commentRatio": 0,
+        "longestBlock": 26
+      }
     },
     {
       "file": "scrapy/utils/sitemap.py",
@@ -2790,7 +3931,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 47
+      "nloc": 47,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/utils/spider.py",
@@ -2807,7 +3955,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 68
+      "nloc": 68,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.028985507246376812,
+        "longestBlock": 8
+      }
     },
     {
       "file": "scrapy/utils/ssl.py",
@@ -2824,7 +3979,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 61
+      "nloc": 61,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 3,
+        "functions": 4,
+        "commentRatio": 0.06451612903225806,
+        "longestBlock": 27
+      }
     },
     {
       "file": "scrapy/utils/template.py",
@@ -2841,7 +4003,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 37
+      "nloc": 37,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 2,
+        "functions": 2,
+        "commentRatio": 0,
+        "longestBlock": 5
+      }
     },
     {
       "file": "scrapy/utils/test.py",
@@ -2858,7 +4027,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 125
+      "nloc": 125,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 2,
+        "functions": 12,
+        "commentRatio": 0.007936507936507936,
+        "longestBlock": 10
+      }
     },
     {
       "file": "scrapy/utils/testproc.py",
@@ -2875,7 +4051,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 50
+      "nloc": 50,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 3,
+        "functions": 6,
+        "commentRatio": 0,
+        "longestBlock": 10
+      }
     },
     {
       "file": "scrapy/utils/testsite.py",
@@ -2892,7 +4075,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 44
+      "nloc": 44,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 7,
+        "functions": 5,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "scrapy/utils/trackref.py",
@@ -2909,7 +4099,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 67
+      "nloc": 67,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 7,
+        "functions": 5,
+        "commentRatio": 0,
+        "longestBlock": 13
+      }
     },
     {
       "file": "scrapy/utils/url.py",
@@ -2926,7 +4123,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 165
+      "nloc": 165,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 13,
+        "functions": 11,
+        "commentRatio": 0.012048192771084338,
+        "longestBlock": 20
+      }
     },
     {
       "file": "scrapy/utils/versions.py",
@@ -2943,7 +4147,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 31
+      "nloc": 31,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 13
+      }
     },
     {
       "file": "setup.py",
@@ -2960,7 +4171,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 96
+      "nloc": 96,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 46
+      }
     }
   ],
   "total": 174,

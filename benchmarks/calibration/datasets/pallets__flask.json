@@ -19,7 +19,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 17
+      "nloc": 17,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0.05555555555555555,
+        "longestBlock": 15
+      }
     },
     {
       "file": "src/flask/__init__.py",
@@ -36,7 +43,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 71
+      "nloc": 71,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 3,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 40
+      }
     },
     {
       "file": "src/flask/__main__.py",
@@ -53,7 +67,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 3
+      "nloc": 3,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 1
+      }
     },
     {
       "file": "src/flask/app.py",
@@ -70,7 +91,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 2551
+      "nloc": 2551,
+      "structure": {
+        "cyclomatic": 182,
+        "maxNesting": 9,
+        "functions": 84,
+        "commentRatio": 0.09678683385579938,
+        "longestBlock": 37
+      }
     },
     {
       "file": "src/flask/blueprints.py",
@@ -87,7 +115,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 706
+      "nloc": 706,
+      "structure": {
+        "cyclomatic": 40,
+        "maxNesting": 7,
+        "functions": 37,
+        "commentRatio": 0.026874115983026876,
+        "longestBlock": 28
+      }
     },
     {
       "file": "src/flask/cli.py",
@@ -104,7 +139,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 1054
+      "nloc": 1054,
+      "structure": {
+        "cyclomatic": 122,
+        "maxNesting": 6,
+        "functions": 37,
+        "commentRatio": 0.07677725118483412,
+        "longestBlock": 65
+      }
     },
     {
       "file": "src/flask/config.py",
@@ -121,7 +163,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 338
+      "nloc": 338,
+      "structure": {
+        "cyclomatic": 26,
+        "maxNesting": 6,
+        "functions": 12,
+        "commentRatio": 0.017699115044247787,
+        "longestBlock": 16
+      }
     },
     {
       "file": "src/flask/ctx.py",
@@ -138,7 +187,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 438
+      "nloc": 438,
+      "structure": {
+        "cyclomatic": 28,
+        "maxNesting": 5,
+        "functions": 27,
+        "commentRatio": 0.04100227790432802,
+        "longestBlock": 23
+      }
     },
     {
       "file": "src/flask/debughelpers.py",
@@ -155,7 +211,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 158
+      "nloc": 158,
+      "structure": {
+        "cyclomatic": 22,
+        "maxNesting": 5,
+        "functions": 7,
+        "commentRatio": 0,
+        "longestBlock": 17
+      }
     },
     {
       "file": "src/flask/globals.py",
@@ -172,7 +235,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 107
+      "nloc": 107,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 3,
+        "functions": 6,
+        "commentRatio": 0,
+        "longestBlock": 15
+      }
     },
     {
       "file": "src/flask/helpers.py",
@@ -189,7 +259,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 705
+      "nloc": 705,
+      "structure": {
+        "cyclomatic": 34,
+        "maxNesting": 7,
+        "functions": 23,
+        "commentRatio": 0.04815864022662889,
+        "longestBlock": 22
+      }
     },
     {
       "file": "src/flask/json/__init__.py",
@@ -206,7 +283,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 342
+      "nloc": 342,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 3,
+        "functions": 10,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "src/flask/json/provider.py",
@@ -223,7 +307,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 310
+      "nloc": 310,
+      "structure": {
+        "cyclomatic": 21,
+        "maxNesting": 4,
+        "functions": 11,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "src/flask/json/tag.py",
@@ -240,7 +331,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 312
+      "nloc": 312,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 4,
+        "functions": 33,
+        "commentRatio": 0.038338658146964855,
+        "longestBlock": 12
+      }
     },
     {
       "file": "src/flask/logging.py",
@@ -257,7 +355,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 74
+      "nloc": 74,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0.02666666666666667,
+        "longestBlock": 6
+      }
     },
     {
       "file": "src/flask/scaffold.py",
@@ -274,7 +379,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 898
+      "nloc": 898,
+      "structure": {
+        "cyclomatic": 60,
+        "maxNesting": 8,
+        "functions": 41,
+        "commentRatio": 0.15239154616240266,
+        "longestBlock": 33
+      }
     },
     {
       "file": "src/flask/sessions.py",
@@ -291,7 +403,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 419
+      "nloc": 419,
+      "structure": {
+        "cyclomatic": 30,
+        "maxNesting": 5,
+        "functions": 24,
+        "commentRatio": 0.11428571428571428,
+        "longestBlock": 15
+      }
     },
     {
       "file": "src/flask/signals.py",
@@ -308,7 +427,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 56
+      "nloc": 56,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 4,
+        "functions": 4,
+        "commentRatio": 0.07017543859649122,
+        "longestBlock": 12
+      }
     },
     {
       "file": "src/flask/templating.py",
@@ -325,7 +451,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 212
+      "nloc": 212,
+      "structure": {
+        "cyclomatic": 21,
+        "maxNesting": 5,
+        "functions": 15,
+        "commentRatio": 0.014084507042253521,
+        "longestBlock": 13
+      }
     },
     {
       "file": "src/flask/testing.py",
@@ -342,7 +475,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 286
+      "nloc": 286,
+      "structure": {
+        "cyclomatic": 21,
+        "maxNesting": 5,
+        "functions": 11,
+        "commentRatio": 0.059233449477351915,
+        "longestBlock": 25
+      }
     },
     {
       "file": "src/flask/typing.py",
@@ -359,7 +499,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 80
+      "nloc": 80,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.18518518518518517,
+        "longestBlock": 23
+      }
     },
     {
       "file": "src/flask/views.py",
@@ -376,7 +523,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 188
+      "nloc": 188,
+      "structure": {
+        "cyclomatic": 19,
+        "maxNesting": 5,
+        "functions": 7,
+        "commentRatio": 0.15873015873015872,
+        "longestBlock": 12
+      }
     },
     {
       "file": "src/flask/wrappers.py",
@@ -393,7 +547,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 171
+      "nloc": 171,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 4,
+        "functions": 8,
+        "commentRatio": 0.11046511627906977,
+        "longestBlock": 11
+      }
     }
   ],
   "total": 23,

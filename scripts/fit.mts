@@ -30,6 +30,11 @@ const DIR = "benchmarks/calibration/datasets";
  */
 const FEATURES = [
   "log_nloc",
+  "cyclomatic",
+  "maxNesting",
+  "functions",
+  "commentRatio",
+  "longestBlock",
   "churn",
   "authors",
   "ownershipRatio",
@@ -45,6 +50,7 @@ interface FileRow {
   file: string;
   defective: boolean;
   nloc: number | null;
+  structure: Record<string, number> | null;
   features: Record<string, number>;
 }
 
@@ -57,9 +63,14 @@ for (const f of readdirSync(DIR).sort()) {
   for (const x of d.files) {
     // A row without the control variable cannot be used: the model would be scoring it on
     // markers alone while every other row was adjusted for size.
-    if (x.nloc === null) continue;
+    if (x.nloc === null || x.structure === null) continue;
     rows.push([
       Math.log1p(x.nloc),
+      x.structure.cyclomatic ?? 0,
+      x.structure.maxNesting ?? 0,
+      x.structure.functions ?? 0,
+      x.structure.commentRatio ?? 0,
+      x.structure.longestBlock ?? 0,
       x.features.churn ?? 0,
       x.features.authors ?? 0,
       x.features.ownershipRatio ?? 0,
@@ -91,10 +102,17 @@ const show = (name: string, r: EvaluationResult): void => {
   console.log(`${name.padEnd(26)} pooled AUC ${pooled}${ci}   mean-per-repo ${mean}`);
 };
 
+if (FEATURES[6] !== "churn" || FEATURES[13] !== "priorDefect" || FEATURES[0] !== "log_nloc") {
+  throw new Error(
+    `baseline column indices are stale: 0=${FEATURES[0]} 6=${FEATURES[6]} 13=${FEATURES[13]}`,
+  );
+}
+
 const model = leaveOneRepoOut(data, modelScorerCV(LAMBDAS, { iterations: 20000 }), { seed: 42 });
-// Index 1 is churn, index 8 is priorDefect — the two baselines §5.3 names.
-const churn = leaveOneRepoOut(data, columnScorer(1), { seed: 42 });
-const prior = leaveOneRepoOut(data, columnScorer(8), { seed: 42 });
+// Indices into FEATURES: 6 = churn, 13 = priorDefect, 0 = log_nloc. Asserted below rather
+// than trusted, because a silent off-by-one would compare the model against the wrong column.
+const churn = leaveOneRepoOut(data, columnScorer(6), { seed: 42 });
+const prior = leaveOneRepoOut(data, columnScorer(13), { seed: 42 });
 const size = leaveOneRepoOut(data, columnScorer(0), { seed: 42 });
 
 console.log("cross-project, leave-one-repository-out:\n");
@@ -109,11 +127,41 @@ for (const r of [...model.perRepo].sort((a, b) => (b.auc ?? -1) - (a.auc ?? -1))
   console.log(`  ${r.repo.padEnd(24)} ${a}   ${r.defective}/${r.files} defective`);
 }
 
-const beatsChurn = (model.pooledAuc ?? 0) > (churn.pooledAuc ?? 0);
-const beatsPrior = (model.pooledAuc ?? 0) > (prior.pooledAuc ?? 0);
-const beatsSize = (model.pooledAuc ?? 0) > (size.pooledAuc ?? 0);
+/**
+ * The gate is evaluated on BOTH metrics, and passes only if the model wins on both.
+ *
+ * They answer different questions and neither is redundant:
+ *
+ *   MEAN-PER-REPO is what a user experiences. They point the tool at ONE repository and read
+ *   its files in ranked order; whether a probability is comparable to some other project's is
+ *   never visible to them. It is also the figure comparable to the reference implementation,
+ *   which reports 0.74 cross-project with "up to 0.90 per repo" — a per-repo distribution.
+ *
+ *   POOLED is the harder test, and it fails here for a diagnosed reason rather than a bug: the
+ *   model never sees a held-out repository's base rate, so its probabilities are not
+ *   commensurable across projects. Measured: socket.io has a 78% defect rate and a maximum
+ *   predicted probability of 0.269, while eslint has 11% and a median of 0.515. Pooling those
+ *   ranks eslint's clean files above socket.io's broken ones.
+ *
+ * Reporting both, and gating on both, is what stops the metric being chosen after the fact.
+ * As it happens the verdict is identical either way, which is the only reason it is safe to
+ * discuss the choice at all.
+ */
+const winsOn = (m: EvaluationResult, b: EvaluationResult): boolean =>
+  (m.pooledAuc ?? 0) > (b.pooledAuc ?? 0) && (m.meanRepoAuc ?? 0) > (b.meanRepoAuc ?? 0);
 
-console.log("\n§5.3 exit criteria:");
+const beatsChurn = winsOn(model, churn);
+const beatsPrior = winsOn(model, prior);
+const beatsSize = winsOn(model, size);
+
+console.log("\nreference point — repowise.dev, retrieved 2026-07-30:");
+console.log("  0.74 cross-project ROC AUC over 21 repos / 9 languages, up to 0.90 per repo,");
+console.log("  from 21 signals: \"complexity, hidden coupling, missing tests, churn, fragile ownership\".");
+console.log(`  this model: ${model.meanRepoAuc?.toFixed(3)} mean-per-repo over 12 repos / 2 languages, 15 signals.`);
+console.log("  Absolute figures are NOT comparable — different corpora, windows and difficulty.");
+console.log("  The model-vs-baseline comparison below is, because it is the same corpus.");
+
+console.log("\n§5.3 exit criteria (must win on BOTH pooled and mean-per-repo):");
 console.log(`  beats recent-churn  : ${beatsChurn ? "yes" : "NO"}`);
 console.log(`  beats prior-defect  : ${beatsPrior ? "yes" : "NO"}`);
 console.log(`  beats file size     : ${beatsSize ? "yes" : "NO"}  (not required by §5.3, but a model that loses to it has learned nothing)`);
@@ -157,6 +205,19 @@ writeFileSync(
       },
       beats: { recentChurn: beatsChurn, priorDefect: beatsPrior, fileSize: beatsSize },
       verdict: passed ? "PASS" : "FAIL",
+      gate: "model must beat each baseline on BOTH pooled and mean-per-repo AUC",
+      reference: {
+        source: "repowise.dev, retrieved 2026-07-30",
+        crossProjectAuc: 0.74,
+        perRepoMax: 0.9,
+        repos: 21,
+        languages: 9,
+        signals: 21,
+        signalDescription:
+          "complexity, hidden coupling, missing tests, churn, fragile ownership",
+        note:
+          "Absolute AUCs are not comparable across corpora — different repos, a 6-month window vs this corpus's 12, and a different base rate. Cited to show the feature-class gap: the reference leads with complexity and test-coverage markers, and PLAN.md §5.2 previously mischaracterised it as ranking git markers above static complexity.",
+      },
       weightsAdopted: false,
       note: passed
         ? "Criteria met."

@@ -39,3 +39,4 @@ export {
   type RepoData,
   type RepoResult,
 } from "./evaluate";
+export { structuralMetrics, type StructuralMetrics } from "./structure";

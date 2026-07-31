@@ -202,9 +202,22 @@ averaged in. A golden test locks the surfaced score byte-for-byte so the pillars
 
 ### 5.2 Add organisational signals
 
-Currently the scorer has churn and nothing else. The published defect-prediction literature —
-and repowise's own calibration — finds git/organisational markers among the strongest
-predictors, above static complexity. All derivable from **a single `git log` pass**:
+Currently the scorer has churn and nothing else. Organisational git markers are cheap — all
+derivable from **a single `git log` pass** — and worth adding:
+
+> **Corrected 2026-07-30, and the correction matters.** This section previously claimed
+> repowise's calibration "finds git/organisational markers among the strongest predictors,
+> **above static complexity**". That is not what repowise publishes. Their own description of
+> the 21 signals leads with complexity: *"complexity, hidden coupling, missing tests, churn,
+> fragile ownership"* (repowise.dev, retrieved 2026-07-30). Static complexity and test coverage
+> are **in** their model, not beneath it.
+>
+> The mistake was not harmless. It licensed a git-only feature set, and §5.3's fit against a
+> 12-repo corpus then produced a model that loses to `sort by lines-of-code` — see
+> `benchmarks/calibration/scorecard.json`. Measured against the reference: repowise reports
+> **0.74 cross-project AUC** over 21 repos and 9 languages, "beats recency and past-breakage
+> heuristics by 10+ points"; this project's git-only model reaches 0.604 pooled / 0.657
+> mean-per-repo and beats neither. The gap is a feature-class gap, not a refutation.
 
 `co_change_scatter` · `change_entropy` · `ownership_risk` · `bus_factor` · `developer_congestion`
 · `knowledge_loss` · `prior_defect` · `code_age_volatility`
@@ -299,7 +312,7 @@ Recorded so the reasoning survives, per [`IDENTITY.md`](./IDENTITY.md) §3.
 |---|---|---|
 | Defect-prediction literature; repowise's published study | Calibrate weights against a labelled corpus; score at T0 to prevent leakage; control for NLOC; report ROC AUC vs baselines | §5.3 |
 | repowise | Keep defect / maintainability / performance as separate pillars rather than one blended number | §5.1 |
-| repowise; SE literature | Organisational git markers as first-class predictors, from a single `git log` pass | §5.2 |
+| repowise; SE literature | Organisational git markers as first-class predictors, from a single `git log` pass — **but alongside complexity and test-coverage markers, not instead of them**. repowise's 21 signals are "complexity, hidden coupling, missing tests, churn, fragile ownership"; an earlier version of this row implied git markers ranked above static complexity, which they do not claim | §5.2 |
 | repowise | Bounded ≤3-hop call-graph walk for interprocedural analysis — corroborates our own depth bound | §6 |
 | Bazel/Turborepo | Content-addressed caching keyed on content, not mtime | §7 |
 | repowise `doctor --repair`; general practice | Multi-store consistency check with auto-repair; checkpointed resumable jobs | §4, §7 |

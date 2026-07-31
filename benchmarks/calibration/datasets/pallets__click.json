@@ -19,7 +19,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 9
+      "nloc": 9,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 7
+      }
     },
     {
       "file": "src/click/__init__.py",
@@ -36,7 +43,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 73
+      "nloc": 73,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 71
+      }
     },
     {
       "file": "src/click/_compat.py",
@@ -53,7 +67,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 626
+      "nloc": 626,
+      "structure": {
+        "cyclomatic": 72,
+        "maxNesting": 4,
+        "functions": 50,
+        "commentRatio": 0.06539074960127592,
+        "longestBlock": 19
+      }
     },
     {
       "file": "src/click/_termui_impl.py",
@@ -70,7 +91,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 717
+      "nloc": 717,
+      "structure": {
+        "cyclomatic": 111,
+        "maxNesting": 6,
+        "functions": 36,
+        "commentRatio": 0.0988857938718663,
+        "longestBlock": 36
+      }
     },
     {
       "file": "src/click/_textwrap.py",
@@ -87,7 +115,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 49
+      "nloc": 49,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 4,
+        "functions": 3,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "src/click/_winconsole.py",
@@ -104,7 +139,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 279
+      "nloc": 279,
+      "structure": {
+        "cyclomatic": 21,
+        "maxNesting": 4,
+        "functions": 21,
+        "commentRatio": 0.039285714285714285,
+        "longestBlock": 26
+      }
     },
     {
       "file": "src/click/core.py",
@@ -121,7 +163,14 @@
       },
       "defective": true,
       "fixCount": 3,
-      "nloc": 2998
+      "nloc": 2998,
+      "structure": {
+        "cyclomatic": 338,
+        "maxNesting": 9,
+        "functions": 149,
+        "commentRatio": 0.06235411803934645,
+        "longestBlock": 58
+      }
     },
     {
       "file": "src/click/decorators.py",
@@ -138,7 +187,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 497
+      "nloc": 497,
+      "structure": {
+        "cyclomatic": 34,
+        "maxNesting": 5,
+        "functions": 30,
+        "commentRatio": 0.02208835341365462,
+        "longestBlock": 13
+      }
     },
     {
       "file": "src/click/exceptions.py",
@@ -155,7 +211,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 287
+      "nloc": 287,
+      "structure": {
+        "cyclomatic": 29,
+        "maxNesting": 5,
+        "functions": 18,
+        "commentRatio": 0.006944444444444444,
+        "longestBlock": 21
+      }
     },
     {
       "file": "src/click/formatting.py",
@@ -172,7 +235,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 301
+      "nloc": 301,
+      "structure": {
+        "cyclomatic": 30,
+        "maxNesting": 8,
+        "functions": 17,
+        "commentRatio": 0.009933774834437087,
+        "longestBlock": 21
+      }
     },
     {
       "file": "src/click/globals.py",
@@ -189,7 +259,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 68
+      "nloc": 68,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 4,
+        "functions": 6,
+        "commentRatio": 0,
+        "longestBlock": 9
+      }
     },
     {
       "file": "src/click/parser.py",
@@ -206,7 +283,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 529
+      "nloc": 529,
+      "structure": {
+        "cyclomatic": 73,
+        "maxNesting": 6,
+        "functions": 21,
+        "commentRatio": 0.13584905660377358,
+        "longestBlock": 19
+      }
     },
     {
       "file": "src/click/shell_completion.py",
@@ -223,7 +307,14 @@
       },
       "defective": true,
       "fixCount": 3,
-      "nloc": 580
+      "nloc": 580,
+      "structure": {
+        "cyclomatic": 33,
+        "maxNesting": 6,
+        "functions": 26,
+        "commentRatio": 0.03270223752151463,
+        "longestBlock": 14
+      }
     },
     {
       "file": "src/click/termui.py",
@@ -240,7 +331,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 787
+      "nloc": 787,
+      "structure": {
+        "cyclomatic": 63,
+        "maxNesting": 7,
+        "functions": 21,
+        "commentRatio": 0.04314720812182741,
+        "longestBlock": 40
+      }
     },
     {
       "file": "src/click/testing.py",
@@ -257,7 +355,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 479
+      "nloc": 479,
+      "structure": {
+        "cyclomatic": 40,
+        "maxNesting": 8,
+        "functions": 29,
+        "commentRatio": 0.027083333333333334,
+        "longestBlock": 29
+      }
     },
     {
       "file": "src/click/types.py",
@@ -274,7 +379,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 1073
+      "nloc": 1073,
+      "structure": {
+        "cyclomatic": 98,
+        "maxNesting": 6,
+        "functions": 61,
+        "commentRatio": 0.04748603351955307,
+        "longestBlock": 21
+      }
     },
     {
       "file": "src/click/utils.py",
@@ -291,7 +403,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 580
+      "nloc": 580,
+      "structure": {
+        "cyclomatic": 61,
+        "maxNesting": 6,
+        "functions": 31,
+        "commentRatio": 0.04130808950086059,
+        "longestBlock": 25
+      }
     }
   ],
   "total": 17,

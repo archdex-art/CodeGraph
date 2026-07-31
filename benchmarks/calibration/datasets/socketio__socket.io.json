@@ -19,7 +19,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 486
+      "nloc": 486,
+      "structure": {
+        "cyclomatic": 19,
+        "maxNesting": 5,
+        "functions": 12,
+        "commentRatio": 0.4188911704312115,
+        "longestBlock": 45
+      }
     },
     {
       "file": "lib/client.ts",
@@ -36,7 +43,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 347
+      "nloc": 347,
+      "structure": {
+        "cyclomatic": 24,
+        "maxNesting": 6,
+        "functions": 18,
+        "commentRatio": 0.2442528735632184,
+        "longestBlock": 23
+      }
     },
     {
       "file": "lib/index.ts",
@@ -53,7 +67,14 @@
       },
       "defective": true,
       "fixCount": 11,
-      "nloc": 1003
+      "nloc": 1003,
+      "structure": {
+        "cyclomatic": 56,
+        "maxNesting": 7,
+        "functions": 32,
+        "commentRatio": 0.4113545816733068,
+        "longestBlock": 55
+      }
     },
     {
       "file": "lib/namespace.ts",
@@ -70,7 +91,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 654
+      "nloc": 654,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 7,
+        "functions": 20,
+        "commentRatio": 0.5603053435114503,
+        "longestBlock": 73
+      }
     },
     {
       "file": "lib/parent-namespace.ts",
@@ -87,7 +115,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 76
+      "nloc": 76,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 4,
+        "functions": 4,
+        "commentRatio": 0.11688311688311688,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/socket.ts",
@@ -104,7 +139,14 @@
       },
       "defective": true,
       "fixCount": 12,
-      "nloc": 1098
+      "nloc": 1098,
+      "structure": {
+        "cyclomatic": 49,
+        "maxNesting": 5,
+        "functions": 44,
+        "commentRatio": 0.5040946314831665,
+        "longestBlock": 68
+      }
     },
     {
       "file": "lib/typed-events.ts",
@@ -121,7 +163,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 180
+      "nloc": 180,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0.4696132596685083,
+        "longestBlock": 33
+      }
     },
     {
       "file": "lib/uws.ts",
@@ -138,7 +187,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 164
+      "nloc": 164,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 5,
+        "functions": 17,
+        "commentRatio": 0.048484848484848485,
+        "longestBlock": 21
+      }
     },
     {
       "file": "wrapper.mjs",
@@ -155,7 +211,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 3
+      "nloc": 3,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 1
+      }
     }
   ],
   "total": 9,

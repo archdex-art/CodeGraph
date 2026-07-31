@@ -19,7 +19,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 214
+      "nloc": 214,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 4,
+        "functions": 2,
+        "commentRatio": 0.14883720930232558,
+        "longestBlock": 78
+      }
     },
     {
       "file": "bin/eslint.js",
@@ -36,7 +43,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 140
+      "nloc": 140,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 4,
+        "functions": 7,
+        "commentRatio": 0.375886524822695,
+        "longestBlock": 25
+      }
     },
     {
       "file": "conf/config-schema.js",
@@ -53,7 +67,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 93
+      "nloc": 93,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 5,
+        "functions": 0,
+        "commentRatio": 0.18085106382978725,
+        "longestBlock": 23
+      }
     },
     {
       "file": "conf/default-cli-options.js",
@@ -70,7 +91,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 32
+      "nloc": 32,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.2727272727272727,
+        "longestBlock": 13
+      }
     },
     {
       "file": "conf/eslint-all.js",
@@ -87,7 +115,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 31
+      "nloc": 31,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 2,
+        "functions": 2,
+        "commentRatio": 0.4375,
+        "longestBlock": 5
+      }
     },
     {
       "file": "conf/eslint-recommended.js",
@@ -104,7 +139,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 76
+      "nloc": 76,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0.09090909090909091,
+        "longestBlock": 66
+      }
     },
     {
       "file": "conf/globals.js",
@@ -121,7 +163,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 149
+      "nloc": 149,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.08666666666666667,
+        "longestBlock": 39
+      }
     },
     {
       "file": "eslint.config.js",
@@ -138,7 +187,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 247
+      "nloc": 247,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 3,
+        "functions": 2,
+        "commentRatio": 0.1693548387096774,
+        "longestBlock": 77
+      }
     },
     {
       "file": "karma.conf.js",
@@ -155,7 +211,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 125
+      "nloc": 125,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 5,
+        "functions": 1,
+        "commentRatio": 0.29365079365079366,
+        "longestBlock": 22
+      }
     },
     {
       "file": "lib/api.js",
@@ -172,7 +235,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 26
+      "nloc": 26,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.37037037037037035,
+        "longestBlock": 6
+      }
     },
     {
       "file": "lib/cli-engine/cli-engine.js",
@@ -189,7 +259,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 1067
+      "nloc": 1067,
+      "structure": {
+        "cyclomatic": 105,
+        "maxNesting": 8,
+        "functions": 68,
+        "commentRatio": 0.31647940074906367,
+        "longestBlock": 31
+      }
     },
     {
       "file": "lib/cli-engine/file-enumerator.js",
@@ -206,7 +283,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 545
+      "nloc": 545,
+      "structure": {
+        "cyclomatic": 44,
+        "maxNesting": 6,
+        "functions": 32,
+        "commentRatio": 0.37362637362637363,
+        "longestBlock": 31
+      }
     },
     {
       "file": "lib/cli-engine/formatters/checkstyle.js",
@@ -223,7 +307,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 60
+      "nloc": 60,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 4,
+        "functions": 3,
+        "commentRatio": 0.26229508196721313,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/cli-engine/formatters/compact.js",
@@ -240,7 +331,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 60
+      "nloc": 60,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 3,
+        "functions": 4,
+        "commentRatio": 0.26229508196721313,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/cli-engine/formatters/html.js",
@@ -257,7 +355,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 351
+      "nloc": 351,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 4,
+        "functions": 19,
+        "commentRatio": 0.1875,
+        "longestBlock": 34
+      }
     },
     {
       "file": "lib/cli-engine/formatters/jslint-xml.js",
@@ -274,7 +379,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 41
+      "nloc": 41,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 4,
+        "functions": 1,
+        "commentRatio": 0.16666666666666666,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/cli-engine/formatters/json-with-metadata.js",
@@ -291,7 +403,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 16
+      "nloc": 16,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0.4117647058823529,
+        "longestBlock": 6
+      }
     },
     {
       "file": "lib/cli-engine/formatters/json.js",
@@ -308,7 +427,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 13
+      "nloc": 13,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 1,
+        "commentRatio": 0.5,
+        "longestBlock": 5
+      }
     },
     {
       "file": "lib/cli-engine/formatters/junit.js",
@@ -325,7 +451,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 82
+      "nloc": 82,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 4,
+        "functions": 5,
+        "commentRatio": 0.26506024096385544,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/cli-engine/formatters/stylish.js",
@@ -342,7 +475,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 101
+      "nloc": 101,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 5,
+        "functions": 7,
+        "commentRatio": 0.16666666666666666,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/cli-engine/formatters/tap.js",
@@ -359,7 +499,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 95
+      "nloc": 95,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 6,
+        "functions": 9,
+        "commentRatio": 0.28125,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/cli-engine/formatters/unix.js",
@@ -376,7 +523,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 58
+      "nloc": 58,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 4,
+        "functions": 4,
+        "commentRatio": 0.2542372881355932,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/cli-engine/formatters/visualstudio.js",
@@ -393,7 +547,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 63
+      "nloc": 63,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 3,
+        "functions": 4,
+        "commentRatio": 0.25,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/cli-engine/hash.js",
@@ -410,7 +571,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 35
+      "nloc": 35,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 1,
+        "commentRatio": 0.5833333333333334,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/cli-engine/index.js",
@@ -427,7 +595,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 7
+      "nloc": 7,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "lib/cli-engine/lint-result-cache.js",
@@ -444,7 +619,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 191
+      "nloc": 191,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 4,
+        "functions": 10,
+        "commentRatio": 0.375,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/cli-engine/load-rules.js",
@@ -461,7 +643,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 46
+      "nloc": 46,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 3,
+        "functions": 2,
+        "commentRatio": 0.3617021276595745,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/cli-engine/xml-escape.js",
@@ -478,7 +667,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 34
+      "nloc": 34,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 3,
+        "functions": 2,
+        "commentRatio": 0.37142857142857144,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/cli.js",
@@ -495,7 +691,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 467
+      "nloc": 467,
+      "structure": {
+        "cyclomatic": 63,
+        "maxNesting": 5,
+        "functions": 39,
+        "commentRatio": 0.19017094017094016,
+        "longestBlock": 36
+      }
     },
     {
       "file": "lib/config/default-config.js",
@@ -512,7 +715,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 70
+      "nloc": 70,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 5,
+        "functions": 2,
+        "commentRatio": 0.2535211267605634,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/config/flat-config-array.js",
@@ -529,7 +739,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 214
+      "nloc": 214,
+      "structure": {
+        "cyclomatic": 23,
+        "maxNesting": 6,
+        "functions": 14,
+        "commentRatio": 0.32558139534883723,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/config/flat-config-helpers.js",
@@ -546,7 +763,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 111
+      "nloc": 111,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 4,
+        "functions": 6,
+        "commentRatio": 0.2857142857142857,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/config/flat-config-schema.js",
@@ -563,7 +787,14 @@
       },
       "defective": true,
       "fixCount": 4,
-      "nloc": 457
+      "nloc": 457,
+      "structure": {
+        "cyclomatic": 59,
+        "maxNesting": 5,
+        "functions": 38,
+        "commentRatio": 0.28820960698689957,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/config/rule-validator.js",
@@ -580,7 +811,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 157
+      "nloc": 157,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 6,
+        "functions": 13,
+        "commentRatio": 0.34810126582278483,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/eslint/eslint-helpers.js",
@@ -597,7 +835,14 @@
       },
       "defective": true,
       "fixCount": 7,
-      "nloc": 940
+      "nloc": 940,
+      "structure": {
+        "cyclomatic": 94,
+        "maxNesting": 9,
+        "functions": 54,
+        "commentRatio": 0.31668437832093516,
+        "longestBlock": 100
+      }
     },
     {
       "file": "lib/eslint/eslint.js",
@@ -614,7 +859,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 700
+      "nloc": 700,
+      "structure": {
+        "cyclomatic": 92,
+        "maxNesting": 7,
+        "functions": 60,
+        "commentRatio": 0.3095577746077033,
+        "longestBlock": 103
+      }
     },
     {
       "file": "lib/eslint/flat-eslint.js",
@@ -631,7 +883,14 @@
       },
       "defective": true,
       "fixCount": 6,
-      "nloc": 1182
+      "nloc": 1182,
+      "structure": {
+        "cyclomatic": 119,
+        "maxNesting": 7,
+        "functions": 84,
+        "commentRatio": 0.2890955198647506,
+        "longestBlock": 31
+      }
     },
     {
       "file": "lib/eslint/index.js",
@@ -648,7 +907,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 9
+      "nloc": 9,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 4
+      }
     },
     {
       "file": "lib/linter/apply-disable-directives.js",
@@ -665,7 +931,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 341
+      "nloc": 341,
+      "structure": {
+        "cyclomatic": 29,
+        "maxNesting": 5,
+        "functions": 15,
+        "commentRatio": 0.32456140350877194,
+        "longestBlock": 25
+      }
     },
     {
       "file": "lib/linter/code-path-analysis/code-path-analyzer.js",
@@ -682,7 +955,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 844
+      "nloc": 844,
+      "structure": {
+        "cyclomatic": 161,
+        "maxNesting": 4,
+        "functions": 62,
+        "commentRatio": 0.26627218934911245,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/linter/code-path-analysis/code-path-segment.js",
@@ -699,7 +979,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 235
+      "nloc": 235,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 6,
+        "functions": 20,
+        "commentRatio": 0.4661016949152542,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/linter/code-path-analysis/code-path-state.js",
@@ -716,7 +1003,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 1483
+      "nloc": 1483,
+      "structure": {
+        "cyclomatic": 108,
+        "maxNesting": 5,
+        "functions": 126,
+        "commentRatio": 0.3308625336927224,
+        "longestBlock": 41
+      }
     },
     {
       "file": "lib/linter/code-path-analysis/code-path.js",
@@ -733,7 +1027,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 247
+      "nloc": 247,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 6,
+        "functions": 22,
+        "commentRatio": 0.3951612903225806,
+        "longestBlock": 22
+      }
     },
     {
       "file": "lib/linter/code-path-analysis/debug-helpers.js",
@@ -750,7 +1051,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 203
+      "nloc": 203,
+      "structure": {
+        "cyclomatic": 24,
+        "maxNesting": 5,
+        "functions": 19,
+        "commentRatio": 0.27450980392156865,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/linter/code-path-analysis/fork-context.js",
@@ -767,7 +1075,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 248
+      "nloc": 248,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 3,
+        "functions": 21,
+        "commentRatio": 0.46586345381526106,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/linter/code-path-analysis/id-generator.js",
@@ -784,7 +1099,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 45
+      "nloc": 45,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0.4782608695652174,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/linter/config-comment-parser.js",
@@ -801,7 +1123,14 @@
       },
       "defective": true,
       "fixCount": 3,
-      "nloc": 144
+      "nloc": 144,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 5,
+        "functions": 6,
+        "commentRatio": 0.3103448275862069,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/linter/index.js",
@@ -818,7 +1147,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 13
+      "nloc": 13,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.07142857142857142,
+        "longestBlock": 4
+      }
     },
     {
       "file": "lib/linter/interpolate.js",
@@ -835,7 +1171,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 28
+      "nloc": 28,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 4,
+        "functions": 2,
+        "commentRatio": 0.3103448275862069,
+        "longestBlock": 4
+      }
     },
     {
       "file": "lib/linter/linter.js",
@@ -852,7 +1195,14 @@
       },
       "defective": true,
       "fixCount": 4,
-      "nloc": 2079
+      "nloc": 2079,
+      "structure": {
+        "cyclomatic": 221,
+        "maxNesting": 8,
+        "functions": 135,
+        "commentRatio": 0.2793269230769231,
+        "longestBlock": 29
+      }
     },
     {
       "file": "lib/linter/node-event-generator.js",
@@ -869,7 +1219,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 354
+      "nloc": 354,
+      "structure": {
+        "cyclomatic": 55,
+        "maxNesting": 6,
+        "functions": 24,
+        "commentRatio": 0.3492957746478873,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/linter/report-translator.js",
@@ -886,7 +1243,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 368
+      "nloc": 368,
+      "structure": {
+        "cyclomatic": 44,
+        "maxNesting": 5,
+        "functions": 38,
+        "commentRatio": 0.35772357723577236,
+        "longestBlock": 22
+      }
     },
     {
       "file": "lib/linter/rule-fixer.js",
@@ -903,7 +1267,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 140
+      "nloc": 140,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 3,
+        "functions": 9,
+        "commentRatio": 0.5815602836879432,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/linter/rules.js",
@@ -920,7 +1291,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 80
+      "nloc": 80,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 3,
+        "functions": 6,
+        "commentRatio": 0.4444444444444444,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/linter/safe-emitter.js",
@@ -937,7 +1315,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 52
+      "nloc": 52,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 4,
+        "functions": 5,
+        "commentRatio": 0.49056603773584906,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/linter/source-code-fixer.js",
@@ -954,7 +1339,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 152
+      "nloc": 152,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 4,
+        "functions": 8,
+        "commentRatio": 0.33986928104575165,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/linter/timing.js",
@@ -971,7 +1363,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 161
+      "nloc": 161,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 4,
+        "functions": 12,
+        "commentRatio": 0.29012345679012347,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/options.js",
@@ -988,7 +1387,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 377
+      "nloc": 377,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 4,
+        "functions": 7,
+        "commentRatio": 0.16137566137566137,
+        "longestBlock": 236
+      }
     },
     {
       "file": "lib/rule-tester/flat-rule-tester.js",
@@ -1005,7 +1411,14 @@
       },
       "defective": true,
       "fixCount": 3,
-      "nloc": 1044
+      "nloc": 1044,
+      "structure": {
+        "cyclomatic": 100,
+        "maxNesting": 11,
+        "functions": 71,
+        "commentRatio": 0.2679425837320574,
+        "longestBlock": 25
+      }
     },
     {
       "file": "lib/rule-tester/index.js",
@@ -1022,7 +1435,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 5
+      "nloc": 5,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "lib/rule-tester/rule-tester.js",
@@ -1039,7 +1459,14 @@
       },
       "defective": true,
       "fixCount": 5,
-      "nloc": 1054
+      "nloc": 1054,
+      "structure": {
+        "cyclomatic": 106,
+        "maxNesting": 11,
+        "functions": 74,
+        "commentRatio": 0.2909952606635071,
+        "longestBlock": 29
+      }
     },
     {
       "file": "lib/rules/accessor-pairs.js",
@@ -1056,7 +1483,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 354
+      "nloc": 354,
+      "structure": {
+        "cyclomatic": 43,
+        "maxNesting": 6,
+        "functions": 30,
+        "commentRatio": 0.3464788732394366,
+        "longestBlock": 29
+      }
     },
     {
       "file": "lib/rules/array-bracket-newline.js",
@@ -1073,7 +1507,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 258
+      "nloc": 258,
+      "structure": {
+        "cyclomatic": 23,
+        "maxNesting": 6,
+        "functions": 17,
+        "commentRatio": 0.23552123552123552,
+        "longestBlock": 22
+      }
     },
     {
       "file": "lib/rules/array-bracket-spacing.js",
@@ -1090,7 +1531,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 241
+      "nloc": 241,
+      "structure": {
+        "cyclomatic": 32,
+        "maxNesting": 5,
+        "functions": 14,
+        "commentRatio": 0.24793388429752067,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/array-callback-return.js",
@@ -1107,7 +1555,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 296
+      "nloc": 296,
+      "structure": {
+        "cyclomatic": 40,
+        "maxNesting": 7,
+        "functions": 22,
+        "commentRatio": 0.24915824915824916,
+        "longestBlock": 23
+      }
     },
     {
       "file": "lib/rules/array-element-newline.js",
@@ -1124,7 +1579,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 301
+      "nloc": 301,
+      "structure": {
+        "cyclomatic": 32,
+        "maxNesting": 8,
+        "functions": 18,
+        "commentRatio": 0.2152317880794702,
+        "longestBlock": 46
+      }
     },
     {
       "file": "lib/rules/arrow-body-style.js",
@@ -1141,7 +1603,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 296
+      "nloc": 296,
+      "structure": {
+        "cyclomatic": 47,
+        "maxNesting": 9,
+        "functions": 21,
+        "commentRatio": 0.15488215488215487,
+        "longestBlock": 31
+      }
     },
     {
       "file": "lib/rules/arrow-parens.js",
@@ -1158,7 +1627,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 183
+      "nloc": 183,
+      "structure": {
+        "cyclomatic": 23,
+        "maxNesting": 8,
+        "functions": 9,
+        "commentRatio": 0.2717391304347826,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/arrow-spacing.js",
@@ -1175,7 +1651,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 161
+      "nloc": 161,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 7,
+        "functions": 14,
+        "commentRatio": 0.2037037037037037,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/block-scoped-var.js",
@@ -1192,7 +1675,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 124
+      "nloc": 124,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 5,
+        "functions": 9,
+        "commentRatio": 0.304,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/rules/block-spacing.js",
@@ -1209,7 +1699,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 171
+      "nloc": 171,
+      "structure": {
+        "cyclomatic": 19,
+        "maxNesting": 7,
+        "functions": 15,
+        "commentRatio": 0.19767441860465115,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/brace-style.js",
@@ -1226,7 +1723,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 194
+      "nloc": 194,
+      "structure": {
+        "cyclomatic": 26,
+        "maxNesting": 5,
+        "functions": 12,
+        "commentRatio": 0.1794871794871795,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/callback-return.js",
@@ -1243,7 +1747,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 187
+      "nloc": 187,
+      "structure": {
+        "cyclomatic": 27,
+        "maxNesting": 7,
+        "functions": 20,
+        "commentRatio": 0.2712765957446808,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/rules/camelcase.js",
@@ -1260,7 +1771,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 398
+      "nloc": 398,
+      "structure": {
+        "cyclomatic": 55,
+        "maxNesting": 7,
+        "functions": 21,
+        "commentRatio": 0.2556390977443609,
+        "longestBlock": 33
+      }
     },
     {
       "file": "lib/rules/capitalized-comments.js",
@@ -1277,7 +1795,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 300
+      "nloc": 300,
+      "structure": {
+        "cyclomatic": 27,
+        "maxNesting": 6,
+        "functions": 15,
+        "commentRatio": 0.30564784053156147,
+        "longestBlock": 25
+      }
     },
     {
       "file": "lib/rules/class-methods-use-this.js",
@@ -1294,7 +1819,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 187
+      "nloc": 187,
+      "structure": {
+        "cyclomatic": 15,
+        "maxNesting": 6,
+        "functions": 11,
+        "commentRatio": 0.31382978723404253,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/comma-dangle.js",
@@ -1311,7 +1843,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 370
+      "nloc": 370,
+      "structure": {
+        "cyclomatic": 40,
+        "maxNesting": 7,
+        "functions": 20,
+        "commentRatio": 0.2776280323450135,
+        "longestBlock": 43
+      }
     },
     {
       "file": "lib/rules/comma-spacing.js",
@@ -1328,7 +1867,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 189
+      "nloc": 189,
+      "structure": {
+        "cyclomatic": 24,
+        "maxNesting": 7,
+        "functions": 8,
+        "commentRatio": 0.20526315789473684,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/comma-style.js",
@@ -1345,7 +1891,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 311
+      "nloc": 311,
+      "structure": {
+        "cyclomatic": 41,
+        "maxNesting": 6,
+        "functions": 33,
+        "commentRatio": 0.22435897435897437,
+        "longestBlock": 55
+      }
     },
     {
       "file": "lib/rules/complexity.js",
@@ -1362,7 +1915,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 165
+      "nloc": 165,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 7,
+        "functions": 10,
+        "commentRatio": 0.20481927710843373,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/rules/computed-property-spacing.js",
@@ -1379,7 +1939,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 205
+      "nloc": 205,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 7,
+        "functions": 15,
+        "commentRatio": 0.22330097087378642,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/consistent-return.js",
@@ -1396,7 +1963,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 185
+      "nloc": 185,
+      "structure": {
+        "cyclomatic": 23,
+        "maxNesting": 6,
+        "functions": 13,
+        "commentRatio": 0.23118279569892472,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/consistent-this.js",
@@ -1413,7 +1987,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 151
+      "nloc": 151,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 6,
+        "functions": 13,
+        "commentRatio": 0.2565789473684211,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/constructor-super.js",
@@ -1430,7 +2011,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 423
+      "nloc": 423,
+      "structure": {
+        "cyclomatic": 60,
+        "maxNesting": 8,
+        "functions": 29,
+        "commentRatio": 0.29009433962264153,
+        "longestBlock": 22
+      }
     },
     {
       "file": "lib/rules/curly.js",
@@ -1447,7 +2035,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 486
+      "nloc": 486,
+      "structure": {
+        "cyclomatic": 56,
+        "maxNesting": 10,
+        "functions": 37,
+        "commentRatio": 0.3613963039014374,
+        "longestBlock": 68
+      }
     },
     {
       "file": "lib/rules/default-case-last.js",
@@ -1464,7 +2059,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 44
+      "nloc": 44,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.17777777777777778,
+        "longestBlock": 6
+      }
     },
     {
       "file": "lib/rules/default-case.js",
@@ -1481,7 +2083,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 97
+      "nloc": 97,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 7,
+        "functions": 6,
+        "commentRatio": 0.23469387755102042,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/default-param-last.js",
@@ -1498,7 +2107,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 62
+      "nloc": 62,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 6,
+        "functions": 5,
+        "commentRatio": 0.15873015873015872,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/dot-location.js",
@@ -1515,7 +2131,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 105
+      "nloc": 105,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 8,
+        "functions": 7,
+        "commentRatio": 0.20754716981132076,
+        "longestBlock": 27
+      }
     },
     {
       "file": "lib/rules/dot-notation.js",
@@ -1532,7 +2155,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 177
+      "nloc": 177,
+      "structure": {
+        "cyclomatic": 32,
+        "maxNesting": 8,
+        "functions": 10,
+        "commentRatio": 0.14606741573033707,
+        "longestBlock": 30
+      }
     },
     {
       "file": "lib/rules/eol-last.js",
@@ -1549,7 +2179,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 112
+      "nloc": 112,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 8,
+        "functions": 9,
+        "commentRatio": 0.168141592920354,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/eqeqeq.js",
@@ -1566,7 +2203,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 174
+      "nloc": 174,
+      "structure": {
+        "cyclomatic": 22,
+        "maxNesting": 7,
+        "functions": 11,
+        "commentRatio": 0.24,
+        "longestBlock": 31
+      }
     },
     {
       "file": "lib/rules/for-direction.js",
@@ -1583,7 +2227,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 126
+      "nloc": 126,
+      "structure": {
+        "cyclomatic": 23,
+        "maxNesting": 7,
+        "functions": 19,
+        "commentRatio": 0.2440944881889764,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/func-call-spacing.js",
@@ -1600,7 +2251,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 230
+      "nloc": 230,
+      "structure": {
+        "cyclomatic": 23,
+        "maxNesting": 7,
+        "functions": 15,
+        "commentRatio": 0.23809523809523808,
+        "longestBlock": 37
+      }
     },
     {
       "file": "lib/rules/func-name-matching.js",
@@ -1617,7 +2275,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 253
+      "nloc": 253,
+      "structure": {
+        "cyclomatic": 61,
+        "maxNesting": 8,
+        "functions": 20,
+        "commentRatio": 0.2204724409448819,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/rules/func-names.js",
@@ -1634,7 +2299,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 191
+      "nloc": 191,
+      "structure": {
+        "cyclomatic": 34,
+        "maxNesting": 6,
+        "functions": 12,
+        "commentRatio": 0.2552083333333333,
+        "longestBlock": 25
+      }
     },
     {
       "file": "lib/rules/func-style.js",
@@ -1651,7 +2323,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 98
+      "nloc": 98,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 6,
+        "functions": 11,
+        "commentRatio": 0.08080808080808081,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/rules/function-call-argument-newline.js",
@@ -1668,7 +2347,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 122
+      "nloc": 122,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 7,
+        "functions": 9,
+        "commentRatio": 0.17073170731707318,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/function-paren-newline.js",
@@ -1685,7 +2371,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 289
+      "nloc": 289,
+      "structure": {
+        "cyclomatic": 42,
+        "maxNesting": 6,
+        "functions": 23,
+        "commentRatio": 0.16551724137931034,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/generator-star-spacing.js",
@@ -1702,7 +2395,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 206
+      "nloc": 206,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 8,
+        "functions": 14,
+        "commentRatio": 0.21739130434782608,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/getter-return.js",
@@ -1719,7 +2419,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 179
+      "nloc": 179,
+      "structure": {
+        "cyclomatic": 22,
+        "maxNesting": 8,
+        "functions": 12,
+        "commentRatio": 0.2222222222222222,
+        "longestBlock": 23
+      }
     },
     {
       "file": "lib/rules/global-require.js",
@@ -1736,7 +2443,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 88
+      "nloc": 88,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 7,
+        "functions": 6,
+        "commentRatio": 0.21348314606741572,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/grouped-accessor-pairs.js",
@@ -1753,7 +2467,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 224
+      "nloc": 224,
+      "structure": {
+        "cyclomatic": 27,
+        "maxNesting": 6,
+        "functions": 17,
+        "commentRatio": 0.3422222222222222,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/guard-for-in.js",
@@ -1770,7 +2491,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 76
+      "nloc": 76,
+      "structure": {
+        "cyclomatic": 15,
+        "maxNesting": 6,
+        "functions": 9,
+        "commentRatio": 0.19480519480519481,
+        "longestBlock": 5
+      }
     },
     {
       "file": "lib/rules/handle-callback-err.js",
@@ -1787,7 +2515,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 100
+      "nloc": 100,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 6,
+        "functions": 6,
+        "commentRatio": 0.2871287128712871,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/id-blacklist.js",
@@ -1804,7 +2539,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 245
+      "nloc": 245,
+      "structure": {
+        "cyclomatic": 34,
+        "maxNesting": 6,
+        "functions": 12,
+        "commentRatio": 0.32113821138211385,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/id-denylist.js",
@@ -1821,7 +2563,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 227
+      "nloc": 227,
+      "structure": {
+        "cyclomatic": 31,
+        "maxNesting": 6,
+        "functions": 10,
+        "commentRatio": 0.3201754385964912,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/id-length.js",
@@ -1838,7 +2587,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 210
+      "nloc": 210,
+      "structure": {
+        "cyclomatic": 32,
+        "maxNesting": 7,
+        "functions": 12,
+        "commentRatio": 0.2037914691943128,
+        "longestBlock": 39
+      }
     },
     {
       "file": "lib/rules/id-match.js",
@@ -1855,7 +2611,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 298
+      "nloc": 298,
+      "structure": {
+        "cyclomatic": 63,
+        "maxNesting": 7,
+        "functions": 21,
+        "commentRatio": 0.23745819397993312,
+        "longestBlock": 32
+      }
     },
     {
       "file": "lib/rules/implicit-arrow-linebreak.js",
@@ -1872,7 +2635,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 81
+      "nloc": 81,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 7,
+        "functions": 6,
+        "commentRatio": 0.1951219512195122,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/indent-legacy.js",
@@ -1889,7 +2659,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 1126
+      "nloc": 1126,
+      "structure": {
+        "cyclomatic": 185,
+        "maxNesting": 9,
+        "functions": 99,
+        "commentRatio": 0.2085181898846495,
+        "longestBlock": 138
+      }
     },
     {
       "file": "lib/rules/indent.js",
@@ -1906,7 +2683,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 1804
+      "nloc": 1804,
+      "structure": {
+        "cyclomatic": 183,
+        "maxNesting": 7,
+        "functions": 106,
+        "commentRatio": 0.2581717451523546,
+        "longestBlock": 127
+      }
     },
     {
       "file": "lib/rules/index.js",
@@ -1923,7 +2707,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 305
+      "nloc": 305,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.02287581699346405,
+        "longestBlock": 293
+      }
     },
     {
       "file": "lib/rules/init-declarations.js",
@@ -1940,7 +2731,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 139
+      "nloc": 139,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 8,
+        "functions": 8,
+        "commentRatio": 0.17142857142857143,
+        "longestBlock": 38
+      }
     },
     {
       "file": "lib/rules/jsx-quotes.js",
@@ -1957,7 +2755,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 95
+      "nloc": 95,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 7,
+        "functions": 6,
+        "commentRatio": 0.20833333333333334,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/key-spacing.js",
@@ -1974,7 +2779,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 690
+      "nloc": 690,
+      "structure": {
+        "cyclomatic": 65,
+        "maxNesting": 11,
+        "functions": 49,
+        "commentRatio": 0.22286541244573083,
+        "longestBlock": 166
+      }
     },
     {
       "file": "lib/rules/keyword-spacing.js",
@@ -1991,7 +2803,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 637
+      "nloc": 637,
+      "structure": {
+        "cyclomatic": 78,
+        "maxNesting": 10,
+        "functions": 50,
+        "commentRatio": 0.30250783699059564,
+        "longestBlock": 32
+      }
     },
     {
       "file": "lib/rules/line-comment-position.js",
@@ -2008,7 +2827,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 122
+      "nloc": 122,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 8,
+        "functions": 6,
+        "commentRatio": 0.08943089430894309,
+        "longestBlock": 32
+      }
     },
     {
       "file": "lib/rules/linebreak-style.js",
@@ -2025,7 +2851,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 105
+      "nloc": 105,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 8,
+        "functions": 5,
+        "commentRatio": 0.22641509433962265,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/lines-around-comment.js",
@@ -2042,7 +2875,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 457
+      "nloc": 457,
+      "structure": {
+        "cyclomatic": 76,
+        "maxNesting": 8,
+        "functions": 30,
+        "commentRatio": 0.27510917030567683,
+        "longestBlock": 61
+      }
     },
     {
       "file": "lib/rules/lines-around-directive.js",
@@ -2059,7 +2899,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 201
+      "nloc": 201,
+      "structure": {
+        "cyclomatic": 28,
+        "maxNesting": 6,
+        "functions": 11,
+        "commentRatio": 0.26732673267326734,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/lines-between-class-members.js",
@@ -2076,7 +2923,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 181
+      "nloc": 181,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 9,
+        "functions": 11,
+        "commentRatio": 0.32967032967032966,
+        "longestBlock": 33
+      }
     },
     {
       "file": "lib/rules/logical-assignment-operators.js",
@@ -2093,7 +2947,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 474
+      "nloc": 474,
+      "structure": {
+        "cyclomatic": 97,
+        "maxNesting": 8,
+        "functions": 26,
+        "commentRatio": 0.2231578947368421,
+        "longestBlock": 37
+      }
     },
     {
       "file": "lib/rules/max-classes-per-file.js",
@@ -2110,7 +2971,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 89
+      "nloc": 89,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 7,
+        "functions": 4,
+        "commentRatio": 0.12222222222222222,
+        "longestBlock": 27
+      }
     },
     {
       "file": "lib/rules/max-depth.js",
@@ -2127,7 +2995,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 156
+      "nloc": 156,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 6,
+        "functions": 9,
+        "commentRatio": 0.2229299363057325,
+        "longestBlock": 28
+      }
     },
     {
       "file": "lib/rules/max-len.js",
@@ -2144,7 +3019,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 433
+      "nloc": 433,
+      "structure": {
+        "cyclomatic": 57,
+        "maxNesting": 8,
+        "functions": 24,
+        "commentRatio": 0.2764976958525346,
+        "longestBlock": 39
+      }
     },
     {
       "file": "lib/rules/max-lines-per-function.js",
@@ -2161,7 +3043,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 213
+      "nloc": 213,
+      "structure": {
+        "cyclomatic": 31,
+        "maxNesting": 6,
+        "functions": 17,
+        "commentRatio": 0.22429906542056074,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/max-lines.js",
@@ -2178,7 +3067,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 193
+      "nloc": 193,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 7,
+        "functions": 10,
+        "commentRatio": 0.17525773195876287,
+        "longestBlock": 31
+      }
     },
     {
       "file": "lib/rules/max-nested-callbacks.js",
@@ -2195,7 +3091,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 117
+      "nloc": 117,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 6,
+        "functions": 6,
+        "commentRatio": 0.23728813559322035,
+        "longestBlock": 28
+      }
     },
     {
       "file": "lib/rules/max-params.js",
@@ -2212,7 +3115,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 102
+      "nloc": 102,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 6,
+        "functions": 4,
+        "commentRatio": 0.1650485436893204,
+        "longestBlock": 28
+      }
     },
     {
       "file": "lib/rules/max-statements-per-line.js",
@@ -2229,7 +3139,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 196
+      "nloc": 196,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 6,
+        "functions": 9,
+        "commentRatio": 0.22842639593908629,
+        "longestBlock": 27
+      }
     },
     {
       "file": "lib/rules/max-statements.js",
@@ -2246,7 +3163,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 184
+      "nloc": 184,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 6,
+        "functions": 10,
+        "commentRatio": 0.24864864864864866,
+        "longestBlock": 37
+      }
     },
     {
       "file": "lib/rules/multiline-comment-style.js",
@@ -2263,7 +3187,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 435
+      "nloc": 435,
+      "structure": {
+        "cyclomatic": 60,
+        "maxNesting": 11,
+        "functions": 30,
+        "commentRatio": 0.19495412844036697,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/multiline-ternary.js",
@@ -2280,7 +3211,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 171
+      "nloc": 171,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 9,
+        "functions": 16,
+        "commentRatio": 0.06395348837209303,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/rules/new-cap.js",
@@ -2297,7 +3235,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 276
+      "nloc": 276,
+      "structure": {
+        "cyclomatic": 28,
+        "maxNesting": 6,
+        "functions": 22,
+        "commentRatio": 0.24187725631768953,
+        "longestBlock": 43
+      }
     },
     {
       "file": "lib/rules/new-parens.js",
@@ -2314,7 +3259,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 99
+      "nloc": 99,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 7,
+        "functions": 6,
+        "commentRatio": 0.15,
+        "longestBlock": 26
+      }
     },
     {
       "file": "lib/rules/newline-after-var.js",
@@ -2331,7 +3283,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 255
+      "nloc": 255,
+      "structure": {
+        "cyclomatic": 31,
+        "maxNesting": 7,
+        "functions": 16,
+        "commentRatio": 0.37890625,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/newline-before-return.js",
@@ -2348,7 +3307,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 217
+      "nloc": 217,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 8,
+        "functions": 20,
+        "commentRatio": 0.3440366972477064,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/newline-per-chained-call.js",
@@ -2365,7 +3331,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 123
+      "nloc": 123,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 7,
+        "functions": 9,
+        "commentRatio": 0.1774193548387097,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/no-alert.js",
@@ -2382,7 +3355,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 136
+      "nloc": 136,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 8,
+        "functions": 9,
+        "commentRatio": 0.2773722627737226,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/no-array-constructor.js",
@@ -2399,7 +3379,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 54
+      "nloc": 54,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 5,
+        "functions": 3,
+        "commentRatio": 0.2545454545454545,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/rules/no-async-promise-executor.js",
@@ -2416,7 +3403,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 39
+      "nloc": 39,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 5,
+        "functions": 1,
+        "commentRatio": 0.2,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/no-await-in-loop.js",
@@ -2433,7 +3427,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 106
+      "nloc": 106,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 6,
+        "functions": 6,
+        "commentRatio": 0.2336448598130841,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/no-bitwise.js",
@@ -2450,7 +3451,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 119
+      "nloc": 119,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 6,
+        "functions": 6,
+        "commentRatio": 0.31666666666666665,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/no-buffer-constructor.js",
@@ -2467,7 +3475,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 50
+      "nloc": 50,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 6,
+        "functions": 1,
+        "commentRatio": 0.23529411764705882,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/no-caller.js",
@@ -2484,7 +3499,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 46
+      "nloc": 46,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 7,
+        "functions": 2,
+        "commentRatio": 0.1702127659574468,
+        "longestBlock": 5
+      }
     },
     {
       "file": "lib/rules/no-case-declarations.js",
@@ -2501,7 +3523,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 64
+      "nloc": 64,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 7,
+        "functions": 5,
+        "commentRatio": 0.2,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/no-catch-shadow.js",
@@ -2518,7 +3547,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 80
+      "nloc": 80,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 7,
+        "functions": 3,
+        "commentRatio": 0.345679012345679,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/no-class-assign.js",
@@ -2535,7 +3571,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 61
+      "nloc": 61,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.2903225806451613,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/no-compare-neg-zero.js",
@@ -2552,7 +3595,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 60
+      "nloc": 60,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 8,
+        "functions": 3,
+        "commentRatio": 0.26229508196721313,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/rules/no-cond-assign.js",
@@ -2569,7 +3619,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 159
+      "nloc": 159,
+      "structure": {
+        "cyclomatic": 19,
+        "maxNesting": 6,
+        "functions": 8,
+        "commentRatio": 0.25,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/no-confusing-arrow.js",
@@ -2586,7 +3643,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 89
+      "nloc": 89,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 6,
+        "functions": 4,
+        "commentRatio": 0.25555555555555554,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/no-console.js",
@@ -2603,7 +3667,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 134
+      "nloc": 134,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 6,
+        "functions": 6,
+        "commentRatio": 0.28888888888888886,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/no-const-assign.js",
@@ -2620,7 +3691,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 54
+      "nloc": 54,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 6,
+        "functions": 4,
+        "commentRatio": 0.23636363636363636,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/rules/no-constant-binary-expression.js",
@@ -2637,7 +3715,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 500
+      "nloc": 500,
+      "structure": {
+        "cyclomatic": 136,
+        "maxNesting": 7,
+        "functions": 32,
+        "commentRatio": 0.32934131736526945,
+        "longestBlock": 30
+      }
     },
     {
       "file": "lib/rules/no-constant-condition.js",
@@ -2654,7 +3739,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 149
+      "nloc": 149,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 5,
+        "functions": 8,
+        "commentRatio": 0.3466666666666667,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/no-constructor-return.js",
@@ -2671,7 +3763,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 62
+      "nloc": 62,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 6,
+        "functions": 5,
+        "commentRatio": 0.12698412698412698,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/no-continue.js",
@@ -2688,7 +3787,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 39
+      "nloc": 39,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 5,
+        "functions": 2,
+        "commentRatio": 0.2,
+        "longestBlock": 5
+      }
     },
     {
       "file": "lib/rules/no-control-regex.js",
@@ -2705,7 +3811,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 125
+      "nloc": 125,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 8,
+        "functions": 10,
+        "commentRatio": 0.1349206349206349,
+        "longestBlock": 25
+      }
     },
     {
       "file": "lib/rules/no-debugger.js",
@@ -2722,7 +3835,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 43
+      "nloc": 43,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 5,
+        "functions": 2,
+        "commentRatio": 0.18181818181818182,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/no-delete-var.js",
@@ -2739,7 +3859,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 42
+      "nloc": 42,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.18604651162790697,
+        "longestBlock": 6
+      }
     },
     {
       "file": "lib/rules/no-div-regex.js",
@@ -2756,7 +3883,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 53
+      "nloc": 53,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 7,
+        "functions": 4,
+        "commentRatio": 0.14814814814814814,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/no-dupe-args.js",
@@ -2773,7 +3907,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 80
+      "nloc": 80,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 7,
+        "functions": 5,
+        "commentRatio": 0.32098765432098764,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/no-dupe-class-members.js",
@@ -2790,7 +3931,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 104
+      "nloc": 104,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 7,
+        "functions": 9,
+        "commentRatio": 0.2,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/rules/no-dupe-else-if.js",
@@ -2807,7 +3955,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 122
+      "nloc": 122,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 7,
+        "functions": 8,
+        "commentRatio": 0.2764227642276423,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/rules/no-dupe-keys.js",
@@ -2824,7 +3979,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 142
+      "nloc": 142,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 7,
+        "functions": 9,
+        "commentRatio": 0.27972027972027974,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/no-duplicate-case.js",
@@ -2841,7 +4003,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 71
+      "nloc": 71,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 8,
+        "functions": 6,
+        "commentRatio": 0.25,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/no-duplicate-imports.js",
@@ -2858,7 +4027,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 290
+      "nloc": 290,
+      "structure": {
+        "cyclomatic": 36,
+        "maxNesting": 5,
+        "functions": 21,
+        "commentRatio": 0.2268041237113402,
+        "longestBlock": 30
+      }
     },
     {
       "file": "lib/rules/no-else-return.js",
@@ -2875,7 +4051,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 404
+      "nloc": 404,
+      "structure": {
+        "cyclomatic": 46,
+        "maxNesting": 7,
+        "functions": 27,
+        "commentRatio": 0.3728395061728395,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/no-empty-character-class.js",
@@ -2892,7 +4075,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 55
+      "nloc": 55,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 6,
+        "functions": 1,
+        "commentRatio": 0.35714285714285715,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/rules/no-empty-function.js",
@@ -2909,7 +4099,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 167
+      "nloc": 167,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 6,
+        "functions": 13,
+        "commentRatio": 0.22023809523809523,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-empty-pattern.js",
@@ -2926,7 +4123,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 43
+      "nloc": 43,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 7,
+        "functions": 5,
+        "commentRatio": 0.18181818181818182,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/rules/no-empty-static-block.js",
@@ -2943,7 +4147,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 47
+      "nloc": 47,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 7,
+        "functions": 3,
+        "commentRatio": 0.16666666666666666,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/no-empty.js",
@@ -2960,7 +4171,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 103
+      "nloc": 103,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 7,
+        "functions": 7,
+        "commentRatio": 0.1346153846153846,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/rules/no-eq-null.js",
@@ -2977,7 +4195,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 46
+      "nloc": 46,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.19148936170212766,
+        "longestBlock": 6
+      }
     },
     {
       "file": "lib/rules/no-eval.js",
@@ -2994,7 +4219,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 286
+      "nloc": 286,
+      "structure": {
+        "cyclomatic": 28,
+        "maxNesting": 6,
+        "functions": 16,
+        "commentRatio": 0.2613240418118467,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/no-ex-assign.js",
@@ -3011,7 +4243,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 52
+      "nloc": 52,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 5,
+        "functions": 3,
+        "commentRatio": 0.24528301886792453,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/rules/no-extend-native.js",
@@ -3028,7 +4267,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 178
+      "nloc": 178,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 6,
+        "functions": 7,
+        "commentRatio": 0.3016759776536313,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-extra-bind.js",
@@ -3045,7 +4291,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 213
+      "nloc": 213,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 6,
+        "functions": 11,
+        "commentRatio": 0.34579439252336447,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/no-extra-boolean-cast.js",
@@ -3062,7 +4315,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 317
+      "nloc": 317,
+      "structure": {
+        "cyclomatic": 53,
+        "maxNesting": 10,
+        "functions": 21,
+        "commentRatio": 0.22327044025157233,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/rules/no-extra-label.js",
@@ -3079,7 +4339,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 149
+      "nloc": 149,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 9,
+        "functions": 11,
+        "commentRatio": 0.28,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/no-extra-parens.js",
@@ -3096,7 +4363,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 1250
+      "nloc": 1250,
+      "structure": {
+        "cyclomatic": 276,
+        "maxNesting": 10,
+        "functions": 105,
+        "commentRatio": 0.2014388489208633,
+        "longestBlock": 39
+      }
     },
     {
       "file": "lib/rules/no-extra-semi.js",
@@ -3113,7 +4387,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 126
+      "nloc": 126,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 5,
+        "functions": 6,
+        "commentRatio": 0.33070866141732286,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/no-fallthrough.js",
@@ -3130,7 +4411,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 152
+      "nloc": 152,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 6,
+        "functions": 9,
+        "commentRatio": 0.28104575163398693,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/rules/no-floating-decimal.js",
@@ -3147,7 +4435,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 70
+      "nloc": 70,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 8,
+        "functions": 4,
+        "commentRatio": 0.15492957746478872,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/no-func-assign.js",
@@ -3164,7 +4459,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 76
+      "nloc": 76,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 6,
+        "functions": 5,
+        "commentRatio": 0.2987012987012987,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/no-global-assign.js",
@@ -3181,7 +4483,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 94
+      "nloc": 94,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 6,
+        "functions": 4,
+        "commentRatio": 0.25263157894736843,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/rules/no-implicit-coercion.js",
@@ -3198,7 +4507,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 380
+      "nloc": 380,
+      "structure": {
+        "cyclomatic": 76,
+        "maxNesting": 6,
+        "functions": 26,
+        "commentRatio": 0.2545931758530184,
+        "longestBlock": 29
+      }
     },
     {
       "file": "lib/rules/no-implicit-globals.js",
@@ -3215,7 +4531,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 145
+      "nloc": 145,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 9,
+        "functions": 10,
+        "commentRatio": 0.1506849315068493,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/no-implied-eval.js",
@@ -3232,7 +4555,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 131
+      "nloc": 131,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 6,
+        "functions": 9,
+        "commentRatio": 0.2196969696969697,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/no-import-assign.js",
@@ -3249,7 +4579,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 239
+      "nloc": 239,
+      "structure": {
+        "cyclomatic": 42,
+        "maxNesting": 9,
+        "functions": 12,
+        "commentRatio": 0.24166666666666667,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/no-inline-comments.js",
@@ -3266,7 +4603,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 110
+      "nloc": 110,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 5,
+        "functions": 6,
+        "commentRatio": 0.1891891891891892,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/no-inner-declarations.js",
@@ -3283,7 +4627,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 110
+      "nloc": 110,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 5,
+        "functions": 7,
+        "commentRatio": 0.1891891891891892,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/no-invalid-regexp.js",
@@ -3300,7 +4651,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 179
+      "nloc": 179,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 6,
+        "functions": 15,
+        "commentRatio": 0.25,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/no-invalid-this.js",
@@ -3317,7 +4675,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 150
+      "nloc": 150,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 6,
+        "functions": 9,
+        "commentRatio": 0.2582781456953642,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/no-irregular-whitespace.js",
@@ -3334,7 +4699,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 259
+      "nloc": 259,
+      "structure": {
+        "cyclomatic": 21,
+        "maxNesting": 8,
+        "functions": 13,
+        "commentRatio": 0.27307692307692305,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/rules/no-iterator.js",
@@ -3351,7 +4723,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 52
+      "nloc": 52,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 6,
+        "functions": 2,
+        "commentRatio": 0.20754716981132076,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/no-label-var.js",
@@ -3368,7 +4747,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 79
+      "nloc": 79,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.3625,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/no-labels.js",
@@ -3385,7 +4771,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 149
+      "nloc": 149,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 6,
+        "functions": 11,
+        "commentRatio": 0.2,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/no-lone-blocks.js",
@@ -3402,7 +4795,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 134
+      "nloc": 134,
+      "structure": {
+        "cyclomatic": 21,
+        "maxNesting": 6,
+        "functions": 13,
+        "commentRatio": 0.2,
+        "longestBlock": 23
+      }
     },
     {
       "file": "lib/rules/no-lonely-if.js",
@@ -3419,7 +4819,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 89
+      "nloc": 89,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 8,
+        "functions": 4,
+        "commentRatio": 0.14444444444444443,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/no-loop-func.js",
@@ -3436,7 +4843,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 204
+      "nloc": 204,
+      "structure": {
+        "cyclomatic": 29,
+        "maxNesting": 6,
+        "functions": 15,
+        "commentRatio": 0.32195121951219513,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/no-loss-of-precision.js",
@@ -3453,7 +4867,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 206
+      "nloc": 206,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 6,
+        "functions": 15,
+        "commentRatio": 0.3333333333333333,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/no-magic-numbers.js",
@@ -3470,7 +4891,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 243
+      "nloc": 243,
+      "structure": {
+        "cyclomatic": 33,
+        "maxNesting": 7,
+        "functions": 13,
+        "commentRatio": 0.28688524590163933,
+        "longestBlock": 36
+      }
     },
     {
       "file": "lib/rules/no-misleading-character-class.js",
@@ -3487,7 +4915,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 273
+      "nloc": 273,
+      "structure": {
+        "cyclomatic": 36,
+        "maxNesting": 9,
+        "functions": 20,
+        "commentRatio": 0.14963503649635038,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/rules/no-mixed-operators.js",
@@ -3504,7 +4939,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 226
+      "nloc": 226,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 7,
+        "functions": 9,
+        "commentRatio": 0.29955947136563876,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/rules/no-mixed-requires.js",
@@ -3521,7 +4963,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 238
+      "nloc": 238,
+      "structure": {
+        "cyclomatic": 22,
+        "maxNesting": 6,
+        "functions": 15,
+        "commentRatio": 0.21338912133891214,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/rules/no-mixed-spaces-and-tabs.js",
@@ -3538,7 +4987,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 113
+      "nloc": 113,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 9,
+        "functions": 5,
+        "commentRatio": 0.18421052631578946,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/no-multi-assign.js",
@@ -3555,7 +5011,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 67
+      "nloc": 67,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 5,
+        "functions": 2,
+        "commentRatio": 0.16176470588235295,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/rules/no-multi-spaces.js",
@@ -3572,7 +5035,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 138
+      "nloc": 138,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 7,
+        "functions": 8,
+        "commentRatio": 0.14388489208633093,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/rules/no-multi-str.js",
@@ -3589,7 +5059,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 65
+      "nloc": 65,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.30303030303030304,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/no-multiple-empty-lines.js",
@@ -3606,7 +5083,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 151
+      "nloc": 151,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 9,
+        "functions": 8,
+        "commentRatio": 0.1513157894736842,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/rules/no-native-reassign.js",
@@ -3623,7 +5107,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 97
+      "nloc": 97,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 6,
+        "functions": 4,
+        "commentRatio": 0.25510204081632654,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/no-negated-condition.js",
@@ -3640,7 +5131,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 95
+      "nloc": 95,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 6,
+        "functions": 7,
+        "commentRatio": 0.3333333333333333,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-negated-in-lhs.js",
@@ -3657,7 +5155,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 46
+      "nloc": 46,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.19148936170212766,
+        "longestBlock": 6
+      }
     },
     {
       "file": "lib/rules/no-nested-ternary.js",
@@ -3674,7 +5179,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 44
+      "nloc": 44,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.17777777777777778,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/no-new-func.js",
@@ -3691,7 +5203,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 86
+      "nloc": 86,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 9,
+        "functions": 5,
+        "commentRatio": 0.16091954022988506,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/rules/no-new-native-nonconstructor.js",
@@ -3708,7 +5227,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 64
+      "nloc": 64,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 10,
+        "functions": 4,
+        "commentRatio": 0.16923076923076924,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/rules/no-new-object.js",
@@ -3725,7 +5251,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 57
+      "nloc": 57,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 6,
+        "functions": 4,
+        "commentRatio": 0.1896551724137931,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/rules/no-new-require.js",
@@ -3742,7 +5275,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 50
+      "nloc": 50,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.17647058823529413,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/no-new-symbol.js",
@@ -3759,7 +5299,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 54
+      "nloc": 54,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 8,
+        "functions": 3,
+        "commentRatio": 0.14545454545454545,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/rules/no-new-wrappers.js",
@@ -3776,7 +5323,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 48
+      "nloc": 48,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 7,
+        "functions": 2,
+        "commentRatio": 0.16326530612244897,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/no-new.js",
@@ -3793,7 +5347,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 43
+      "nloc": 43,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 5,
+        "functions": 1,
+        "commentRatio": 0.20454545454545456,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/no-nonoctal-decimal-escape.js",
@@ -3810,7 +5371,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 148
+      "nloc": 148,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 7,
+        "functions": 7,
+        "commentRatio": 0.20134228187919462,
+        "longestBlock": 26
+      }
     },
     {
       "file": "lib/rules/no-obj-calls.js",
@@ -3827,7 +5395,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 84
+      "nloc": 84,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 7,
+        "functions": 6,
+        "commentRatio": 0.2235294117647059,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/no-octal-escape.js",
@@ -3844,7 +5419,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 56
+      "nloc": 56,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 7,
+        "functions": 4,
+        "commentRatio": 0.15789473684210525,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/no-octal.js",
@@ -3861,7 +5443,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 45
+      "nloc": 45,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 6,
+        "functions": 2,
+        "commentRatio": 0.17391304347826086,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/no-param-reassign.js",
@@ -3878,7 +5467,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 229
+      "nloc": 229,
+      "structure": {
+        "cyclomatic": 36,
+        "maxNesting": 7,
+        "functions": 14,
+        "commentRatio": 0.23043478260869565,
+        "longestBlock": 38
+      }
     },
     {
       "file": "lib/rules/no-path-concat.js",
@@ -3895,7 +5491,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 64
+      "nloc": 64,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 6,
+        "functions": 2,
+        "commentRatio": 0.18461538461538463,
+        "longestBlock": 6
+      }
     },
     {
       "file": "lib/rules/no-plusplus.js",
@@ -3912,7 +5515,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 105
+      "nloc": 105,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 6,
+        "functions": 6,
+        "commentRatio": 0.25471698113207547,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/rules/no-process-env.js",
@@ -3929,7 +5539,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 51
+      "nloc": 51,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.17307692307692307,
+        "longestBlock": 6
+      }
     },
     {
       "file": "lib/rules/no-process-exit.js",
@@ -3946,7 +5563,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 47
+      "nloc": 47,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 5,
+        "functions": 1,
+        "commentRatio": 0.25,
+        "longestBlock": 6
+      }
     },
     {
       "file": "lib/rules/no-promise-executor-return.js",
@@ -3963,7 +5587,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 121
+      "nloc": 121,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 5,
+        "functions": 11,
+        "commentRatio": 0.29508196721311475,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/no-proto.js",
@@ -3980,7 +5611,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 48
+      "nloc": 48,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 6,
+        "functions": 2,
+        "commentRatio": 0.22448979591836735,
+        "longestBlock": 6
+      }
     },
     {
       "file": "lib/rules/no-prototype-builtins.js",
@@ -3997,7 +5635,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 71
+      "nloc": 71,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.2222222222222222,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/no-redeclare.js",
@@ -4014,7 +5659,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 174
+      "nloc": 174,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 6,
+        "functions": 13,
+        "commentRatio": 0.22857142857142856,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/no-regex-spaces.js",
@@ -4031,7 +5683,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 180
+      "nloc": 180,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 10,
+        "functions": 9,
+        "commentRatio": 0.2541436464088398,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-restricted-exports.js",
@@ -4048,7 +5707,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 96
+      "nloc": 96,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 6,
+        "functions": 8,
+        "commentRatio": 0.16494845360824742,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-restricted-globals.js",
@@ -4065,7 +5731,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 122
+      "nloc": 122,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 7,
+        "functions": 6,
+        "commentRatio": 0.1951219512195122,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/rules/no-restricted-imports.js",
@@ -4082,7 +5755,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 387
+      "nloc": 387,
+      "structure": {
+        "cyclomatic": 37,
+        "maxNesting": 9,
+        "functions": 19,
+        "commentRatio": 0.14175257731958762,
+        "longestBlock": 45
+      }
     },
     {
       "file": "lib/rules/no-restricted-modules.js",
@@ -4099,7 +5779,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 216
+      "nloc": 216,
+      "structure": {
+        "cyclomatic": 25,
+        "maxNesting": 10,
+        "functions": 11,
+        "commentRatio": 0.22119815668202766,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/rules/no-restricted-properties.js",
@@ -4116,7 +5803,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 181
+      "nloc": 181,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 7,
+        "functions": 15,
+        "commentRatio": 0.12087912087912088,
+        "longestBlock": 40
+      }
     },
     {
       "file": "lib/rules/no-restricted-syntax.js",
@@ -4133,7 +5827,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 70
+      "nloc": 70,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 7,
+        "functions": 2,
+        "commentRatio": 0.1267605633802817,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/rules/no-return-assign.js",
@@ -4150,7 +5851,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 80
+      "nloc": 80,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 6,
+        "functions": 4,
+        "commentRatio": 0.19753086419753085,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/no-return-await.js",
@@ -4167,7 +5875,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 130
+      "nloc": 130,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 7,
+        "functions": 11,
+        "commentRatio": 0.1984732824427481,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/rules/no-script-url.js",
@@ -4184,7 +5899,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 61
+      "nloc": 61,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 5,
+        "functions": 5,
+        "commentRatio": 0.24193548387096775,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-self-assign.js",
@@ -4201,7 +5923,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 183
+      "nloc": 183,
+      "structure": {
+        "cyclomatic": 35,
+        "maxNesting": 5,
+        "functions": 17,
+        "commentRatio": 0.1956521739130435,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/no-self-compare.js",
@@ -4218,7 +5947,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 60
+      "nloc": 60,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.2459016393442623,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/no-sequences.js",
@@ -4235,7 +5971,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 138
+      "nloc": 138,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 7,
+        "functions": 6,
+        "commentRatio": 0.2949640287769784,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/rules/no-setter-return.js",
@@ -4252,7 +5995,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 225
+      "nloc": 225,
+      "structure": {
+        "cyclomatic": 28,
+        "maxNesting": 5,
+        "functions": 15,
+        "commentRatio": 0.3185840707964602,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/no-shadow-restricted-names.js",
@@ -4269,7 +6019,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 64
+      "nloc": 64,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 8,
+        "functions": 2,
+        "commentRatio": 0.23076923076923078,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/rules/no-shadow.js",
@@ -4286,7 +6043,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 335
+      "nloc": 335,
+      "structure": {
+        "cyclomatic": 58,
+        "maxNesting": 6,
+        "functions": 22,
+        "commentRatio": 0.24702380952380953,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-spaced-func.js",
@@ -4303,7 +6067,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 83
+      "nloc": 83,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 6,
+        "functions": 4,
+        "commentRatio": 0.20238095238095238,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/rules/no-sparse-arrays.js",
@@ -4320,7 +6091,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 50
+      "nloc": 50,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 6,
+        "functions": 3,
+        "commentRatio": 0.21568627450980393,
+        "longestBlock": 5
+      }
     },
     {
       "file": "lib/rules/no-sync.js",
@@ -4337,7 +6115,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 64
+      "nloc": 64,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 6,
+        "functions": 1,
+        "commentRatio": 0.13846153846153847,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/rules/no-tabs.js",
@@ -4354,7 +6139,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 78
+      "nloc": 78,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 9,
+        "functions": 2,
+        "commentRatio": 0.13924050632911392,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/no-template-curly-in-string.js",
@@ -4371,7 +6163,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 44
+      "nloc": 44,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 5,
+        "functions": 2,
+        "commentRatio": 0.17777777777777778,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/rules/no-ternary.js",
@@ -4388,7 +6187,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 41
+      "nloc": 41,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 5,
+        "functions": 2,
+        "commentRatio": 0.19047619047619047,
+        "longestBlock": 5
+      }
     },
     {
       "file": "lib/rules/no-this-before-super.js",
@@ -4405,7 +6211,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 304
+      "nloc": 304,
+      "structure": {
+        "cyclomatic": 28,
+        "maxNesting": 8,
+        "functions": 21,
+        "commentRatio": 0.35737704918032787,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-throw-literal.js",
@@ -4422,7 +6235,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 51
+      "nloc": 51,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 7,
+        "functions": 4,
+        "commentRatio": 0.15384615384615385,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/no-trailing-spaces.js",
@@ -4439,7 +6259,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 190
+      "nloc": 190,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 8,
+        "functions": 9,
+        "commentRatio": 0.2356020942408377,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/no-undef-init.js",
@@ -4456,7 +6283,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 75
+      "nloc": 75,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 8,
+        "functions": 6,
+        "commentRatio": 0.11842105263157894,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/no-undef.js",
@@ -4473,7 +6307,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 78
+      "nloc": 78,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 6,
+        "functions": 2,
+        "commentRatio": 0.20253164556962025,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/no-undefined.js",
@@ -4490,7 +6331,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 84
+      "nloc": 84,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 5,
+        "functions": 5,
+        "commentRatio": 0.23529411764705882,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/no-underscore-dangle.js",
@@ -4507,7 +6355,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 334
+      "nloc": 334,
+      "structure": {
+        "cyclomatic": 57,
+        "maxNesting": 9,
+        "functions": 17,
+        "commentRatio": 0.2417910447761194,
+        "longestBlock": 46
+      }
     },
     {
       "file": "lib/rules/no-unexpected-multiline.js",
@@ -4524,7 +6379,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 120
+      "nloc": 120,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 8,
+        "functions": 9,
+        "commentRatio": 0.19008264462809918,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/no-unmodified-loop-condition.js",
@@ -4541,7 +6403,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 360
+      "nloc": 360,
+      "structure": {
+        "cyclomatic": 35,
+        "maxNesting": 7,
+        "functions": 28,
+        "commentRatio": 0.3296398891966759,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/no-unneeded-ternary.js",
@@ -4558,7 +6427,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 166
+      "nloc": 166,
+      "structure": {
+        "cyclomatic": 22,
+        "maxNesting": 8,
+        "functions": 10,
+        "commentRatio": 0.20958083832335328,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-unreachable-loop.js",
@@ -4575,7 +6451,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 150
+      "nloc": 150,
+      "structure": {
+        "cyclomatic": 15,
+        "maxNesting": 6,
+        "functions": 10,
+        "commentRatio": 0.2582781456953642,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/no-unreachable.js",
@@ -4592,7 +6475,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 264
+      "nloc": 264,
+      "structure": {
+        "cyclomatic": 19,
+        "maxNesting": 7,
+        "functions": 21,
+        "commentRatio": 0.2981132075471698,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-unsafe-finally.js",
@@ -4609,7 +6499,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 111
+      "nloc": 111,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 6,
+        "functions": 7,
+        "commentRatio": 0.24107142857142858,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-unsafe-negation.js",
@@ -4626,7 +6523,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 128
+      "nloc": 128,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 8,
+        "functions": 7,
+        "commentRatio": 0.2248062015503876,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/no-unsafe-optional-chaining.js",
@@ -4643,7 +6547,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 205
+      "nloc": 205,
+      "structure": {
+        "cyclomatic": 26,
+        "maxNesting": 5,
+        "functions": 25,
+        "commentRatio": 0.17475728155339806,
+        "longestBlock": 72
+      }
     },
     {
       "file": "lib/rules/no-unused-expressions.js",
@@ -4660,7 +6571,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 189
+      "nloc": 189,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 6,
+        "functions": 19,
+        "commentRatio": 0.25263157894736843,
+        "longestBlock": 41
+      }
     },
     {
       "file": "lib/rules/no-unused-labels.js",
@@ -4677,7 +6595,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 110
+      "nloc": 110,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 7,
+        "functions": 9,
+        "commentRatio": 0.26126126126126126,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/no-unused-private-class-members.js",
@@ -4694,7 +6619,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 195
+      "nloc": 195,
+      "structure": {
+        "cyclomatic": 29,
+        "maxNesting": 8,
+        "functions": 19,
+        "commentRatio": 0.2857142857142857,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/no-unused-vars.js",
@@ -4711,7 +6643,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 717
+      "nloc": 717,
+      "structure": {
+        "cyclomatic": 122,
+        "maxNesting": 8,
+        "functions": 60,
+        "commentRatio": 0.26740947075208915,
+        "longestBlock": 39
+      }
     },
     {
       "file": "lib/rules/no-use-before-define.js",
@@ -4728,7 +6667,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 347
+      "nloc": 347,
+      "structure": {
+        "cyclomatic": 41,
+        "maxNesting": 6,
+        "functions": 23,
+        "commentRatio": 0.34195402298850575,
+        "longestBlock": 39
+      }
     },
     {
       "file": "lib/rules/no-useless-backreference.js",
@@ -4745,7 +6691,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 192
+      "nloc": 192,
+      "structure": {
+        "cyclomatic": 19,
+        "maxNesting": 8,
+        "functions": 12,
+        "commentRatio": 0.22279792746113988,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/no-useless-call.js",
@@ -4762,7 +6715,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 90
+      "nloc": 90,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 7,
+        "functions": 5,
+        "commentRatio": 0.25274725274725274,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/no-useless-catch.js",
@@ -4779,7 +6739,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 57
+      "nloc": 57,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 7,
+        "functions": 4,
+        "commentRatio": 0.13793103448275862,
+        "longestBlock": 27
+      }
     },
     {
       "file": "lib/rules/no-useless-computed-key.js",
@@ -4796,7 +6763,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 168
+      "nloc": 168,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 7,
+        "functions": 11,
+        "commentRatio": 0.3076923076923077,
+        "longestBlock": 29
+      }
     },
     {
       "file": "lib/rules/no-useless-concat.js",
@@ -4813,7 +6787,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 115
+      "nloc": 115,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 6,
+        "functions": 7,
+        "commentRatio": 0.3103448275862069,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/rules/no-useless-constructor.js",
@@ -4830,7 +6811,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 189
+      "nloc": 189,
+      "structure": {
+        "cyclomatic": 23,
+        "maxNesting": 5,
+        "functions": 15,
+        "commentRatio": 0.3684210526315789,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/no-useless-escape.js",
@@ -4847,7 +6835,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 254
+      "nloc": 254,
+      "structure": {
+        "cyclomatic": 32,
+        "maxNesting": 6,
+        "functions": 22,
+        "commentRatio": 0.30196078431372547,
+        "longestBlock": 25
+      }
     },
     {
       "file": "lib/rules/no-useless-rename.js",
@@ -4864,7 +6859,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 172
+      "nloc": 172,
+      "structure": {
+        "cyclomatic": 23,
+        "maxNesting": 6,
+        "functions": 12,
+        "commentRatio": 0.2543352601156069,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/no-useless-return.js",
@@ -4881,7 +6883,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 305
+      "nloc": 305,
+      "structure": {
+        "cyclomatic": 24,
+        "maxNesting": 8,
+        "functions": 23,
+        "commentRatio": 0.33986928104575165,
+        "longestBlock": 28
+      }
     },
     {
       "file": "lib/rules/no-var.js",
@@ -4898,7 +6907,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 334
+      "nloc": 334,
+      "structure": {
+        "cyclomatic": 36,
+        "maxNesting": 6,
+        "functions": 21,
+        "commentRatio": 0.44776119402985076,
+        "longestBlock": 55
+      }
     },
     {
       "file": "lib/rules/no-void.js",
@@ -4915,7 +6931,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 64
+      "nloc": 64,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 5,
+        "functions": 2,
+        "commentRatio": 0.16923076923076924,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/no-warning-comments.js",
@@ -4932,7 +6955,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 201
+      "nloc": 201,
+      "structure": {
+        "cyclomatic": 15,
+        "maxNesting": 7,
+        "functions": 7,
+        "commentRatio": 0.28217821782178215,
+        "longestBlock": 26
+      }
     },
     {
       "file": "lib/rules/no-whitespace-before-property.js",
@@ -4949,7 +6979,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 113
+      "nloc": 113,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 6,
+        "functions": 7,
+        "commentRatio": 0.2631578947368421,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/no-with.js",
@@ -4966,7 +7003,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 39
+      "nloc": 39,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 5,
+        "functions": 2,
+        "commentRatio": 0.2,
+        "longestBlock": 5
+      }
     },
     {
       "file": "lib/rules/nonblock-statement-body-position.js",
@@ -4983,7 +7027,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 124
+      "nloc": 124,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 7,
+        "functions": 9,
+        "commentRatio": 0.208,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/object-curly-newline.js",
@@ -5000,7 +7051,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 321
+      "nloc": 321,
+      "structure": {
+        "cyclomatic": 37,
+        "maxNesting": 8,
+        "functions": 21,
+        "commentRatio": 0.1956521739130435,
+        "longestBlock": 25
+      }
     },
     {
       "file": "lib/rules/object-curly-spacing.js",
@@ -5017,7 +7075,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 308
+      "nloc": 308,
+      "structure": {
+        "cyclomatic": 27,
+        "maxNesting": 5,
+        "functions": 24,
+        "commentRatio": 0.27184466019417475,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/object-property-newline.js",
@@ -5034,7 +7099,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 99
+      "nloc": 99,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 9,
+        "functions": 8,
+        "commentRatio": 0.1,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/object-shorthand.js",
@@ -5051,7 +7123,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 519
+      "nloc": 519,
+      "structure": {
+        "cyclomatic": 81,
+        "maxNesting": 8,
+        "functions": 45,
+        "commentRatio": 0.2153846153846154,
+        "longestBlock": 61
+      }
     },
     {
       "file": "lib/rules/one-var-declaration-per-line.js",
@@ -5068,7 +7147,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 92
+      "nloc": 92,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 7,
+        "functions": 5,
+        "commentRatio": 0.27956989247311825,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/one-var.js",
@@ -5085,7 +7171,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 567
+      "nloc": 567,
+      "structure": {
+        "cyclomatic": 92,
+        "maxNesting": 8,
+        "functions": 55,
+        "commentRatio": 0.1936619718309859,
+        "longestBlock": 39
+      }
     },
     {
       "file": "lib/rules/operator-assignment.js",
@@ -5102,7 +7195,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 209
+      "nloc": 209,
+      "structure": {
+        "cyclomatic": 25,
+        "maxNesting": 9,
+        "functions": 10,
+        "commentRatio": 0.2714285714285714,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/operator-linebreak.js",
@@ -5119,7 +7219,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 250
+      "nloc": 250,
+      "structure": {
+        "cyclomatic": 35,
+        "maxNesting": 6,
+        "functions": 14,
+        "commentRatio": 0.22310756972111553,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/rules/padded-blocks.js",
@@ -5136,7 +7243,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 307
+      "nloc": 307,
+      "structure": {
+        "cyclomatic": 32,
+        "maxNesting": 7,
+        "functions": 26,
+        "commentRatio": 0.16233766233766234,
+        "longestBlock": 34
+      }
     },
     {
       "file": "lib/rules/padding-line-between-statements.js",
@@ -5153,7 +7267,14 @@
       },
       "defective": true,
       "fixCount": 2,
-      "nloc": 632
+      "nloc": 632,
+      "structure": {
+        "cyclomatic": 61,
+        "maxNesting": 7,
+        "functions": 39,
+        "commentRatio": 0.31911532385466035,
+        "longestBlock": 45
+      }
     },
     {
       "file": "lib/rules/prefer-arrow-callback.js",
@@ -5170,7 +7291,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 381
+      "nloc": 381,
+      "structure": {
+        "cyclomatic": 58,
+        "maxNesting": 9,
+        "functions": 29,
+        "commentRatio": 0.2696335078534031,
+        "longestBlock": 21
+      }
     },
     {
       "file": "lib/rules/prefer-const.js",
@@ -5187,7 +7315,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 501
+      "nloc": 501,
+      "structure": {
+        "cyclomatic": 76,
+        "maxNesting": 9,
+        "functions": 41,
+        "commentRatio": 0.2848605577689243,
+        "longestBlock": 28
+      }
     },
     {
       "file": "lib/rules/prefer-destructuring.js",
@@ -5204,7 +7339,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 301
+      "nloc": 301,
+      "structure": {
+        "cyclomatic": 31,
+        "maxNesting": 8,
+        "functions": 14,
+        "commentRatio": 0.2980132450331126,
+        "longestBlock": 59
+      }
     },
     {
       "file": "lib/rules/prefer-exponentiation-operator.js",
@@ -5221,7 +7363,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 190
+      "nloc": 190,
+      "structure": {
+        "cyclomatic": 31,
+        "maxNesting": 8,
+        "functions": 11,
+        "commentRatio": 0.23036649214659685,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/rules/prefer-named-capture-group.js",
@@ -5238,7 +7387,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 175
+      "nloc": 175,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 8,
+        "functions": 12,
+        "commentRatio": 0.17613636363636365,
+        "longestBlock": 23
+      }
     },
     {
       "file": "lib/rules/prefer-numeric-literals.js",
@@ -5255,7 +7411,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 148
+      "nloc": 148,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 8,
+        "functions": 3,
+        "commentRatio": 0.2550335570469799,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/prefer-object-has-own.js",
@@ -5272,7 +7435,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 112
+      "nloc": 112,
+      "structure": {
+        "cyclomatic": 18,
+        "maxNesting": 8,
+        "functions": 7,
+        "commentRatio": 0.23008849557522124,
+        "longestBlock": 22
+      }
     },
     {
       "file": "lib/rules/prefer-object-spread.js",
@@ -5289,7 +7459,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 299
+      "nloc": 299,
+      "structure": {
+        "cyclomatic": 39,
+        "maxNesting": 7,
+        "functions": 18,
+        "commentRatio": 0.2633333333333333,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/prefer-promise-reject-errors.js",
@@ -5306,7 +7483,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 131
+      "nloc": 131,
+      "structure": {
+        "cyclomatic": 16,
+        "maxNesting": 5,
+        "functions": 5,
+        "commentRatio": 0.32575757575757575,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/prefer-reflect.js",
@@ -5323,7 +7507,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 127
+      "nloc": 127,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 6,
+        "functions": 6,
+        "commentRatio": 0.125,
+        "longestBlock": 26
+      }
     },
     {
       "file": "lib/rules/prefer-regex-literals.js",
@@ -5340,7 +7531,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 396
+      "nloc": 396,
+      "structure": {
+        "cyclomatic": 60,
+        "maxNesting": 11,
+        "functions": 24,
+        "commentRatio": 0.17632241813602015,
+        "longestBlock": 64
+      }
     },
     {
       "file": "lib/rules/prefer-rest-params.js",
@@ -5357,7 +7555,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 115
+      "nloc": 115,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 4,
+        "functions": 8,
+        "commentRatio": 0.3448275862068966,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/prefer-spread.js",
@@ -5374,7 +7579,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 87
+      "nloc": 87,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 6,
+        "functions": 5,
+        "commentRatio": 0.26136363636363635,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/prefer-template.js",
@@ -5391,7 +7603,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 275
+      "nloc": 275,
+      "structure": {
+        "cyclomatic": 34,
+        "maxNesting": 6,
+        "functions": 23,
+        "commentRatio": 0.33695652173913043,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/quote-props.js",
@@ -5408,7 +7627,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 307
+      "nloc": 307,
+      "structure": {
+        "cyclomatic": 64,
+        "maxNesting": 7,
+        "functions": 25,
+        "commentRatio": 0.16883116883116883,
+        "longestBlock": 39
+      }
     },
     {
       "file": "lib/rules/quotes.js",
@@ -5425,7 +7651,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 347
+      "nloc": 347,
+      "structure": {
+        "cyclomatic": 58,
+        "maxNesting": 11,
+        "functions": 25,
+        "commentRatio": 0.2557471264367816,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/rules/radix.js",
@@ -5442,7 +7675,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 198
+      "nloc": 198,
+      "structure": {
+        "cyclomatic": 25,
+        "maxNesting": 8,
+        "functions": 9,
+        "commentRatio": 0.24120603015075376,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/require-atomic-updates.js",
@@ -5459,7 +7699,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 317
+      "nloc": 317,
+      "structure": {
+        "cyclomatic": 44,
+        "maxNesting": 10,
+        "functions": 37,
+        "commentRatio": 0.2169811320754717,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/require-await.js",
@@ -5476,7 +7723,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 113
+      "nloc": 113,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 6,
+        "functions": 9,
+        "commentRatio": 0.2543859649122807,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/require-jsdoc.js",
@@ -5493,7 +7747,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 122
+      "nloc": 122,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 7,
+        "functions": 11,
+        "commentRatio": 0.13008130081300814,
+        "longestBlock": 35
+      }
     },
     {
       "file": "lib/rules/require-unicode-regexp.js",
@@ -5510,7 +7771,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 69
+      "nloc": 69,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 7,
+        "functions": 2,
+        "commentRatio": 0.15714285714285714,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/require-yield.js",
@@ -5527,7 +7795,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 77
+      "nloc": 77,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 5,
+        "functions": 8,
+        "commentRatio": 0.2564102564102564,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/rules/rest-spread-spacing.js",
@@ -5544,7 +7819,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 120
+      "nloc": 120,
+      "structure": {
+        "cyclomatic": 11,
+        "maxNesting": 6,
+        "functions": 9,
+        "commentRatio": 0.15702479338842976,
+        "longestBlock": 29
+      }
     },
     {
       "file": "lib/rules/semi-spacing.js",
@@ -5561,7 +7843,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 245
+      "nloc": 245,
+      "structure": {
+        "cyclomatic": 22,
+        "maxNesting": 9,
+        "functions": 20,
+        "commentRatio": 0.22764227642276422,
+        "longestBlock": 27
+      }
     },
     {
       "file": "lib/rules/semi-style.js",
@@ -5578,7 +7867,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 155
+      "nloc": 155,
+      "structure": {
+        "cyclomatic": 32,
+        "maxNesting": 7,
+        "functions": 12,
+        "commentRatio": 0.19230769230769232,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/semi.js",
@@ -5595,7 +7891,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 410
+      "nloc": 410,
+      "structure": {
+        "cyclomatic": 58,
+        "maxNesting": 7,
+        "functions": 29,
+        "commentRatio": 0.25547445255474455,
+        "longestBlock": 40
+      }
     },
     {
       "file": "lib/rules/sort-imports.js",
@@ -5612,7 +7915,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 241
+      "nloc": 241,
+      "structure": {
+        "cyclomatic": 31,
+        "maxNesting": 10,
+        "functions": 19,
+        "commentRatio": 0.19421487603305784,
+        "longestBlock": 33
+      }
     },
     {
       "file": "lib/rules/sort-keys.js",
@@ -5629,7 +7939,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 230
+      "nloc": 230,
+      "structure": {
+        "cyclomatic": 30,
+        "maxNesting": 7,
+        "functions": 20,
+        "commentRatio": 0.1645021645021645,
+        "longestBlock": 33
+      }
     },
     {
       "file": "lib/rules/sort-vars.js",
@@ -5646,7 +7963,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 104
+      "nloc": 104,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 9,
+        "functions": 5,
+        "commentRatio": 0.10476190476190476,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/rules/space-before-blocks.js",
@@ -5663,7 +7987,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 201
+      "nloc": 201,
+      "structure": {
+        "cyclomatic": 21,
+        "maxNesting": 7,
+        "functions": 13,
+        "commentRatio": 0.18811881188118812,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/rules/space-before-function-paren.js",
@@ -5680,7 +8011,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 164
+      "nloc": 164,
+      "structure": {
+        "cyclomatic": 22,
+        "maxNesting": 7,
+        "functions": 11,
+        "commentRatio": 0.17575757575757575,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/rules/space-in-parens.js",
@@ -5697,7 +8035,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 282
+      "nloc": 282,
+      "structure": {
+        "cyclomatic": 33,
+        "maxNesting": 8,
+        "functions": 23,
+        "commentRatio": 0.2049469964664311,
+        "longestBlock": 18
+      }
     },
     {
       "file": "lib/rules/space-infix-ops.js",
@@ -5714,7 +8059,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 195
+      "nloc": 195,
+      "structure": {
+        "cyclomatic": 19,
+        "maxNesting": 6,
+        "functions": 16,
+        "commentRatio": 0.23979591836734693,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/rules/space-unary-ops.js",
@@ -5731,7 +8083,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 321
+      "nloc": 321,
+      "structure": {
+        "cyclomatic": 33,
+        "maxNesting": 8,
+        "functions": 29,
+        "commentRatio": 0.2639751552795031,
+        "longestBlock": 39
+      }
     },
     {
       "file": "lib/rules/spaced-comment.js",
@@ -5748,7 +8107,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 382
+      "nloc": 382,
+      "structure": {
+        "cyclomatic": 33,
+        "maxNesting": 7,
+        "functions": 23,
+        "commentRatio": 0.27154046997389036,
+        "longestBlock": 63
+      }
     },
     {
       "file": "lib/rules/strict.js",
@@ -5765,7 +8131,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 277
+      "nloc": 277,
+      "structure": {
+        "cyclomatic": 34,
+        "maxNesting": 7,
+        "functions": 28,
+        "commentRatio": 0.2949640287769784,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/switch-colon-spacing.js",
@@ -5782,7 +8155,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 129
+      "nloc": 129,
+      "structure": {
+        "cyclomatic": 10,
+        "maxNesting": 6,
+        "functions": 6,
+        "commentRatio": 0.24615384615384617,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/symbol-description.js",
@@ -5799,7 +8179,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 71
+      "nloc": 71,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 7,
+        "functions": 4,
+        "commentRatio": 0.2361111111111111,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/template-curly-spacing.js",
@@ -5816,7 +8203,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 141
+      "nloc": 141,
+      "structure": {
+        "cyclomatic": 13,
+        "maxNesting": 7,
+        "functions": 8,
+        "commentRatio": 0.14788732394366197,
+        "longestBlock": 13
+      }
     },
     {
       "file": "lib/rules/template-tag-spacing.js",
@@ -5833,7 +8227,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 90
+      "nloc": 90,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 7,
+        "functions": 6,
+        "commentRatio": 0.16483516483516483,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/unicode-bom.js",
@@ -5850,7 +8251,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 73
+      "nloc": 73,
+      "structure": {
+        "cyclomatic": 6,
+        "maxNesting": 7,
+        "functions": 4,
+        "commentRatio": 0.14864864864864866,
+        "longestBlock": 20
+      }
     },
     {
       "file": "lib/rules/use-isnan.js",
@@ -5867,7 +8275,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 141
+      "nloc": 141,
+      "structure": {
+        "cyclomatic": 19,
+        "maxNesting": 7,
+        "functions": 9,
+        "commentRatio": 0.23943661971830985,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/rules/utils/ast-utils.js",
@@ -5884,7 +8299,14 @@
       },
       "defective": true,
       "fixCount": 3,
-      "nloc": 2124
+      "nloc": 2124,
+      "structure": {
+        "cyclomatic": 365,
+        "maxNesting": 6,
+        "functions": 157,
+        "commentRatio": 0.42070588235294115,
+        "longestBlock": 101
+      }
     },
     {
       "file": "lib/rules/utils/fix-tracker.js",
@@ -5901,7 +8323,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 114
+      "nloc": 114,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 3,
+        "functions": 7,
+        "commentRatio": 0.48695652173913045,
+        "longestBlock": 12
+      }
     },
     {
       "file": "lib/rules/utils/keywords.js",
@@ -5918,7 +8347,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 67
+      "nloc": 67,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0.058823529411764705,
+        "longestBlock": 61
+      }
     },
     {
       "file": "lib/rules/utils/lazy-loading-rule-map.js",
@@ -5935,7 +8371,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 115
+      "nloc": 115,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 5,
+        "functions": 6,
+        "commentRatio": 0.39655172413793105,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/rules/utils/patterns/letters.js",
@@ -5952,7 +8395,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 36
+      "nloc": 36,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 0,
+        "functions": 0,
+        "commentRatio": 0.8378378378378378,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/rules/utils/unicode/index.js",
@@ -5969,7 +8419,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 11
+      "nloc": 11,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.25,
+        "longestBlock": 6
+      }
     },
     {
       "file": "lib/rules/utils/unicode/is-combining-character.js",
@@ -5986,7 +8443,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 13
+      "nloc": 13,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0.5714285714285714,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/utils/unicode/is-emoji-modifier.js",
@@ -6003,7 +8467,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 13
+      "nloc": 13,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 1,
+        "functions": 1,
+        "commentRatio": 0.5714285714285714,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/utils/unicode/is-regional-indicator-symbol.js",
@@ -6020,7 +8491,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 13
+      "nloc": 13,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 1,
+        "functions": 1,
+        "commentRatio": 0.5714285714285714,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/rules/utils/unicode/is-surrogate-pair.js",
@@ -6037,7 +8515,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 14
+      "nloc": 14,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 1,
+        "functions": 1,
+        "commentRatio": 0.6,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/rules/valid-jsdoc.js",
@@ -6054,7 +8539,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 516
+      "nloc": 516,
+      "structure": {
+        "cyclomatic": 87,
+        "maxNesting": 10,
+        "functions": 30,
+        "commentRatio": 0.16054158607350097,
+        "longestBlock": 43
+      }
     },
     {
       "file": "lib/rules/valid-typeof.js",
@@ -6071,7 +8563,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 121
+      "nloc": 121,
+      "structure": {
+        "cyclomatic": 20,
+        "maxNesting": 10,
+        "functions": 7,
+        "commentRatio": 0.18032786885245902,
+        "longestBlock": 23
+      }
     },
     {
       "file": "lib/rules/vars-on-top.js",
@@ -6088,7 +8587,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 157
+      "nloc": 157,
+      "structure": {
+        "cyclomatic": 24,
+        "maxNesting": 6,
+        "functions": 13,
+        "commentRatio": 0.3037974683544304,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/rules/wrap-iife.js",
@@ -6105,7 +8611,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 204
+      "nloc": 204,
+      "structure": {
+        "cyclomatic": 21,
+        "maxNesting": 8,
+        "functions": 14,
+        "commentRatio": 0.25853658536585367,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/rules/wrap-regex.js",
@@ -6122,7 +8635,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 59
+      "nloc": 59,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 7,
+        "functions": 3,
+        "commentRatio": 0.13333333333333333,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/rules/yield-star-spacing.js",
@@ -6139,7 +8659,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 127
+      "nloc": 127,
+      "structure": {
+        "cyclomatic": 12,
+        "maxNesting": 8,
+        "functions": 10,
+        "commentRatio": 0.171875,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/rules/yoda.js",
@@ -6156,7 +8683,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 362
+      "nloc": 362,
+      "structure": {
+        "cyclomatic": 50,
+        "maxNesting": 7,
+        "functions": 21,
+        "commentRatio": 0.2534435261707989,
+        "longestBlock": 27
+      }
     },
     {
       "file": "lib/shared/ajv.js",
@@ -6173,7 +8707,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 34
+      "nloc": 34,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0.3142857142857143,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/shared/ast-utils.js",
@@ -6190,7 +8731,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 29
+      "nloc": 29,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 1,
+        "functions": 1,
+        "commentRatio": 0.43333333333333335,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/shared/config-validator.js",
@@ -6207,7 +8755,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 347
+      "nloc": 347,
+      "structure": {
+        "cyclomatic": 43,
+        "maxNesting": 4,
+        "functions": 30,
+        "commentRatio": 0.3132183908045977,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/shared/deprecation-warnings.js",
@@ -6224,7 +8779,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 58
+      "nloc": 58,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0.3728813559322034,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/shared/logging.js",
@@ -6241,7 +8803,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 30
+      "nloc": 30,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 2,
+        "commentRatio": 0.5161290322580645,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/shared/relative-module-resolver.js",
@@ -6258,7 +8827,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 50
+      "nloc": 50,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 4,
+        "functions": 2,
+        "commentRatio": 0.47058823529411764,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/shared/runtime-info.js",
@@ -6275,7 +8851,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 167
+      "nloc": 167,
+      "structure": {
+        "cyclomatic": 15,
+        "maxNesting": 4,
+        "functions": 12,
+        "commentRatio": 0.3333333333333333,
+        "longestBlock": 10
+      }
     },
     {
       "file": "lib/shared/string-utils.js",
@@ -6292,7 +8875,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 22
+      "nloc": 22,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 2,
+        "functions": 2,
+        "commentRatio": 0.391304347826087,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/shared/traverser.js",
@@ -6309,7 +8899,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 195
+      "nloc": 195,
+      "structure": {
+        "cyclomatic": 17,
+        "maxNesting": 7,
+        "functions": 19,
+        "commentRatio": 0.413265306122449,
+        "longestBlock": 19
+      }
     },
     {
       "file": "lib/shared/types.js",
@@ -6326,7 +8923,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 212
+      "nloc": 212,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.8779342723004695,
+        "longestBlock": 17
+      }
     },
     {
       "file": "lib/source-code/index.js",
@@ -6343,7 +8947,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 5
+      "nloc": 5,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "lib/source-code/source-code.js",
@@ -6360,7 +8971,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 593
+      "nloc": 593,
+      "structure": {
+        "cyclomatic": 101,
+        "maxNesting": 6,
+        "functions": 45,
+        "commentRatio": 0.4006734006734007,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/source-code/token-store/backward-token-comment-cursor.js",
@@ -6377,7 +8995,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 57
+      "nloc": 57,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0.3793103448275862,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/source-code/token-store/backward-token-cursor.js",
@@ -6394,7 +9019,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 58
+      "nloc": 58,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 3,
+        "functions": 4,
+        "commentRatio": 0.4745762711864407,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/source-code/token-store/cursor.js",
@@ -6411,7 +9043,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 76
+      "nloc": 76,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 3,
+        "functions": 4,
+        "commentRatio": 0.6363636363636364,
+        "longestBlock": 24
+      }
     },
     {
       "file": "lib/source-code/token-store/cursors.js",
@@ -6428,7 +9067,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 90
+      "nloc": 90,
+      "structure": {
+        "cyclomatic": 5,
+        "maxNesting": 3,
+        "functions": 6,
+        "commentRatio": 0.4945054945054945,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/source-code/token-store/decorative-cursor.js",
@@ -6445,7 +9091,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 39
+      "nloc": 39,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 2,
+        "commentRatio": 0.45,
+        "longestBlock": 8
+      }
     },
     {
       "file": "lib/source-code/token-store/filter-cursor.js",
@@ -6462,7 +9115,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 43
+      "nloc": 43,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 4,
+        "functions": 2,
+        "commentRatio": 0.4318181818181818,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/source-code/token-store/forward-token-comment-cursor.js",
@@ -6479,7 +9139,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 57
+      "nloc": 57,
+      "structure": {
+        "cyclomatic": 9,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0.3793103448275862,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/source-code/token-store/forward-token-cursor.js",
@@ -6496,7 +9163,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 63
+      "nloc": 63,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 3,
+        "functions": 5,
+        "commentRatio": 0.453125,
+        "longestBlock": 14
+      }
     },
     {
       "file": "lib/source-code/token-store/index.js",
@@ -6513,7 +9187,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 627
+      "nloc": 627,
+      "structure": {
+        "cyclomatic": 30,
+        "maxNesting": 3,
+        "functions": 37,
+        "commentRatio": 0.43312101910828027,
+        "longestBlock": 36
+      }
     },
     {
       "file": "lib/source-code/token-store/limit-cursor.js",
@@ -6530,7 +9211,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 40
+      "nloc": 40,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0.4634146341463415,
+        "longestBlock": 9
+      }
     },
     {
       "file": "lib/source-code/token-store/padded-token-cursor.js",
@@ -6547,7 +9235,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 38
+      "nloc": 38,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0.6153846153846154,
+        "longestBlock": 16
+      }
     },
     {
       "file": "lib/source-code/token-store/skip-cursor.js",
@@ -6564,7 +9259,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 42
+      "nloc": 42,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 4,
+        "functions": 3,
+        "commentRatio": 0.4418604651162791,
+        "longestBlock": 11
+      }
     },
     {
       "file": "lib/source-code/token-store/utils.js",
@@ -6581,7 +9283,14 @@
       },
       "defective": true,
       "fixCount": 1,
-      "nloc": 92
+      "nloc": 92,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 3,
+        "functions": 8,
+        "commentRatio": 0.5053763440860215,
+        "longestBlock": 15
+      }
     },
     {
       "file": "lib/unsupported-api.js",
@@ -6598,7 +9307,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 27
+      "nloc": 27,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.42857142857142855,
+        "longestBlock": 6
+      }
     },
     {
       "file": "Makefile.js",
@@ -6615,7 +9331,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 1092
+      "nloc": 1092,
+      "structure": {
+        "cyclomatic": 47,
+        "maxNesting": 4,
+        "functions": 56,
+        "commentRatio": 0.2442817932296432,
+        "longestBlock": 25
+      }
     },
     {
       "file": "messages/all-files-ignored.js",
@@ -6632,7 +9355,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 16
+      "nloc": 16,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0.11764705882352941,
+        "longestBlock": 4
+      }
     },
     {
       "file": "messages/extend-config-missing.js",
@@ -6649,7 +9379,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 13
+      "nloc": 13,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "messages/failed-to-read-json.js",
@@ -6666,7 +9403,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 11
+      "nloc": 11,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "messages/file-not-found.js",
@@ -6683,7 +9427,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 10
+      "nloc": 10,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 5
+      }
     },
     {
       "file": "messages/no-config-found.js",
@@ -6700,7 +9451,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 15
+      "nloc": 15,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "messages/plugin-conflict.js",
@@ -6717,7 +9475,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 22
+      "nloc": 22,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 3,
+        "functions": 2,
+        "commentRatio": 0,
+        "longestBlock": 4
+      }
     },
     {
       "file": "messages/plugin-invalid.js",
@@ -6734,7 +9499,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 16
+      "nloc": 16,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0.11764705882352941,
+        "longestBlock": 3
+      }
     },
     {
       "file": "messages/plugin-missing.js",
@@ -6751,7 +9523,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 19
+      "nloc": 19,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "messages/print-config-with-directory-path.js",
@@ -6768,7 +9547,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 8
+      "nloc": 8,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 6
+      }
     },
     {
       "file": "messages/whitespace-found.js",
@@ -6785,7 +9571,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 11
+      "nloc": 11,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 2,
+        "functions": 1,
+        "commentRatio": 0,
+        "longestBlock": 3
+      }
     },
     {
       "file": "packages/eslint-config-eslint/index.js",
@@ -6802,7 +9595,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 9
+      "nloc": 9,
+      "structure": {
+        "cyclomatic": 1,
+        "maxNesting": 1,
+        "functions": 0,
+        "commentRatio": 0.4,
+        "longestBlock": 5
+      }
     },
     {
       "file": "tools/code-sample-minimizer.js",
@@ -6819,7 +9619,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 205
+      "nloc": 205,
+      "structure": {
+        "cyclomatic": 30,
+        "maxNesting": 7,
+        "functions": 16,
+        "commentRatio": 0.24757281553398058,
+        "longestBlock": 33
+      }
     },
     {
       "file": "tools/config-rule.js",
@@ -6836,7 +9643,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 316
+      "nloc": 316,
+      "structure": {
+        "cyclomatic": 22,
+        "maxNesting": 6,
+        "functions": 24,
+        "commentRatio": 0.4479495268138801,
+        "longestBlock": 24
+      }
     },
     {
       "file": "tools/eslint-fuzzer.js",
@@ -6853,7 +9667,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 214
+      "nloc": 214,
+      "structure": {
+        "cyclomatic": 25,
+        "maxNesting": 6,
+        "functions": 12,
+        "commentRatio": 0.26046511627906976,
+        "longestBlock": 23
+      }
     },
     {
       "file": "tools/fetch-docs-links.js",
@@ -6870,7 +9691,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 112
+      "nloc": 112,
+      "structure": {
+        "cyclomatic": 7,
+        "maxNesting": 7,
+        "functions": 7,
+        "commentRatio": 0.3008849557522124,
+        "longestBlock": 13
+      }
     },
     {
       "file": "tools/fuzzer-runner.js",
@@ -6887,7 +9715,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 81
+      "nloc": 81,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 4,
+        "functions": 3,
+        "commentRatio": 0.36585365853658536,
+        "longestBlock": 13
+      }
     },
     {
       "file": "tools/internal-rules/index.js",
@@ -6904,7 +9739,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 13
+      "nloc": 13,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0,
+        "longestBlock": 8
+      }
     },
     {
       "file": "tools/internal-rules/multiline-comment-style.js",
@@ -6921,7 +9763,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 25
+      "nloc": 25,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 2,
+        "functions": 0,
+        "commentRatio": 0.34615384615384615,
+        "longestBlock": 7
+      }
     },
     {
       "file": "tools/internal-rules/no-invalid-meta.js",
@@ -6938,7 +9787,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 135
+      "nloc": 135,
+      "structure": {
+        "cyclomatic": 14,
+        "maxNesting": 6,
+        "functions": 12,
+        "commentRatio": 0.27205882352941174,
+        "longestBlock": 15
+      }
     },
     {
       "file": "tools/internal-testers/event-generator-tester.js",
@@ -6955,7 +9811,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 62
+      "nloc": 62,
+      "structure": {
+        "cyclomatic": 3,
+        "maxNesting": 4,
+        "functions": 3,
+        "commentRatio": 0.4444444444444444,
+        "longestBlock": 11
+      }
     },
     {
       "file": "tools/internal-testers/test-parser.js",
@@ -6972,7 +9835,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 48
+      "nloc": 48,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 3,
+        "functions": 4,
+        "commentRatio": 0.2653061224489796,
+        "longestBlock": 21
+      }
     },
     {
       "file": "tools/update-readme.js",
@@ -6989,7 +9859,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 165
+      "nloc": 165,
+      "structure": {
+        "cyclomatic": 8,
+        "maxNesting": 3,
+        "functions": 7,
+        "commentRatio": 0.3072289156626506,
+        "longestBlock": 18
+      }
     },
     {
       "file": "tools/update-rule-types.js",
@@ -7006,7 +9883,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 58
+      "nloc": 58,
+      "structure": {
+        "cyclomatic": 4,
+        "maxNesting": 3,
+        "functions": 3,
+        "commentRatio": 0.22033898305084745,
+        "longestBlock": 8
+      }
     },
     {
       "file": "webpack.config.js",
@@ -7023,7 +9907,14 @@
       },
       "defective": false,
       "fixCount": 0,
-      "nloc": 53
+      "nloc": 53,
+      "structure": {
+        "cyclomatic": 2,
+        "maxNesting": 5,
+        "functions": 0,
+        "commentRatio": 0.25925925925925924,
+        "longestBlock": 28
+      }
     }
   ],
   "total": 413,

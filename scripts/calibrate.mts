@@ -27,7 +27,11 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { gitLogRange } from "../packages/vcs/src/signals";
-import { buildDataset, commitsFromLog } from "../packages/calibrate/src/index";
+import {
+  buildDataset,
+  commitsFromLog,
+  structuralMetrics,
+} from "../packages/calibrate/src/index";
 
 const argv = process.argv.slice(2);
 const flag = (name: string, fallback: string): string => {
@@ -101,8 +105,17 @@ const windowEnd = end.toISOString().slice(0, 10);
  * using it would leak post-T0 information into a feature. One `ls-tree` plus one batched
  * `cat-file` rather than a process per file — 3827 files would otherwise be 3827 spawns.
  */
-function nlocAtT0(dir: string, rev: string): Map<string, number> {
-  const out = new Map<string, number>();
+interface FileFacts {
+  nloc: number;
+  cyclomatic: number;
+  maxNesting: number;
+  functions: number;
+  commentRatio: number;
+  longestBlock: number;
+}
+
+function factsAtT0(dir: string, rev: string): Map<string, FileFacts> {
+  const out = new Map<string, FileFacts>();
   let listing: string;
   try {
     listing = execFileSync("git", ["ls-tree", "-r", rev], {
@@ -142,7 +155,10 @@ function nlocAtT0(dir: string, rev: string): Map<string, number> {
     const body = batch.subarray(nl + 1, nl + 1 + size);
     let lines = 0;
     for (const byte of body) if (byte === 0x0a) lines++;
-    out.set(b.file, lines);
+    // Structural markers come from the SAME blob stream — the file text is already decoded
+    // here, so complexity costs no extra git work.
+    const st = structuralMetrics(body.toString("utf8"), b.file.endsWith(".py"));
+    out.set(b.file, { nloc: lines, ...st });
     off = nl + 1 + size + 1;
   }
   return out;
@@ -227,12 +243,27 @@ try {
      * Caught because NLOC came back null for them. Without the size control §5.3 mandates, they
      * would have sat in the dataset indefinitely, indistinguishable from real files.
      */
-    const nloc = nlocAtT0(dir, t0Rev);
+    const facts = factsAtT0(dir, t0Rev);
     const d = buildDataset(before, after, undefined, {
-      includeFile: (f) => isSource(f) && nloc.has(f),
+      includeFile: (f) => isSource(f) && facts.has(f),
     });
 
-    const files = d.files.map((f) => ({ ...f, nloc: nloc.get(f.file) ?? null }));
+    const files = d.files.map((f) => {
+      const k = facts.get(f.file);
+      return {
+        ...f,
+        nloc: k?.nloc ?? null,
+        structure: k
+          ? {
+              cyclomatic: k.cyclomatic,
+              maxNesting: k.maxNesting,
+              functions: k.functions,
+              commentRatio: k.commentRatio,
+              longestBlock: k.longestBlock,
+            }
+          : null,
+      };
+    });
     const withNloc = files.filter((f) => f.nloc !== null).length;
 
     writeFileSync(
