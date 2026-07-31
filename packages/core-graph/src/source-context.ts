@@ -1,4 +1,5 @@
 import ts from "typescript";
+import { contentCache } from "./content-cache";
 
 /**
  * Where in the source a match landed.
@@ -63,8 +64,18 @@ export function tierForExt(ext: string): Exclude<AnalysisTier, "skipped"> {
  * span SUPPRESSES a real finding. Trading false positives for silent false negatives is a bad
  * trade in a tool whose credibility is the product.
  */
+/**
+ * Bumped whenever the span rules change. Forgetting to bump serves entries computed by the old
+ * logic - which is how the scanner-desync bug would have outlived its own fix.
+ */
+const SPANS_VERSION = "spans-2-parser";
+
 export function syntacticSpans(text: string, ext: string): SourceSpan[] {
   if (!TS_FAMILY.has(ext)) return [];
+  return contentCache.get(text, ext, SPANS_VERSION, () => computeSpans(text, ext));
+}
+
+function computeSpans(text: string, ext: string): SourceSpan[] {
   const sf = ts.createSourceFile(
     `f${ext}`,
     text,

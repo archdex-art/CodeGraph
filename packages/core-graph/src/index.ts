@@ -56,3 +56,5 @@ export { syntacticSpans, contextAt, tierForExt } from "./source-context";
 export type { SourceContext, SourceSpan, AnalysisTier } from "./source-context";
 export { classifyTaint, callAt } from "./dataflow";
 export type { TaintQuery, TaintVerdict } from "./dataflow";
+export { ContentCache, contentCache } from "./content-cache";
+export type { ContentCacheStats } from "./content-cache";

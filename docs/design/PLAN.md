@@ -509,6 +509,41 @@ injection classes; regex tier demoted to an explicitly low-confidence fallback.
 > recognition covers early-return only - a guard inside a branch or loop is ignored, chosen so
 > the analysis under-claims rather than suppresses.
 
+> **P6 exit criterion corrected 2026-07-30, before building the cache rather than after.**
+>
+> The stated exit is "warm re-index <= 5% of cold". Profiled first, on this repository
+> (303 TS files, ~2.1s):
+>
+> | phase | ms | memoisable per file? |
+> |---|---|---|
+> | eslint security | 624 | yes |
+> | `ts.createProgram` | 567 | **no** |
+> | symbol extraction | 420 | **no** - see below |
+> | `getTypeChecker` | 199 | **no** |
+> | `syntacticSpans` | 104 | yes |
+>
+> **5% is unreachable while a TypeScript program is built.** `oldProgram` reuse was measured
+> and buys almost nothing: 751ms cold, 734ms with one file changed, **682ms with NOTHING
+> changed**. Parsing is reused; binding and checker construction are not. That ~766ms is a hard
+> floor of about a third of the index.
+>
+> **Delivered: 2,205ms -> 1,220ms, 55% of cold**, memoising the two phases that are pure
+> functions of a file's own bytes. Symbol extraction is excluded deliberately even though it is
+> the third-largest cost: a reference's `resolvedTargetId` names a declaration in ANOTHER file,
+> so a content-keyed hit can return a stale edge after that file moves. It needs a dependency
+> key, not a content key, and the unsound version trades visible slowness for invisible wrong
+> answers.
+>
+> **The cache pays where re-indexing actually happens** - not users re-opening a repository,
+> but the product indexing near-identical trees: `agents/executor.ts` indexes twice per
+> remediation to measure the score delta, and `gitops/historicalAnalysis.ts` indexes one
+> snapshot per commit for the Timeline.
+>
+> **Proposed exit, checkable rather than aspirational:** warm re-index <= 60% of cold on the
+> same tree, and a documented reason for the remainder. Reaching materially below that means
+> making the graph incremental - reusing the program across runs and re-resolving only the
+> changed subgraph - which is a different and much larger piece of work than a per-file cache.
+
 ## 7. P6 — Scale & incrementality *(~2 weeks)*
 
 Content-addressed per-file cache (`contentHash + extractorVersion → FileFacts`); PR-scoped and

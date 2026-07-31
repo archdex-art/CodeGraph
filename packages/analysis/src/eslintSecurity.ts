@@ -1,5 +1,6 @@
 /// <reference path="./types/eslint-plugin-security.d.ts" />
 import { Linter } from "eslint";
+import { contentCache } from "@codegraph/core-graph";
 import security from "eslint-plugin-security";
 import tsParser from "@typescript-eslint/parser";
 
@@ -91,8 +92,18 @@ const TAINTABLE = new Set([
  * or any linter-internal error — a lint failure on one file must never abort
  * indexing the rest of the workspace.
  */
+/** Bump when RULE_META, the rule set, or the finding shape changes. */
+const SECURITY_VERSION = "eslint-sec-2-taintable";
+
 export function lintForSecurity(text: string, ext: string, maxFindings = 10): EslintSecurityFinding[] {
   if (!JS_EXTS[ext]) return [];
+  // 624ms of a 2.1s index on this repository, and a pure function of the file's own text.
+  return contentCache.get(text, `${ext}\u0000${maxFindings}`, SECURITY_VERSION, () =>
+    computeSecurityFindings(text, ext, maxFindings),
+  );
+}
+
+function computeSecurityFindings(text: string, ext: string, maxFindings: number): EslintSecurityFinding[] {
   try {
     const filename = `file${ext}`;
     // eslint-plugin-security ships no first-party types and doesn't precisely
