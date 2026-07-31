@@ -69,7 +69,8 @@ const ALLOWED = {
   // P2's transitional package, split by P5 per LLD §13.2.
   "score-engine": ["analysis-model"],
   viz: ["analysis-model"],
-  analysis: ["core-domain", "core-graph", "config", "vcs", "analysis-model", "score-engine", "viz"],
+  "detect-engine": ["analysis-model", "core-graph", "core-domain", "score-engine"],
+  analysis: ["core-domain", "core-graph", "config", "vcs", "analysis-model", "score-engine", "viz", "detect-engine"],
   "analysis-model": ["core-graph"],
 };
 

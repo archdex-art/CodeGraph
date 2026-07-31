@@ -606,6 +606,26 @@ injection classes; regex tier demoted to an explicitly low-confidence fallback.
 >
 > Numbers unchanged again: express 89, projected 89 -> 90, remediation 89 -> 95, 920/920.
 
+> **Third slice done: `detect-engine`, 407 lines.** `indexer.ts` 1,259 -> **703**. The rule
+> table, the context gate, the taint verdict, the tier ladder and the secret value-shape signal
+> now sit together, because they COMPOSE - a finding in a Python file from a rule whose value
+> does not look generated is discounted twice, and reading the product of those factors in one
+> place is the only way to see it. Scoring is deliberately elsewhere: keeping them apart is what
+> stops a rule being tuned to move a number.
+>
+> **The layering gate caught a wrong slice boundary.** `analyzeDependencies` went with the other
+> rules and dependency-cruiser immediately failed it - `raw-fs-only-in-io-packages`. It reads
+> package.json from disk, so it is I/O, and it belongs with the pipeline until someone separates
+> its file read from its rule logic. The gate found that, not review.
+>
+> Also moved to shared reference data: `PipelineContext` and the yield helpers (the cancellation
+> seam every stage needs), plus `CODE_EXTS`. `resetIssueIds()` replaces `indexer` reaching into
+> a module-level counter - ids are a per-run sequence and `executor.ts` indexes twice per
+> remediation, so the reset is now an explicit part of detection's contract.
+>
+> **Remaining to clear the 600 threshold: 104 lines.** `pipeline/enumerate` (the walk) and
+> `lang-*` (import extraction) are the last two slices.
+
 ## 7. P6 — Scale & incrementality *(~2 weeks)*
 
 Content-addressed per-file cache (`contentHash + extractorVersion → FileFacts`); PR-scoped and

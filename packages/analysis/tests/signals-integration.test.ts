@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { indexRepo, scoreIssues } from "../src/indexer";
+import { indexRepo } from "../src/indexer";
+import { scoreIssues } from "@codegraph/score-engine";
 
 /**
  * PLAN.md §5.2's signals, where they meet the pipeline.

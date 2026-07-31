@@ -58,4 +58,6 @@ export {
 } from "./models";
 export { toSarif, sarifRuleId } from "./sarif";
 export type { SarifLog, SarifOptions } from "./sarif";
-export { LANG_BY_EXT } from "./models";
+export { LANG_BY_EXT, CODE_EXTS } from "./models";
+export { throwIfAborted, yieldToEventLoop, YIELD_EVERY } from "./pipeline";
+export type { PipelineContext } from "./pipeline";

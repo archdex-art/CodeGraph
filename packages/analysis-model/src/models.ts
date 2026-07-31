@@ -65,6 +65,13 @@ export interface FileSignals {
  * `viz` uses it to colour a node, and two copies would let the graph disagree with the language
  * table beside it.
  */
+export const CODE_EXTS: Record<string, true> = {
+  ".ts": true, ".tsx": true, ".js": true, ".jsx": true, ".mjs": true,
+  ".cjs": true, ".py": true, ".go": true, ".rs": true, ".java": true,
+  ".rb": true, ".php": true, ".c": true, ".h": true, ".cpp": true,
+  ".hpp": true, ".cs": true, ".swift": true, ".kt": true,
+};
+
 export const LANG_BY_EXT: Record<string, string> = {
   ".ts": "TypeScript", ".tsx": "TypeScript", ".js": "JavaScript", ".jsx": "JavaScript",
   ".mjs": "JavaScript", ".cjs": "JavaScript", ".py": "Python", ".go": "Go",

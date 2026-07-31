@@ -30,7 +30,8 @@ export { DIMENSION_META } from "@codegraph/analysis-model";
 
 export type { PipelineContext } from "./context";
 export { throwIfAborted } from "./context";
-export { indexRepo, scoreIssues } from "./indexer";
+export { indexRepo } from "./indexer";
+export { scoreIssues, expectedHarm } from "@codegraph/score-engine";
 
-export type { EslintSecurityFinding } from "./eslintSecurity";
-export { lintForSecurity } from "./eslintSecurity";
+export type { EslintSecurityFinding } from "@codegraph/detect-engine";
+export { lintForSecurity } from "@codegraph/detect-engine";

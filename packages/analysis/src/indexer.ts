@@ -28,20 +28,19 @@ import {
 import { buildSymbolGraph, callAt, classifyTaint, contextAt, extractorFor, syntacticSpans, tierForExt } from "@codegraph/core-graph";
 import type { AnalysisTier, TaintQuery, TaintVerdict } from "@codegraph/core-graph";
 import type { ScanCoverage, ScannedFile } from "@codegraph/analysis-model";
-import { LANG_BY_EXT } from "@codegraph/analysis-model";
+import { CODE_EXTS, LANG_BY_EXT, YIELD_EVERY, yieldToEventLoop } from "@codegraph/analysis-model";
 import { HITS_PER_RULE_PER_FILE, expectedHarm, scoreIssues } from "@codegraph/score-engine";
 import { buildTree, buildVizGraph } from "@codegraph/viz";
+import {
+  analyzeFiles,
+  analyzeTests,
+  mkIssue,
+  resetIssueIds,
+} from "@codegraph/detect-engine";
 import ts from "typescript";
 import type { SourceContext } from "@codegraph/core-graph";
-import { lintForSecurity } from "./eslintSecurity";
 
 
-const CODE_EXTS: Record<string, true> = {
-  ".ts": true, ".tsx": true, ".js": true, ".jsx": true, ".mjs": true,
-  ".cjs": true, ".py": true, ".go": true, ".rs": true, ".java": true,
-  ".rb": true, ".php": true, ".c": true, ".h": true, ".cpp": true,
-  ".hpp": true, ".cs": true, ".swift": true, ".kt": true,
-};
 
 const SKIP_DIRS: Record<string, true> = {
   ".git": true, "node_modules": true, "dist": true, "build": true,
@@ -235,12 +234,6 @@ function extractImports(text: string, ext: string): string[] {
 // produces the "stuck on an old page, then 502 Bad Gateway" symptom on a
 // large first-time index. Yielding periodically lets the event loop drain
 // other pending requests between chunks of indexing work.
-const YIELD_EVERY = 15;
-function yieldToEventLoop(): Promise<void> {
-  const { promise, resolve } = Promise.withResolvers<void>();
-  setImmediate(resolve);
-  return promise;
-}
 
 /** Walk the repo, build per-file records + language stats. */
 async function scan(
@@ -401,279 +394,100 @@ async function computeImportGraph(files: ScannedFile[], ctx?: PipelineContext): 
 }
 
 
-interface Rule {
-  re: RegExp;
-  dimension: Dimension;
-  severity: number;
-  confidence?: number;
-  title: string;
-  exts?: Record<string, true>;
-  validate?: (line: string, m: RegExpExecArray) => boolean;
-  /**
-   * Multiplier applied to this match's confidence. Separate from `validate`, which DELETES the
-   * finding: a weak signal should move the weight, not silence the report.
-   */
-  adjust?: (m: RegExpExecArray) => number;
-  /**
-   * Syntactic contexts in which this rule can legitimately fire. Defaults to `["code"]`.
-   *
-   * This is the cheap half of PLAN.md P5's "route the regexes through structural rules": not a
-   * graph-shape query yet, but the position class the match must be in. Measured across every
-   * match, **35% on express and 64% on this repository** were in a context where the rule
-   * cannot be true - `eval(` inside a doc comment, `console.log` inside a string.
-   *
-   * It is per-rule and NOT "strip comments and strings", because the correct context differs:
-   * a `TODO` marker belongs in a comment and is noise anywhere else; `@ts-ignore` can only
-   * ever be a comment; a hardcoded `localhost` URL is necessarily a string literal. Blanket
-   * stripping would have deleted three rules' true positives outright.
-   */
-  context?: readonly SourceContext[];
-}
+// Detection moved to `@codegraph/detect-engine` (LLD §13).
 
-const DEFAULT_CONTEXT: readonly SourceContext[] = ["code"];
 
-// A real secret never contains a literal "..." ellipsis or matches a common
-// placeholder word — those are documentation/example conventions.
-const PLACEHOLDER_SECRET_RE = /^(\.{3,}|x{4,}|\*{4,}|your[-_ ]?\w*|example\w*|placeholder\w*|changeme|insert[-_ ]?\w*|redacted|dummy|fake|sample|todo|<.*>|\{\{.*\}\})$/i;
-/**
- * Is this value shaped like a machine-generated credential?
- *
- * Found by running CodeGraph on CodeGraph. "Possible hardcoded secret" dominated the top of
- * our own findings and drove the security dimension to 12, and every one was wrong. Two
- * classes, both from real code in this repository:
- *
- *   apps/web/src/lib/settings.ts:71  anthropicApiKey: "assistant.anthropicApiKey"
- *   apps/web/tests/redact.test.ts:13 anthropicApiKey: "sk-ant-BAD-KEY"
- *
- * The first is a settings PATH, not a value. The second is a test fixture.
- *
- * Entropy was tried first and does not separate them: the fixture
- * `sk-ant-SCOPED-BUT-VALID-KEY` scores H=4.18, ABOVE the real-shaped `AKIAIOSFODNN7EXAMPLE`
- * (3.68) and a 40-char hex digest (3.83). What does separate them on that sample is a digit -
- * generated credentials contain them (base64, hex, AWS ids, GitHub tokens all do) and
- * hand-written identifiers usually do not.
- *
- * Ten examples is a small sample and the rule is stated as a weak signal accordingly: it
- * DOWNGRADES rather than rejects, because `correcthorsebatterystaple` is a real secret with no
- * digits in it. A long value passes regardless, since length alone makes a generated secret
- * plausible.
- */
-const CONFIG_PATH_RE = /^[a-z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*)+$/;
 
-function looksLikeCredential(value: string): boolean {
-  if (CONFIG_PATH_RE.test(value)) return false; // `assistant.anthropicApiKey` is a key, not a value
-  return /\d/.test(value) || value.length >= 32;
-}
-
-/** Weak-signal discount for a value that does not look machine-generated. */
-const WEAK_SECRET_FACTOR = 0.25;
-
-function isPlaceholderSecret(value: string): boolean {
-  return PLACEHOLDER_SECRET_RE.test(value) || value.includes("...");
-}
-
-// Heuristic, language-agnostic-ish defect/risk rules.
-const RULES: Rule[] = [
-  { re: /\beval\s*\(/, dimension: "security", severity: 5, confidence: 0.95, title: "Use of eval()" },
-  { re: /child_process|os\.system\(|subprocess\.(call|run|Popen)\(/, dimension: "security", severity: 3, confidence: 0.85, title: "Shell/process execution" },
-  {
-    re: /(password|secret|api[_-]?key|token)\s*[:=]\s*['"]([^'"]{6,})['"]/i,
-    dimension: "security", severity: 5, confidence: 0.8, title: "Possible hardcoded secret",
-    validate: (_line, m) => !isPlaceholderSecret(m[2]),
-    adjust: (m) => (looksLikeCredential(m[2]) ? 1 : WEAK_SECRET_FACTOR),
-  },
-  // A hardcoded URL IS a string literal; in a comment it is an example, not a config value.
-  { re: /https?:\/\/[^"'\s]*(?<![\w.])(localhost|127\.0\.0\.1)/, dimension: "security", severity: 2, confidence: 0.9, title: "Hardcoded local URL", context: ["string", "code"] },
-  { re: /\bdangerouslySetInnerHTML\b|innerHTML\s*=/, dimension: "security", severity: 3, confidence: 0.95, title: "Raw HTML injection sink" },
-  // The SELECT half matches inside the query string; the `query(` half matches in code.
-  { re: /SELECT\s+.+\+|query\(\s*['"`].*\$\{/i, dimension: "security", severity: 4, confidence: 0.7, title: "Possible SQL string concatenation", context: ["code", "string"] },
-
-  { re: /\bconsole\.(log|debug)\b|^\s*print\(/m, dimension: "correctness", severity: 1, confidence: 1.0, title: "Leftover debug output" },
-  { re: /\bdebugger\b/, dimension: "correctness", severity: 2, confidence: 1.0, title: "debugger statement" },
-  { re: /catch\s*\([^)]*\)\s*\{\s*\}/, dimension: "correctness", severity: 3, confidence: 0.9, title: "Empty catch block" },
-  // A marker lives in a comment BY DEFINITION. "TODO" in a string is a message, not debt.
-  { re: /\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b/, dimension: "maintainability", severity: 1, confidence: 1.0, title: "TODO/FIXME marker", context: ["comment"] },
-  // A suppression directive is only a suppression when the compiler reads it - i.e. a comment.
-  { re: /@ts-(ignore|nocheck)|# type: ignore|eslint-disable/, dimension: "maintainability", severity: 2, confidence: 1.0, title: "Suppressed checker", context: ["comment"] },
-  { re: /:\s*any\b|\bas\s+any\b/, dimension: "correctness", severity: 1, confidence: 1.0, title: "Untyped `any`", exts: { ".ts": true, ".tsx": true } },
-];
-
-/**
- * Provenance policy for sink findings (PLAN.md P5 item 2).
- *
- * `eslint-plugin-security` flags any non-literal argument to a sink. On this repository that
- * is 136 of 200 findings - 68% from one rule - and reading them shows `mkdirSync(dir)` from
- * config, `statSync(full)` inside a directory walk, temp paths in tests. None of it
- * attacker-controlled. The rule cannot tell, because it never asks where the value came from.
- *
- * **Sources are deliberately narrow, and `process.env` is deliberately absent.** Env vars are
- * operator configuration, not attacker input; treating them as a source would re-flag exactly
- * the config-driven paths this is meant to quieten, and the noise would return wearing a
- * taint-analysis badge. `process.argv` IS included: for a CLI it is user input.
- *
- * A function PARAMETER is not a source either. Every function taking an argument would light
- * up, and cross-function propagation is P5 item 4's job, bounded to depth 3.
- */
-const TAINT_QUERY: TaintQuery = {
-  sourceRoots: new Set(["req", "request", "ctx"]),
-  sourceExpressions: [
-    /^process\.argv\b/,
-    /^(window\.)?location\.(search|hash|href)\b/,
-    /^document\.cookie\b/,
-  ],
-  // `resolveSafe` is this repository's containment primitive (packages/fsx/src/workspace.ts).
-  sanitizers: new Set(["resolveSafe", "escapeHtml", "sanitize", "encodeURIComponent"]),
-};
-
-const TS_FAMILY_EXT: Record<string, true> = {
-  ".ts": true, ".tsx": true, ".js": true, ".jsx": true, ".mjs": true, ".cjs": true,
-};
-
-/**
- * Taint modulates CONFIDENCE; it never deletes a finding.
- *
- * Deleting would convert an incomplete source list into silent false negatives - the failure
- * mode a security tool cannot afford, and one nobody would notice. Downgrading keeps the
- * finding visible and lets it weigh correctly, because `confidence` now multiplies into
- * `expectedHarm`: an untraced sink contributes about a third of what it used to, and a
- * genuinely tainted one outranks everything around it. The two changes compose by design.
- */
-function adjustForTaint(base: number, verdict: TaintVerdict): number {
-  switch (verdict) {
-    // Reached a source with nothing cleaning it. This is the finding the rule was written for.
-    case "tainted":
-      return Math.min(0.95, base * 1.35);
-    // A source, then a sanitizer. Reported, but it should sit near the bottom of the list.
-    case "sanitized":
-      return Math.max(0.05, base * 0.2);
-    // No source found inside this function. Usually internal, sometimes a caller's argument
-    // we cannot see yet - hence downgraded, not dropped.
-    case "untraced":
-      return Math.max(0.1, base * 0.35);
+/** Aggregate files into top-level modules + inter-module import edges (flowchart). */
+function buildModuleGraph(
+  files: ScannedFile[],
+  importEdges: Array<{ from: string; to: string }>,
+  issuesByFile: Map<string, number>
+): ModuleGraph {
+  // Count files per top-level dir; big top dirs get expanded to 2 levels so the
+  // architecture graph stays meaningful instead of a few giant blobs.
+  const topCount = new Map<string, number>();
+  for (const f of files) {
+    const seg = f.rel.split(path.sep).join("/").split("/");
+    const top = seg.length > 1 ? seg[0] : "(root)";
+    topCount.set(top, (topCount.get(top) || 0) + 1);
   }
-}
-
-/**
- * How far a `lexical`-tier finding's confidence is cut (HLD §8.3).
- *
- * A regex hit in a file nobody parsed might be in a comment, a string, or real code - the
- * distinction the context gate makes for TypeScript and cannot make for Python. Measured on
- * express and this repository, 35-64% of raw regex matches sit in a context where the rule
- * cannot hold, so a little over half is the honest discount for not knowing which.
- *
- * Not zero, and not a filter: the finding may well be real, and hiding it would trade visible
- * noise for silent blindness on every non-TypeScript file in the repository.
- */
-const LEXICAL_CONFIDENCE_FACTOR = 0.45;
-
-/** Absent confidence means "unqualified", so it stays unqualified rather than becoming 0. */
-function scaleConfidence(base: number | undefined, factor: number): number | undefined {
-  if (base === undefined) return undefined;
-  return factor === 1 ? base : Math.max(0.05, Math.round(base * factor * 1000) / 1000);
-}
-
-let _issueSeq = 0;
-function mkIssue(dim: Dimension, sev: number, title: string, file: string, line: number, br: number, conf?: number, churn?: number): Issue {
-  return { id: `iss_${_issueSeq++}`, dimension: dim, severity: sev, confidence: conf, title, file, line, blastRadius: br, churn: churn ?? 1 };
-}
-
-async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, churnByFile: Map<string, number>, ctx?: PipelineContext): Promise<Issue[]> {
-  const issues: Issue[] = [];
-  for (let idx = 0; idx < files.length; idx++) {
-    if (idx > 0 && idx % YIELD_EVERY === 0) {
-      await yieldToEventLoop();
-      throwIfAborted(ctx);
+  const EXPAND_THRESHOLD = 12;
+  const moduleOf = (rel: string): string => {
+    const seg = rel.split(path.sep).join("/").split("/");
+    if (seg.length <= 1) return "(root)";
+    const top = seg[0];
+    if (seg.length >= 3 && (topCount.get(top) || 0) > EXPAND_THRESHOLD) {
+      return top + "/" + seg[1];
     }
-    const f = files[idx];
-    if (!f.text) continue;
-    const br = 1 + (fanIn.get(f.rel) || 0); // blast radius from graph fan-in
-    const ch = churnByFile.get(f.rel) || 1;
-    /**
-     * HLD §8.3: a `lexical`-tier file was matched by regex alone - no parse, so no idea
-     * whether a hit sits in a comment, a string, or running code. The design always said those
-     * findings are "marked low-confidence"; nothing did it until now.
-     *
-     * This is the same boundary as `syntacticSpans`, and deliberately so: the files that get
-     * no context gating are exactly the files whose findings cannot be trusted as far.
-     */
-    const tier = tierForExt(f.ext);
-    const tierPenalty = tier === "lexical" ? LEXICAL_CONFIDENCE_FACTOR : 1;
-    const lines = f.text.split("\n");
-    /**
-     * Comment/string ranges for this file, computed ONCE and shared by all 12 rules. Empty for
-     * languages the TS scanner does not cover (Python), which makes every position `code` and
-     * leaves those files scored exactly as before - see `syntacticSpans`.
-     */
-    const spans = syntacticSpans(f.text, f.ext);
-    // Absolute offset of each line start, so a per-line regex index becomes a file offset.
-    const lineStart: number[] = new Array(lines.length);
-    for (let i = 0, at = 0; i < lines.length; i++) {
-      lineStart[i] = at;
-      at += lines[i].length + 1; // +1 for the "\n" removed by split
-    }
-    for (const rule of RULES) {
-      if (rule.exts && !rule.exts[f.ext]) continue;
-      const validContexts = rule.context ?? DEFAULT_CONTEXT;
-      let emitted = 0;
-      let occurrences = 0;
-      let firstIssueIndex = -1;
-      for (const [lineIndex, line] of lines.entries()) {
-        const m = rule.re.exec(line);
-        if (!m || (rule.validate && !rule.validate(line, m))) continue;
-        // Structural gate. `spans` empty => "code" => unchanged behaviour.
-        if (spans.length && !validContexts.includes(contextAt(spans, lineStart[lineIndex] + m.index)))
-          continue;
-        occurrences++;
-        // Keep emitting only up to the cap: the issue list is rendered and
-        // stored, so it stays bounded. Counting continues past it so the score
-        // can tell 500 matches from 5 (review B3) — scanning the remaining lines
-        // is the same regex pass either way, so this costs nothing extra.
-        if (emitted < HITS_PER_RULE_PER_FILE) {
-          if (firstIssueIndex === -1) firstIssueIndex = issues.length;
-          issues.push(
-            mkIssue(
-              rule.dimension, rule.severity, rule.title, f.rel, lineIndex + 1, br,
-              scaleConfidence(rule.confidence, tierPenalty * (rule.adjust?.(m) ?? 1)), ch,
-            ),
-          );
-          emitted++;
-        }
-      }
-      // Volume is recorded once per (rule, file) group, on the first emitted
-      // issue. Setting it on all of them would multiply the same excess by the
-      // number of emitted markers.
-      if (occurrences > HITS_PER_RULE_PER_FILE && firstIssueIndex >= 0) {
-        const first = issues[firstIssueIndex];
-        if (first) first.occurrences = occurrences;
-      }
-    }
-    // AST-based security detector layer (eslint-plugin-security), catches
-    // vulnerability classes the line-regex RULES above are structurally blind
-    // to (ReDoS regex literals, dynamic fs/require paths, weak randomness, ...).
-    const secFindings = lintForSecurity(f.text, f.ext);
-    // Parse once, and only if a sink finding actually needs provenance checking.
-    let taintSf: ts.SourceFile | null = null;
-    for (const f2 of secFindings) {
-      let confidence = f2.confidence;
-      if (f2.taintable && TS_FAMILY_EXT[f.ext]) {
-        taintSf ??= ts.createSourceFile(f.rel, f.text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-        const call = callAt(taintSf, f2.line, f2.column);
-        const arg = call?.arguments[0];
-        if (arg) confidence = adjustForTaint(confidence, classifyTaint(arg, TAINT_QUERY));
-      }
-      issues.push(mkIssue("security", f2.severity, f2.title, f.rel, f2.line, br, scaleConfidence(confidence, tierPenalty), ch));
-    }
+    return top;
+  };
 
-    // God-file: very large source file → maintainability penalty scaled by fan-in.
-    if (f.loc > 600) {
-      issues.push(
-        mkIssue("maintainability", f.loc > 1200 ? 4 : 2, `Large file (${f.loc} LOC)`, f.rel, 1, br, 0.9, ch)
-      );
+  const mods = new Map<string, ModuleNode>();
+  const langCount = new Map<string, Map<string, number>>();
+  for (const f of files) {
+    const id = moduleOf(f.rel);
+    let m = mods.get(id);
+    if (!m) {
+      m = { id, label: id, files: 0, loc: 0, issues: 0, language: null, tier: 0 };
+      mods.set(id, m);
+      langCount.set(id, new Map());
+    }
+    m.files += 1;
+    m.loc += f.loc;
+    m.issues += issuesByFile.get(f.rel) || 0;
+    const lang = LANG_BY_EXT[f.ext];
+    if (lang) {
+      const lc = langCount.get(id)!;
+      lc.set(lang, (lc.get(lang) || 0) + 1);
     }
   }
-  return issues;
+  for (const [id, m] of mods) {
+    const lc = langCount.get(id)!;
+    let best: string | null = null;
+    let bestN = 0;
+    for (const [lang, n] of lc) if (n > bestN) { bestN = n; best = lang; }
+    m.language = best;
+  }
+
+  const edgeW = new Map<string, ModuleEdge>();
+  for (const e of importEdges) {
+    const s = moduleOf(e.from);
+    const t = moduleOf(e.to);
+    if (s === t) continue;
+    const key = s + "→" + t;
+    const ex = edgeW.get(key);
+    if (ex) ex.weight += 1;
+    else edgeW.set(key, { source: s, target: t, weight: 1 });
+  }
+  const edges = [...edgeW.values()];
+
+  // Assign tiers by longest-path depth (cycles broken by visited guard).
+  const adj = new Map<string, string[]>();
+  for (const m of mods.keys()) adj.set(m, []);
+  for (const e of edges) adj.get(e.source)?.push(e.target);
+  const tierOf = new Map<string, number>();
+  function depth(node: string, seen: Set<string>): number {
+    if (tierOf.has(node)) return tierOf.get(node)!;
+    if (seen.has(node)) return 0;
+    seen.add(node);
+    let d = 0;
+    for (const next of adj.get(node) || []) d = Math.max(d, 1 + depth(next, seen));
+    seen.delete(node);
+    tierOf.set(node, d);
+    return d;
+  }
+  for (const m of mods.keys()) m && (mods.get(m)!.tier = depth(m, new Set()));
+
+  return { nodes: [...mods.values()].sort((a, b) => a.tier - b.tier || b.loc - a.loc), edges };
 }
 
+/**
+ * Dependency hygiene. Stays in the pipeline rather than `detect-engine` because it READS
+ * package.json from disk, and the layering rule confines raw `fs` to the I/O packages. The
+ * dependency-cruiser gate caught this the moment it moved - the slice boundary was wrong, not
+ * the rule. Separating its file read from its rule logic is what would let it join the others.
+ */
 /**
  * Dependency hygiene across EVERY manifest in the repo, not just the root one.
  *
@@ -783,120 +597,9 @@ function analyzeDependencies(
   return { issues, count: external.size, depsList: [...external].sort() };
 }
 
-/** Test integrity: presence/ratio of test files. */
-function analyzeTests(files: ScannedFile[]): Issue[] {
-  const code = files.filter((f) => CODE_EXTS[f.ext]);
-  if (code.length === 0) return [];
-  const tests = code.filter((f) => /(\.|_|\/)(test|spec)/i.test(f.rel) || /(^|\/)tests?\//i.test(f.rel));
-  const ratio = tests.length / code.length;
-  const issues: Issue[] = [];
-  if (tests.length === 0) {
-    issues.push(mkIssue("test_integrity", 4, "No test files detected", ".", 1, 3, 0.6));
-  } else if (ratio < 0.1) {
-    issues.push(mkIssue("test_integrity", 2, `Low test coverage ratio (${(ratio * 100).toFixed(0)}% of code files)`, ".", 1, 2, 0.75));
-  }
-  return issues;
-}
-
-/**
- * The Health Score model now lives in `@codegraph/score-engine` (LLD §13).
- *
- * Re-exported here so the swarm's projected score keeps re-running the REAL scorer
- * (review item C5) without every caller learning a new import path in the same commit that
- * moves it.
- */
-export { scoreIssues, expectedHarm };
-
-// The renderable file/directory graph moved to `@codegraph/viz` (LLD §13).
-
-
-/** Aggregate files into top-level modules + inter-module import edges (flowchart). */
-function buildModuleGraph(
-  files: ScannedFile[],
-  importEdges: Array<{ from: string; to: string }>,
-  issuesByFile: Map<string, number>
-): ModuleGraph {
-  // Count files per top-level dir; big top dirs get expanded to 2 levels so the
-  // architecture graph stays meaningful instead of a few giant blobs.
-  const topCount = new Map<string, number>();
-  for (const f of files) {
-    const seg = f.rel.split(path.sep).join("/").split("/");
-    const top = seg.length > 1 ? seg[0] : "(root)";
-    topCount.set(top, (topCount.get(top) || 0) + 1);
-  }
-  const EXPAND_THRESHOLD = 12;
-  const moduleOf = (rel: string): string => {
-    const seg = rel.split(path.sep).join("/").split("/");
-    if (seg.length <= 1) return "(root)";
-    const top = seg[0];
-    if (seg.length >= 3 && (topCount.get(top) || 0) > EXPAND_THRESHOLD) {
-      return top + "/" + seg[1];
-    }
-    return top;
-  };
-
-  const mods = new Map<string, ModuleNode>();
-  const langCount = new Map<string, Map<string, number>>();
-  for (const f of files) {
-    const id = moduleOf(f.rel);
-    let m = mods.get(id);
-    if (!m) {
-      m = { id, label: id, files: 0, loc: 0, issues: 0, language: null, tier: 0 };
-      mods.set(id, m);
-      langCount.set(id, new Map());
-    }
-    m.files += 1;
-    m.loc += f.loc;
-    m.issues += issuesByFile.get(f.rel) || 0;
-    const lang = LANG_BY_EXT[f.ext];
-    if (lang) {
-      const lc = langCount.get(id)!;
-      lc.set(lang, (lc.get(lang) || 0) + 1);
-    }
-  }
-  for (const [id, m] of mods) {
-    const lc = langCount.get(id)!;
-    let best: string | null = null;
-    let bestN = 0;
-    for (const [lang, n] of lc) if (n > bestN) { bestN = n; best = lang; }
-    m.language = best;
-  }
-
-  const edgeW = new Map<string, ModuleEdge>();
-  for (const e of importEdges) {
-    const s = moduleOf(e.from);
-    const t = moduleOf(e.to);
-    if (s === t) continue;
-    const key = s + "→" + t;
-    const ex = edgeW.get(key);
-    if (ex) ex.weight += 1;
-    else edgeW.set(key, { source: s, target: t, weight: 1 });
-  }
-  const edges = [...edgeW.values()];
-
-  // Assign tiers by longest-path depth (cycles broken by visited guard).
-  const adj = new Map<string, string[]>();
-  for (const m of mods.keys()) adj.set(m, []);
-  for (const e of edges) adj.get(e.source)?.push(e.target);
-  const tierOf = new Map<string, number>();
-  function depth(node: string, seen: Set<string>): number {
-    if (tierOf.has(node)) return tierOf.get(node)!;
-    if (seen.has(node)) return 0;
-    seen.add(node);
-    let d = 0;
-    for (const next of adj.get(node) || []) d = Math.max(d, 1 + depth(next, seen));
-    seen.delete(node);
-    tierOf.set(node, d);
-    return d;
-  }
-  for (const m of mods.keys()) m && (mods.get(m)!.tier = depth(m, new Set()));
-
-  return { nodes: [...mods.values()].sort((a, b) => a.tier - b.tier || b.loc - a.loc), edges };
-}
-
 /** Full pipeline: scan a repo/folder dir → result (graph + score + viz). */
 export async function indexRepo(root: string, ctx?: PipelineContext): Promise<IndexResult> {
-  _issueSeq = 0;
+  resetIssueIds();
   /**
    * One git pass yields eight organisational signals, not just churn (PLAN.md §5.2).
    *

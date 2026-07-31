@@ -1,5 +1,5 @@
 {
-  "name": "@codegraph/analysis",
+  "name": "@codegraph/detect-engine",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,15 +13,11 @@
   },
   "dependencies": {
     "@codegraph/analysis-model": "*",
-    "@codegraph/config": "*",
-    "@codegraph/core-domain": "*",
     "@codegraph/core-graph": "*",
-    "@codegraph/vcs": "*",
-    "@typescript-eslint/parser": "^8.65.0",
-    "eslint": "^9.39.5",
-    "eslint-plugin-security": "^4.0.1",
     "@codegraph/score-engine": "*",
-    "@codegraph/viz": "*",
-    "@codegraph/detect-engine": "*"
+    "eslint": "^9.39.0",
+    "eslint-plugin-security": "^3.0.1",
+    "@typescript-eslint/parser": "^8.65.0",
+    "typescript": "^5"
   }
 }
