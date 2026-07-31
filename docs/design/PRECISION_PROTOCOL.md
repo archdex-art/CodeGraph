@@ -176,3 +176,54 @@ form (29ms at n=6400). A regression guard now sits on the live path rather than 
   the two that confuse a mention for an occurrence.
 - The interval is wide (58–83%) at n=50. Any decision resting on the exact value needs a
   bigger sample and a second labeller, per §5.
+
+
+---
+
+## 7. Passes 2 and 3 — acting on the breakdown
+
+Same protocol, same corpora, same stride. The sample is redrawn each time because fixing a rule
+changes the finding list; that is expected and is why the per-rule table matters more than the
+total.
+
+| pass | change | express | self | total | 95% CI |
+|---|---|---|---|---|---|
+| 1 | baseline | 88% | 56% | **72%** | 58–83% |
+| 2 | markers must FOLLOW a comment opener, and not be quoted | 88% | 76% | **82%** | 69–90% |
+| 3 | placeholder tokens + synthetic runs suppressed | **100%** | 76% | **88%** | 76–94% |
+
+### What each fix was
+
+**Pass 2 — mention versus occurrence.** TODO scored 0/4 and `Suppressed checker` 0/1, together
+11 of 14 false positives. Restricting them to comments was necessary and not sufficient: a
+comment *discussing* markers is still a comment. Two signals fixed it — a real marker directly
+follows `//`, `/*`, a JSDoc `*` or `#`, and a marker inside backticks is a quoted example. Both
+rules are now 1/1, and every match is checked rather than the first, because one comment can
+quote an example *and* leave a real marker.
+
+**Pass 3 — placeholders.** Secrets scored 0/8, every match a fixture or documentation
+placeholder. Placeholder words as whole tokens plus character runs no generator emits
+(`0123456789`, the alphabet) suppress five of the eight. The token boundary is load-bearing:
+`AKIAIOSFODNN7EXAMPLE` contains "EXAMPLE" preceded by `7`, so it is not a token and stays
+reported.
+
+### Is 0.85 met?
+
+**The point estimate is, at 88%. The interval is not settled.** Its lower bound is 76%, below
+target, and n=50 cannot resolve that. Reporting the estimate as a pass and the interval as
+open, rather than choosing whichever reading is convenient.
+
+### What still fails, and one thing deliberately left
+
+Secrets remain 0/3: `s3cret`, `sk-ant-BAD-KEY`, `sk-ant-carol-key-longer` — fixtures the token
+list does not catch. **The obvious fix is to suppress secrets in `*.test.*` and `examples/`, and
+it is deliberately not done.** A real credential committed to a test file is precisely the case
+worth catching, and path-based suppression would silence it. The remaining false positives are
+the price of that, and it is a recall decision, not an oversight.
+
+The two ReDoS entries were both measured flat to n=8000 (rule 5). That rule's confidence is
+already reduced to 0.5 for being a static over-approximation; precision counts reports, so the
+downgrade does not help the number and the entries stand as failures.
+
+Self-precision (76%) still trails express (100%) for the reason §5 gave before any of this was
+measured: this repository is not a representative corpus of anyone's code.

@@ -104,8 +104,64 @@ function looksLikeCredential(value: string): boolean {
 /** Weak-signal discount for a value that does not look machine-generated. */
 const WEAK_SECRET_FACTOR = 0.25;
 
+/**
+ * Placeholder WORDS appearing as whole tokens, and character runs no generator produces.
+ *
+ * Added from the precision audit's measured failures, not from imagination. "Possible hardcoded
+ * secret" scored **0/8** — every match was a fixture or a documentation placeholder:
+ * `sk-test-key`, `test-secret-for-fleet-graph`, `unused`, `foobar`,
+ * `ghp_0123456789abcdefghijABCDEFGHIJ`.
+ *
+ * The token boundary is deliberate: `AKIAIOSFODNN7EXAMPLE` contains "EXAMPLE" but is preceded
+ * by `7`, so it is not a token and the value is still reported. Requiring a non-alphanumeric
+ * boundary is what separates a placeholder word from a coincidental substring.
+ *
+ * **This deletes findings, so it carries false-negative risk**, and the risk is real: a genuine
+ * key issued for a test account can contain "test". The trade is deliberate — a rule that
+ * reports eight fixtures buries the one real credential among them, and the loud case is better
+ * served by a dedicated high-entropy detector than by this one crying wolf. Recorded rather
+ * than hidden.
+ */
+const PLACEHOLDER_TOKEN_RE =
+  /(?:^|[^A-Za-z0-9])(?:test|testing|unused|foobar|dummy|fake|sample|example|placeholder|changeme|secret|password)(?:[^A-Za-z0-9]|$)/i;
+
+/** Runs no credential generator emits; `ghp_0123456789abcdefghij...` is a hand-typed stub. */
+const SYNTHETIC_RUN_RE = /0123456789|abcdefghij|ABCDEFGHIJ|qwerty|aaaaaa/;
+
 function isPlaceholderSecret(value: string): boolean {
-  return PLACEHOLDER_SECRET_RE.test(value) || value.includes("...");
+  return (
+    PLACEHOLDER_SECRET_RE.test(value) ||
+    value.includes("...") ||
+    PLACEHOLDER_TOKEN_RE.test(value) ||
+    SYNTHETIC_RUN_RE.test(value)
+  );
+}
+
+/**
+ * Is `line` a genuine marker/directive, or one QUOTED as an example?
+ *
+ * The second refinement the precision audit forced. Requiring the marker to follow a comment
+ * opener removed prose like "reduce every TODO in a file", but left a narrower class: a comment
+ * that quotes a marker inside backticks as an example. Two of the three survivors were exactly
+ * that - in this file's own documentation of these rules.
+ *
+ * Markdown inline-code parity settles it: an odd number of backticks before the match means it
+ * is inside an unclosed span, so it is being shown rather than left. Every match is checked,
+ * not just the first, because a comment can quote an example AND leave a real marker on the
+ * same line.
+ */
+const TODO_MARKER_RE = /(?:\/\/|\/\*+|^\s*\*|#)\s*(?:TODO|FIXME|HACK|XXX)\b/;
+const SUPPRESSION_RE = /(?:\/\/|\/\*+|^\s*\*|#)\s*(?:@ts-(?:ignore|nocheck)|eslint-disable|type:\s*ignore)\b/;
+
+function markerNotQuoted(re: RegExp, line: string): boolean {
+  const scan = new RegExp(re.source, "g");
+  for (let m: RegExpExecArray | null; (m = scan.exec(line)); ) {
+    let ticks = 0;
+    for (let i = 0; i < m.index; i++) if (line[i] === "`") ticks++;
+    if (ticks % 2 === 0) return true;
+    if (m.index === scan.lastIndex) scan.lastIndex++;
+  }
+  return false;
 }
 
 // Heuristic, language-agnostic-ish defect/risk rules.
@@ -127,10 +183,29 @@ const RULES: Rule[] = [
   { re: /\bconsole\.(log|debug)\b|^\s*print\(/m, dimension: "correctness", severity: 1, confidence: 1.0, title: "Leftover debug output" },
   { re: /\bdebugger\b/, dimension: "correctness", severity: 2, confidence: 1.0, title: "debugger statement" },
   { re: /catch\s*\([^)]*\)\s*\{\s*\}/, dimension: "correctness", severity: 3, confidence: 0.9, title: "Empty catch block" },
-  // A marker lives in a comment BY DEFINITION. "TODO" in a string is a message, not debt.
-  { re: /\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b/, dimension: "maintainability", severity: 1, confidence: 1.0, title: "TODO/FIXME marker", context: ["comment"] },
-  // A suppression directive is only a suppression when the compiler reads it - i.e. a comment.
-  { re: /@ts-(ignore|nocheck)|# type: ignore|eslint-disable/, dimension: "maintainability", severity: 2, confidence: 1.0, title: "Suppressed checker", context: ["comment"] },
+  /**
+   * A marker lives in a comment BY DEFINITION, and must FOLLOW the comment opener.
+   *
+   * The word-boundary form scored **0/4** in the precision audit
+   * (`docs/design/PRECISION_PROTOCOL.md`): every match was prose ABOUT TODO handling -
+   * "reduce every TODO in a file", "e.g. God files, TODO markers". Restricting the context to
+   * comments was necessary and not sufficient, because a comment discussing markers is still a
+   * comment.
+   *
+   * The distinction that works is position: a real marker is the first thing after `//`, `/*`,
+   * a JSDoc `*`, or `#`. A mention sits mid-sentence. Trailing markers
+   * (`const x = 1; // TODO: later`) still match, because the opener is still immediately before.
+   */
+  { re: TODO_MARKER_RE, dimension: "maintainability", severity: 1, confidence: 1.0, title: "TODO/FIXME marker", context: ["comment"],
+    validate: (line) => markerNotQuoted(TODO_MARKER_RE, line) },
+  /**
+   * Same failure, same fix. A directive suppresses something only when the compiler reads it as
+   * one, which means it follows the comment opener. The audit's single instance was a doc
+   * comment EXPLAINING `@ts-ignore` - nothing was suppressed, so the finding's title was simply
+   * untrue (protocol rule 5).
+   */
+  { re: SUPPRESSION_RE, dimension: "maintainability", severity: 2, confidence: 1.0, title: "Suppressed checker", context: ["comment"],
+    validate: (line) => markerNotQuoted(SUPPRESSION_RE, line) },
   { re: /:\s*any\b|\bas\s+any\b/, dimension: "correctness", severity: 1, confidence: 1.0, title: "Untyped `any`", exts: { ".ts": true, ".tsx": true } },
 ];
 

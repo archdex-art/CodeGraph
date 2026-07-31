@@ -82,10 +82,48 @@ describe("hardcoded secret value shape", () => {
   });
 
   it("keeps a long value even without digits", async () => {
-    // 32+ characters is long enough that a generated secret is plausible on length alone.
+    /**
+     * 32+ characters is long enough that a generated secret is plausible on length alone.
+     *
+     * The fixture was originally `abcdefghijklmnopqrstuvwxyz...`, which the later synthetic-run
+     * check correctly began suppressing — the alphabet is not what a generator emits. The rule
+     * was right and the fixture was unrealistic; replaced with a value that looks generated.
+     */
     const long = await confidenceOf(
-      'export const t = { secret: "abcdefghijklmnopqrstuvwxyzabcdefghij" };\n',
+      'export const t = { secret: "xKfmQpLvRnTwYzAbCdEfGhJkMnPqRsTuVw" };\n',
     );
+    expect(long).toBeDefined();
     expect(long!).toBeGreaterThan(0.5);
+  });
+});
+
+describe("placeholder suppression (precision audit follow-up)", () => {
+  /**
+   * "Possible hardcoded secret" scored **0/8** in the audit — every match a fixture or a
+   * documentation placeholder. These are the measured values, verbatim.
+   */
+  const suppressed = [
+    ['apiKey: "sk-test-key"', "sk-test-key"],
+    ['secret: "test-secret-for-fleet-graph"', "test-secret-for-fleet-graph"],
+    ['token: "ghp_0123456789abcdefghijABCDEFGHIJ"', "sequential run"],
+    ['password: "foobar"', "foobar"],
+    ['accessToken: "unused"', "unused"],
+  ] as const;
+
+  it.each(suppressed)("suppresses %s", async (expr) => {
+    expect(await confidenceOf(`export const k = { ${expr} };\n`)).toBeUndefined();
+  });
+
+  it("still reports a credential-shaped value", async () => {
+    // The guard against a fix that silences the rule rather than narrowing it.
+    const c = await confidenceOf('export const k = { apiKey: "sk-ant-api03-x7Kd9mQ2pL4vR8nT1wY6zA3bC5eF" };\n');
+    expect(c).toBeDefined();
+    expect(c!).toBeGreaterThan(0.5);
+  });
+
+  it("does not suppress on a coincidental substring", async () => {
+    // `AKIAIOSFODNN7EXAMPLE` contains "EXAMPLE" but preceded by `7`, so it is not a token.
+    // Without the boundary requirement this real-shaped value would vanish.
+    expect(await confidenceOf('export const k = { apiKey: "AKIAIOSFODNN7EXAMPLE" };\n')).toBeDefined();
   });
 });
