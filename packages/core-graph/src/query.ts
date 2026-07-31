@@ -23,6 +23,22 @@ export class QueryEngine {
     }
   }
 
+  /**
+   * Synthetic `<module>` nodes exist so a call made outside any named function still has a
+   * source (see `graph.ts`). They are real answers to "who calls this" and wrong answers to
+   * every question that ENUMERATES symbols the user wrote.
+   *
+   * Measured after they were introduced: `search("module")` returned 21 synthetic nodes out of
+   * 30, `hubs()` ranked one in the top three, and `symbolAt(file, 1)` preferred the zero-width
+   * module node over a function starting on line 1 - because it picks the smallest enclosing
+   * span and nothing is smaller than nothing.
+   *
+   * Relation queries (`callers`, `callees`, `impact`) deliberately keep them.
+   */
+  private authored(s: CodeSymbol): boolean {
+    return s.kind !== "module";
+  }
+
   get(id: string): CodeSymbol | undefined {
     return this.byId.get(id);
   }
@@ -33,6 +49,7 @@ export class QueryEngine {
     if (!query) return [];
     const scored: Array<{ s: CodeSymbol; score: number }> = [];
     for (const s of this.graph.symbols) {
+      if (!this.authored(s)) continue;
       const name = s.name.toLowerCase();
       let score = 0;
       if (name === query) score = 100;
@@ -125,6 +142,7 @@ export class QueryEngine {
   symbolAt(file: string, line: number): CodeSymbol | undefined {
     let best: CodeSymbol | undefined;
     for (const s of this.graph.symbols) {
+      if (!this.authored(s)) continue;
       if (s.file !== file) continue;
       if (line < s.line || line > s.endLine) continue;
       if (!best || s.endLine - s.line < best.endLine - best.line) best = s;
@@ -230,7 +248,8 @@ export class QueryEngine {
 
   /** Hub symbols: highest connectivity (fanIn+fanOut). */
   hubs(limit = 15): CodeSymbol[] {
-    return [...this.graph.symbols]
+    return this.graph.symbols
+      .filter((s) => this.authored(s))
       .sort((a, b) => b.fanIn + b.fanOut - (a.fanIn + a.fanOut))
       .slice(0, limit);
   }
