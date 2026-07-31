@@ -297,9 +297,37 @@ stores and ignores.
 > | functions reported dead | 276 | **146** |
 > | call edges (express) | 38 | **261** |
 >
-> Sampling says roughly 38% of the remaining unreferenced set has real call sites, so recall is
-> improved, not finished. What is settled is the diagnosis: **the bottleneck was attribution,
-> not resolution**, and typed extraction would not have moved either number.
+> **Correction, same day.** The line first published here said "roughly 38% of the remaining
+> unreferenced set has real call sites". That was `git grep` counting matches inside strings and
+> comments. Re-measured on the AST with the checker: of 137 unreferenced functions, the compiler
+> finds a real call site for **3 - 2%**. Call-edge recall is essentially closed; the rest are
+> exports, entry points and dynamic dispatch. The grep number was wrong in the direction that
+> made the remaining work look bigger, which is the flattering direction, so it is corrected in
+> place rather than quietly dropped.
+>
+> **Second pass: references that are not calls.** The extractor recorded only `CallExpression`.
+> Measured with the checker: **372 function identifiers in value position** against 6,836 in
+> call position. Two classes are unambiguous and now handled - JSX tags (91) and callback
+> arguments (41):
+>
+> | | before | after |
+> |---|---|---|
+> | components with no inbound edge | **41 / 41** | **6 / 41** |
+> | call edges (this repo) | 2,529 | **2,599** |
+> | functions reported dead | 146 | **100** |
+> | call edges (express) | 261 | **299** |
+> | unreferenced (express) | 107 / 174 | **72 / 174** |
+>
+> Rendering is invoking: React calls the component. Before this every component in a React
+> codebase was an isolated node - the single worst graph defect found on this branch, in a
+> product whose thesis is that the graph is the product.
+>
+> **What remains, for whoever picks this up.** The 239 remaining value-position references are
+> `PropertyAccessExpression` - `obj.method` held as a value, `fn.bind(...)`, `fn.name`. They are
+> ambiguous: some are usages, some are metadata reads. Sizing them needs the same
+> checker-as-ground-truth method used above, applied per parent-node kind, BEFORE any code is
+> written. The 6 components still unreferenced are Next.js page and layout entry points, which
+> genuinely have no in-repo caller and should stay that way.
 
 ### 5.3 Calibrate against a defect corpus
 
