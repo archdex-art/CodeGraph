@@ -577,6 +577,20 @@ injection classes; regex tier demoted to an explicitly low-confidence fallback.
 > so it would reduce the finding without clearing it. Clearing it means separating the pipeline
 > from the scoring model, which is the `detect-engine` / `score-engine` split LLD §13 already
 > specifies. Recorded here so the next person inherits the reason rather than the file.
+>
+> **First slice done 2026-07-30: `score-engine` extracted.** Chosen over the other slices
+> because it removes a real COUPLING rather than only moving lines.
+> `agents/orchestrator.ts` computes the swarm's projected score by re-running the REAL scorer
+> (review C5), which meant importing `scoreIssues` from the indexer - so scoring a hypothetical
+> list of findings pulled in the file walker, the ESLint layer, the TypeScript program builder
+> and the taint analysis. It now imports `@codegraph/score-engine`, whose only dependency is
+> `analysis-model`, and dependency-cruiser enforces that rather than a comment asking nicely.
+>
+> `indexer.ts` 1,259 -> 1,131. **The finding does not clear**, which was predicted before
+> starting: the threshold is 600 and one slice of ~130 lines was never going to reach it. The
+> remaining slices - `pipeline/enumerate`, `lang-*`, `detect-engine`, `viz` - are what get
+> there. Every published number is unchanged (express 89, projected 89 -> 90, remediation
+> 89 -> 95) and the 24-case golden score table moved to the new package intact.
 
 ## 7. P6 — Scale & incrementality *(~2 weeks)*
 
