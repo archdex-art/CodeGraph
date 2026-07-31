@@ -67,7 +67,8 @@ const ALLOWED = {
   sandbox: ["core-domain", "config", "observability", "verify"],
 
   // P2's transitional package, split by P5 per LLD §13.2.
-  analysis: ["core-domain", "core-graph", "config", "vcs", "analysis-model"],
+  "score-engine": ["analysis-model"],
+  analysis: ["core-domain", "core-graph", "config", "vcs", "analysis-model", "score-engine"],
   "analysis-model": ["core-graph"],
 };
 

@@ -1,6 +1,8 @@
 import type { RepoDetail } from "../types";
 import { QueryEngine } from "../codeintel/query";
-import { scoreIssues } from "../indexer";
+// Straight from the score model, not through the indexer: simulating a projected score
+// must not drag in the walker, the ESLint layer and the TypeScript program (LLD §13).
+import { scoreIssues } from "@codegraph/score-engine";
 import type { AgentReport, Finding, Priority, RemediationPlan } from "./types";
 import { SPECIALISTS, resetSeq, type AgentContext } from "./specialists";
 

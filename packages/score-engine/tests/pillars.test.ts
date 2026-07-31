@@ -8,7 +8,7 @@ import {
   type Issue,
   type Pillar,
 } from "@codegraph/analysis-model";
-import { scoreIssues } from "../src/indexer";
+import { scoreIssues } from "../src/index";
 
 /**
  * PLAN.md §5.1: "Three independent weight tables over one scoring kernel. Defect risk is the

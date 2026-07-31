@@ -19,6 +19,7 @@
     "@codegraph/vcs": "*",
     "@typescript-eslint/parser": "^8.65.0",
     "eslint": "^9.39.5",
-    "eslint-plugin-security": "^4.0.1"
+    "eslint-plugin-security": "^4.0.1",
+    "@codegraph/score-engine": "*"
   }
 }

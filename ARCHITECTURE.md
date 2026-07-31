@@ -58,7 +58,8 @@ The libraries, and why each boundary exists:
 | `sandbox` | Process execution for verification gates — timeout, no shell, scrubbed env |
 | `persistence` | The **only** module that speaks SQL |
 | `jobs` | Queue semantics: lease, heartbeat, retry, cancellation |
-| `analysis` · `analysis-model` · `core-graph` | Scan, symbol graph, rules, scoring. Transitional; P5 splits them per LLD §13 |
+| `analysis` · `analysis-model` · `core-graph` | Scan, symbol graph, detection rules. Still transitional; LLD §13 splits `analysis` further into `pipeline`/`lang-*`/`detect-engine`/`viz` |
+| `score-engine` | The Health Score model — pure functions of findings plus LOC, no I/O. Split out first because the swarm's projected score re-runs the REAL scorer (review C5), which meant importing it from the indexer and dragging in the walker, the ESLint layer and the TypeScript program |
 | `remediate-engine` | Fix providers and the apply loop, shared by `apps/web` and `apps/cli` |
 | `verify` | The four verification gates and the `VerificationRecord` |
 | `calibrate` | Offline defect labelling for score calibration (PLAN.md §5.3). Depends on `vcs` and nothing else — a calibration run must not be able to reach the scorer it is fitting weights for |
