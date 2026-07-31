@@ -544,6 +544,40 @@ injection classes; regex tier demoted to an explicitly low-confidence fallback.
 > making the graph incremental - reusing the program across runs and re-resolving only the
 > changed subgraph - which is a different and much larger piece of work than a per-file cache.
 
+> **Dogfood pass 2026-07-30: CodeGraph run on CodeGraph, findings acted on.**
+>
+> Self score was 68 with the **security dimension at 12**, and the top of the list was one rule
+> firing wrongly over and over. Two false-positive classes, both from real code here:
+>
+> | site | value | why it is not a secret |
+> |---|---|---|
+> | `apps/web/src/lib/settings.ts:71` | `anthropicApiKey: "assistant.anthropicApiKey"` | a settings PATH |
+> | `apps/web/tests/redact.test.ts` | `anthropicApiKey: "sk-ant-BAD-KEY"` | a test fixture |
+>
+> **Entropy was tried and rejected on evidence.** The fixture `sk-ant-SCOPED-BUT-VALID-KEY`
+> scores H=4.18 - ABOVE `AKIAIOSFODNN7EXAMPLE` (3.68) and a 40-char hex digest (3.83). What
+> separated all ten samples was a digit: generated credentials have them, hand-written
+> identifiers do not. Applied as a confidence multiplier, never a reject, because
+> `correcthorsebatterystaple` is a real secret with no digits.
+>
+> **`detect-unsafe-regex` downgraded 0.85 -> 0.5.** Both instances it reports here were
+> measured and neither backtracks - under a millisecond at n=16,000 - while the control
+> `/^(a+)+$/` takes 258ms at n=26. The rule is a static over-approximation that flags a shape
+> without proving the alternatives overlap, and its confidence now says "look at this" rather
+> than "this is true".
+>
+> Self 68 -> 71, security 12 -> 22. Express 85 -> 89, security 79 -> 91, and its six
+> downgraded "secrets" were read: `'keyboard cat'`, `'manny is cool'`, `'some secret here'` -
+> all placeholders in `examples/`.
+>
+> **Accepted, not fixed: `Large file (1259 LOC)` on `packages/analysis/src/indexer.ts`.** It is
+> a true positive about work done in this branch - taint policy, tier policy, credential shape
+> and the rule table all landed in one file. Extracting the rules and confidence policy into
+> `rules.ts` is the obvious split, but it removes roughly 180 lines and the threshold is 600,
+> so it would reduce the finding without clearing it. Clearing it means separating the pipeline
+> from the scoring model, which is the `detect-engine` / `score-engine` split LLD §13 already
+> specifies. Recorded here so the next person inherits the reason rather than the file.
+
 ## 7. P6 — Scale & incrementality *(~2 weeks)*
 
 Content-addressed per-file cache (`contentHash + extractorVersion → FileFacts`); PR-scoped and

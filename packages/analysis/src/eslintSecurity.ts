@@ -28,7 +28,23 @@ const JS_EXTS: Record<string, true> = { ".ts": true, ".tsx": true, ".js": true, 
 // file in isolation). Each remaining rule has a low, well-understood FP rate
 // and flags a genuinely distinct vulnerability class from the regex RULES.
 const RULE_META: Record<string, { title: string; severity: number; confidence: number }> = {
-  "security/detect-unsafe-regex": { title: "ReDoS-vulnerable regular expression", severity: 3, confidence: 0.85 },
+  /**
+   * 0.85 -> 0.5. This rule is a STATIC OVER-APPROXIMATION: `safe-regex` flags nested
+   * quantifiers without establishing that the alternatives actually overlap, which is what
+   * makes backtracking exponential. Confidence should reflect what a rule can prove, and this
+   * one proves a shape, not a vulnerability.
+   *
+   * Both instances it reports in this repository were measured and neither backtracks:
+   * `/^[a-z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*)+$/` and
+   * `/import\s+(?:[A-Za-z0-9_.]+\s+)?"([^"]+)"/` both stay under a millisecond at n=16,000,
+   * because each repetition must start with a literal the inner class cannot match. The
+   * harness was validated against `/^(a+)+$/`, which takes 258ms at n=26 - so the measurement
+   * can see a real one.
+   *
+   * Downgraded, not removed: the pattern shape is worth surfacing, and a reader who knows the
+   * regex's inputs can judge it. The number now says "look at this" rather than "this is true".
+   */
+  "security/detect-unsafe-regex": { title: "ReDoS-vulnerable regular expression", severity: 3, confidence: 0.5 },
   "security/detect-non-literal-regexp": { title: "Regular expression built from a variable", severity: 2, confidence: 0.7 },
   "security/detect-non-literal-fs-filename": { title: "Filesystem path built from a variable", severity: 3, confidence: 0.7 },
   "security/detect-non-literal-require": { title: "Dynamic require() path", severity: 3, confidence: 0.7 },
@@ -93,7 +109,7 @@ const TAINTABLE = new Set([
  * indexing the rest of the workspace.
  */
 /** Bump when RULE_META, the rule set, or the finding shape changes. */
-const SECURITY_VERSION = "eslint-sec-2-taintable";
+const SECURITY_VERSION = "eslint-sec-3-redos-confidence";
 
 export function lintForSecurity(text: string, ext: string, maxFindings = 10): EslintSecurityFinding[] {
   if (!JS_EXTS[ext]) return [];

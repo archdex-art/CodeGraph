@@ -424,6 +424,11 @@ interface Rule {
   exts?: Record<string, true>;
   validate?: (line: string, m: RegExpExecArray) => boolean;
   /**
+   * Multiplier applied to this match's confidence. Separate from `validate`, which DELETES the
+   * finding: a weak signal should move the weight, not silence the report.
+   */
+  adjust?: (m: RegExpExecArray) => number;
+  /**
    * Syntactic contexts in which this rule can legitimately fire. Defaults to `["code"]`.
    *
    * This is the cheap half of PLAN.md P5's "route the regexes through structural rules": not a
@@ -444,6 +449,39 @@ const DEFAULT_CONTEXT: readonly SourceContext[] = ["code"];
 // A real secret never contains a literal "..." ellipsis or matches a common
 // placeholder word — those are documentation/example conventions.
 const PLACEHOLDER_SECRET_RE = /^(\.{3,}|x{4,}|\*{4,}|your[-_ ]?\w*|example\w*|placeholder\w*|changeme|insert[-_ ]?\w*|redacted|dummy|fake|sample|todo|<.*>|\{\{.*\}\})$/i;
+/**
+ * Is this value shaped like a machine-generated credential?
+ *
+ * Found by running CodeGraph on CodeGraph. "Possible hardcoded secret" dominated the top of
+ * our own findings and drove the security dimension to 12, and every one was wrong. Two
+ * classes, both from real code in this repository:
+ *
+ *   apps/web/src/lib/settings.ts:71  anthropicApiKey: "assistant.anthropicApiKey"
+ *   apps/web/tests/redact.test.ts:13 anthropicApiKey: "sk-ant-BAD-KEY"
+ *
+ * The first is a settings PATH, not a value. The second is a test fixture.
+ *
+ * Entropy was tried first and does not separate them: the fixture
+ * `sk-ant-SCOPED-BUT-VALID-KEY` scores H=4.18, ABOVE the real-shaped `AKIAIOSFODNN7EXAMPLE`
+ * (3.68) and a 40-char hex digest (3.83). What does separate them on that sample is a digit -
+ * generated credentials contain them (base64, hex, AWS ids, GitHub tokens all do) and
+ * hand-written identifiers usually do not.
+ *
+ * Ten examples is a small sample and the rule is stated as a weak signal accordingly: it
+ * DOWNGRADES rather than rejects, because `correcthorsebatterystaple` is a real secret with no
+ * digits in it. A long value passes regardless, since length alone makes a generated secret
+ * plausible.
+ */
+const CONFIG_PATH_RE = /^[a-z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*)+$/;
+
+function looksLikeCredential(value: string): boolean {
+  if (CONFIG_PATH_RE.test(value)) return false; // `assistant.anthropicApiKey` is a key, not a value
+  return /\d/.test(value) || value.length >= 32;
+}
+
+/** Weak-signal discount for a value that does not look machine-generated. */
+const WEAK_SECRET_FACTOR = 0.25;
+
 function isPlaceholderSecret(value: string): boolean {
   return PLACEHOLDER_SECRET_RE.test(value) || value.includes("...");
 }
@@ -456,6 +494,7 @@ const RULES: Rule[] = [
     re: /(password|secret|api[_-]?key|token)\s*[:=]\s*['"]([^'"]{6,})['"]/i,
     dimension: "security", severity: 5, confidence: 0.8, title: "Possible hardcoded secret",
     validate: (_line, m) => !isPlaceholderSecret(m[2]),
+    adjust: (m) => (looksLikeCredential(m[2]) ? 1 : WEAK_SECRET_FACTOR),
   },
   // A hardcoded URL IS a string literal; in a comment it is an example, not a config value.
   { re: /https?:\/\/[^"'\s]*(?<![\w.])(localhost|127\.0\.0\.1)/, dimension: "security", severity: 2, confidence: 0.9, title: "Hardcoded local URL", context: ["string", "code"] },
@@ -608,7 +647,7 @@ async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, ch
           issues.push(
             mkIssue(
               rule.dimension, rule.severity, rule.title, f.rel, lineIndex + 1, br,
-              scaleConfidence(rule.confidence, tierPenalty), ch,
+              scaleConfidence(rule.confidence, tierPenalty * (rule.adjust?.(m) ?? 1)), ch,
             ),
           );
           emitted++;
