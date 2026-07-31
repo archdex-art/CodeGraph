@@ -73,6 +73,8 @@ const HELP: Readonly<Record<string, string>> = {
   cg_cache_hit_ratio:
     "Content-cache hit ratio for the current process, 0..1. Sampled at scrape, not stored: it describes live state, and a counter would average it over the process lifetime.",
   cg_queue_depth: "Jobs waiting to be claimed.",
+  cg_stage_duration_seconds:
+    "Time spent per pipeline stage. A summary, not a histogram: `_sum` and `_count` give the mean via rate(sum)/rate(count), and buckets are not emitted because no bucket boundaries have been chosen from evidence. Percentiles are therefore unavailable, which is stated rather than faked with arbitrary buckets.",
 };
 
 /**
@@ -93,6 +95,21 @@ export interface GaugeSample {
 }
 
 /**
+ * Counter families that are the components of a summary.
+ *
+ * `foo_sum` and `foo_count` are stored as ordinary counters — they are monotonic, and the
+ * storage does not need to know better — but the exposition must declare `# TYPE foo summary`
+ * ONCE for the base name, not `counter` twice. Prometheus rejects a duplicate TYPE line for one
+ * family, so this is a correctness requirement rather than tidiness.
+ */
+const SUMMARY_BASES = new Set(["cg_stage_duration_seconds"]);
+
+function summaryBaseOf(name: string): string | null {
+  for (const base of SUMMARY_BASES) if (name === `${base}_sum` || name === `${base}_count`) return base;
+  return null;
+}
+
+/**
  * Render the Prometheus text exposition format (v0.0.4).
  *
  * Hand-rolled rather than pulling a client library, for the reason the storage is a table:
@@ -104,8 +121,19 @@ export function renderPrometheus(gauges: readonly GaugeSample[] = []): string {
   const lines: string[] = [];
   let currentName = "";
 
+  const declaredSummaries = new Set<string>();
   for (const row of rows) {
-    if (row.name !== currentName) {
+    const base = summaryBaseOf(row.name);
+    if (base) {
+      // One TYPE line per FAMILY: `_sum` and `_count` are two series of one summary.
+      if (!declaredSummaries.has(base)) {
+        declaredSummaries.add(base);
+        currentName = "";
+        const help = HELP[base];
+        if (help) lines.push(`# HELP ${base} ${help}`);
+        lines.push(`# TYPE ${base} summary`);
+      }
+    } else if (row.name !== currentName) {
       currentName = row.name;
       const help = HELP[row.name];
       if (help) lines.push(`# HELP ${row.name} ${help}`);

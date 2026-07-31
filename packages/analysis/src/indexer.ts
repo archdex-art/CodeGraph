@@ -28,7 +28,14 @@ import {
 import { buildSymbolGraph, callAt, classifyTaint, contextAt, extractorFor, syntacticSpans, tierForExt } from "@codegraph/core-graph";
 import type { AnalysisTier, TaintQuery, TaintVerdict } from "@codegraph/core-graph";
 import type { ScanCoverage, ScannedFile } from "@codegraph/analysis-model";
-import { CODE_EXTS, LANG_BY_EXT, YIELD_EVERY, yieldToEventLoop } from "@codegraph/analysis-model";
+import {
+  CODE_EXTS,
+  LANG_BY_EXT,
+  YIELD_EVERY,
+  timeStage,
+  yieldToEventLoop,
+  type StageTimings,
+} from "@codegraph/analysis-model";
 import { HITS_PER_RULE_PER_FILE, expectedHarm, scoreIssues } from "@codegraph/score-engine";
 import { buildModuleGraph, buildTree, buildVizGraph } from "@codegraph/viz";
 import { computeImportGraph, extractImports } from "@codegraph/imports";
@@ -390,11 +397,22 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
   const signalMap = gitSignals(root);
   const churnMap = new Map<string, number>();
   for (const [file, sig] of signalMap) churnMap.set(file, sig.churn);
-  const { files, languages, loc, coverage } = await scan(root, ctx);
-  const { fanIn, importEdges } = await computeImportGraph(files, ctx);
+  /**
+   * Stage timings (HLD §14). Named for the stages LLD §13 split out, so a slow run points at a
+   * package rather than at "indexing".
+   */
+  const stageTimings: StageTimings = {};
+  const { files, languages, loc, coverage } = await timeStage(stageTimings, "scan", () =>
+    scan(root, ctx),
+  );
+  const { fanIn, importEdges } = await timeStage(stageTimings, "imports", () =>
+    computeImportGraph(files, ctx),
+  );
   
-  const dep = analyzeDependencies(root, files);
-  const codeIssues = await analyzeFiles(files, fanIn, churnMap, ctx);
+  const dep = await timeStage(stageTimings, "dependencies", () => analyzeDependencies(root, files));
+  const codeIssues = await timeStage(stageTimings, "detect", () =>
+    analyzeFiles(files, fanIn, churnMap, ctx),
+  );
   const testIssues = analyzeTests(files);
   const issues = [...codeIssues, ...dep.issues, ...testIssues];
 
@@ -409,7 +427,9 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
     edges: importEdges.length + files.length, // imports + containment
   };
 
-  const { dimensions, overall } = scoreIssues(issues, loc);
+  const { dimensions, overall } = await timeStage(stageTimings, "score", () =>
+    scoreIssues(issues, loc),
+  );
   // Same weighting as the score - literally the same function - so the order the user reads
   // matches the weighting the score applied. Sorting by the raw `severity × blastRadius`
   // product was review item B2 surfacing a second time: it put a TODO in a heavily-imported
@@ -425,7 +445,8 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
   const modules = buildModuleGraph(files, importEdges, issuesByFile);
 
   // Symbol-level knowledge graph (code intelligence layer).
-  const symbolGraph = await buildSymbolGraph(
+  const symbolGraph = await timeStage(stageTimings, "symbol-graph", () =>
+    buildSymbolGraph(
     files
       .filter((f) => f.text && extractorFor(f.ext))
       .map((f) => ({
@@ -439,11 +460,13 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
     // `node_modules` and `@types` in scope. Without it resolution falls back to a synthetic
     // base that only knows the files handed in.
     root,
+    ),
   );
 
   return {
     loc,
     languages,
+    stageTimings,
     graphStats,
     dimensions,
     coverage,

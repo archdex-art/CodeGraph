@@ -4,6 +4,7 @@ import { indexRepo } from "@codegraph/analysis";
 import { initTreeSitter } from "@codegraph/core-graph";
 import {
   completeRepoIndex,
+  incrementCounter,
   recordRun,
   dataDir,
   setRepoError,
@@ -143,6 +144,21 @@ export async function analyze(
     // fingerprint column P6's baseline mode keys on, review C1's per-finding `/fix`) was
     // reading data that stopped at the migration. Measured before this line existed: 4
     // issues in the blob, 0 rows in `findings`.
+    /**
+     * `cg_stage_duration_seconds` (HLD §14), emitted here rather than inside `indexRepo`
+     * because `analysis` sits below `persistence` in the layering. The pipeline returns its
+     * timings; the process that already owns the run row records them.
+     *
+     * Seconds, not milliseconds: the metric name says `_seconds` and Prometheus convention is
+     * base units. Emitted as `_sum`/`_count` so `rate(sum)/rate(count)` gives the mean per
+     * stage — enough to answer "which stage got slower", which is the question the run record
+     * was promised for.
+     */
+    for (const [stage, ms] of Object.entries(result.stageTimings ?? {})) {
+      incrementCounter("cg_stage_duration_seconds_sum", { stage }, ms / 1000);
+      incrementCounter("cg_stage_duration_seconds_count", { stage });
+    }
+
     recordRun(
       {
         id: randomUUID(),

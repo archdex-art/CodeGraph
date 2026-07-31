@@ -1,3 +1,4 @@
+import type { StageTimings } from "./pipeline";
 import type { SymbolGraph } from "@codegraph/core-graph";
 
 /**
@@ -238,6 +239,11 @@ export interface IndexResult {
    * predates coverage reporting", which the UI must render as unknown rather than as complete.
    */
   coverage?: ScanCoverage;
+  /**
+   * Wall-clock milliseconds per stage (HLD §14). Optional so rows written before this keep
+   * deserialising — absent means "this run predates stage timing", not "it took no time".
+   */
+  stageTimings?: StageTimings;
   issues: Issue[];
   dependencies: string[]; // actual package names this repo depends on
   churnByFile: Record<string, number>;

@@ -54,3 +54,36 @@ export function yieldToEventLoop(): Promise<void> {
   setImmediate(resolve);
   return promise;
 }
+
+/**
+ * Wall-clock milliseconds per pipeline stage (HLD §14, "Run record").
+ *
+ * HLD promised that "every run persists its own stage timings and degradations". Degradations
+ * shipped as `ScanCoverage`; the timings did not, and their absence is also why
+ * `cg_stage_duration_seconds` did not exist - the metric and the run record are one piece of
+ * work, not two.
+ *
+ * Returned on the result rather than pushed to a metrics store, because `analysis` sits below
+ * `persistence` in the layering. The caller that already owns the run row records them.
+ */
+export type StageTimings = Record<string, number>;
+
+/**
+ * Time `fn`, recording the elapsed milliseconds under `stage`.
+ *
+ * Records on the way out whether or not `fn` threw. A stage that failed still consumed the
+ * time, and losing it is how a slow stage that eventually errors becomes invisible - which is
+ * exactly the run worth measuring.
+ */
+export async function timeStage<T>(
+  into: StageTimings,
+  stage: string,
+  fn: () => Promise<T> | T,
+): Promise<T> {
+  const started = Date.now();
+  try {
+    return await fn();
+  } finally {
+    into[stage] = (into[stage] ?? 0) + (Date.now() - started);
+  }
+}

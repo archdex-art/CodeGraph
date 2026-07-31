@@ -139,3 +139,45 @@ describe("gauges (HLD §14)", () => {
     expect(renderPrometheus()).toMatch(/\n$/);
   });
 });
+
+describe("summary families (cg_stage_duration_seconds)", () => {
+  /**
+   * `_sum` and `_count` are stored as ordinary counters — they are monotonic — but they are two
+   * series of ONE summary family, and Prometheus rejects a duplicate `# TYPE` line for a
+   * family. Declaring each as its own counter is therefore not a cosmetic error.
+   */
+  it("declares the family once, as a summary", () => {
+    incrementCounter("cg_stage_duration_seconds_sum", { stage: "scan" }, 1.5);
+    incrementCounter("cg_stage_duration_seconds_count", { stage: "scan" });
+    const out = renderPrometheus();
+    expect(out).toContain("# TYPE cg_stage_duration_seconds summary");
+    expect(out.match(/# TYPE cg_stage_duration_seconds summary/g)).toHaveLength(1);
+    expect(out).not.toContain("# TYPE cg_stage_duration_seconds_sum counter");
+    expect(out).not.toContain("# TYPE cg_stage_duration_seconds_count counter");
+  });
+
+  it("emits both series with their labels", () => {
+    incrementCounter("cg_stage_duration_seconds_sum", { stage: "detect" }, 0.82);
+    incrementCounter("cg_stage_duration_seconds_count", { stage: "detect" });
+    const out = renderPrometheus();
+    expect(out).toContain('cg_stage_duration_seconds_sum{stage="detect"} 0.82');
+    expect(out).toContain('cg_stage_duration_seconds_count{stage="detect"} 1');
+  });
+
+  it("declares the family once across several stages", () => {
+    for (const stage of ["scan", "detect", "score"]) {
+      incrementCounter("cg_stage_duration_seconds_sum", { stage }, 0.1);
+      incrementCounter("cg_stage_duration_seconds_count", { stage });
+    }
+    const out = renderPrometheus();
+    expect(out.match(/# TYPE cg_stage_duration_seconds summary/g)).toHaveLength(1);
+  });
+
+  it("still types ordinary counters as counters", () => {
+    incrementCounter("cg_stage_duration_seconds_sum", { stage: "scan" }, 1);
+    incrementCounter("cg_run_total", { outcome: "ok" });
+    const out = renderPrometheus();
+    expect(out).toContain("# TYPE cg_run_total counter");
+    expect(out).toContain("# TYPE cg_stage_duration_seconds summary");
+  });
+});
