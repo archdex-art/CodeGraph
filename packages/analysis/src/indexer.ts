@@ -25,7 +25,9 @@ import {
   pillarsFrom,
   type PillarScore,
 } from "@codegraph/analysis-model";
-import { buildSymbolGraph, contextAt, extractorFor, syntacticSpans } from "@codegraph/core-graph";
+import { buildSymbolGraph, callAt, classifyTaint, contextAt, extractorFor, syntacticSpans } from "@codegraph/core-graph";
+import type { TaintQuery, TaintVerdict } from "@codegraph/core-graph";
+import ts from "typescript";
 import type { SourceContext } from "@codegraph/core-graph";
 import { lintForSecurity } from "./eslintSecurity";
 
@@ -480,6 +482,61 @@ const RULES: Rule[] = [
   { re: /:\s*any\b|\bas\s+any\b/, dimension: "correctness", severity: 1, confidence: 1.0, title: "Untyped `any`", exts: { ".ts": true, ".tsx": true } },
 ];
 
+/**
+ * Provenance policy for sink findings (PLAN.md P5 item 2).
+ *
+ * `eslint-plugin-security` flags any non-literal argument to a sink. On this repository that
+ * is 136 of 200 findings - 68% from one rule - and reading them shows `mkdirSync(dir)` from
+ * config, `statSync(full)` inside a directory walk, temp paths in tests. None of it
+ * attacker-controlled. The rule cannot tell, because it never asks where the value came from.
+ *
+ * **Sources are deliberately narrow, and `process.env` is deliberately absent.** Env vars are
+ * operator configuration, not attacker input; treating them as a source would re-flag exactly
+ * the config-driven paths this is meant to quieten, and the noise would return wearing a
+ * taint-analysis badge. `process.argv` IS included: for a CLI it is user input.
+ *
+ * A function PARAMETER is not a source either. Every function taking an argument would light
+ * up, and cross-function propagation is P5 item 4's job, bounded to depth 3.
+ */
+const TAINT_QUERY: TaintQuery = {
+  sourceRoots: new Set(["req", "request", "ctx"]),
+  sourceExpressions: [
+    /^process\.argv\b/,
+    /^(window\.)?location\.(search|hash|href)\b/,
+    /^document\.cookie\b/,
+  ],
+  // `resolveSafe` is this repository's containment primitive (packages/fsx/src/workspace.ts).
+  sanitizers: new Set(["resolveSafe", "escapeHtml", "sanitize", "encodeURIComponent"]),
+};
+
+const TS_FAMILY_EXT: Record<string, true> = {
+  ".ts": true, ".tsx": true, ".js": true, ".jsx": true, ".mjs": true, ".cjs": true,
+};
+
+/**
+ * Taint modulates CONFIDENCE; it never deletes a finding.
+ *
+ * Deleting would convert an incomplete source list into silent false negatives - the failure
+ * mode a security tool cannot afford, and one nobody would notice. Downgrading keeps the
+ * finding visible and lets it weigh correctly, because `confidence` now multiplies into
+ * `expectedHarm`: an untraced sink contributes about a third of what it used to, and a
+ * genuinely tainted one outranks everything around it. The two changes compose by design.
+ */
+function adjustForTaint(base: number, verdict: TaintVerdict): number {
+  switch (verdict) {
+    // Reached a source with nothing cleaning it. This is the finding the rule was written for.
+    case "tainted":
+      return Math.min(0.95, base * 1.35);
+    // A source, then a sanitizer. Reported, but it should sit near the bottom of the list.
+    case "sanitized":
+      return Math.max(0.05, base * 0.2);
+    // No source found inside this function. Usually internal, sometimes a caller's argument
+    // we cannot see yet - hence downgraded, not dropped.
+    case "untraced":
+      return Math.max(0.1, base * 0.35);
+  }
+}
+
 let _issueSeq = 0;
 function mkIssue(dim: Dimension, sev: number, title: string, file: string, line: number, br: number, conf?: number, churn?: number): Issue {
   return { id: `iss_${_issueSeq++}`, dimension: dim, severity: sev, confidence: conf, title, file, line, blastRadius: br, churn: churn ?? 1 };
@@ -545,8 +602,18 @@ async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, ch
     // AST-based security detector layer (eslint-plugin-security), catches
     // vulnerability classes the line-regex RULES above are structurally blind
     // to (ReDoS regex literals, dynamic fs/require paths, weak randomness, ...).
-    for (const f2 of lintForSecurity(f.text, f.ext)) {
-      issues.push(mkIssue("security", f2.severity, f2.title, f.rel, f2.line, br, f2.confidence, ch));
+    const secFindings = lintForSecurity(f.text, f.ext);
+    // Parse once, and only if a sink finding actually needs provenance checking.
+    let taintSf: ts.SourceFile | null = null;
+    for (const f2 of secFindings) {
+      let confidence = f2.confidence;
+      if (f2.taintable && TS_FAMILY_EXT[f.ext]) {
+        taintSf ??= ts.createSourceFile(f.rel, f.text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+        const call = callAt(taintSf, f2.line, f2.column);
+        const arg = call?.arguments[0];
+        if (arg) confidence = adjustForTaint(confidence, classifyTaint(arg, TAINT_QUERY));
+      }
+      issues.push(mkIssue("security", f2.severity, f2.title, f.rel, f2.line, br, confidence, ch));
     }
 
     // God-file: very large source file → maintainability penalty scaled by fan-in.

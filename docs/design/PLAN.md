@@ -447,6 +447,48 @@ injection classes; regex tier demoted to an explicitly low-confidence fallback.
 > triple-quoted strings would be wrong at the edges, and a wrong span SUPPRESSES a real
 > finding - trading false positives for silent false negatives is the worse deal.
 
+> **P5 item 2 landed 2026-07-30 — intraprocedural taint, and it found a real hole.**
+>
+> `eslint-plugin-security` flags any non-literal argument to a sink and never asks where the
+> value came from. Measured on this repository: **170 sink findings, all at one confidence.**
+> Classified by provenance:
+>
+> | verdict | count | meaning |
+> |---|---|---|
+> | tainted | **2** | reaches a sink from user-controlled input |
+> | sanitized | 26 | a source, then a transform or a dominating guard |
+> | untraced | 142 | no source found in this function |
+>
+> **The 2 were a genuine vulnerability in our own code.** `FileSystemService.readFile` and
+> `writeFile` passed `request.path` from an Electron IPC message straight to `fs`. The
+> `fs:read`/`fs:write` permissions answer "may the renderer touch the disk", never "which
+> file" - so any renderer holding one could read or write anything the user could. Fixed in the
+> same commit with `FsGrants`: a directory is reachable because the user picked it in the OS
+> dialog, mirroring `@codegraph/fsx` on the server side. The analysis now reports both sinks
+> `sanitized`, which is the loop this product is supposed to close.
+>
+> **Taint modulates confidence; it never deletes a finding.** An incomplete source list would
+> otherwise become silent false negatives. Because `confidence` already multiplies into
+> `expectedHarm`, an untraced sink now contributes about a third of what it did and a tainted
+> one outranks its neighbours - the two changes compose without new machinery.
+>
+> **The CFG half is guard recognition, and it is where the value was.** JavaScript validates
+> far more than it transforms: check a predicate, return early, then use the ORIGINAL value.
+> No assignment happens, so a def-use walk sees nothing. Adding dominating early-return guards
+> took tainted from 6 to 2 - the four dropped were `apps/web/src/app/api/browse/route.ts`,
+> guarded on the line above each sink.
+>
+> **Deliberately excluded.** `process.env` is not a source: it is operator configuration, and
+> treating it as one would re-flag exactly the config-driven paths this quietens. A function
+> parameter is not a source either - that is item 4, bounded to depth 3. Verdicts join over a
+> lattice (`tainted > sanitized > untraced`), so one dirty path wins; global "saw a source" and
+> "saw a sanitizer" flags report *sanitized* for `if (a) p = clean(req.x); else p = req.y`,
+> which is a false negative.
+>
+> **Still open.** Sanitizer and source names are a fixed table, not configurable. Guard
+> recognition covers early-return only - a guard inside a branch or loop is ignored, chosen so
+> the analysis under-claims rather than suppresses.
+
 ## 7. P6 — Scale & incrementality *(~2 weeks)*
 
 Content-addressed per-file cache (`contentHash + extractorVersion → FileFacts`); PR-scoped and

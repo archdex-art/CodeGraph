@@ -2,9 +2,13 @@ import { dialog, BrowserWindow } from "electron";
 import { DialogContract, OpenDirectoryRequest } from "../../../shared/contracts/dialog";
 import { Result } from "../../../shared/core/result";
 import { Logger } from "../core/logger";
+import { FsGrants } from "../security/fs-grants";
 
 export class DialogService implements DialogContract {
-  constructor(private readonly logger: Logger) {}
+  constructor(
+    private readonly logger: Logger,
+    private readonly grants: FsGrants,
+  ) {}
 
   public async openDirectory(request?: OpenDirectoryRequest): Promise<Result<string | null>> {
     try {
@@ -23,7 +27,11 @@ export class DialogService implements DialogContract {
         return Result.ok(null);
       }
 
-      return Result.ok(result.filePaths[0]);
+      // The user picking a directory IS the grant. Nothing else widens filesystem reach.
+      const chosen = result.filePaths[0];
+      this.grants.grant(chosen);
+      this.logger.info("DialogService", `Granted filesystem access to ${chosen}`);
+      return Result.ok(chosen);
     } catch (error) {
       this.logger.error("DialogService", "Failed to open directory dialog", error);
       return Result.fail("INTERNAL_ERROR", "Failed to open native dialog", {

@@ -62,10 +62,28 @@ const FLAT_CONFIG = [
 
 export interface EslintSecurityFinding {
   line: number;
+  /** 1-indexed, needed to locate the call structurally for taint classification. */
+  column: number;
   title: string;
   severity: number;
   confidence: number;
+  /**
+   * True for rules that flag a SINK taking a non-literal argument. Those say nothing about
+   * where the value came from, so they are the ones worth re-examining with data flow.
+   * `detect-unsafe-regex` and `detect-new-buffer` are not sinks - the code is wrong on its
+   * own terms regardless of any input - so they are left alone.
+   */
+  taintable: boolean;
 }
+
+/** Sink rules: the finding is only as interesting as the argument's provenance. */
+const TAINTABLE = new Set([
+  "security/detect-non-literal-fs-filename",
+  "security/detect-non-literal-require",
+  "security/detect-non-literal-regexp",
+  "security/detect-child-process",
+  "security/detect-eval-with-expression",
+]);
 
 /**
  * Lints one file's in-memory text with the curated security rule set.
@@ -86,7 +104,14 @@ export function lintForSecurity(text: string, ext: string, maxFindings = 10): Es
       if (!m.ruleId) continue;
       const meta = RULE_META[m.ruleId];
       if (!meta) continue;
-      out.push({ line: Math.max(1, m.line || 1), title: meta.title, severity: meta.severity, confidence: meta.confidence });
+      out.push({
+        line: Math.max(1, m.line || 1),
+        column: Math.max(1, m.column || 1),
+        title: meta.title,
+        severity: meta.severity,
+        confidence: meta.confidence,
+        taintable: TAINTABLE.has(m.ruleId),
+      });
       if (out.length >= maxFindings) break;
     }
     return out;

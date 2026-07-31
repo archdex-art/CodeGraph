@@ -54,3 +54,5 @@ export { astTsExtractor, initTreeSitter } from "./ast-extractor";
 
 export { syntacticSpans, contextAt } from "./source-context";
 export type { SourceContext, SourceSpan } from "./source-context";
+export { classifyTaint, callAt } from "./dataflow";
+export type { TaintQuery, TaintVerdict } from "./dataflow";

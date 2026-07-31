@@ -9,6 +9,7 @@ import { Supervisor } from "./core/supervisor";
 import { WindowManager } from "./core/window-manager";
 import { IpcRouter } from "./ipc/router";
 import { AppContext } from "./core/context";
+import { FsGrants } from "./security/fs-grants";
 import { DialogService } from "./services/dialog";
 import { FileSystemService } from "./services/filesystem";
 import { AppControlService } from "./services/app-control";
@@ -59,8 +60,12 @@ async function bootstrap() {
   di.register("context", context);
 
   // 3. Native Services & IPC Binding
-  const dialogService = new DialogService(logger);
-  const fileSystemService = new FileSystemService(logger);
+  // One grant store: the dialog is the only thing that widens it, the filesystem service the
+  // only thing that reads it. Access follows the user's explicit directory choice and nothing
+  // else - see security/fs-grants.ts.
+  const fsGrants = new FsGrants();
+  const dialogService = new DialogService(logger, fsGrants);
+  const fileSystemService = new FileSystemService(logger, fsGrants);
   const appControlService = new AppControlService(logger, eventBus);
   const updateService = new UpdateService(logger, eventBus);
   registerIpcHandlers(ipcRouter, dialogService, fileSystemService, appControlService);
