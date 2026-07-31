@@ -83,100 +83,11 @@ function collectRefs(lines: string[]): RawReference[] {
 
 // ---- shared import parsing (ES module syntax; TS `import type` included —
 // harmless for call resolution since types are never call targets) ----
-const IMPORT_RE = /^import\s+(?:type\s+)?(?:([A-Za-z0-9_$]+)\s*,?\s*)?(?:\{([^}]*)\})?\s*(?:\*\s*as\s+([A-Za-z0-9_$]+))?\s*(?:from\s+)?["']([^"']+)["']/;
-function collectImports(lines: string[]): RawImport[] {
-  const out: RawImport[] = [];
-  for (const raw of lines) {
-    const l = raw.trim();
-    if (!l.startsWith("import ")) continue;
-    const m = l.match(IMPORT_RE);
-    if (!m) continue;
-    const [, defaultName, named, namespaceName, modulePath] = m;
-    if (defaultName) out.push({ localName: defaultName, importedName: "default", modulePath });
-    if (namespaceName) out.push({ localName: namespaceName, importedName: "*", modulePath });
-    if (named) {
-      for (const part of named.split(",")) {
-        const p = part.trim();
-        if (!p) continue;
-        const asMatch = p.match(/^([A-Za-z0-9_$]+)\s+as\s+([A-Za-z0-9_$]+)$/);
-        if (asMatch) out.push({ localName: asMatch[2], importedName: asMatch[1], modulePath });
-        else out.push({ localName: p, importedName: p, modulePath });
-      }
-    }
-  }
-  return out;
-}
-
-// ---- TypeScript / JavaScript ----
-
-const JS_KEYWORDS: Record<string, true> = {
-  if: true, for: true, while: true, switch: true, catch: true, return: true,
-  function: true, await: true, typeof: true, super: true, new: true, in: true, of: true,
-};
-
-const tsExtractor: LanguageExtractor = {
-  language: "TypeScript",
-  exts: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
-  extract(ctx: ExtractContext) {
-    const lines = ctx.text.split("\n");
-    const symbols: RawSymbol[] = [];
-    let classContext: { name: string; endLine: number } | null = null;
-
-    for (let i = 0; i < lines.length; i++) {
-      const raw = lines[i];
-      const l = raw.trim();
-      if (classContext && i + 1 > classContext.endLine) classContext = null;
-
-      const exported = /^export\b/.test(l) || /^export\s+default\b/.test(l);
-
-      // class / interface / type / enum
-      let m =
-        l.match(/^(?:export\s+)?(?:default\s+)?(?:abstract\s+)?(class)\s+([A-Za-z0-9_$]+)/) ||
-        l.match(/^(?:export\s+)?(interface)\s+([A-Za-z0-9_$]+)/) ||
-        l.match(/^(?:export\s+)?(enum)\s+([A-Za-z0-9_$]+)/);
-      if (m) {
-        const kind = m[1] as SymbolKind;
-        const end = kind === "interface" || kind === "enum" ? braceEnd(lines, i) : braceEnd(lines, i);
-        symbols.push({ name: m[2], kind, line: i + 1, endLine: end, signature: l.replace(/\s*\{.*$/, ""), doc: docAbove(lines, i, "js"), exported, container: null });
-        if (kind === "class") classContext = { name: m[2], endLine: end };
-        continue;
-      }
-      m = l.match(/^(?:export\s+)?type\s+([A-Za-z0-9_$]+)\s*=/);
-      if (m) {
-        symbols.push({ name: m[1], kind: "type", line: i + 1, endLine: i + 1, signature: l.replace(/;$/, ""), doc: docAbove(lines, i, "js"), exported, container: null });
-        continue;
-      }
-      m = l.match(/^(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*([A-Za-z0-9_$]+)\s*(\([^)]*\))/);
-      if (m) {
-        symbols.push({ name: m[1], kind: "function", line: i + 1, endLine: braceEnd(lines, i), signature: `function ${m[1]}${m[2]}`, doc: docAbove(lines, i, "js"), exported, container: null });
-        continue;
-      }
-      // const foo = (…) => / arrow & function expr
-      m = l.match(/^(?:export\s+)?(?:default\s+)?const\s+([A-Za-z0-9_$]+)\s*(?::[^=]+)?=\s*(?:async\s*)?(\([^)]*\)|[A-Za-z0-9_$]+)\s*=>/) ||
-          l.match(/^(?:export\s+)?(?:default\s+)?const\s+([A-Za-z0-9_$]+)\s*=\s*(?:async\s*)?function/);
-      if (m) {
-        const isComponent = /^[A-Z]/.test(m[1]) && (ctx.text.includes("react") || ctx.text.includes("jsx") || /\.(tsx|jsx)$/.test(""));
-        symbols.push({ name: m[1], kind: isComponent ? "component" : "function", line: i + 1, endLine: braceEnd(lines, i), signature: l.replace(/\s*=>.*$/, " =>").slice(0, 120), doc: docAbove(lines, i, "js"), exported, container: null });
-        continue;
-      }
-      // exported const value
-      m = l.match(/^export\s+const\s+([A-Za-z0-9_$]+)\s*[:=]/);
-      if (m) {
-        symbols.push({ name: m[1], kind: "constant", line: i + 1, endLine: i + 1, signature: l.slice(0, 120), doc: docAbove(lines, i, "js"), exported: true, container: null });
-        continue;
-      }
-
-      // class methods
-      if (classContext) {
-        const mm = raw.match(/^\s+(?:public\s+|private\s+|protected\s+|static\s+|async\s+|get\s+|set\s+|readonly\s+)*([A-Za-z0-9_$]+)\s*(\([^)]*\))\s*(?::[^={]+)?\{/);
-        if (mm && !JS_KEYWORDS[mm[1]]) {
-          symbols.push({ name: mm[1], kind: "method", line: i + 1, endLine: braceEnd(lines, i), signature: `${mm[1]}${mm[2]}`, doc: docAbove(lines, i, "js"), exported: classContext ? true : false, container: classContext.name });
-        }
-      }
-    }
-    return { symbols, references: collectRefs(lines), imports: collectImports(lines) };
-  },
-};
+// The regex TypeScript/JavaScript extractor, `IMPORT_RE` and `collectImports` were deleted.
+// `astTsExtractor` took the extractor as a `fallback` and never called it: `createSourceFile`
+// returns a tree with diagnostics rather than throwing, so there was no path on which the
+// fallback could run. It had been unreachable for every .ts/.js file, which is why a CommonJS
+// fix written into it earlier in this branch had no effect at all.
 
 // ---- Python ----
 // Import CAPTURE only, no path resolution in graph.ts yet (Python package/module
@@ -249,7 +160,7 @@ const pyExtractor: LanguageExtractor = {
 
 // ---- registry ----
 
-const REGISTRY: LanguageExtractor[] = [astTsExtractor(tsExtractor), pyExtractor];
+const REGISTRY: LanguageExtractor[] = [astTsExtractor(), pyExtractor];
 const byExt = new Map<string, LanguageExtractor>();
 for (const ex of REGISTRY) {
   for (const e of ex.exts) {

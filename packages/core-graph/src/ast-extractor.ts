@@ -30,7 +30,18 @@ function signatureHead(src: string): string {
   return src.trim();
 }
 
-export const astTsExtractor = (fallback: LanguageExtractor): LanguageExtractor => ({
+/**
+ * The TypeScript/JavaScript extractor.
+ *
+ * Took a `fallback` extractor and never called it. `ts.createSourceFile` does not throw - it
+ * returns a tree with diagnostics - so there was no path on which the fallback could run, and
+ * the regex extractor it wrapped was unreachable for every `.ts`/`.js` file.
+ *
+ * That dead branch cost real time in this branch: a CommonJS fix was written into the regex
+ * extractor, verified by reading the code, and had no effect at all, because the code it edited
+ * never ran. Removed so the next person cannot make the same mistake.
+ */
+export const astTsExtractor = (): LanguageExtractor => ({
   language: "TypeScript",
   exts: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
   extract(ctx: ExtractContext): ExtractResult {

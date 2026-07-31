@@ -156,6 +156,19 @@ them, and precision counts reports.
 CodeGraph indexes. A crafted source file stalls the indexer. Found because rule 5 required
 measuring the claim rather than accepting or dismissing the rule's reputation.
 
+**Follow-up, and a correction worth recording.** That regex turned out to be UNREACHABLE.
+`astTsExtractor` took the regex extractor as a `fallback` parameter and never called it -
+`ts.createSourceFile` returns a tree with diagnostics rather than throwing, so no path led
+there. The label stays `true` under §3 (the described property was genuinely present at that
+location; the protocol does not ask about exploitability) but the risk was not live, and saying
+otherwise would overstate the find.
+
+It explains something earlier in the same branch: a CommonJS extraction fix was written into
+that file, reviewed, and had no effect, because the code it edited never ran. 95 lines of dead
+extractor are now deleted and the live import path - `@codegraph/imports` - was measured
+instead: flat to n=6400 for the JS and Go forms, quadratic but bounded for the Python `from`
+form (29ms at n=6400). A regression guard now sits on the live path rather than the dead one.
+
 ### What this changes
 
 - P5.3 stays open, now with a number instead of an assumption.
