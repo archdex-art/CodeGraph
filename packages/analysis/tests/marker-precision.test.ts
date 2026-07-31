@@ -88,3 +88,50 @@ describe("marker rules", () => {
     expect(await titles(src)).not.toContain("Suppressed checker");
   });
 });
+
+describe("debugger statement (held-out corpus follow-up)", () => {
+  /**
+   * Scored **0/4** on the held-out Python corpus — every match was docstring prose or a CLI
+   * option string. Python has no `debugger` keyword, so on a Python file a match is prose by
+   * construction, and Python is `lexical` tier with no context gate to help.
+   */
+  it("reports a real debugger statement", async () => {
+    for (const src of ["debugger;\nexport const a = 1;\n", "export function f() {\n  debugger;\n}\n"]) {
+      expect(await titles(src), src).toContain("debugger statement");
+    }
+  });
+
+  it("ignores the word in an identifier", async () => {
+    expect(await titles("export const debuggerPort = 9229;\n")).not.toContain("debugger statement");
+  });
+
+  it("does not fire on Python at all", async () => {
+    /**
+     * Verbatim from flask: a CLI option string and docstring prose. Also a bare `debugger`
+     * line, which is a valid Python expression statement referencing a variable — and the only
+     * shape the statement-form regex would otherwise match, so it is what makes the
+     * extension gate load-bearing rather than decorative.
+     */
+    const py =
+      '"""The reloader and debugger are enabled by default."""\n' +
+      'OPT = "--debugger/--no-debugger"\n' +
+      "debugger\n";
+    expect(await titles(py, "a.py")).not.toContain("debugger statement");
+  });
+
+  it("ignores prose mentioning a debugger in a JS comment", async () => {
+    const src = "// an interactive debugger will be shown for unhandled errors\nexport const a = 1;\n";
+    expect(await titles(src)).not.toContain("debugger statement");
+  });
+
+  it("ignores the bare word in CODE that is not a statement", async () => {
+    /**
+     * The case that actually pins the statement form. Each of the tests above is satisfied by a
+     * different mechanism — the word boundary, the extension gate, the context gate — so
+     * reverting the regex to `\bdebugger\b` left them all green. A property key sits in code
+     * context, in a JS file, with word boundaries on both sides.
+     */
+    const src = "export const cfg = { debugger: false, level: 1 };\n";
+    expect(await titles(src)).not.toContain("debugger statement");
+  });
+});

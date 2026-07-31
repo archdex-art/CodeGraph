@@ -1,0 +1,368 @@
+[
+ {
+  "corpus": "axios",
+  "title": "Hardcoded local URL",
+  "file": "tests/unit/adapters/http.test.js",
+  "line": 107,
+  "src": "const { data: responseData } = await axios.get(`http://127.0.0.1:${server.",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Suppressed checker",
+  "file": "lib/helpers/toFormData.js",
+  "line": 118,
+  "src": "// eslint-disable-next-line no-use-before-define",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "ReDoS-vulnerable regular expression",
+  "file": "lib/core/AxiosHeaders.js",
+  "line": 23,
+  "src": "const tokensRE = /([^\\s,;=]+)\\s*(?:=\\s*([^,;]+))?/g;",
+  "label": "false",
+  "reason": "measured flat to n=32000; does not backtrack (rule 5)"
+ },
+ {
+  "corpus": "axios",
+  "title": "Suppressed checker",
+  "file": "lib/helpers/validator.js",
+  "line": 65,
+  "src": "// eslint-disable-next-line no-console",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Untyped `any`",
+  "file": "tests/module/cjs/tests/helpers/cjs-typing.ts",
+  "line": 9,
+  "src": "transformRequest: (data: any) => '{\"foo\":\"bar\"}',",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Suppressed checker",
+  "file": "tests/module/cjs/tests/helpers/ts-require-default.ts",
+  "line": 1,
+  "src": "// @ts-nocheck",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Hardcoded local URL",
+  "file": "tests/unit/regression.test.js",
+  "line": 91,
+  "src": "baseURL: `http://localhost:${server.address().port}`,",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Hardcoded local URL",
+  "file": "tests/unit/adapters/fetch.test.js",
+  "line": 255,
+  "src": "const { data } = await fetchAxios.get(`http://localhost:${server.address()",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Hardcoded local URL",
+  "file": "tests/smoke/cjs/tests/auth.smoke.test.cjs",
+  "line": 125,
+  "src": "const response = await axios.get(`http://urluser:urlpass@127.0.0.1:${port}",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Filesystem path built from a variable",
+  "file": "tests/module/cjs/tests/helpers/fixture.cjs",
+  "line": 25,
+  "src": "fs.rmdirSync(dirPath, { recursive: true });",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Untyped `any`",
+  "file": "index.d.ts",
+  "line": 161,
+  "src": "): any;",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Untyped `any`",
+  "file": "tests/smoke/deno/tests/error.smoke.test.ts",
+  "line": 43,
+  "src": ".catch((e: any) => e);",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Untyped `any`",
+  "file": "tests/smoke/bun/tests/interceptors.smoke.test.ts",
+  "line": 37,
+  "src": "client.interceptors.request.use((config: any) => {",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Untyped `any`",
+  "file": "tests/module/esm/tests/helpers/esm-index.ts",
+  "line": 348,
+  "src": "(error: any) => Promise.reject(error)",
+  "label": "true"
+ },
+ {
+  "corpus": "axios",
+  "title": "Possible hardcoded secret",
+  "file": "tests/browser/basicAuth.browser.test.js",
+  "line": 94,
+  "src": "password: 'open sesame',",
+  "label": "false",
+  "reason": "'open sesame' is a placeholder passphrase in a browser test (rule 4)"
+ },
+ {
+  "corpus": "flask",
+  "title": "Large file (1626 LOC)",
+  "file": "src/flask/app.py",
+  "line": 1,
+  "src": "from __future__ import annotations",
+  "label": "true"
+ },
+ {
+  "corpus": "flask",
+  "title": "Large file (1014 LOC)",
+  "file": "src/flask/sansio/app.py",
+  "line": 1,
+  "src": "from __future__ import annotations",
+  "label": "true"
+ },
+ {
+  "corpus": "flask",
+  "title": "debugger statement",
+  "file": "src/flask/cli.py",
+  "line": 905,
+  "src": "\"--debugger/--no-debugger\",",
+  "label": "false",
+  "reason": "a CLI option STRING '--debugger/--no-debugger', not a debugger statement (rule 5)"
+ },
+ {
+  "corpus": "flask",
+  "title": "Suppressed checker",
+  "file": "src/flask/globals.py",
+  "line": 60,
+  "src": "session: SessionMixinProxy = LocalProxy(  # type: ignore[assignment]",
+  "label": "true"
+ },
+ {
+  "corpus": "flask",
+  "title": "Suppressed checker",
+  "file": "src/flask/wrappers.py",
+  "line": 119,
+  "src": "@property  # type: ignore[override]",
+  "label": "true"
+ },
+ {
+  "corpus": "flask",
+  "title": "Suppressed checker",
+  "file": "src/flask/ctx.py",
+  "line": 410,
+  "src": "result = self.url_adapter.match(return_rule=True)  # type: ignore[union-at",
+  "label": "true"
+ },
+ {
+  "corpus": "flask",
+  "title": "debugger statement",
+  "file": "src/flask/sansio/app.py",
+  "line": 552,
+  "src": "development server, an interactive debugger will be shown for unhandled",
+  "label": "false",
+  "reason": "docstring prose: 'an interactive debugger will be shown' (rule 5)"
+ },
+ {
+  "corpus": "flask",
+  "title": "Large file (1119 LOC)",
+  "file": "tests/test_blueprints.py",
+  "line": 1,
+  "src": "import pytest",
+  "label": "true"
+ },
+ {
+  "corpus": "flask",
+  "title": "debugger statement",
+  "file": "src/flask/app.py",
+  "line": 905,
+  "src": "mode, the error will be re-raised so that the debugger can",
+  "label": "false",
+  "reason": "docstring prose: 'so that the debugger can' (rule 5)"
+ },
+ {
+  "corpus": "flask",
+  "title": "Suppressed checker",
+  "file": "src/flask/sessions.py",
+  "line": 185,
+  "src": "return app.config[\"SESSION_COOKIE_DOMAIN\"]  # type: ignore[no-any-return]",
+  "label": "true"
+ },
+ {
+  "corpus": "flask",
+  "title": "debugger statement",
+  "file": "src/flask/cli.py",
+  "line": 951,
+  "src": "The reloader and debugger are enabled by default with the '--debug'",
+  "label": "false",
+  "reason": "docstring prose: 'The reloader and debugger are enabled' (rule 5)"
+ },
+ {
+  "corpus": "flask",
+  "title": "Suppressed checker",
+  "file": "src/flask/views.py",
+  "line": 107,
+  "src": "self = view.view_class(  # type: ignore[attr-defined]",
+  "label": "true"
+ },
+ {
+  "corpus": "flask",
+  "title": "Suppressed checker",
+  "file": "src/flask/sansio/blueprints.py",
+  "line": 326,
+  "src": "view_func=self.send_static_file,  # type: ignore[attr-defined]",
+  "label": "true"
+ },
+ {
+  "corpus": "flask",
+  "title": "Suppressed checker",
+  "file": "src/flask/logging.py",
+  "line": 45,
+  "src": "current = current.parent  # type: ignore",
+  "label": "true"
+ },
+ {
+  "corpus": "flask",
+  "title": "Hardcoded local URL",
+  "file": "tests/test_appctx.py",
+  "line": 20,
+  "src": "assert rv == \"https://localhost/\"",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Suppressed checker",
+  "file": "test/https.ts",
+  "line": 282,
+  "src": "// eslint-disable-next-line @typescript-eslint/naming-convention",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Large file (1441 LOC)",
+  "file": "test/timeout.ts",
+  "line": 1,
+  "src": "import process from 'node:process';",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Untyped `any`",
+  "file": "source/core/index.ts",
+  "line": 765,
+  "src": "if ((request as any)?._writableState?.errored) {",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Suppressed checker",
+  "file": "test/early-307-redirects.ts",
+  "line": 84,
+  "src": "// eslint-disable-next-line @typescript-eslint/no-restricted-types",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Suppressed checker",
+  "file": "test/pagination.ts",
+  "line": 694,
+  "src": "// eslint-disable-next-line unicorn/prevent-abbreviations",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Suppressed checker",
+  "file": "source/create.ts",
+  "line": 217,
+  "src": "// eslint-disable-next-line no-await-in-loop",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Suppressed checker",
+  "file": "source/core/options.ts",
+  "line": 2752,
+  "src": "// eslint-disable-next-line @typescript-eslint/no-dynamic-delete",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Suppressed checker",
+  "file": "benchmark/index.ts",
+  "line": 167,
+  "src": "// eslint-disable-next-line @typescript-eslint/no-base-to-string",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Hardcoded local URL",
+  "file": "test/error.ts",
+  "line": 358,
+  "src": "await t.throwsAsync(got(`http://localhost:${port}`), {",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Hardcoded local URL",
+  "file": "test/https.ts",
+  "line": 1047,
+  "src": "const request = got.stream(`https://127.0.0.1:${port}`, {",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Hardcoded local URL",
+  "file": "test/stream.ts",
+  "line": 421,
+  "src": "got.stream(`http://localhost:${upstreamServer.port}/`, {",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Hardcoded local URL",
+  "file": "benchmark/server.ts",
+  "line": 12,
+  "src": "console.log(`Listening at https://localhost:${port}`);",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Leftover debug output",
+  "file": "test/cache.ts",
+  "line": 626,
+  "src": "console.log('max-age has expired, performing second request');",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Untyped `any`",
+  "file": "test/dns-cache-fallback.ts",
+  "line": 18,
+  "src": "lookup: ((_hostname: string, options: any, callback: any) => {",
+  "label": "true"
+ },
+ {
+  "corpus": "got",
+  "title": "Untyped `any`",
+  "file": "test/early-307-redirects.ts",
+  "line": 85,
+  "src": "request.write = ((chunk: any, encoding: BufferEncoding | undefined, callba",
+  "label": "true"
+ }
+]

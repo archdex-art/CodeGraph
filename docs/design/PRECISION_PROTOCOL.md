@@ -252,3 +252,41 @@ fixes have to be tested on repositories whose findings I have never looked at.
 fixes were shaped against, so held-out precision should land lower. **If it comes in below 0.85
 the fixes did not generalise, and that is the finding** — the passes above would then describe
 tuning rather than improvement.
+
+
+### Held-out result
+
+Three repositories, pinned, never analysed for findings before: `axios@c3f553c`,
+`pallets/flask@6a2f545`, `sindresorhus/got@e3924aa`. 15 findings each by the same stride.
+Labels: [`precision-heldout.json`](./precision-heldout.json).
+
+| corpus | precision | 95% CI |
+|---|---|---|
+| got | 15/15 = **100%** | 80–100% |
+| axios | 13/15 = **87%** | 62–96% |
+| flask | 11/15 = **73%** | 48–89% |
+| **held-out total** | **39/45 = 87%** | **74–94%** |
+
+**The prediction held and the fixes generalised.** 87% on repositories the rules were never
+shaped against, against 88% on the tuned pair — below express's post-fix 100% as predicted, and
+above 0.85.
+
+**The strongest single piece of evidence is `Suppressed checker` at 16/16.** Pass 2 was written
+against JavaScript `//` comments; the held-out corpus exercised it almost entirely on Python
+`# type: ignore[...]` forms it had never seen. A rule fitted to its examples would not have
+transferred like that.
+
+### The new failure, found exactly where the criteria aimed
+
+`debugger statement` scored **0/4**, all in flask. Python has no `debugger` keyword, so every
+match was docstring prose ("an interactive debugger will be shown") or a CLI option string
+(`"--debugger/--no-debugger"`) — and Python is `lexical` tier, so no context gate stood in the
+way. Criterion 4 demanded a Python repository precisely because that tier had never been
+precision-tested, and it was the only place the held-out run found something new.
+
+Fixed by requiring the STATEMENT form and restricting the rule to the JS/TS family, where the
+construct exists. flask's score moves 92 → 97 and its four false positives disappear. Mutation
+testing then showed the first four tests were each satisfied by a *different* mechanism — word
+boundary, extension gate, context gate — so none of them pinned the statement form; a property
+key (`{ debugger: false }`) does, and a bare `debugger` line in Python is what makes the
+extension gate load-bearing rather than decorative.

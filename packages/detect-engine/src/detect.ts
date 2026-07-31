@@ -181,7 +181,25 @@ const RULES: Rule[] = [
   { re: /SELECT\s+.+\+|query\(\s*['"`].*\$\{/i, dimension: "security", severity: 4, confidence: 0.7, title: "Possible SQL string concatenation", context: ["code", "string"] },
 
   { re: /\bconsole\.(log|debug)\b|^\s*print\(/m, dimension: "correctness", severity: 1, confidence: 1.0, title: "Leftover debug output" },
-  { re: /\bdebugger\b/, dimension: "correctness", severity: 2, confidence: 1.0, title: "debugger statement" },
+  /**
+   * A debugger STATEMENT, not the word.
+   *
+   * Scored **0/4** on the held-out Python corpus (`docs/design/PRECISION_PROTOCOL.md` §8) -
+   * every match was docstring prose ("an interactive debugger will be shown") or a CLI option
+   * string (`"--debugger/--no-debugger"`). Python has no `debugger` keyword, so on a Python
+   * file a match is prose by construction, and Python is `lexical` tier so no context gate is
+   * there to help.
+   *
+   * Two changes: restricted to the JS/TS family, where the statement exists, and required to be
+   * a statement - line start or after `;`/`{`/`}`/a block-comment close, optionally terminated.
+   * `const debuggerPort = 9229` no longer matches either.
+   *
+   * Found only because §8's criteria demanded a Python repository specifically, on the grounds
+   * that the lexical tier had never been precision-tested. It was the one place the held-out
+   * run found a new failure.
+   */
+  { re: /(?:^|[;{}]|\*\/)\s*debugger\s*(?:;|$)/, dimension: "correctness", severity: 2, confidence: 1.0, title: "debugger statement",
+    exts: { ".ts": true, ".tsx": true, ".js": true, ".jsx": true, ".mjs": true, ".cjs": true } },
   { re: /catch\s*\([^)]*\)\s*\{\s*\}/, dimension: "correctness", severity: 3, confidence: 0.9, title: "Empty catch block" },
   /**
    * A marker lives in a comment BY DEFINITION, and must FOLLOW the comment opener.
