@@ -143,6 +143,51 @@ export const astTsExtractor = (fallback: LanguageExtractor): LanguageExtractor =
             complexity: computeComplexity(node),
           });
         }
+      } else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+        /**
+         * CommonJS exports: `exports.foo = …` and `module.exports.foo = …`.
+         *
+         * Every branch above matches an ES declaration, so a CommonJS module contributed
+         * almost no symbols — and a call to one could not resolve, because there was nothing
+         * to resolve TO. Measured on `expressjs/express@a371447`, CommonJS throughout: 123
+         * symbols across 159 files and **11 resolved call edges**, with `deadCode()` calling
+         * 110 of 123 symbols unreferenced. That is not a sparse codebase; it is an extractor
+         * that could not see it.
+         *
+         * Matched on the AST rather than by regex, so `exports.foo` inside a string or a
+         * comment is not a definition, and the assigned expression's real kind is available.
+         */
+        const lhs = node.left;
+        if (ts.isPropertyAccessExpression(lhs) && ts.isIdentifier(lhs.name)) {
+          const base = lhs.expression;
+          const isExportsBase =
+            (ts.isIdentifier(base) && base.text === "exports") ||
+            (ts.isPropertyAccessExpression(base) &&
+              ts.isIdentifier(base.expression) &&
+              base.expression.text === "module" &&
+              base.name.text === "exports");
+          if (isExportsBase) {
+            const rhs = node.right;
+            const isCallable =
+              ts.isFunctionExpression(rhs) || ts.isArrowFunction(rhs) || ts.isClassExpression(rhs);
+            symbols.push({
+              name: lhs.name.text,
+              // A class expression is a class; a function or arrow is a function; anything
+              // else assigned to an export is a value, not something calls resolve to.
+              kind: ts.isClassExpression(rhs) ? "class" : isCallable ? "function" : "constant",
+              line: lineOf(node),
+              endLine: endLineOf(node),
+              signature: signatureHead(
+                ctx.text.slice(node.getStart(sourceFile), node.getStart(sourceFile) + 300),
+              ),
+              doc: getDoc(node),
+              // The left-hand side IS the export. No modifier to inspect.
+              exported: true,
+              container: null,
+              ...(isCallable ? { complexity: computeComplexity(rhs) } : {}),
+            });
+          }
+        }
       } else if (ts.isCallExpression(node)) {
         const expr = node.expression;
         let name = "";
