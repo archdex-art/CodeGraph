@@ -699,3 +699,31 @@ It twice declines, in writing, to touch remediation.
 
 **That is the whole plan in one sentence: get to the verified fix faster, and let detection
 improve underneath it.**
+
+## Incremental graph — measured verdict 2026-07-30
+
+Listed as the remaining large item since P5. Measured before building, and the measurement
+**cancels the obvious version of it.**
+
+| phase | cost |
+|---|---|
+| `symbol-graph` stage | 1,233ms (59% of a 2,093ms run) |
+| ├ TS program (`createProgram` + `getTypeChecker`) | ~802ms |
+| └ parsing all 329 TS files | **58ms** |
+
+Two candidate optimisations, both dead:
+
+1. **Cache extracted symbols per content hash.** Symbols are a pure function of file text, so
+   this looked like the safe slice of incrementality. But parsing is 58ms — it was never the
+   expense. Ceiling on the whole idea: ~58ms of 2,093ms.
+2. **Make the typed program optional** (e.g. off for Timeline snapshots, which index dozens of
+   commits). It is 38% of a run and changes 6 edges out of 2,549. But those 6 are method calls
+   through a receiver, where the fallback emits a *confidently wrong* edge rather than none.
+   For Timeline specifically this is the worst possible failure: an edge that flips between two
+   same-named functions across snapshots is phantom churn — a diff showing a change that never
+   happened. Timeline is the one caller that can least afford it.
+
+Pinned by `packages/core-graph/tests/typed-resolution.test.ts`. What remains of the idea is
+genuine incrementality — reusing a program across runs and re-checking only changed files —
+which is the large, risky version, and unchanged in status: **large, and still the only path
+below a 60% warm re-index.**

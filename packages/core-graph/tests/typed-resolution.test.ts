@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 import { buildSymbolGraph } from "../src/index";
 
 /**
@@ -29,9 +32,21 @@ import { buildSymbolGraph } from "../src/index";
  * A discriminating unit test would need a case where the heuristic is provably wrong. Four
  * candidates were built and all four failed to discriminate - namespace imports, directory/
  * `index.ts` imports, cross-file named imports, and single-file shadowing are each handled
- * correctly by the heuristic. The real disagreements are same-name shadowing in files large
- * enough that the two definitions are far apart, which is awkward to fake and easy to fake
- * WRONG. Left as an honest gap rather than a test that looks like proof and is not.
+ * correctly by the heuristic.
+ *
+ * **That gap is now closed - see the second describe block.** The shape the four candidates
+ * missed is a METHOD CALL THROUGH A RECEIVER: `this.config.childEnv(...)`,
+ * `contentCache.clear()`. The method name never appears in an import, so the fallback's import
+ * table has nothing to offer and it reaches for a same-named free function in another file. It
+ * does not lose the edge - it emits a confident wrong one.
+ *
+ * Found by diffing real-path against synthetic-base builds of THIS repository and reading the
+ * six edges that differed, rather than by inventing candidates. Every one had that shape:
+ * `childEnv` on `desktop/core/config.ts` attributed to `packages/config`, `register` on
+ * `ipc/router.ts` to `core/di.ts`, `clear` on `content-cache.ts` to `di.ts`.
+ *
+ * The first rewrite of those tests used an imported free function and survived deleting the
+ * program - the same vacuity this comment warns about, reproduced while fixing it.
  */
 const f = (rel: string, text: string) => ({ rel, ext: rel.slice(rel.lastIndexOf(".")), text, language: "TypeScript" });
 
@@ -86,5 +101,65 @@ describe("type-aware resolution", () => {
     for (const e of g.edges.filter((x) => x.kind === "calls")) {
       expect(g.symbols.some((s) => s.id === e.target)).toBe(true);
     }
+  });
+});
+
+/**
+ * The discriminating cases the comment above once recorded as missing.
+ *
+ * Unlike the block above, these FAIL if the typed program is skipped or its resolution base
+ * goes synthetic - both mutants verified caught. They need real paths on disk, hence the temp
+ * directory: the receiver's type has to be resolvable, not merely present in a file map.
+ *
+ * Cost of what they guard: ~923ms of a ~1,255ms `symbol-graph` stage, for six edges in 2,549.
+ * `graph.ts` carries the argument for paying it.
+ */
+describe("type-aware resolution of method calls through a receiver", () => {
+  let dir: string | null = null;
+  afterEach(() => {
+    if (dir) rmSync(dir, { recursive: true, force: true });
+    dir = null;
+  });
+
+  function repo(files: Record<string, string>) {
+    dir = mkdtempSync(path.join(tmpdir(), "cg-typed-"));
+    const inputs = Object.entries(files).map(([rel, text]) => {
+      const abs = path.join(dir!, rel);
+      mkdirSync(path.dirname(abs), { recursive: true });
+      writeFileSync(abs, text);
+      return { rel, ext: path.extname(rel), text, language: "TypeScript" };
+    });
+    return { root: dir, inputs };
+  }
+
+  it("resolves a method call to its class, not a same-named free function", async () => {
+    const { root, inputs } = repo({
+      "src/config.ts": "export class ConfigManager {\n  childEnv(port: number) { return { PORT: String(port) }; }\n}\n",
+      "src/env.ts": "export function childEnv(port: number) { return { OTHER: String(port) }; }\n",
+      "src/server.ts":
+        'import { ConfigManager } from "./config";\n' +
+        "export class Server {\n  private config = new ConfigManager();\n" +
+        "  spawn() { return this.config.childEnv(1); }\n}\n",
+    });
+    const g = await buildSymbolGraph(inputs, new Map(), root);
+    const call = g.edges.find((e) => e.source.startsWith("src/server.ts#spawn") && e.kind === "calls");
+    expect(call, "no call edge from spawn").toBeDefined();
+    // `env.ts` is the decoy the name-based resolver reaches for. That is the bug being pinned.
+    expect(call!.target).not.toContain("src/env.ts");
+    expect(call!.target).toContain("src/config.ts");
+  });
+
+  it("resolves a method on an imported object, not a same-named free function", async () => {
+    // The `contentCache.clear()` case from this repository, reduced.
+    const { root, inputs } = repo({
+      "src/cache.ts": "export const contentCache = {\n  clear() { return 1; },\n};\n",
+      "src/di.ts": "export function clear() { return 2; }\n",
+      "src/reset.ts":
+        'import { contentCache } from "./cache";\nexport function reset() { return contentCache.clear(); }\n',
+    });
+    const g = await buildSymbolGraph(inputs, new Map(), root);
+    const call = g.edges.find((e) => e.source.startsWith("src/reset.ts#reset") && e.kind === "calls");
+    expect(call, "no call edge from reset").toBeDefined();
+    expect(call!.target).not.toContain("src/di.ts");
   });
 });

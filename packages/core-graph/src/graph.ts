@@ -114,6 +114,25 @@ export async function buildSymbolGraph(files: FileInput[], issuesByFile: Map<str
    * `root` is the repo directory. Given it, paths are real, so `node_modules` and `@types`
    * resolve too. Absent (unit tests construct files in memory), a synthetic base keeps
    * resolution working between the supplied files, which is all such a test has.
+   *
+   * **Do not delete this to make the stage faster.** Measured 2026-07-30 on this repository:
+   * the program costs ~923ms of a ~1,255ms `symbol-graph` stage — 38% of a whole run — and
+   * changes SIX edges out of 2,549 (0.24%). Every number says remove it. Removing it is wrong.
+   *
+   * Those six are all the same shape: a method call through a receiver
+   * (`this.config.childEnv(...)`, `contentCache.clear()`) where the method name also exists as
+   * a free function in some other file. The name never appears in an import, so the fallback's
+   * import table cannot help and it picks the other file. It does not lose the edge — it
+   * emits a confident wrong one, and a wrong edge in a graph product is worse than a gap,
+   * because the graph is the product.
+   *
+   * `tests/typed-resolution.test.ts` pins exactly this, and fails if the program is skipped or
+   * the base goes synthetic. Written twice: the first version used an imported free function
+   * and passed with the program deleted.
+   *
+   * Also measured, for the neighbouring idea: parsing all 329 TS files costs 58ms while the
+   * program costs ~802ms, so caching extracted symbols per content hash cannot pay — parsing
+   * was never the expense.
    */
   const tsFiles = files.filter(f => /\.(ts|tsx|js|jsx|cjs|mjs)$/.test(f.ext));
   const base = (root ? resolvePath(root) : "/__codegraph__").split(pathSep).join("/");
