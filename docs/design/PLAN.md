@@ -417,6 +417,36 @@ injection classes; regex tier demoted to an explicitly low-confidence fallback.
 
 ---
 
+> **P5 item 1 landed 2026-07-30 — rule context gating.**
+>
+> Each rule now declares the syntactic context in which it can be true, checked against
+> comment/string ranges from the TypeScript *scanner*. Measured across every rule match
+> beforehand: **35% on express, 64% on this repository** fired where the rule cannot hold.
+>
+> | | before | after |
+> |---|---|---|
+> | issues (express) | 87 | **66** |
+> | security dimension | 52 | **71** |
+> | Health Score (express) | 77 | **82** |
+>
+> All 21 suppressed findings on express were verified noise by reading them: `eval(` and
+> `innerHTML` inside an XSS *test fixture string* in `test/res.redirect.js`, and 16
+> `http://localhost:3000` URLs inside `// example:` comments. No true positive was lost.
+>
+> It is per-rule and NOT blanket comment/string stripping. A `TODO` marker belongs in a
+> comment; `@ts-ignore` can only be a comment; a hardcoded `localhost` URL is necessarily a
+> string. Blanket stripping would have deleted three rules' true positives.
+>
+> **Still open on item 1.** This is the position class, not yet a graph-shape query. `eval(`
+> in code is accepted without checking it is a CallExpression whose callee resolves to the
+> global `eval` - so `myEval(` style names and shadowed locals are still matched by text.
+> That needs the AST rule tier, and the measurement above does not cover it.
+>
+> **Python is deliberately unchanged.** `syntacticSpans` returns `[]` outside the TS family,
+> so those files behave exactly as before. A hand-rolled lexer for `#` comments and
+> triple-quoted strings would be wrong at the edges, and a wrong span SUPPRESSES a real
+> finding - trading false positives for silent false negatives is the worse deal.
+
 ## 7. P6 — Scale & incrementality *(~2 weeks)*
 
 Content-addressed per-file cache (`contentHash + extractorVersion → FileFacts`); PR-scoped and

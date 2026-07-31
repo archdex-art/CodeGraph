@@ -25,7 +25,8 @@ import {
   pillarsFrom,
   type PillarScore,
 } from "@codegraph/analysis-model";
-import { buildSymbolGraph, extractorFor } from "@codegraph/core-graph";
+import { buildSymbolGraph, contextAt, extractorFor, syntacticSpans } from "@codegraph/core-graph";
+import type { SourceContext } from "@codegraph/core-graph";
 import { lintForSecurity } from "./eslintSecurity";
 
 const LANG_BY_EXT: Record<string, string> = {
@@ -429,7 +430,23 @@ interface Rule {
   title: string;
   exts?: Record<string, true>;
   validate?: (line: string, m: RegExpExecArray) => boolean;
+  /**
+   * Syntactic contexts in which this rule can legitimately fire. Defaults to `["code"]`.
+   *
+   * This is the cheap half of PLAN.md P5's "route the regexes through structural rules": not a
+   * graph-shape query yet, but the position class the match must be in. Measured across every
+   * match, **35% on express and 64% on this repository** were in a context where the rule
+   * cannot be true - `eval(` inside a doc comment, `console.log` inside a string.
+   *
+   * It is per-rule and NOT "strip comments and strings", because the correct context differs:
+   * a `TODO` marker belongs in a comment and is noise anywhere else; `@ts-ignore` can only
+   * ever be a comment; a hardcoded `localhost` URL is necessarily a string literal. Blanket
+   * stripping would have deleted three rules' true positives outright.
+   */
+  context?: readonly SourceContext[];
 }
+
+const DEFAULT_CONTEXT: readonly SourceContext[] = ["code"];
 
 // A real secret never contains a literal "..." ellipsis or matches a common
 // placeholder word — those are documentation/example conventions.
@@ -447,15 +464,19 @@ const RULES: Rule[] = [
     dimension: "security", severity: 5, confidence: 0.8, title: "Possible hardcoded secret",
     validate: (_line, m) => !isPlaceholderSecret(m[2]),
   },
-  { re: /https?:\/\/[^"'\s]*(?<![\w.])(localhost|127\.0\.0\.1)/, dimension: "security", severity: 2, confidence: 0.9, title: "Hardcoded local URL" },
+  // A hardcoded URL IS a string literal; in a comment it is an example, not a config value.
+  { re: /https?:\/\/[^"'\s]*(?<![\w.])(localhost|127\.0\.0\.1)/, dimension: "security", severity: 2, confidence: 0.9, title: "Hardcoded local URL", context: ["string", "code"] },
   { re: /\bdangerouslySetInnerHTML\b|innerHTML\s*=/, dimension: "security", severity: 3, confidence: 0.95, title: "Raw HTML injection sink" },
-  { re: /SELECT\s+.+\+|query\(\s*['"`].*\$\{/i, dimension: "security", severity: 4, confidence: 0.7, title: "Possible SQL string concatenation" },
+  // The SELECT half matches inside the query string; the `query(` half matches in code.
+  { re: /SELECT\s+.+\+|query\(\s*['"`].*\$\{/i, dimension: "security", severity: 4, confidence: 0.7, title: "Possible SQL string concatenation", context: ["code", "string"] },
 
   { re: /\bconsole\.(log|debug)\b|^\s*print\(/m, dimension: "correctness", severity: 1, confidence: 1.0, title: "Leftover debug output" },
   { re: /\bdebugger\b/, dimension: "correctness", severity: 2, confidence: 1.0, title: "debugger statement" },
   { re: /catch\s*\([^)]*\)\s*\{\s*\}/, dimension: "correctness", severity: 3, confidence: 0.9, title: "Empty catch block" },
-  { re: /\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b/, dimension: "maintainability", severity: 1, confidence: 1.0, title: "TODO/FIXME marker" },
-  { re: /@ts-(ignore|nocheck)|# type: ignore|eslint-disable/, dimension: "maintainability", severity: 2, confidence: 1.0, title: "Suppressed checker" },
+  // A marker lives in a comment BY DEFINITION. "TODO" in a string is a message, not debt.
+  { re: /\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b/, dimension: "maintainability", severity: 1, confidence: 1.0, title: "TODO/FIXME marker", context: ["comment"] },
+  // A suppression directive is only a suppression when the compiler reads it - i.e. a comment.
+  { re: /@ts-(ignore|nocheck)|# type: ignore|eslint-disable/, dimension: "maintainability", severity: 2, confidence: 1.0, title: "Suppressed checker", context: ["comment"] },
   { re: /:\s*any\b|\bas\s+any\b/, dimension: "correctness", severity: 1, confidence: 1.0, title: "Untyped `any`", exts: { ".ts": true, ".tsx": true } },
 ];
 
@@ -476,14 +497,30 @@ async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, ch
     const br = 1 + (fanIn.get(f.rel) || 0); // blast radius from graph fan-in
     const ch = churnByFile.get(f.rel) || 1;
     const lines = f.text.split("\n");
+    /**
+     * Comment/string ranges for this file, computed ONCE and shared by all 12 rules. Empty for
+     * languages the TS scanner does not cover (Python), which makes every position `code` and
+     * leaves those files scored exactly as before - see `syntacticSpans`.
+     */
+    const spans = syntacticSpans(f.text, f.ext);
+    // Absolute offset of each line start, so a per-line regex index becomes a file offset.
+    const lineStart: number[] = new Array(lines.length);
+    for (let i = 0, at = 0; i < lines.length; i++) {
+      lineStart[i] = at;
+      at += lines[i].length + 1; // +1 for the "\n" removed by split
+    }
     for (const rule of RULES) {
       if (rule.exts && !rule.exts[f.ext]) continue;
+      const validContexts = rule.context ?? DEFAULT_CONTEXT;
       let emitted = 0;
       let occurrences = 0;
       let firstIssueIndex = -1;
       for (const [lineIndex, line] of lines.entries()) {
         const m = rule.re.exec(line);
         if (!m || (rule.validate && !rule.validate(line, m))) continue;
+        // Structural gate. `spans` empty => "code" => unchanged behaviour.
+        if (spans.length && !validContexts.includes(contextAt(spans, lineStart[lineIndex] + m.index)))
+          continue;
         occurrences++;
         // Keep emitting only up to the cap: the issue list is rendered and
         // stored, so it stays bounded. Counting continues past it so the score
