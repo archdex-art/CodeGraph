@@ -579,6 +579,14 @@ for what a finding model must handle; − we maintain a mapping layer. **Accepte
 *suppress* or *explain* a finding but never *create* one, so results stay reproducible.
 Any LLM-touched finding is flagged as such in the UI and in SARIF properties.
 
+**ADR-009 — Cross-project score calibration is the wrong target; CodeGraph indexes one repo
+deeply.** Universal learned weights are not shipped and no cross-project AUC is chased: that
+metric measures transfer from other people's repositories, a handicap this product never wears
+(§2.2). The measured failure was base-rate non-transfer, which cannot occur within one
+repository. *Consequences:* the kernel stays hand-picked and says so; per-file risk ranking is
+validated against the indexed repo's own history; the corpus and harness are retained and
+retargeted. Full record: [`ADR-009`](./ADR-009-score-calibration.md).
+
 **ADR-008 — The Health Score is the single headline metric, and it reports its own coverage.**
 *Consequences:* a score computed over 40 % analysed LOC can no longer masquerade as one
 computed over 98 %. Costs a small amount of UI real estate; buys the score its credibility.

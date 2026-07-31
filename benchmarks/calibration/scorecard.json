@@ -144,5 +144,7 @@
     "note": "Absolute AUCs are not comparable across corpora — different repos, a 6-month window vs this corpus's 12, and a different base rate. Cited to show the feature-class gap: the reference leads with complexity and test-coverage markers, and PLAN.md §5.2 previously mischaracterised it as ranking git markers above static complexity."
   },
   "weightsAdopted": false,
+  "supersededBy": "docs/design/ADR-009-score-calibration.md",
+  "targetRetired": "Cross-project transfer is not this product's question — CodeGraph indexes one repo deeply (HLD 2.2) and holds its whole history. This scorecard is retained as the measurement that retired the target, and the harness is retargeted to within-repository validation.",
   "note": "Criteria not met. Weights are NOT adopted into the Health Score; the scorer is unchanged. Convergence was verified (loss identical to 6dp beyond 8442 iterations) and lambda was chosen by nested leave-one-repo-out on the training folds, so this is not an artefact of under-fitting or of an assumed penalty. Diagnosis: the markers are severely collinear (churn~authors r=0.887, churn~priorDefect r=0.802, authors~priorDefect r=0.839), so the regression splits one shared signal into opposing coefficients that do not transfer."
 }

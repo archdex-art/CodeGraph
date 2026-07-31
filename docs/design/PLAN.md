@@ -249,9 +249,30 @@ Standard defect-prediction methodology, applied honestly:
 A score over 40 % analysed LOC is a different claim from one over 98 %, and must never render
 identically.
 
-**Exit:** cross-project ROC AUC published with CI, beating both baselines; pillar separation
-locked by golden test; scorecard gating CI; `projectScore()` computed by re-running the model
-without the resolved findings rather than by the `P0×2.2 + P1×1.1` guess (review C5).
+**Exit — AMENDED 2026-07-30, see [ADR-009](./ADR-009-score-calibration.md).**
+
+> The original exit was *"cross-project ROC AUC published with CI, beating both baselines"*.
+> **Retired.** It measured whether weights learned from other people's repositories transfer to
+> yours — the question a product shipping one universal model must answer. CodeGraph indexes
+> **one repo deeply** (HLD §2.2) and holds its whole history, so it never wears that handicap.
+> The measured failure was base-rate non-transfer across projects, which cannot occur within a
+> single repository; per-repo discrimination was already 0.86–0.90 on several repos even with
+> foreign weights.
+>
+> Adopting a competitor's headline figure as an exit criterion is reactive positioning
+> (IDENTITY.md §4.4) in methodology rather than in copy. That is the actual error, and ADR-009
+> records it.
+
+Now:
+- Pillar separation locked by golden test — **done** (§5.1).
+- Coverage published alongside the score — **done** (ADR-008).
+- `projectScore()` re-runs the real scorer rather than the `P0×2.2 + P1×1.1` guess — **done**
+  (review C5), and now refuses to project from a truncated issue list.
+- The Health Score **discloses that its kernel is hand-picked**. No accuracy claim is made,
+  because none is earned.
+- Per-file risk ranking is validated **against the indexed repository's own history** — a
+  per-repo claim the user can check on their own code. Corpus and harness retained and
+  retargeted for it.
 
 > **Identity guard.** Health Score stays **0–100 and stays the only headline number.** No 1–10
 > scale, no A–E ladder, no quality gate, no borrowed marker names. Calibration methodology is
