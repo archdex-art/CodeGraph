@@ -61,6 +61,20 @@ export function insertJob(id: string, repoId: string): void {
     .run(id, repoId, now, now);
 }
 
+/**
+ * Jobs waiting to be claimed — `cg_queue_depth` (HLD §14).
+ *
+ * Counts `queued` only. A running job is not backlog: depth is meant to answer "is work piling
+ * up faster than it is being done", and including in-flight work would make a healthy queue
+ * with one busy worker look identical to a stalled one.
+ */
+export function queueDepth(): number {
+  const row = db().prepare("SELECT COUNT(*) AS n FROM jobs WHERE status = 'queued'").get() as
+    | { n: number }
+    | undefined;
+  return row?.n ?? 0;
+}
+
 export function findJob(id: string): JobRow | null {
   const row = db()
     .prepare("SELECT id, repo_id, status, progress, message, error FROM jobs WHERE id = ?")

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { renderPrometheus } from "@codegraph/persistence";
+import { queueDepth, renderPrometheus, type GaugeSample } from "@codegraph/persistence";
+import { contentCache } from "@codegraph/core-graph";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,26 @@ export const dynamic = "force-dynamic";
  * here, not this endpoint existing.
  */
 export function GET() {
-  return new NextResponse(renderPrometheus(), {
+  /**
+   * Gauges are sampled HERE rather than stored, because they describe what is true now. They
+   * are also read here rather than inside `renderPrometheus` because their sources sit above
+   * persistence in the layering - the content cache is `core-graph`, the depth is a query -
+   * and reaching up for them would invert the dependency the layer rules protect.
+   *
+   * `cg_cache_hit_ratio` is per-process by construction: the cache is in-memory, so a scrape of
+   * a multi-process deployment reports the process that answered. Documented rather than
+   * papered over with an average that would belong to nobody.
+   */
+  const cache = contentCache.stats();
+  const lookups = cache.hits + cache.misses;
+  const gauges: GaugeSample[] = [
+    // 0 rather than NaN before the first lookup: a ratio of nothing is not "unknown", it is
+    // "nothing has been asked for yet", and a dashboard should not show a gap for that.
+    { name: "cg_cache_hit_ratio", value: lookups === 0 ? 0 : cache.hits / lookups },
+    { name: "cg_queue_depth", value: queueDepth() },
+  ];
+
+  return new NextResponse(renderPrometheus(gauges), {
     headers: {
       // The version suffix is part of the format contract; Prometheus checks it.
       "Content-Type": "text/plain; version=0.0.4; charset=utf-8",

@@ -70,7 +70,27 @@ const HELP: Readonly<Record<string, string>> = {
     "Verification gate outcomes. The metric that makes \"how often does our fix actually pass the tests?\" a number rather than a claim.",
   cg_run_total: "Analysis runs by outcome.",
   cg_findings_total: "Findings emitted, by rule and severity.",
+  cg_cache_hit_ratio:
+    "Content-cache hit ratio for the current process, 0..1. Sampled at scrape, not stored: it describes live state, and a counter would average it over the process lifetime.",
+  cg_queue_depth: "Jobs waiting to be claimed.",
 };
+
+/**
+ * A gauge reading, supplied by the caller at scrape time.
+ *
+ * Counters are persisted because several processes increment them and the total must survive a
+ * restart. A gauge is the opposite: it is whatever is true right now, and storing it would mean
+ * serving a value that was true when some process last wrote it.
+ *
+ * The caller passes them in rather than this module importing them, because the sources live
+ * ABOVE persistence in the layering - the content cache is in `core-graph`, the queue depth in
+ * `jobs`. Reaching up for them would invert the dependency the layer rules exist to protect.
+ */
+export interface GaugeSample {
+  name: string;
+  value: number;
+  labels?: MetricLabels;
+}
 
 /**
  * Render the Prometheus text exposition format (v0.0.4).
@@ -79,7 +99,7 @@ const HELP: Readonly<Record<string, string>> = {
  * the libraries all assume a single long-lived process owns the registry, which is the
  * assumption this architecture breaks. What is left to do is string formatting.
  */
-export function renderPrometheus(): string {
+export function renderPrometheus(gauges: readonly GaugeSample[] = []): string {
   const rows = allCounters();
   const lines: string[] = [];
   let currentName = "";
@@ -94,14 +114,34 @@ export function renderPrometheus(): string {
     lines.push(`${row.key} ${formatValue(row.value)}`);
   }
 
+  for (const g of gauges) {
+    const help = HELP[g.name];
+    if (help) lines.push(`# HELP ${g.name} ${help}`);
+    lines.push(`# TYPE ${g.name} gauge`);
+    lines.push(`${keyFor(g.name, g.labels ?? {})} ${formatValue(g.value)}`);
+  }
+
   // A trailing newline is required by the format; a scrape of an empty registry is still a
   // valid scrape, so this returns a newline rather than an empty body.
   return `${lines.join("\n")}\n`;
 }
 
-/** Integers render without a decimal point; anything else keeps full precision. */
+/**
+ * Prometheus number formatting.
+ *
+ * The previous body was `Number.isInteger(v) ? String(v) : String(v)` - both arms identical,
+ * so the branch decided nothing. It also produced `Infinity` and `NaN`, which the exposition
+ * format does not accept: it wants `+Inf`, `-Inf`, `NaN`. That was theoretical while only
+ * counters existed and stops being theoretical the moment a ratio gauge divides by zero, which
+ * `cg_cache_hit_ratio` does on a process that has not looked anything up yet.
+ */
 function formatValue(value: number): string {
-  return Number.isInteger(value) ? String(value) : String(value);
+  // Only the infinities need translating. `String(NaN)` is already `"NaN"`, which is the
+  // spelling the format wants - a NaN branch was written here, measured inert by mutation
+  // testing, and removed rather than left to look load-bearing.
+  if (value === Number.POSITIVE_INFINITY) return "+Inf";
+  if (value === Number.NEGATIVE_INFINITY) return "-Inf";
+  return String(value);
 }
 
 /** Reset, for tests only. Never called by application code. */

@@ -88,3 +88,54 @@ describe("renderPrometheus", () => {
     expect(typeLines).toHaveLength(1);
   });
 });
+
+describe("gauges (HLD §14)", () => {
+  /**
+   * `cg_cache_hit_ratio` and `cg_queue_depth` were named in HLD §14 and existed nowhere —
+   * the same shape of gap as the §8.3 tier ladder and the SARIF adapter.
+   *
+   * Gauges are sampled at scrape rather than stored: a stored gauge serves whatever was true
+   * when some process last wrote it, which for "how full is the queue" is worse than no answer.
+   */
+  it("renders a gauge with its TYPE line", () => {
+    const out = renderPrometheus([{ name: "cg_queue_depth", value: 3 }]);
+    expect(out).toContain("# TYPE cg_queue_depth gauge");
+    expect(out).toContain("cg_queue_depth 3");
+  });
+
+  it("renders a fractional gauge without losing precision", () => {
+    const out = renderPrometheus([{ name: "cg_cache_hit_ratio", value: 0.625 }]);
+    expect(out).toContain("cg_cache_hit_ratio 0.625");
+  });
+
+  it("emits Prometheus spellings for NaN and infinities", () => {
+    /**
+     * `String(Infinity)` is `"Infinity"`, which the exposition format rejects. This was
+     * unreachable while only counters existed and stops being so the moment a ratio divides by
+     * zero — which a hit ratio does on a process that has looked nothing up.
+     */
+    const out = renderPrometheus([
+      { name: "cg_cache_hit_ratio", value: Number.NaN },
+      { name: "cg_queue_depth", value: Number.POSITIVE_INFINITY },
+    ]);
+    expect(out).toContain("cg_cache_hit_ratio NaN");
+    expect(out).toContain("cg_queue_depth +Inf");
+    expect(out).not.toContain("Infinity");
+  });
+
+  it("keeps counters and gauges in one scrape, each with its own TYPE", () => {
+    incrementCounter("cg_run_total", { outcome: "ok" });
+    const out = renderPrometheus([{ name: "cg_queue_depth", value: 0 }]);
+    expect(out).toContain("# TYPE cg_run_total counter");
+    expect(out).toContain("# TYPE cg_queue_depth gauge");
+  });
+
+  it("renders labelled gauges", () => {
+    const out = renderPrometheus([{ name: "cg_queue_depth", value: 2, labels: { kind: "analyze" } }]);
+    expect(out).toContain('cg_queue_depth{kind="analyze"} 2');
+  });
+
+  it("still renders a valid scrape with no gauges at all", () => {
+    expect(renderPrometheus()).toMatch(/\n$/);
+  });
+});

@@ -524,9 +524,9 @@ the existing `desktop/` app, which v2 brings under CI.
 | Signal | Implementation |
 |---|---|
 | **Logs** | Structured JSON, one line per event, with `runId`/`jobId`/`stage` on every line. `pino`. Never `console.log` outside `observability`. |
-| **Metrics** | Counters/histograms exposed at `/api/metrics` (Prometheus text format): `cg_stage_duration_seconds{stage}`, `cg_run_total{outcome}`, `cg_findings_total{rule,severity}`, `cg_cache_hit_ratio`, `cg_queue_depth`, `cg_verification_total{gate,outcome}`. |
+| **Metrics** | Exposed at `/api/metrics` (Prometheus text format). **Implemented:** `cg_run_total{outcome}`, `cg_findings_total{rule,severity}`, `cg_verification_total{gate,outcome}` (counters, SQLite-backed so they survive restart and several processes); `cg_cache_hit_ratio`, `cg_queue_depth` (gauges, sampled at scrape — a stored gauge serves whatever was true when some process last wrote it). **NOT implemented:** `cg_stage_duration_seconds{stage}`, which needs per-stage timing that nothing captures yet — see the Run record row. |
 | **Traces** | OpenTelemetry spans per stage, parented to the run. Off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. |
-| **Run record** | Every run persists its own stage timings and degradations — self-observability that works with no external stack, which matters for the self-host story. |
+| **Run record** | **Partly implemented.** Degradations are persisted (`ScanCoverage`, including per-tier LOC from §8.3). Per-stage timings are NOT: nothing instruments stage boundaries, which is also why `cg_stage_duration_seconds` is absent. The two are one piece of work, not two. |
 
 `cg_verification_total{gate,outcome}` is the metric that keeps the product honest: it makes
 "how often does our fix actually pass the tests?" a number on a dashboard rather than a claim

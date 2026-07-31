@@ -51,6 +51,7 @@ export {
 export type { JobRow, QueuedJobRow, NewJob } from "./jobs";
 export {
   findJob,
+  queueDepth,
   insertJob,
   updateJob,
   TERMINAL_JOB_STATUSES,
@@ -106,3 +107,4 @@ export {
   listTrashRows,
   trashRowsBeyondCap,
 } from "./trash";
+export type { GaugeSample } from "./metrics";
