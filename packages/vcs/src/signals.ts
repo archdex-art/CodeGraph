@@ -149,8 +149,8 @@ export interface FileSignals {
 /**
  * One commit, as parsed from `git log`.
  *
- * Exported and `readonly` so `@codegraph/calibrate` can hold the same shape without a cast.
- * Readonly is the honest signature anyway: `signalsFromCommits` only reads.
+ * Readonly because `signalsFromCommits` only reads. Exported so a caller can hold the shape
+ * without redeclaring it.
  */
 export interface Commit {
   readonly author: string;

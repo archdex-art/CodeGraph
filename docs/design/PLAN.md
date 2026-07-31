@@ -202,6 +202,23 @@ averaged in. A golden test locks the surfaced score byte-for-byte so the pillars
 
 ### 5.2 Add organisational signals
 
+> **Status 2026-07-30: computed, not surfaced.** Eight signals come out of one `git log` pass.
+> **`churn` is consumed** (per-issue, and by the swarm's hotspot ranking). The other seven —
+> `coChangeScatter`, `changeEntropy`, `ownershipRisk`, `busFactor`, `knowledgeLoss`,
+> `priorDefect`, `ageVolatility` — are on `IndexResult` and **nothing reads them**.
+>
+> They were built to feed §5.3's calibration, which ADR-009 deleted. They are retained rather
+> than removed on a narrow argument: they ride a git pass `churn` already requires, so their
+> marginal cost is ~0, and they are facts about *the repo in hand* — not a corpus of other
+> people's projects, which is what ADR-009 actually objected to.
+>
+> **That argument expires.** Retaining working code because it is cheap is one step from
+> retaining it because it exists, which is the pattern this branch removed five times (dead lint
+> gate, unpopulated `coverage_json`, `bin` pointing at nothing, `@codegraph/calibrate`). They
+> earn their place by being **shown to a user** — ownership and bus factor are codebase
+> visibility, which is the product — or they follow the corpus out. No third option, and not
+> "used for scoring": ADR-009 is why unvalidated weights do not ship.
+
 Currently the scorer has churn and nothing else. Organisational git markers are cheap — all
 derivable from **a single `git log` pass** — and worth adding:
 
@@ -271,8 +288,9 @@ Now:
 - The Health Score **discloses that its kernel is hand-picked**. No accuracy claim is made,
   because none is earned.
 - Per-file risk ranking is validated **against the indexed repository's own history** — a
-  per-repo claim the user can check on their own code. Corpus and harness retained and
-  retargeted for it.
+  per-repo claim the user can check on their own code, needing no corpus of other people's
+  projects. The cross-repo corpus and fitting pipeline are **deleted**; ADR-009 keeps the
+  measurements and the reasoning.
 
 > **Identity guard.** Health Score stays **0–100 and stays the only headline number.** No 1–10
 > scale, no A–E ladder, no quality gate, no borrowed marker names. Calibration methodology is

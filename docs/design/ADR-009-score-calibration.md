@@ -9,10 +9,22 @@
 
 ## Decision
 
-**CodeGraph does not ship universal learned score weights, and does not chase a cross-project
-ROC AUC.** The `k = 0.06` kernel stays hand-picked and stays labelled as such. The calibration
-corpus and harness are kept, and their target changes from *cross-project transfer* to
-*within-repository validation*.
+**CodeGraph does not ship universal learned score weights, does not chase a cross-project ROC
+AUC, and does not keep a corpus of other people's repositories.** The `k = 0.06` kernel stays
+hand-picked and stays labelled as such. The calibration corpus, the fitting pipeline, and
+`@codegraph/calibrate` are **deleted**.
+
+> **Amended 2026-07-30, same day.** The first version of this ADR said the corpus and harness
+> were "kept and retargeted to within-repository validation". That was half a decision. Nothing
+> in the product imported them — only two scripts — and 784 KB of twelve other projects' git
+> history sat in the tree as an invitation to re-run the wrong experiment. Retaining unused
+> machinery "in case" is the exact pattern this branch spent five commits removing: a dead lint
+> gate, an unpopulated `coverage_json`, a `bin` entry pointing at a file that did not exist.
+>
+> Within-repository validation does not need a corpus of strangers' repositories. It needs the
+> repository in hand, which CodeGraph already has. If that work happens, it gets written then,
+> for that purpose. What survives is this document — the reasoning is the durable artefact, not
+> the code that produced it.
 
 ## Why the previous target was wrong
 
@@ -88,9 +100,10 @@ first" ordering the swarm produces. That is a within-repository question by cons
 is validated per-repository against that repository's own history. A file list ordered for
 *your* repo needs no commensurability with anyone else's.
 
-**The corpus and harness are kept, and retargeted.** `@codegraph/calibrate`, the leakage guard,
-the AUC and bootstrap code, and the 12-repo corpus are all reusable for within-repo validation —
-which is the honest version of the question. Nothing is deleted; the exit criterion moves.
+**The corpus and harness are deleted.** `@codegraph/calibrate`, `benchmarks/calibration/`,
+`npm run calibrate` and `npm run fit` are removed. Every measurement they produced is quoted in
+this document, which is what a reader needs; the pipeline that produced it answers a question
+the product does not ask, and leaving it in the tree is how someone re-asks it.
 
 **What is explicitly NOT adopted:** a 21-marker signal list, a 1–10 scale, letter grades, or any
 target expressed as a competitor's published figure. §4.2 and §4.4.
@@ -110,4 +123,4 @@ target expressed as a competitor's published figure. §4.2 and §4.4.
 A within-repository validation showing the history-derived ranking beats file size **on the
 indexed repository's own history**, with enough positives in that repository to mean anything.
 That is a per-repo claim, checkable by the user on their own code, and it needs no corpus of
-other people's projects to be true.
+other people's projects to be true — which is why deleting the corpus costs nothing.

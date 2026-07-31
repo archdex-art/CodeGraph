@@ -584,8 +584,9 @@ deeply.** Universal learned weights are not shipped and no cross-project AUC is 
 metric measures transfer from other people's repositories, a handicap this product never wears
 (§2.2). The measured failure was base-rate non-transfer, which cannot occur within one
 repository. *Consequences:* the kernel stays hand-picked and says so; per-file risk ranking is
-validated against the indexed repo's own history; the corpus and harness are retained and
-retargeted. Full record: [`ADR-009`](./ADR-009-score-calibration.md).
+validated against the indexed repo's own history; the corpus, the fitting pipeline and
+`@codegraph/calibrate` are DELETED — within-repo work needs the repo in hand, not twelve
+strangers'. Full record: [`ADR-009`](./ADR-009-score-calibration.md).
 
 **ADR-008 — The Health Score is the single headline metric, and it reports its own coverage.**
 *Consequences:* a score computed over 40 % analysed LOC can no longer masquerade as one

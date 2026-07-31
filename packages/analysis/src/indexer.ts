@@ -959,7 +959,12 @@ function buildModuleGraph(
 export async function indexRepo(root: string, ctx?: PipelineContext): Promise<IndexResult> {
   _issueSeq = 0;
   /**
-   * One git pass now yields eight organisational signals, not just churn (PLAN.md §5.2).
+   * One git pass yields eight organisational signals, not just churn (PLAN.md §5.2).
+   *
+   * Of the eight, only `churn` currently has a consumer. The other seven are returned and
+   * unread: they were built for the calibration ADR-009 deleted. They stay because they cost
+   * nothing extra here - this pass runs for `churn` regardless - but PLAN.md §5.2 records the
+   * condition on which they stay, and it is not "they are already written".
    *
    * `churnMap` is derived from the same pass rather than costing a second one, so this
    * replaces the old `churnByFile()` call at equal cost. The other seven signals are REPORTED,
