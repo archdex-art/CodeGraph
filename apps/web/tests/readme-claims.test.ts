@@ -131,6 +131,7 @@ describe("the test-suite claim counts what exists", () => {
    * "479/479 across 34 files" survived the whole monorepo migration, and "770 across 59" was
    * stale within the same session that wrote it, because adding these very tests moved it.
    */
+  const SKIP_DIRS = new Set(["node_modules", "build", "dist", ".next", "test-results"]);
   const countTestFiles = (dirs: string[]): number => {
     const { readdirSync, existsSync, statSync } = require("node:fs") as typeof import("node:fs");
     let n = 0;
@@ -139,7 +140,12 @@ describe("the test-suite claim counts what exists", () => {
       for (const e of readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, e.name);
         if (e.isDirectory()) {
-          if (e.name !== "node_modules") walk(full);
+          // Build OUTPUT contains copies of test files — `apps/desktop/build/standalone`
+          // carries the whole of `apps/web/tests`. Walking it made this assertion depend on
+          // whether the machine had run a build: green on CI (which builds desktop and web in
+          // separate checkouts) and red for any developer who built both. Counting sources
+          // means counting sources.
+          if (!SKIP_DIRS.has(e.name)) walk(full);
         } else if (e.name.endsWith(".test.ts")) n++;
       }
     };

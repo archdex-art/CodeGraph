@@ -24,6 +24,11 @@ import manifest from "./manifest.json";
  */
 const EXCLUDED_PATHS: readonly string[][] = [
   ["apps", "web", "data"],
+  // Next's standalone writer copies the app directory wholesale, so `apps/web/tests` — 33
+  // files, 292 KB of vitest specs and fixtures — was reaching the .dmg. Not operator state
+  // like `data/`, so not a leak; just code with no runtime caller shipped to users, including
+  // fixtures full of synthetic credentials that have no business in a distributable.
+  ["apps", "web", "tests"],
 ];
 
 function isExcluded(relativePath: string): boolean {

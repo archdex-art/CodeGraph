@@ -43,3 +43,12 @@ npm-debug.log*
 coverage
 .vscode
 .idea
+
+# Test suites: the image runs the app, never the tests. Next's standalone writer copies the
+# app directory wholesale, so without this the container ships apps/web/tests too — same
+# finding as apps/desktop/scripts/build/asset-copy.ts EXCLUDED_PATHS, other packaging path.
+# The Dockerfile builds and never invokes vitest, so nothing in the build needs these.
+apps/*/tests
+packages/*/tests
+**/*.test.ts
+**/*.test.tsx

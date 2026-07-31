@@ -71,6 +71,11 @@ export async function verifyArtifacts(): Promise<void> {
 async function verifyNoRuntimeState(targetRoot: string): Promise<void> {
   const forbidden = [
     { label: "runtime data directory", path: path.join("standalone", "apps", "web", "data") },
+    // Found by a doc guard failing for an unrelated reason: it counts test files by walking
+    // the tree, and the bundled copies made the count wrong. The filter above is the fix; this
+    // is what keeps it fixed, since the exclusion list and the standalone writer's behaviour
+    // are maintained by different people at different times.
+    { label: "test suite", path: path.join("standalone", "apps", "web", "tests") },
   ];
 
   let leaked = false;
@@ -91,7 +96,7 @@ async function verifyNoRuntimeState(targetRoot: string): Promise<void> {
   if (leaked) {
     throw new Error("Runtime state leaked into the build output. Halting build.");
   }
-  console.log("  ✓ Verified: no runtime state (database, cloned repos) in bundle");
+  console.log("  ✓ Verified: no runtime state or test suites in bundle");
 }
 
 async function verifyClaudeSDK(sdkPath: string): Promise<void> {
