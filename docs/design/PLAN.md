@@ -437,10 +437,30 @@ injection classes; regex tier demoted to an explicitly low-confidence fallback.
 > comment; `@ts-ignore` can only be a comment; a hardcoded `localhost` URL is necessarily a
 > string. Blanket stripping would have deleted three rules' true positives.
 >
+> **Correction 2026-07-30, same day: the first implementation was wrong and suppressed real
+> findings.** It drove `ts.createScanner` in a bare `while (scan())` loop, which cannot call
+> `rescanTemplateToken` after a `TemplateHead` or `reScanSlashToken` to settle
+> regex-versus-division, so it desynchronises at the first `${...}` or `/`. Validated against
+> the parser over 4,783 sampled positions: **1,125 (23.5%) were plain code reported as
+> `string`** - `process.exitCode = 1;` among them - which SUPPRESSES findings, the exact
+> failure direction the module comment claimed to avoid.
+>
+> The measurement that justified this work was parser-based all along; only the shipped code
+> was not. Rewritten on `createSourceFile`: false negatives 1,125 -> 7, false positives 0,
+> index cost +13% (2,129ms -> 2,416ms on this repo). Template substitutions are now `code`, so
+> a rule can still see `${userInput}`.
+>
 > **Still open on item 1.** This is the position class, not yet a graph-shape query. `eval(`
 > in code is accepted without checking it is a CallExpression whose callee resolves to the
 > global `eval` - so `myEval(` style names and shadowed locals are still matched by text.
 > That needs the AST rule tier, and the measurement above does not cover it.
+>
+> **Item 4 (interprocedural taint) is measured and deferred, not forgotten.** Of 148 untraced
+> sink findings here, only **30 (20%)** have an argument derived from a function parameter -
+> the ceiling for what caller-side propagation could reach - and the examples are build
+> scripts and CLI paths that come from argv anyway. Building a 3-hop engine to move at most 30
+> findings on a corpus of one repository is the mistake ADR-009 records. It needs a repository
+> where layered request handlers are the norm before the yield can be judged.
 >
 > **Python is deliberately unchanged.** `syntacticSpans` returns `[]` outside the TS family,
 > so those files behave exactly as before. A hand-rolled lexer for `#` comments and

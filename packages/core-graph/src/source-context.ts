@@ -44,11 +44,18 @@ export function tierForExt(ext: string): Exclude<AnalysisTier, "skipped"> {
 }
 
 /**
- * Comment and string-literal ranges, via the TypeScript **scanner**.
+ * Comment and string-literal ranges, via the TypeScript **parser**.
  *
- * A scanner, not a parser, on purpose: this needs token boundaries, not a tree, and it must run
- * over every file on every index. The scanner also tokenises broken or partial source without
- * throwing, which a parse tree does not guarantee.
+ * **This used a raw `createScanner` loop and that was wrong.** A bare `while (scan())` has no
+ * way to `rescanTemplateToken` after a `TemplateHead`, or to `reScanSlashToken` when deciding
+ * regex-versus-division, so it desynchronises at the first `${...}` or `/` and mis-tokenises
+ * everything after. Measured against the parser over 4,783 sampled positions in this
+ * repository: **1,125 (23.5%) were plain code reported as `string`** - `process.exitCode = 1;`
+ * among them. That silently SUPPRESSES findings, which is the failure direction this module's
+ * own comment claims to avoid.
+ *
+ * The original measurement that justified context gating was parser-based; only the shipped
+ * implementation was not. The two now agree.
  *
  * Returns `[]` for languages outside the TS family - Python among them - so callers treat every
  * position as `code` and behaviour is exactly as it was. That is deliberate. A hand-rolled
@@ -58,30 +65,54 @@ export function tierForExt(ext: string): Exclude<AnalysisTier, "skipped"> {
  */
 export function syntacticSpans(text: string, ext: string): SourceSpan[] {
   if (!TS_FAMILY.has(ext)) return [];
-  const spans: SourceSpan[] = [];
-  const scanner = ts.createScanner(
-    ts.ScriptTarget.Latest,
-    /* skipTrivia */ false,
-    ext === ".tsx" || ext === ".jsx" ? ts.LanguageVariant.JSX : ts.LanguageVariant.Standard,
+  const sf = ts.createSourceFile(
+    `f${ext}`,
     text,
+    ts.ScriptTarget.Latest,
+    /* setParentNodes */ false,
+    ext === ".tsx" || ext === ".jsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
-  for (let token = scanner.scan(); token !== ts.SyntaxKind.EndOfFileToken; token = scanner.scan()) {
-    switch (token) {
-      case ts.SyntaxKind.SingleLineCommentTrivia:
-      case ts.SyntaxKind.MultiLineCommentTrivia:
-        spans.push({ start: scanner.getTokenStart(), end: scanner.getTokenEnd(), kind: "comment" });
-        break;
-      case ts.SyntaxKind.StringLiteral:
-      case ts.SyntaxKind.NoSubstitutionTemplateLiteral:
-      case ts.SyntaxKind.TemplateHead:
-      case ts.SyntaxKind.TemplateMiddle:
-      case ts.SyntaxKind.TemplateTail:
-        spans.push({ start: scanner.getTokenStart(), end: scanner.getTokenEnd(), kind: "string" });
-        break;
-      default:
-        break;
+  const spans: SourceSpan[] = [];
+  const seenComment = new Set<number>();
+
+  /**
+   * Both APIs are needed. TypeScript classifies a comment appearing BEFORE the first newline
+   * after a token as that token's TRAILING comment, and `getLeadingCommentRanges` deliberately
+   * skips it - so `const a = 1; // note` is invisible to the leading call alone. Caught by the
+   * simplest test in this module's suite, which is the one that nearly was not written.
+   */
+  const addComments = (ranges: readonly ts.CommentRange[] | undefined): void => {
+    for (const r of ranges ?? []) {
+      if (seenComment.has(r.pos)) continue;
+      seenComment.add(r.pos);
+      spans.push({ start: r.pos, end: r.end, kind: "comment" });
     }
-  }
+  };
+
+  const walk = (n: ts.Node): void => {
+    addComments(ts.getLeadingCommentRanges(text, n.getFullStart()));
+    addComments(ts.getTrailingCommentRanges(text, n.getEnd()));
+    if (ts.isTemplateExpression(n)) {
+      /**
+       * Only the literal chunks are string. `${...}` is CODE, and marking the whole template
+       * would suppress every finding inside a substitution - exactly the `${userInput}` spot
+       * worth looking at.
+       */
+      spans.push({ start: n.head.getStart(sf), end: n.head.getEnd(), kind: "string" });
+      for (const span of n.templateSpans) {
+        spans.push({ start: span.literal.getStart(sf), end: span.literal.getEnd(), kind: "string" });
+      }
+    } else if (ts.isStringLiteralLike(n)) {
+      spans.push({ start: n.getStart(sf), end: n.getEnd(), kind: "string" });
+    }
+    ts.forEachChild(n, walk);
+  };
+  // `forEachChild` visits `endOfFileToken` as a child of the source file, so comments after
+  // the last statement arrive through the normal walk. An explicit EOF pass was written here
+  // and removed once mutation testing showed deleting it changed nothing.
+  walk(sf);
+
+  spans.sort((a, b) => a.start - b.start);
   return spans;
 }
 
