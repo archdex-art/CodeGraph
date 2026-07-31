@@ -592,6 +592,20 @@ injection classes; regex tier demoted to an explicitly low-confidence fallback.
 > there. Every published number is unchanged (express 89, projected 89 -> 90, remediation
 > 89 -> 95) and the 24-case golden score table moved to the new package intact.
 
+> **Second slice done: `viz` extracted, plus the shared-contract move both remaining slices
+> needed.** `ScannedFile` and `LANG_BY_EXT` now live in `analysis-model`. That was the real
+> prerequisite: every stage LLD §13 splits out takes a scanned file, so leaving the type inside
+> `indexer.ts` would have made each extracted package import the thing it was extracted FROM -
+> the coupling the split exists to remove. `LANG_BY_EXT` moved for the same reason, and because
+> two copies would let the graph disagree with the language table beside it.
+>
+> `indexer.ts` 1,259 -> **1,001** across the two slices. Still above 600. `detect-engine` is the
+> big remaining one (~415 lines: the rule table, the confidence policies, `analyzeFiles`) and it
+> is more entangled than these two - it needs `PipelineContext` from `analysis/src/context.ts`,
+> so the abort contract has to move first. `pipeline/enumerate` and `lang-*` follow.
+>
+> Numbers unchanged again: express 89, projected 89 -> 90, remediation 89 -> 95, 920/920.
+
 ## 7. P6 — Scale & incrementality *(~2 weeks)*
 
 Content-addressed per-file cache (`contentHash + extractorVersion → FileFacts`); PR-scoped and

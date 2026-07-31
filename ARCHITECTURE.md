@@ -59,6 +59,7 @@ The libraries, and why each boundary exists:
 | `persistence` | The **only** module that speaks SQL |
 | `jobs` | Queue semantics: lease, heartbeat, retry, cancellation |
 | `analysis` · `analysis-model` · `core-graph` | Scan, symbol graph, detection rules. Still transitional; LLD §13 splits `analysis` further into `pipeline`/`lang-*`/`detect-engine`/`viz` |
+| `viz` | The renderable file/directory graph. Split from the pipeline because it answers a different question — the symbol graph is what the product reasons over, this is what a person looks at, and its node cap has nothing to do with detection being correct |
 | `score-engine` | The Health Score model — pure functions of findings plus LOC, no I/O. Split out first because the swarm's projected score re-runs the REAL scorer (review C5), which meant importing it from the indexer and dragging in the walker, the ESLint layer and the TypeScript program |
 | `remediate-engine` | Fix providers and the apply loop, shared by `apps/web` and `apps/cli` |
 | `verify` | The four verification gates and the `VerificationRecord` |

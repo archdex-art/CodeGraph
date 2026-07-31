@@ -27,21 +27,14 @@ import {
 } from "@codegraph/analysis-model";
 import { buildSymbolGraph, callAt, classifyTaint, contextAt, extractorFor, syntacticSpans, tierForExt } from "@codegraph/core-graph";
 import type { AnalysisTier, TaintQuery, TaintVerdict } from "@codegraph/core-graph";
-import type { ScanCoverage } from "@codegraph/analysis-model";
+import type { ScanCoverage, ScannedFile } from "@codegraph/analysis-model";
+import { LANG_BY_EXT } from "@codegraph/analysis-model";
 import { HITS_PER_RULE_PER_FILE, expectedHarm, scoreIssues } from "@codegraph/score-engine";
+import { buildTree, buildVizGraph } from "@codegraph/viz";
 import ts from "typescript";
 import type { SourceContext } from "@codegraph/core-graph";
 import { lintForSecurity } from "./eslintSecurity";
 
-const LANG_BY_EXT: Record<string, string> = {
-  ".ts": "TypeScript", ".tsx": "TypeScript", ".js": "JavaScript", ".jsx": "JavaScript",
-  ".mjs": "JavaScript", ".cjs": "JavaScript", ".py": "Python", ".go": "Go",
-  ".rs": "Rust", ".java": "Java", ".rb": "Ruby", ".php": "PHP", ".c": "C",
-  ".h": "C", ".cpp": "C++", ".hpp": "C++", ".cs": "C#", ".swift": "Swift",
-  ".kt": "Kotlin", ".scala": "Scala", ".sh": "Shell", ".sql": "SQL",
-  ".css": "CSS", ".scss": "CSS", ".html": "HTML", ".md": "Markdown",
-  ".json": "JSON", ".yml": "YAML", ".yaml": "YAML",
-};
 
 const CODE_EXTS: Record<string, true> = {
   ".ts": true, ".tsx": true, ".js": true, ".jsx": true, ".mjs": true,
@@ -70,13 +63,6 @@ const MAX_FILE_BYTES = 400_000;
  */
 
 
-interface ScannedFile {
-  rel: string;
-  ext: string;
-  loc: number;
-  text: string;
-  imports: string[]; // resolved-ish relative targets
-}
 
 
 
@@ -821,125 +807,8 @@ function analyzeTests(files: ScannedFile[]): Issue[] {
  */
 export { scoreIssues, expectedHarm };
 
-const VIZ_NODE_CAP = 350;
+// The renderable file/directory graph moved to `@codegraph/viz` (LLD §13).
 
-/** Build the renderable node/edge graph (files + dirs + import/containment edges). */
-function buildVizGraph(
-  files: ScannedFile[],
-  importEdges: Array<{ from: string; to: string }>,
-  fanIn: Map<string, number>,
-  issues: Issue[]
-): VizGraph {
-  // Per-file issue aggregation.
-  const issueCount = new Map<string, number>();
-  const worstSev = new Map<string, number>();
-  for (const i of issues) {
-    issueCount.set(i.file, (issueCount.get(i.file) || 0) + 1);
-    worstSev.set(i.file, Math.max(worstSev.get(i.file) || 0, i.severity));
-  }
-
-  // Choose which files to render; keep highest-impact when over the cap.
-  let chosen = files;
-  let truncated = false;
-  if (files.length > VIZ_NODE_CAP) {
-    chosen = [...files]
-      .sort(
-        (a, b) =>
-          (fanIn.get(b.rel) || 0) * 3 + b.loc / 100 - ((fanIn.get(a.rel) || 0) * 3 + a.loc / 100)
-      )
-      .slice(0, VIZ_NODE_CAP);
-    truncated = true;
-  }
-  const included = new Set(chosen.map((f) => f.rel));
-
-  const nodes = new Map<string, GraphNode>();
-  const edges: GraphEdge[] = [];
-
-  const toPosix = (p: string) => p.split(path.sep).join("/");
-  function ensureDir(dir: string): string {
-    const id = dir === "" || dir === "." ? "." : dir;
-    if (!nodes.has(id)) {
-      nodes.set(id, {
-        id,
-        label: id === "." ? "/" : path.posix.basename(id),
-        kind: "dir",
-        language: null,
-        loc: 0,
-        fanIn: 0,
-        issues: 0,
-        worstSeverity: 0,
-      });
-    }
-    return id;
-  }
-  // Build the directory chain and containment edges up to root.
-  function linkChain(relFile: string) {
-    const posix = toPosix(relFile);
-    let dir = path.posix.dirname(posix);
-    let child = posix;
-    // file's immediate dir -> ... -> root
-    while (true) {
-      const dirId = ensureDir(dir);
-      edges.push({ source: dirId, target: child, kind: "contains" });
-      if (dir === "." || dir === "") break;
-      child = dirId;
-      dir = path.posix.dirname(dir);
-    }
-  }
-
-  for (const f of chosen) {
-    const posix = toPosix(f.rel);
-    nodes.set(posix, {
-      id: posix,
-      label: path.posix.basename(posix),
-      kind: "file",
-      language: LANG_BY_EXT[f.ext] || null,
-      loc: f.loc,
-      fanIn: fanIn.get(f.rel) || 0,
-      issues: issueCount.get(f.rel) || 0,
-      worstSeverity: worstSev.get(f.rel) || 0,
-    });
-    linkChain(f.rel);
-  }
-
-  for (const e of importEdges) {
-    if (included.has(e.from) && included.has(e.to)) {
-      edges.push({ source: toPosix(e.from), target: toPosix(e.to), kind: "imports" });
-    }
-  }
-
-  return { nodes: [...nodes.values()], edges, truncated };
-}
-
-/** Build the nested file tree for circle-packing (all files, not capped). */
-function buildTree(files: ScannedFile[], issuesByFile: Map<string, number>): TreeNode {
-  const root: TreeNode = { name: "/", path: ".", children: [] };
-  const dirCache = new Map<string, TreeNode>([[".", root]]);
-
-  function ensureDir(dirPosix: string): TreeNode {
-    if (dirCache.has(dirPosix)) return dirCache.get(dirPosix)!;
-    const parentPath = path.posix.dirname(dirPosix);
-    const parent = parentPath === dirPosix ? root : ensureDir(parentPath === "" ? "." : parentPath);
-    const node: TreeNode = { name: path.posix.basename(dirPosix), path: dirPosix, children: [] };
-    parent.children!.push(node);
-    dirCache.set(dirPosix, node);
-    return node;
-  }
-
-  for (const f of files) {
-    const posix = f.rel.split(path.sep).join("/");
-    const dirPosix = path.posix.dirname(posix);
-    const parent = dirPosix === "." || dirPosix === "" ? root : ensureDir(dirPosix);
-    parent.children!.push({
-      name: path.posix.basename(posix),
-      path: posix,
-      ext: f.ext,
-      loc: Math.max(1, f.loc),
-      issues: issuesByFile.get(f.rel) || 0,
-    });
-  }
-  return root;
-}
 
 /** Aggregate files into top-level modules + inter-module import edges (flowchart). */
 function buildModuleGraph(

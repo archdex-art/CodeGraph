@@ -52,6 +52,38 @@ export interface FileSignals {
   ageVolatility: number;
 }
 
+/**
+ * One file the scanner read, as handed to every downstream stage.
+ *
+ * Lives in the shared model rather than the pipeline because it is the INPUT CONTRACT of the
+ * stages LLD §13 splits out - `viz`, `detect-engine` and the rest each take these. Leaving it
+ * inside `indexer.ts` would make every extracted package import the thing it was extracted
+ * from, which is the coupling the split exists to remove.
+ */
+/**
+ * Extension to language name. Shared reference data: the scanner uses it to attribute LOC and
+ * `viz` uses it to colour a node, and two copies would let the graph disagree with the language
+ * table beside it.
+ */
+export const LANG_BY_EXT: Record<string, string> = {
+  ".ts": "TypeScript", ".tsx": "TypeScript", ".js": "JavaScript", ".jsx": "JavaScript",
+  ".mjs": "JavaScript", ".cjs": "JavaScript", ".py": "Python", ".go": "Go",
+  ".rs": "Rust", ".java": "Java", ".rb": "Ruby", ".php": "PHP", ".c": "C",
+  ".h": "C", ".cpp": "C++", ".hpp": "C++", ".cs": "C#", ".swift": "Swift",
+  ".kt": "Kotlin", ".scala": "Scala", ".sh": "Shell", ".sql": "SQL",
+  ".css": "CSS", ".scss": "CSS", ".html": "HTML", ".md": "Markdown",
+  ".json": "JSON", ".yml": "YAML", ".yaml": "YAML",
+};
+
+export interface ScannedFile {
+  rel: string;
+  ext: string;
+  loc: number;
+  text: string;
+  /** Resolved-ish relative import targets. */
+  imports: string[];
+}
+
 export interface ScanCoverage {
   filesSeen: number;
   /** Files the walk kept. NOT the number analysed — see filesAnalysed. */

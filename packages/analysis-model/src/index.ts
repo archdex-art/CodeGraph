@@ -34,6 +34,7 @@ export type {
   Pillar,
   PillarScore,
   ScanCoverage,
+  ScannedFile,
   DimensionScore,
   GraphEdge,
   GraphNode,
@@ -57,3 +58,4 @@ export {
 } from "./models";
 export { toSarif, sarifRuleId } from "./sarif";
 export type { SarifLog, SarifOptions } from "./sarif";
+export { LANG_BY_EXT } from "./models";
