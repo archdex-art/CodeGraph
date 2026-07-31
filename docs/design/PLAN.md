@@ -280,9 +280,18 @@ stores and ignores.
 > and 89% on express have no inbound edge, and the checker resolved nothing the heuristic
 > missed - it added 0 project targets the heuristic did not also find.
 >
-> **Decide P5's real exit criterion before building it.** "Precision >= 0.85" is already met
-> and would pass without any work. The honest open question is recall, and nothing measured so
-> far says typed extraction answers it.
+> **Two different precisions - do not conflate them, as an earlier draft of this note did.**
+>
+> - **Call-resolution precision** - does an edge point at the right symbol? Measured **98.4%**,
+>   with the compiler as ground truth and no corpus needed. This is the graph's correctness.
+> - **Detection precision** (P5's actual exit, "≥ 0.85 overall, ≥ 0.90 at P0") - is a reported
+>   finding a real defect? A *human* judgement, so it DOES need a labelled corpus. Nothing
+>   measured on this branch bears on it, and it is not met.
+>
+> The graph work above raised resolution and recall. It did not touch detection quality, which
+> is what P5 is actually about. The corpus problem for P5 is therefore still open and still the
+> thing to settle before building - and unlike §5.3's, this corpus is about *our own findings*
+> on a repo we choose, not about other people's repositories, so ADR-009 does not forbid it.
 >
 > **Recall addressed 2026-07-30, and it was not a resolution problem at all.** Call-site
 > attribution required a named enclosing function, so **2,313 of 5,025 resolved calls (46%)**
