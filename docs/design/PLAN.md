@@ -231,7 +231,8 @@ derivable from **a single `git log` pass** — and worth adding:
 >
 > The mistake was not harmless. It licensed a git-only feature set, and §5.3's fit against a
 > 12-repo corpus then produced a model that loses to `sort by lines-of-code` — see
-> `benchmarks/calibration/scorecard.json`. Measured against the reference: repowise reports
+> the scorecard (deleted with the corpus; the numbers are quoted in ADR-009). Measured
+> against the reference: repowise reports
 > **0.74 cross-project AUC** over 21 repos and 9 languages, "beats recency and past-breakage
 > heuristics by 10+ points"; this project's git-only model reaches 0.604 pooled / 0.657
 > mean-per-repo and beats neither. The gap is a feature-class gap, not a refutation.
