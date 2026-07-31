@@ -181,10 +181,12 @@ numbers move when the target repo moves — and, as it turns out, when *ours* do
 Re-measured 2026-07-30 with `npm run bench`, which reproduces every figure in this table from a
 fresh clone. Three had drifted since the last pass, all because the product changed rather than the
 target: the Health Score moved 77 → 74 when the score was split into pillars (defect risk is now
-surfaced alone), and the priority buckets moved from `P0:21 · P1:38 · P2:0` to `P0:8 · P1:16 · P2:35`
-when judge calibration was fixed — the table used to describe that empty P2 as a known calibration
-issue, long after it was closed. The fix count (31 across 27 files) and issue counts (87 → 56) were
-unchanged.
+surfaced alone) and then 74 → 77 again when `confidence` entered the kernel — the same figure
+twice, for unrelated reasons, which is precisely why every row cites a pinned commit and a command
+rather than a remembered number. The priority buckets moved from `P0:21 · P1:38 · P2:0` to
+`P0:8 · P1:16 · P2:35` when judge calibration was fixed — the table used to describe that empty P2
+as a known calibration issue, long after it was closed. The fix count (31 across 27 files) and
+issue counts (87 → 56) were unchanged.
 
 That is the whole argument for `npm run bench` existing: numbers nobody can re-derive go stale
 quietly, and a README is the last place that should happen.
@@ -192,11 +194,11 @@ quietly, and a README is the last place that should happen.
 | What | Result | Source |
 |---|---|---|
 | **Symbol graph extraction** (`expressjs/express@a371447`) | 174 symbols across 159 files; 37 resolved call edges; 0 call cycles. **Call resolution is still weak on this target** — express is CommonJS, and while `exports.foo = …` is now extracted (which took resolved edges from 11 to 37), name-based resolution across files remains heuristic. Typed extraction (tier `full`) is where this improves; tracked as an open detection-quality item, not presented as a strength | `npm run bench` |
-| **Agent swarm** (`expressjs/express@a371447`) | 72 findings across 6 active specialists (P0:19 · P1:15 · P2:38 · P3:0); Health Score 74, *simulated* **74 → 85** if P0+P1 are fixed. The projection re-runs the real scorer over the issues that would remain, so it simulates the shipped model rather than estimating — but it is a simulation, not a measurement. The measured result is the row below | `npm run bench` |
-| **Verified remediation** (`expressjs/express@a371447`) | 31 fixes across 27 files; Health Score **74 → 81** and issues **87 → 56**, both from an actual re-index of the fixed tree rather than a projection. Verification level **`partial`** — syntax and re-analysis passed, types and tests skipped (express ships no `tsconfig.json`, and gate 3 runs only under `--verify`). Valid, applyable unified git diff | `npm run bench` |
+| **Agent swarm** (`expressjs/express@a371447`) | 72 findings across 6 active specialists (P0:19 · P1:15 · P2:38 · P3:0); Health Score 77, *simulated* **77 → 86** if P0+P1 are fixed. The projection re-runs the real scorer over the issues that would remain, so it simulates the shipped model rather than estimating — but it is a simulation, not a measurement. The measured result is the row below | `npm run bench` |
+| **Verified remediation** (`expressjs/express@a371447`) | 31 fixes across 27 files; Health Score **77 → 83** and issues **87 → 56**, both from an actual re-index of the fixed tree rather than a projection. Verification level **`partial`** — syntax and re-analysis passed, types and tests skipped (express ships no `tsconfig.json`, and gate 3 runs only under `--verify`). Valid, applyable unified git diff | `npm run bench` |
 | **Graph-RAG context generation** | Query *"render a view template"* → 5 seeds, 11 slices, ~647 tokens, structured prompt | [`apps/web/CODE_INTELLIGENCE.md`](./apps/web/CODE_INTELLIGENCE.md) |
 | **Memory ceiling under Render's real constraints** | Full pipeline survives indexing `octocat/Hello-World` **and** `expressjs/express` end-to-end inside a container capped at `--memory=512m --cpus=0.5` — the exact config that OOM-killed the server before the fix in [`docs/postmortems/2026-07-10-tree-sitter-oom.md`](./docs/postmortems/2026-07-10-tree-sitter-oom.md) | CI `docker-smoke-test` job, runs on every push |
-| **Test suite** | **61 test files** in the workspace and **8** for the Electron app, plus a Playwright e2e spec run separately (security, indexer, scoring, pillars, coverage, dependencies, codeintel, executor, verify gates, orchestrator, specialists, migrations, tenant-isolation, CLI, README claims, and more). 829 and 35 cases respectively as of 2026-07-30 — the file counts are asserted by a test, the case counts are a point-in-time figure that moves with every commit | `npm run test`; `npm test --workspace @codegraph/desktop` |
+| **Test suite** | **61 test files** in the workspace and **8** for the Electron app, plus a Playwright e2e spec run separately (security, indexer, scoring, pillars, coverage, dependencies, codeintel, executor, verify gates, orchestrator, specialists, migrations, tenant-isolation, CLI, README claims, and more). 833 and 35 cases respectively as of 2026-07-30 — the file counts are asserted by a test, the case counts are a point-in-time figure that moves with every commit | `npm run test`; `npm test --workspace @codegraph/desktop` |
 | **Security posture (self-audited, tracked openly)** | Baseline **3/10 → 9.1/10**. Phases 0–3 hardening (SSRF guard, local-access gate, security headers, auth gate, cross-tenant isolation fix), then Phase 7 closed **17 of 27** findings from a follow-up deep audit that surfaced **99 issues (5 critical)** across the full stack. Remaining items are tracked, not hidden — plus an independent pen-test pass that verified every control live and fixed a rate-limit `X-Forwarded-For` bypass | [`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md), [`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md) |
 
 ## Comparison with existing tools

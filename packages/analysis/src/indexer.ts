@@ -698,9 +698,43 @@ function volumeMultiplier(occurrences: number | undefined): number {
 }
 
 /**
+ * Expected harm from one finding — the single weighting both the score and the displayed
+ * order use.
+ *
+ *   severity × blastMultiplier × volumeMultiplier × confidence
+ *
+ * **Why confidence belongs here (PLAN.md §5.2).** The scorer stored `confidence` on every
+ * finding and then ignored it, so a 0.7 "Possible SQL string concatenation" weighed exactly as
+ * much as a 0.95 `eval()`. `severity` and `confidence` are orthogonal axes, and the rule table
+ * proves it rather than merely asserting it: `Use of eval()` and `Possible hardcoded secret`
+ * are BOTH severity 5. The uncertain one is not severity-discounted, because severity means
+ * *impact if real*. Multiplying by P(real) is therefore an expectation, not a double-count.
+ *
+ * **This raises scores, and that is the correction, not generosity.** The old model charged
+ * every guess at full price. `k = 0.06` is deliberately NOT rescaled to hold the old headline:
+ * re-tuning a hand-picked constant to conceal a deliberate change is how a number stops
+ * meaning anything. The pillar split above moved the headline for the same kind of reason.
+ *
+ * `?? 1` — absent means *unqualified*, so no discount. Defaulting to 0 would silently delete
+ * every finding from a producer that does not set the field.
+ *
+ * One function, not two expressions kept in step by a comment: `scoreIssues` and the issue
+ * ordering in `indexRepo` MUST apply identical weights, or the list disagrees with the number
+ * it explains (review item B2, which surfaced twice).
+ */
+function expectedHarm(i: Issue): number {
+  return (
+    i.severity *
+    blastMultiplier(i.blastRadius) *
+    volumeMultiplier(i.occurrences) *
+    (i.confidence ?? 1)
+  );
+}
+
+/**
  * The Health Score model.
  *
- *   penalty  = Σ severity × blastMultiplier × volumeMultiplier
+ *   penalty  = Σ severity × blastMultiplier × volumeMultiplier × confidence
  *   subScore = 100 × exp(-k · penalty / sizeFactor)
  *
  * Larger codebases tolerate more raw penalty (normalised by LOC).
@@ -730,10 +764,7 @@ export function scoreIssues(
 
   const dims: DimensionScore[] = (Object.keys(DIMENSION_META) as Dimension[]).map((dim) => {
     const di = issues.filter((i) => i.dimension === dim);
-    const penalty = di.reduce(
-      (s, i) => s + i.severity * blastMultiplier(i.blastRadius) * volumeMultiplier(i.occurrences),
-      0,
-    );
+    const penalty = di.reduce((s, i) => s + expectedHarm(i), 0);
     const norm = penalty / sizeFactor;
     const sub = 100 * Math.exp(-k * norm);
     return {
@@ -993,13 +1024,11 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
   };
 
   const { dimensions, overall } = scoreIssues(issues, loc);
-  // Same damped model as the score, so the order the user reads matches the
-  // weighting the score applied. Sorting by the raw `severity × blastRadius`
-  // product was review item B2 surfacing a second time: it put a TODO in a
-  // heavily-imported file above an eval() in a leaf.
-  const rank = (i: Issue) =>
-    i.severity * blastMultiplier(i.blastRadius) * volumeMultiplier(i.occurrences);
-  issues.sort((a, b) => rank(b) - rank(a));
+  // Same weighting as the score - literally the same function - so the order the user reads
+  // matches the weighting the score applied. Sorting by the raw `severity × blastRadius`
+  // product was review item B2 surfacing a second time: it put a TODO in a heavily-imported
+  // file above an eval() in a leaf.
+  issues.sort((a, b) => expectedHarm(b) - expectedHarm(a));
 
   // Per-file issue counts (shared by viz, tree, modules).
   const issuesByFile = new Map<string, number>();

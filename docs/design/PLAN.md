@@ -241,7 +241,26 @@ derivable from **a single `git log` pass** — and worth adding:
 
 Plus the fixes already identified: symbol-level blast radius (review B2), logarithmic volume
 damping instead of the `hits >= 5` cap (B3), and actually *using* the `confidence` the scorer
-currently stores and ignores.
+stores and ignores.
+
+> **`confidence` done 2026-07-30.** `expectedHarm()` in `packages/analysis/src/indexer.ts` is now
+> `severity × blast × volume × confidence`, and both the score and the displayed issue order call
+> that one function rather than two expressions kept in step by a comment.
+>
+> Multiplying is an expectation, not a tuned weight, so it needed no corpus — and the rule table
+> establishes the two axes are independent rather than assuming it: `Use of eval()` and `Possible
+> hardcoded secret` are BOTH severity 5, so severity means *impact if real* and is not already
+> discounted for uncertainty.
+>
+> **Scores rise** — express 74 → 77, security 45 → 52, concentrated on the low-confidence rules
+> where it should be. `k = 0.06` was deliberately NOT rescaled to hold the old headline. The
+> golden table moved by exactly `100·(s/100)^0.9` on a uniform-0.9 fixture, hand-verified before
+> the numbers were touched, and the transformation law is now asserted so the *semantics* are
+> locked and not merely the outputs.
+>
+> Still open, and NOT closed by this: HLD §8.3's degradation ladder says `lexical`-tier findings
+> are "marked low-confidence", but nothing sets confidence from tier. Until it does, the ladder's
+> confidence claim is decorative. This change is what would make wiring it mean something.
 
 ### 5.3 Calibrate against a defect corpus
 
