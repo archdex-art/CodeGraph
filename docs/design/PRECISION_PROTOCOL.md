@@ -227,3 +227,28 @@ downgrade does not help the number and the entries stand as failures.
 
 Self-precision (76%) still trails express (100%) for the reason §5 gave before any of this was
 measured: this repository is not a representative corpus of anyone's code.
+
+
+---
+
+## 8. Held-out validation — criteria fixed before selection
+
+**Why this is needed.** Passes 2 and 3 were fitted to false positives I had already read. The
+placeholder token list literally contains words taken from the failures it was written to fix.
+That is legitimate rule design and it is also exactly how a number stops generalising, so the
+fixes have to be tested on repositories whose findings I have never looked at.
+
+**Selection criteria, written before any repository was cloned:**
+
+1. Never analysed for findings in this work. (Some appeared in the deleted calibration corpus,
+   which measured git history only — no finding was ever read.)
+2. Real production software, not a tutorial or a framework demo.
+3. Between roughly 50 and 3,000 source files, so the sample is not one file repeated.
+4. **At least one Python repository**, because the `lexical` tier has never been precision-tested
+   and Python gets no context gate at all — the place the tool is most likely to be wrong.
+5. Pinned to a commit, so the measurement is reproducible.
+
+**Prediction, recorded before running:** express reached 100% after pass 3 and is the corpus the
+fixes were shaped against, so held-out precision should land lower. **If it comes in below 0.85
+the fixes did not generalise, and that is the finding** — the passes above would then describe
+tuning rather than improvement.
