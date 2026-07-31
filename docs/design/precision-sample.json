@@ -1,0 +1,516 @@
+[
+ {
+  "corpus": "express",
+  "idx": 0,
+  "title": "Large file (1218 LOC)",
+  "file": "test/app.router.js",
+  "line": 1,
+  "sev": 4,
+  "conf": 0.9,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 2,
+  "title": "Large file (632 LOC)",
+  "file": "lib/application.js",
+  "line": 1,
+  "sev": 2,
+  "conf": 0.9,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 4,
+  "title": "Large file (637 LOC)",
+  "file": "test/Router.js",
+  "line": 1,
+  "sev": 2,
+  "conf": 0.9,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 6,
+  "title": "Large file (816 LOC)",
+  "file": "test/express.static.js",
+  "line": 1,
+  "sev": 2,
+  "conf": 0.9,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 8,
+  "title": "Large file (621 LOC)",
+  "file": "test/res.send.js",
+  "line": 1,
+  "sev": 2,
+  "conf": 0.9,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 10,
+  "title": "Regular expression built from a variable",
+  "file": "test/app.router.js",
+  "line": 1212,
+  "sev": 2,
+  "conf": 0.7,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 12,
+  "title": "Leftover debug output",
+  "file": "examples/vhost/index.js",
+  "line": 38,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 14,
+  "title": "Leftover debug output",
+  "file": "examples/route-separation/index.js",
+  "line": 54,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 16,
+  "title": "Leftover debug output",
+  "file": "examples/route-map/index.js",
+  "line": 74,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 18,
+  "title": "Leftover debug output",
+  "file": "examples/params/index.js",
+  "line": 73,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 20,
+  "title": "Leftover debug output",
+  "file": "examples/mvc/index.js",
+  "line": 94,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 22,
+  "title": "Leftover debug output",
+  "file": "examples/mvc/lib/boot.js",
+  "line": 73,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 24,
+  "title": "Leftover debug output",
+  "file": "examples/multi-router/index.js",
+  "line": 17,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 26,
+  "title": "Leftover debug output",
+  "file": "examples/hello-world/index.js",
+  "line": 14,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 28,
+  "title": "Leftover debug output",
+  "file": "examples/error/index.js",
+  "line": 52,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 30,
+  "title": "Leftover debug output",
+  "file": "examples/downloads/index.js",
+  "line": 39,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 32,
+  "title": "Possible hardcoded secret",
+  "file": "examples/cookie-sessions/index.js",
+  "line": 13,
+  "sev": 5,
+  "conf": 0.2,
+  "label": "false",
+  "reason": "placeholder 'manny is cool' in examples/ (rule 4)"
+ },
+ {
+  "corpus": "express",
+  "idx": 34,
+  "title": "Leftover debug output",
+  "file": "examples/content-negotiation/index.js",
+  "line": 45,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 36,
+  "title": "Possible hardcoded secret",
+  "file": "examples/auth/index.js",
+  "line": 50,
+  "sev": 5,
+  "conf": 0.2,
+  "label": "false",
+  "reason": "placeholder password 'foobar' in examples/ (rule 4)"
+ },
+ {
+  "corpus": "express",
+  "idx": 38,
+  "title": "Leftover debug output",
+  "file": "examples/auth/index.js",
+  "line": 133,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 40,
+  "title": "Leftover debug output",
+  "file": "test/res.location.js",
+  "line": 152,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 42,
+  "title": "Leftover debug output",
+  "file": "examples/view-constructor/index.js",
+  "line": 47,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 44,
+  "title": "Leftover debug output",
+  "file": "examples/static-files/index.js",
+  "line": 40,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 46,
+  "title": "Leftover debug output",
+  "file": "examples/static-files/index.js",
+  "line": 42,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "idx": 48,
+  "title": "Possible hardcoded secret",
+  "file": "examples/session/index.js",
+  "line": 19,
+  "sev": 5,
+  "conf": 0.2,
+  "label": "false",
+  "reason": "placeholder 'keyboard cat' in examples/ (rule 4)"
+ },
+ {
+  "corpus": "self",
+  "idx": 0,
+  "title": "Possible hardcoded secret",
+  "file": "packages/vcs/tests/redact.test.ts",
+  "line": 13,
+  "sev": 5,
+  "conf": 0.8,
+  "label": "false",
+  "reason": "synthetic fixture token ghp_0123456789abcdefghij... (rule 4)"
+ },
+ {
+  "corpus": "self",
+  "idx": 8,
+  "title": "Hardcoded local URL",
+  "file": "apps/desktop/src/main/core/server-manager.ts",
+  "line": 81,
+  "sev": 2,
+  "conf": 0.9,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 16,
+  "title": "Suppressed checker",
+  "file": "packages/detect-engine/src/detect.ts",
+  "line": 62,
+  "sev": 2,
+  "conf": 1,
+  "label": "false",
+  "reason": "prose MENTIONING @ts-ignore in a doc comment; nothing suppressed (rule 5)"
+ },
+ {
+  "corpus": "self",
+  "idx": 24,
+  "title": "ReDoS-vulnerable regular expression",
+  "file": "packages/core-graph/src/extractors.ts",
+  "line": 86,
+  "sev": 3,
+  "conf": 0.5,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 32,
+  "title": "ReDoS-vulnerable regular expression",
+  "file": "packages/core-graph/src/extractors.ts",
+  "line": 171,
+  "sev": 3,
+  "conf": 0.5,
+  "label": "false",
+  "reason": "measured flat to n=3200; not backtracking (rule 5)"
+ },
+ {
+  "corpus": "self",
+  "idx": 40,
+  "title": "ReDoS-vulnerable regular expression",
+  "file": "packages/vcs/src/urlSafety.ts",
+  "line": 109,
+  "sev": 3,
+  "conf": 0.5,
+  "label": "false",
+  "reason": "measured flat to n=3200; not backtracking (rule 5)"
+ },
+ {
+  "corpus": "self",
+  "idx": 48,
+  "title": "Hardcoded local URL",
+  "file": "apps/web/tests/fleet.test.ts",
+  "line": 100,
+  "sev": 2,
+  "conf": 0.9,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 56,
+  "title": "Hardcoded local URL",
+  "file": "apps/web/tests/security.test.ts",
+  "line": 126,
+  "sev": 2,
+  "conf": 0.9,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 64,
+  "title": "Possible hardcoded secret",
+  "file": "apps/web/src/lib/settings.ts",
+  "line": 76,
+  "sev": 5,
+  "conf": 0.2,
+  "label": "false",
+  "reason": "'assistant.localApiKey' is a settings path, not a credential (rule 5)"
+ },
+ {
+  "corpus": "self",
+  "idx": 72,
+  "title": "Filesystem path built from a variable",
+  "file": "packages/analysis/src/indexer.ts",
+  "line": 300,
+  "sev": 3,
+  "conf": 0.24499999999999997,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 80,
+  "title": "TODO/FIXME marker",
+  "file": "packages/core-domain/src/fingerprint.ts",
+  "line": 68,
+  "sev": 1,
+  "conf": 1,
+  "label": "false",
+  "reason": "prose about TODOs, not a TODO marker (rule 5)"
+ },
+ {
+  "corpus": "self",
+  "idx": 88,
+  "title": "TODO/FIXME marker",
+  "file": "apps/web/src/lib/agents/specialists.ts",
+  "line": 153,
+  "sev": 1,
+  "conf": 1,
+  "label": "false",
+  "reason": "prose listing 'TODO markers' as a category (rule 5)"
+ },
+ {
+  "corpus": "self",
+  "idx": 96,
+  "title": "Filesystem path built from a variable",
+  "file": "apps/web/src/lib/gitops/timelineStore.ts",
+  "line": 51,
+  "sev": 3,
+  "conf": 0.24499999999999997,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 104,
+  "title": "TODO/FIXME marker",
+  "file": "packages/analysis/tests/rule-context.test.ts",
+  "line": 64,
+  "sev": 1,
+  "conf": 1,
+  "label": "false",
+  "reason": "test comment describing the TODO case (rule 5)"
+ },
+ {
+  "corpus": "self",
+  "idx": 112,
+  "title": "Untyped `any`",
+  "file": "apps/web/tests/churn.test.ts",
+  "line": 32,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 120,
+  "title": "Possible hardcoded secret",
+  "file": "apps/web/tests/fleet.test.ts",
+  "line": 17,
+  "sev": 5,
+  "conf": 0.2,
+  "label": "false",
+  "reason": "synthetic fixture 'test-secret-for-fleet-graph' (rule 4)"
+ },
+ {
+  "corpus": "self",
+  "idx": 128,
+  "title": "TODO/FIXME marker",
+  "file": "apps/web/tests/scoring.test.ts",
+  "line": 35,
+  "sev": 1,
+  "conf": 1,
+  "label": "false",
+  "reason": "prose recounting a scoring example (rule 5)"
+ },
+ {
+  "corpus": "self",
+  "idx": 136,
+  "title": "Possible hardcoded secret",
+  "file": "apps/web/tests/settings.test.ts",
+  "line": 75,
+  "sev": 5,
+  "conf": 0.2,
+  "label": "false",
+  "reason": "synthetic fixture 'sk-ant-carol-key-longer' (rule 4)"
+ },
+ {
+  "corpus": "self",
+  "idx": 144,
+  "title": "Untyped `any`",
+  "file": "apps/web/src/components/TimelineView.tsx",
+  "line": 398,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 152,
+  "title": "Untyped `any`",
+  "file": "apps/desktop/e2e/smoke.test.ts",
+  "line": 61,
+  "sev": 1,
+  "conf": 1,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 160,
+  "title": "Filesystem path built from a variable",
+  "file": "packages/sandbox/src/sandbox.ts",
+  "line": 176,
+  "sev": 3,
+  "conf": 0.24499999999999997,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 168,
+  "title": "Filesystem path built from a variable",
+  "file": ".dependency-cruiser.cjs",
+  "line": 97,
+  "sev": 3,
+  "conf": 0.24499999999999997,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 176,
+  "title": "Filesystem path built from a variable",
+  "file": "packages/vcs/tests/acquire.test.ts",
+  "line": 94,
+  "sev": 3,
+  "conf": 0.24499999999999997,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 184,
+  "title": "Filesystem path built from a variable",
+  "file": "packages/fsx/tests/containment.test.ts",
+  "line": 22,
+  "sev": 3,
+  "conf": 0.24499999999999997,
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "idx": 192,
+  "title": "Filesystem path built from a variable",
+  "file": "packages/fsx/tests/containment.test.ts",
+  "line": 124,
+  "sev": 3,
+  "conf": 0.24499999999999997,
+  "label": "true"
+ }
+]

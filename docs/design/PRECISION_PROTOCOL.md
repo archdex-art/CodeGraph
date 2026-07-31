@@ -101,3 +101,65 @@ Stated up front, not as a caveat afterwards:
 - **Two repositories, one of them our own.** Self-analysis is not representative; the split is
   reported separately for that reason.
 - **Precision on findings the tool DID report** says nothing about what it missed.
+
+
+---
+
+## 6. Result — measured 2026-07-30
+
+Sample drawn by the §2 stride after this document was committed. Full labels with reasons:
+[`precision-sample.json`](./precision-sample.json).
+
+| corpus | precision | 95% CI (Wilson) |
+|---|---|---|
+| `expressjs/express@a371447` | **22/25 = 88%** | 70–96% |
+| this repository | **14/25 = 56%** | 37–73% |
+| **total** | **36/50 = 72%** | **58–83%** |
+
+**P5.3's exit criterion is NOT met.** 0.85 sits outside the interval's centre and only just
+inside its upper bound. Recorded as a failure rather than rounded toward the target.
+
+### Where it fails, per rule
+
+| true/total | rule |
+|---|---|
+| **0/7** | Possible hardcoded secret |
+| **0/4** | TODO/FIXME marker |
+| **0/1** | Suppressed checker |
+| **1/3** | ReDoS-vulnerable regular expression |
+| 16/16 | Leftover debug output |
+| 7/7 | Filesystem path built from a variable |
+| 5/5 | Large file |
+| 3/3 | Hardcoded local URL |
+| 3/3 | Untyped `any` |
+| 1/1 | Regular expression built from a variable |
+
+**The aggregate is misleading and the breakdown is the point.** 35 of 50 findings come from
+rules that were right every time. The failure is concentrated in four rules, and two of them —
+secrets and TODO markers — account for 11 of the 14 false positives.
+
+Both fail the same way: **the rule matches text that DESCRIBES the thing rather than IS the
+thing.** Every false TODO was prose about TODO handling; the false `Suppressed checker` was a
+doc comment explaining `@ts-ignore`. This repository discusses its own detection rules
+constantly, which is why self-precision (56%) is so much worse than express (88%) — an
+unrepresentative corpus, exactly as §5 warned before the numbers existed.
+
+Secrets fail differently: every match was a synthetic test fixture or an examples-directory
+placeholder. The value-shape signal added earlier downgrades their confidence but still reports
+them, and precision counts reports.
+
+### One finding was true and mattered
+
+`#28`, a ReDoS report against this repository's own `IMPORT_RE` in
+`packages/core-graph/src/extractors.ts`, is real. Measured: **5.8ms at n=200, 141ms at n=800,
+5,583ms at n=3200** — superlinear, against a regex applied to every line of every repository
+CodeGraph indexes. A crafted source file stalls the indexer. Found because rule 5 required
+measuring the claim rather than accepting or dismissing the rule's reputation.
+
+### What this changes
+
+- P5.3 stays open, now with a number instead of an assumption.
+- The next work on it is not "raise precision" in general — it is those four rules, and mostly
+  the two that confuse a mention for an occurrence.
+- The interval is wide (58–83%) at n=50. Any decision resting on the exact value needs a
+  bigger sample and a second labeller, per §5.
