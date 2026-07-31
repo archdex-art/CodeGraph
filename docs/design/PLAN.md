@@ -283,6 +283,23 @@ stores and ignores.
 > **Decide P5's real exit criterion before building it.** "Precision >= 0.85" is already met
 > and would pass without any work. The honest open question is recall, and nothing measured so
 > far says typed extraction answers it.
+>
+> **Recall addressed 2026-07-30, and it was not a resolution problem at all.** Call-site
+> attribution required a named enclosing function, so **2,313 of 5,025 resolved calls (46%)**
+> were discarded before resolution mattered - the target was already resolved, and then thrown
+> away for want of a caller. Source is now a total function: module scope is a node, because a
+> module body executes on import (`<module>` in Python, `<clinit>` on the JVM).
+>
+> | | before | after |
+> |---|---|---|
+> | call edges (this repo) | 1,914 | **2,529** |
+> | symbols with no inbound edge | 612 / 1,303 (47%) | **411 / 1,304 (32%)** |
+> | functions reported dead | 276 | **146** |
+> | call edges (express) | 38 | **261** |
+>
+> Sampling says roughly 38% of the remaining unreferenced set has real call sites, so recall is
+> improved, not finished. What is settled is the diagnosis: **the bottleneck was attribution,
+> not resolution**, and typed extraction would not have moved either number.
 
 ### 5.3 Calibrate against a defect corpus
 

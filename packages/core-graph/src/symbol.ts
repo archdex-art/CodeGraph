@@ -26,7 +26,13 @@ export type SymbolKind =
   | "enum"
   | "struct"
   | "constant"
-  | "component";
+  | "component"
+  /**
+   * A module's top-level body. Synthetic, created only for files that make a call outside any
+   * named symbol - which really does execute on import, so it is a caller like any other.
+   * Kept out of dead-code analysis by kind: a module is never dead.
+   */
+  | "module";
 
 export interface CodeSymbol {
   id: string; // stable: `${file}#${name}@${line}`
