@@ -55,3 +55,5 @@ export {
   pillarsFrom,
   weightWithinPillar,
 } from "./models";
+export { toSarif, sarifRuleId } from "./sarif";
+export type { SarifLog, SarifOptions } from "./sarif";

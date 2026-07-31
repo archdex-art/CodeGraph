@@ -76,7 +76,7 @@ with explicit contracts between them.
 | **Security** | No path escape, no SSRF, no token leak, no cross-tenant read | Capability-scoped filesystem handles, normalised IP validation, session-only credentials, `owner_id` predicate pushed into every query |
 | **Testability** | Every stage runnable in isolation from a fixture directory | Pure functions over explicit inputs; no module-level mutable state; injected clock/fs/git |
 | **Extensibility** | New rule = one file + one test; new language = one package | Registry pattern with declarative rule manifests |
-| **Interoperability** | Results consumable by third-party tooling | SARIF 2.1.0 **export adapter** at the boundary; CodeGraph's `Finding` stays the internal model (ADR-006) |
+| **Interoperability** | Results consumable by third-party tooling | SARIF 2.1.0 **export adapter** at the boundary; CodeGraph's `Finding` stays the internal model (ADR-006). **Implemented 2026-07-30**: `toSarif` in `@codegraph/analysis-model`, served by `GET /api/repos/:id/sarif`. No `rank` and no `partialFingerprints` are emitted - see the module comment for why each omission is deliberate |
 
 ---
 
