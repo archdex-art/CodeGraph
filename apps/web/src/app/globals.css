@@ -1,30 +1,261 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   CodeGraph — "Instrument"
+
+   The product measures a codebase and shows you the reading. So the surface is
+   an instrument, not a dashboard: an ink field, one phosphor signal colour, a
+   calibration grid, and numbers set in mono because numbers are the point.
+
+   Three colours carry meaning and nothing else does:
+     signal   — a reading, a result, the thing you came for
+     violet   — structure: graph nodes, relationships
+     coral    — risk, and only risk
+   A fourth accent would make all four decorative.
+   ============================================================================ */
+
 :root {
-  --background: #050505;
-  --foreground: #e5e7eb;
+  /* Ink. Not #000: pure black kills the depth that separates layered surfaces,
+     and on OLED it smears during scroll. This is black with a trace of green,
+     which makes the phosphor read as emitted rather than painted on. */
+  --ink-900: #06080a;
+  --ink-850: #080b0e;
+  --ink-800: #0b0f13;
+  --ink-700: #11161b;
+  --ink-600: #182027;
+
+  /* Phosphor. The single accent. Chartreuse rather than the usual terminal
+     green or SaaS purple — it reads as an instrument trace, and it is bright
+     enough at 4.5:1 on ink to carry text, not just glow. */
+  --signal-400: #d4ff5c;
+  --signal-500: #c6f24e;
+  --signal-600: #a8d332;
+  --signal-glow: rgba(198, 242, 78, 0.14);
+
+  --violet-400: #a99cff;
+  --violet-500: #8b7fff;
+  --coral-400: #ff8272;
+  --coral-500: #ff6b57;
+  --amber-400: #ffc95c;
+
+  --text-primary: #e8edf2;
+  --text-secondary: #93a1ae;
+  /* 4.82:1 on --ink-900. Was #5d6b78 at 3.67:1, which is AA for large text only —
+     and this token's whole job is 11–12px helper lines and eyebrows, i.e. exactly
+     the sizes the 4.5 threshold exists for. Raised until it cleared, measured, not
+     eyeballed. */
+  --text-muted: #707e8b;
+  /* 2.05:1 — DECORATIVE ONLY. Graph leaf nodes and hairline glyphs. Never put text
+     a user has to read in this colour; use --text-muted. */
+  --text-faint: #3a454f;
+
+  --line-soft: rgba(232, 237, 242, 0.06);
+  --line: rgba(232, 237, 242, 0.10);
+  --line-strong: rgba(232, 237, 242, 0.18);
+
+  --background: var(--ink-900);
+  --foreground: var(--text-primary);
+
+  /* One easing for everything that moves. Expo-out: leaves fast, arrives slow,
+     which is what makes motion feel like physics instead of a timer. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-ink-900: var(--ink-900);
+  --color-ink-850: var(--ink-850);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-signal-400: var(--signal-400);
+  --color-signal-500: var(--signal-500);
+  --color-signal-600: var(--signal-600);
+  --color-violet-400: var(--violet-400);
+  --color-violet-500: var(--violet-500);
+  --color-coral-400: var(--coral-400);
+  --color-coral-500: var(--coral-500);
+  --color-amber-400: var(--amber-400);
+  --color-tx: var(--text-primary);
+  --color-tx-2: var(--text-secondary);
+  --color-tx-3: var(--text-muted);
+  --color-tx-4: var(--text-faint);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-instrument);
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Anchored sections must clear the sticky header or the heading lands under it. */
+  scroll-padding-top: 5rem;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, Arial, Helvetica, sans-serif;
+  background: var(--ink-900);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Animated dashed flow for highlighted node-graph edges (Blender-style). */
+::selection {
+  background: var(--signal-500);
+  color: var(--ink-900);
+}
+
+/* Focus is never removed, only restyled. Keyboard users are the ones who most
+   need to know where they are. */
+:focus-visible {
+  outline: 2px solid var(--signal-500);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* --- Display type ---------------------------------------------------------
+   Instrument Serif carries the headlines; its italic is the emphasis device.
+   Optical sizing matters at display sizes: the default tracking is set for
+   body copy and looks loose above ~48px. */
+.font-display {
+  font-family: var(--font-instrument), ui-serif, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+.font-display em,
+.font-display .em {
+  font-style: italic;
+  color: var(--signal-500);
+  /* The italic is a different cut, not a slant, so it needs its own tracking. */
+  letter-spacing: -0.01em;
+}
+
+/* Eyebrow: the small caps label above a section. Mono, because it behaves like
+   an instrument's channel label. */
+/* Numbers are the product. Tabular figures so a column of them aligns and a
+   counting animation does not reflow its own container. */
+.tnum {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* --- Surfaces ------------------------------------------------------------- */
+
+/* The calibration grid. Two layers at different pitches so it reads as a
+   measuring surface rather than graph paper, masked to fade at the edges
+   because a grid that runs to the viewport edge looks like a background image
+   instead of a field the content sits on. */
+.grid-field {
+  background-image:
+    linear-gradient(to right, var(--line-soft) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line-soft) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 75%);
+}
+
+/* Film grain. Kept as an inline SVG so it costs no request, and at 0.02 alpha
+   it is invisible as texture but stops large ink areas from banding on 8-bit
+   panels — which is the actual reason it is here. */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.022;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/**
+ * Component classes live in `@layer components` DELIBERATELY.
+ *
+ * Unlayered CSS beats every cascade layer, so an unlayered `.panel` with
+ * `background`/`border` shorthands silently outranks Tailwind's `bg-*` and
+ * `border-*` utilities — which sit in `@layer utilities`. The symptom is not an
+ * error: `hover:border-[…]` on a `.panel` just does nothing, and you assume you
+ * mistyped the class. Found by a real dead hover state on the dashboard cards.
+ *
+ * Inside `components`, utilities win, which is the precedence anyone writing
+ * `class="panel hover:border-…"` already assumes they have.
+ */
+@layer components {
+  .panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0));
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+}
+
+/* Hairline that fades at both ends — a rule that stops rather than hits a wall. */
+.rule-fade {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line-strong) 20%, var(--line-strong) 80%, transparent);
+}
+
+/* --- Motion ---------------------------------------------------------------
+   Keyframes used by CSS-only effects. Anything interactive or scroll-driven
+   uses Framer Motion instead, so that reduced-motion is handled in one place. */
+
+@keyframes sweep {
+  0% { transform: translateY(-100%); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(220%); opacity: 0; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(2%, -2%); }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-sweep { animation: sweep 4.5s var(--ease-in-out-quint) infinite; }
+.animate-drift { animation: drift 18s ease-in-out infinite; }
+.animate-marquee { animation: marquee 38s linear infinite; }
+
+/* Existing behaviour, preserved: animated dashed flow for highlighted
+   node-graph edges. Retimed to the shared easing vocabulary. */
 .ng-flow {
   stroke-dasharray: 7 6;
   animation: ng-dash 0.6s linear infinite;
 }
 @keyframes ng-dash {
-  to {
-    stroke-dashoffset: -13;
+  to { stroke-dashoffset: -13; }
+}
+
+/* One global honour of the OS setting. Motion here is decorative on top of a
+   page that reads fine static, so it is switched off wholesale rather than
+   softened — a user who asks for no motion means it. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }

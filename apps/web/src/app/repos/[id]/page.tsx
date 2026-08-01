@@ -2,11 +2,11 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, Gauge, Boxes, Network, FileWarning, Share2, LayoutGrid, CircleDot, BrainCircuit, Bot, Code2, AlertTriangle, History } from "lucide-react";
 import { fetchRepo } from "@/lib/api";
 import type { RepoDetail, Dimension } from "@/lib/types";
 import { DIMENSION_META, PILLAR_META, pillarsFrom } from "@/lib/types";
+import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
 import { NetworkView } from "@/components/NetworkView";
 import { CirclePackView } from "@/components/CirclePackView";
 import { ArchitectureView } from "@/components/ArchitectureView";
@@ -17,18 +17,30 @@ import { TimelineView } from "@/components/TimelineView";
 
 type ViewMode = "architecture" | "pack" | "network" | "intel" | "agents" | "editor" | "timeline";
 
-const SEV_COLOR: Record<number, string> = {
-  5: "text-rose-400 bg-rose-500/10 border-rose-500/20",
-  4: "text-orange-400 bg-orange-500/10 border-orange-500/20",
-  3: "text-amber-400 bg-amber-500/10 border-amber-500/20",
-  2: "text-yellow-300 bg-yellow-500/10 border-yellow-500/20",
-  1: "text-gray-400 bg-white/5 border-white/10",
+/**
+ * Severity carries a WORD as well as a colour.
+ *
+ * This list is the page's action queue, and a queue whose priority is encoded
+ * only in hue is unreadable to anyone who cannot separate coral from amber —
+ * roughly one in twelve men. The colour is the fast scan; the label is the fact.
+ */
+const SEVERITY: Record<number, { label: string; tone: string; chip: string }> = {
+  5: { label: "Critical", tone: "text-[var(--coral-400)]", chip: "border-[var(--coral-500)]/40 bg-[var(--coral-500)]/10" },
+  4: { label: "High", tone: "text-[var(--coral-400)]", chip: "border-[var(--coral-500)]/30 bg-[var(--coral-500)]/[0.06]" },
+  3: { label: "Medium", tone: "text-[var(--amber-400)]", chip: "border-[var(--amber-400)]/30 bg-[var(--amber-400)]/[0.06]" },
+  2: { label: "Low", tone: "text-[var(--text-muted)]", chip: "border-[var(--line)] bg-[var(--ink-700)]" },
+  1: { label: "Info", tone: "text-[var(--text-muted)]", chip: "border-[var(--line)] bg-[var(--ink-700)]" },
 };
 
-function scoreColor(s: number): string {
-  if (s >= 80) return "#34d399";
-  if (s >= 60) return "#fbbf24";
-  return "#fb7185";
+/**
+ * A reading and the word for it. Signal is the only "good" colour on the
+ * surface, so a healthy score is the one place it belongs; amber and coral are
+ * warning and risk respectively and mean nothing else anywhere on the page.
+ */
+function band(s: number): { color: string; label: string } {
+  if (s >= 80) return { color: "var(--signal-500)", label: "Healthy" };
+  if (s >= 60) return { color: "var(--amber-400)", label: "Watch" };
+  return { color: "var(--coral-500)", label: "At risk" };
 }
 
 export default function RepoPage({ params }: { params: Promise<{ id: string }> }) {
@@ -53,15 +65,24 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
 
   if (notFound) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-24 text-center text-gray-400">
-        Repository not found. <Link href="/dashboard" className="text-purple-400">Back to dashboard</Link>
+      <div className="mx-auto max-w-4xl px-6 py-24 text-center">
+        <p className="eyebrow mb-3">404</p>
+        <p className="text-[var(--text-secondary)]">
+          Repository not found.{" "}
+          <Link
+            href="/dashboard"
+            className="cursor-pointer text-[var(--signal-500)] underline decoration-[var(--signal-500)]/30 underline-offset-4 transition-colors duration-200 hover:decoration-[var(--signal-500)]"
+          >
+            Back to dashboard
+          </Link>
+        </p>
       </div>
     );
   }
   if (!repo) {
     return (
-      <div className="flex items-center gap-2 text-gray-500 py-24 justify-center">
-        <Loader2 className="w-4 h-4 animate-spin" /> Loading report…
+      <div className="flex items-center justify-center gap-2.5 py-24 text-sm text-[var(--text-muted)]">
+        <Loader2 className="h-4 w-4 animate-spin text-[var(--signal-500)]" /> Loading report…
       </div>
     );
   }
@@ -83,123 +104,163 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
    */
   const overall = surfaced?.score ?? repo.score ?? 0;
   const wide = view === "editor";
+  const reading = band(overall);
 
   return (
     <div className={`mx-auto px-6 py-12 ${wide ? "max-w-[1600px]" : "max-w-5xl"}`}>
-      <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-white mb-6 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Dashboard
+      <Link
+        href="/dashboard"
+        className="mb-8 inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text-primary)]"
+      >
+        <ArrowLeft className="h-4 w-4" /> Dashboard
       </Link>
 
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">{repo.name}</h1>
-          {repo.sourceType === "git" ? (
-            <a href={repo.url} target="_blank" rel="noreferrer" className="text-sm text-gray-500 font-mono hover:text-purple-300">{repo.url}</a>
-          ) : (
-            <span className="text-sm text-gray-500 font-mono">local · {repo.url}</span>
-          )}
-        </div>
+      <div className="mb-10">
+        <p className="eyebrow mb-2.5">Repository report</p>
+        <h1 className="font-display text-4xl tracking-tight text-[var(--text-primary)] sm:text-5xl">{repo.name}</h1>
+        {repo.sourceType === "git" ? (
+          <a
+            href={repo.url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-block cursor-pointer font-mono text-[13px] text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--signal-500)]"
+          >
+            {repo.url}
+          </a>
+        ) : (
+          <span className="mt-2 inline-block font-mono text-[13px] text-[var(--text-muted)]">local · {repo.url}</span>
+        )}
       </div>
 
-      {/* Score + graph stats */}
-      <div className="grid lg:grid-cols-5 gap-6 mb-6">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="lg:col-span-2 rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/10 to-blue-500/5 p-8 flex flex-col items-center justify-center text-center"
-        >
-          <Gauge className="w-7 h-7 text-purple-300 mb-3" />
-          <div className="text-6xl font-bold tracking-tight" style={{ color: scoreColor(overall) }}>
-            {overall}<span className="text-2xl text-gray-600">/100</span>
-          </div>
-          <div className="mt-2 text-sm text-gray-400">Codebase Health Score</div>
-          {/* Naming what the number measures. It is the defect-risk pillar alone (PLAN.md
-              §5.1) — maintainability used to be 22% of it, which made the headline partly a
-              tidiness score while being read as risk. */}
-          <div className="mt-1 text-[11px] text-gray-500">
-            {PILLAR_META.defect_risk.question}
-          </div>
-          {pillars.some((p) => !PILLAR_META[p.pillar].surfaced) && (
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-[11px]">
-              {pillars
-                .filter((p) => !PILLAR_META[p.pillar].surfaced)
-                .map((p) => (
-                  <span key={p.pillar} className="text-gray-500" title={PILLAR_META[p.pillar].question}>
-                    {PILLAR_META[p.pillar].label}{" "}
-                    {/* Not folded into the headline, and not rendered as a pass when nothing
-                        was measured — an unscored pillar reads "n/a", never 100. */}
-                    <span className={p.score === null ? "text-gray-600" : "font-mono text-gray-300"}>
-                      {p.score === null ? "n/a" : p.score}
-                    </span>
-                  </span>
-                ))}
-            </div>
-          )}
-          {/* ADR-008: the score reports its own coverage, so one computed over a partial scan
-              cannot masquerade as one computed over the whole repository. */}
-          <div className="mt-3 text-[11px] text-gray-500">
-            {repo.coverage ? (
-              <span
-                title={
-                  `${repo.coverage.filesAnalysed} of ${repo.coverage.filesSeen} files scanned · ` +
-                  `${repo.coverage.skippedNoLanguage} unsupported language · ` +
-                  `${repo.coverage.skippedTooLarge} over the size cap · ` +
-                  `${repo.coverage.skippedUnreadable} unreadable`
-                }
-              >
-                Scored over{" "}
-                <span className="font-mono text-gray-300">
-                  {repo.coverage.filesSeen === 0
-                    ? "—"
-                    : `${Math.round((repo.coverage.filesAnalysed / repo.coverage.filesSeen) * 100)}%`}
-                </span>{" "}
-                of files · {repo.coverage.locAnalysed.toLocaleString()} LOC
-                {/* A truncated walk is the one case where the denominator itself is unknown,
-                    so it is called out rather than folded into a percentage. */}
-                {repo.coverage.capHit && (
-                  <span className="text-amber-400"> · scan hit the file cap</span>
-                )}
-              </span>
-            ) : (
-              // Absent coverage is UNKNOWN, never 100%. Repos indexed before ADR-008 land here.
-              <span className="text-gray-600" title="This repo was indexed before coverage was recorded. Re-index to measure it.">
-                Coverage not recorded for this index
-              </span>
-            )}
-          </div>
-        </motion.div>
+      {/* The hero readout, then the graph census beside it. */}
+      <div className="mb-6 grid gap-6 lg:grid-cols-5">
+        <Reveal className="lg:col-span-2">
+          <div className="panel relative h-full overflow-hidden p-7">
+            {/* The light comes off the numeral, not the corner: the glow is
+                positioned behind the reading and tinted by its band, so the
+                panel looks lit by the measurement rather than decorated. */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-6 -left-10 h-56 w-56 rounded-full"
+              style={{ background: `radial-gradient(circle, color-mix(in oklab, ${reading.color} 11%, transparent), transparent 68%)` }}
+            />
+            <div className="relative">
+              <div className="mb-6 flex items-center gap-2">
+                <Gauge className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                <span className="eyebrow">Codebase health score</span>
+              </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
-          className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-3"
-        >
-          <Stat icon={<Network className="w-4 h-4 text-cyan-400" />} label="Graph nodes" value={repo.graphStats?.nodes || 0} />
-          <Stat icon={<Boxes className="w-4 h-4 text-purple-400" />} label="Graph edges" value={repo.graphStats?.edges || 0} />
+              <div className="flex items-end gap-2">
+                <div className="leading-[0.85]" style={{ color: reading.color }}>
+                  <CountUp to={overall} className="tnum text-[72px] font-normal" />
+                </div>
+                <span className="tnum pb-1.5 text-xl text-[var(--text-faint)]">/100</span>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ background: reading.color }}
+                  aria-hidden="true"
+                />
+                {/* The band is named, not just coloured. */}
+                <span className="text-[13px] font-medium" style={{ color: reading.color }}>{reading.label}</span>
+                {/* Naming what the number measures. It is the defect-risk pillar alone (PLAN.md
+                    §5.1) — maintainability used to be 22% of it, which made the headline partly a
+                    tidiness score while being read as risk. */}
+                <span className="text-[13px] text-[var(--text-muted)]">{PILLAR_META.defect_risk.question}</span>
+              </div>
+
+              {pillars.some((p) => !PILLAR_META[p.pillar].surfaced) && (
+                <>
+                  <div className="rule-fade my-5" />
+                  <div className="flex flex-wrap gap-x-6 gap-y-2">
+                    {pillars
+                      .filter((p) => !PILLAR_META[p.pillar].surfaced)
+                      .map((p) => (
+                        <span key={p.pillar} className="flex items-baseline gap-2" title={PILLAR_META[p.pillar].question}>
+                          <span className="eyebrow">{PILLAR_META[p.pillar].label}</span>
+                          {/* Not folded into the headline, and not rendered as a pass when nothing
+                              was measured — an unscored pillar reads "n/a", never 100. */}
+                          <span className={`tnum text-[13px] ${p.score === null ? "text-[var(--text-faint)]" : "text-[var(--text-secondary)]"}`}>
+                            {p.score === null ? "n/a" : p.score}
+                          </span>
+                        </span>
+                      ))}
+                  </div>
+                </>
+              )}
+
+              {/* ADR-008: the score reports its own coverage, so one computed over a partial scan
+                  cannot masquerade as one computed over the whole repository. */}
+              <div className="mt-5 text-[11.5px] leading-relaxed text-[var(--text-muted)]">
+                {repo.coverage ? (
+                  <span
+                    title={
+                      `${repo.coverage.filesAnalysed} of ${repo.coverage.filesSeen} files scanned · ` +
+                      `${repo.coverage.skippedNoLanguage} unsupported language · ` +
+                      `${repo.coverage.skippedTooLarge} over the size cap · ` +
+                      `${repo.coverage.skippedUnreadable} unreadable`
+                    }
+                  >
+                    Scored over{" "}
+                    <span className="tnum text-[var(--text-secondary)]">
+                      {repo.coverage.filesSeen === 0
+                        ? "—"
+                        : `${Math.round((repo.coverage.filesAnalysed / repo.coverage.filesSeen) * 100)}%`}
+                    </span>{" "}
+                    of files · <span className="tnum">{repo.coverage.locAnalysed.toLocaleString()}</span> LOC
+                    {/* A truncated walk is the one case where the denominator itself is unknown,
+                        so it is called out rather than folded into a percentage. */}
+                    {repo.coverage.capHit && (
+                      <span className="text-[var(--amber-400)]"> · scan hit the file cap</span>
+                    )}
+                  </span>
+                ) : (
+                  // Absent coverage is UNKNOWN, never 100%. Repos indexed before ADR-008 land here.
+                  <span className="text-[var(--text-faint)]" title="This repo was indexed before coverage was recorded. Re-index to measure it.">
+                    Coverage not recorded for this index
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </Reveal>
+
+        <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:col-span-3" delay={0.1}>
+          <Stat icon={<Network className="h-3.5 w-3.5 text-[var(--violet-400)]" />} label="Graph nodes" value={repo.graphStats?.nodes || 0} />
+          <Stat icon={<Boxes className="h-3.5 w-3.5 text-[var(--violet-400)]" />} label="Graph edges" value={repo.graphStats?.edges || 0} />
           <Stat label="Files" value={repo.graphStats?.files || 0} />
           <Stat label="Lines of code" value={repo.loc} />
           <Stat label="Directories" value={repo.graphStats?.dirs || 0} />
           <Stat label="Dependencies" value={repo.graphStats?.dependencies || 0} />
           <Stat label="Issues found" value={repo.issues.length} />
           <Stat label="Languages" value={repo.languages?.length || 0} />
-        </motion.div>
+        </Stagger>
       </div>
 
       {repo.symbolGraph?.truncated && (
-        <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-start gap-3">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-200">
-            <span className="font-semibold">Partial results.</span> This repository has more symbols than the {repo.symbolGraph.stats.symbols.toLocaleString()}-symbol
-            analysis cap — the health score, agent findings, and code graph below only reflect the first {repo.symbolGraph.stats.symbols.toLocaleString()} symbols indexed, not the whole codebase.
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-[var(--amber-400)]/25 bg-[var(--amber-400)]/[0.05] px-4 py-3.5">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--amber-400)]" />
+          <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+            <span className="font-medium text-[var(--amber-400)]">Partial results.</span> This repository has more symbols than the{" "}
+            <span className="tnum">{repo.symbolGraph.stats.symbols.toLocaleString()}</span>-symbol
+            analysis cap — the health score, agent findings, and code graph below only reflect the first{" "}
+            <span className="tnum">{repo.symbolGraph.stats.symbols.toLocaleString()}</span> symbols indexed, not the whole codebase.
           </p>
         </div>
       )}
 
       {/* Codebase visualization (3 views) */}
       <div className="mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-            <Share2 className="w-4 h-4 text-cyan-400" /> Codebase intelligence
-          </h2>
-          <div className="inline-flex flex-wrap rounded-lg border border-white/10 bg-[#0a0a0a] p-1 text-sm">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="eyebrow mb-1.5 flex items-center gap-2">
+              <Share2 className="h-3 w-3" /> Channel
+            </p>
+            <h2 className="font-display text-2xl tracking-tight text-[var(--text-primary)]">Codebase intelligence</h2>
+          </div>
+          <div className="inline-flex flex-wrap gap-1 rounded-xl border border-[var(--line)] bg-[var(--ink-850)] p-1">
             <ViewTab active={view === "architecture"} onClick={() => selectView("architecture")} icon={<LayoutGrid className="w-4 h-4" />} label="Architecture" />
             <ViewTab active={view === "pack"} onClick={() => selectView("pack")} icon={<CircleDot className="w-4 h-4" />} label="Circle pack" />
             <ViewTab active={view === "network"} onClick={() => selectView("network")} icon={<Network className="w-4 h-4" />} label="Network" />
@@ -267,43 +328,50 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
       {view !== "editor" && (
         <>
           {/* Dimensions */}
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 mb-6">
-            <h2 className="text-sm font-semibold text-white mb-4">Score breakdown</h2>
-            <div className="space-y-4">
-              {repo.dimensions.map((d, i) => {
+          <div className="panel mb-6 p-6">
+            <p className="eyebrow mb-1.5">Breakdown</p>
+            <h2 className="font-display mb-5 text-xl tracking-tight text-[var(--text-primary)]">Score breakdown</h2>
+            <Stagger className="space-y-4">
+              {repo.dimensions.map((d) => {
                 const meta = DIMENSION_META[d.dimension as Dimension];
+                const dim = band(d.score);
                 return (
-                  <div key={d.dimension}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-300">{meta.label} <span className="text-gray-600 text-xs">· {d.issueCount} issues · weight {Math.round(meta.weight * 100)}%</span></span>
-                      <span className="font-mono text-gray-400">{d.score}</span>
+                  <StaggerItem key={d.dimension}>
+                    <div className="mb-2 flex items-baseline justify-between gap-4">
+                      <span className="text-sm text-[var(--text-primary)]">
+                        {meta.label}{" "}
+                        <span className="text-xs text-[var(--text-muted)]">
+                          · <span className="tnum">{d.issueCount}</span> issues · weight{" "}
+                          <span className="tnum">{Math.round(meta.weight * 100)}%</span>
+                        </span>
+                      </span>
+                      <span className="tnum text-sm" style={{ color: dim.color }}>{d.score}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }} animate={{ width: `${d.score}%` }}
-                        transition={{ duration: 0.7, delay: i * 0.05 }}
-                        className="h-full rounded-full" style={{ background: meta.color }}
-                      />
+                    {/* The rail is a measuring track, so it keeps its full width
+                        visible and the fill reports against it. */}
+                    <div className="h-1.5 overflow-hidden rounded-full bg-[var(--ink-700)]">
+                      <div className="h-full rounded-full" style={{ width: `${d.score}%`, background: dim.color }} />
                     </div>
-                  </div>
+                  </StaggerItem>
                 );
               })}
-            </div>
+            </Stagger>
           </div>
 
           {/* Languages */}
           {repo.languages && repo.languages.length > 0 && (
-            <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 mb-6">
-              <h2 className="text-sm font-semibold text-white mb-4">Languages</h2>
+            <div className="panel mb-6 p-6">
+              <p className="eyebrow mb-1.5">Composition</p>
+              <h2 className="font-display mb-5 text-xl tracking-tight text-[var(--text-primary)]">Languages</h2>
               <div className="flex flex-wrap gap-2">
-                {repo.languages.slice(0, 3).map((l: any) => (
-                  <span key={l.language} className="text-xs px-3 py-1 rounded-full border border-white/10 text-gray-300">
-                    {l.language} <span className="text-gray-600">· {l.loc.toLocaleString()} LOC</span>
+                {repo.languages.slice(0, 3).map((l) => (
+                  <span key={l.language} className="rounded-full border border-[var(--line)] bg-[var(--ink-800)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+                    {l.language} <span className="tnum text-[var(--text-muted)]">· {l.loc.toLocaleString()} LOC</span>
                   </span>
                 ))}
                 {repo.languages.length > 3 && (
-                  <span className="text-xs px-3 py-1 rounded-full border border-white/5 text-gray-500">
-                    +{repo.languages.length - 3} more
+                  <span className="rounded-full border border-[var(--line-soft)] px-3 py-1.5 text-xs text-[var(--text-muted)]">
+                    +<span className="tnum">{repo.languages.length - 3}</span> more
                   </span>
                 )}
               </div>
@@ -311,30 +379,40 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
           )}
 
           {/* Top issues */}
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6">
-            <h2 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
-              <FileWarning className="w-4 h-4 text-amber-400" /> Top issues by impact
-            </h2>
-            <p className="text-xs text-gray-600 mb-4">Ranked by severity × blast radius (graph fan-in).</p>
+          <div className="panel p-6">
+            <p className="eyebrow mb-1.5 flex items-center gap-2">
+              <FileWarning className="h-3 w-3" /> Findings
+            </p>
+            <h2 className="font-display text-xl tracking-tight text-[var(--text-primary)]">Top issues by impact</h2>
+            <p className="mt-1 mb-5 text-xs text-[var(--text-muted)]">Ranked by severity × blast radius (graph fan-in).</p>
             {repo.issues.length === 0 ? (
-              <p className="text-sm text-emerald-400">No issues detected. Clean codebase.</p>
+              <p className="flex items-center gap-2.5 text-sm text-[var(--signal-500)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--signal-500)]" aria-hidden="true" />
+                No issues detected. Clean codebase.
+              </p>
             ) : (
-              <div className="divide-y divide-white/5">
-                {repo.issues.slice(0, 40).map((iss) => (
-                  <div key={iss.id} className="py-3 flex items-start gap-3">
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border shrink-0 mt-0.5 ${SEV_COLOR[iss.severity]}`}>
-                      S{iss.severity}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm text-gray-200">{iss.title}</div>
-                      <div className="text-xs text-gray-600 font-mono truncate">
-                        {iss.file}{iss.line > 1 ? `:${iss.line}` : ""}
+              <ul className="divide-y divide-[var(--line-soft)]">
+                {repo.issues.slice(0, 40).map((iss) => {
+                  const sev = SEVERITY[iss.severity] ?? SEVERITY[1];
+                  return (
+                    <li key={iss.id} className="flex items-start gap-3 py-3">
+                      {/* Colour AND word: S-number for the scan, label for the fact. */}
+                      <span className={`mt-0.5 shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium tracking-[0.08em] uppercase ${sev.chip} ${sev.tone}`}>
+                        <span className="tnum">S{iss.severity}</span> {sev.label}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-[var(--text-primary)]">{iss.title}</div>
+                        <div className="truncate font-mono text-xs text-[var(--text-muted)]">
+                          {iss.file}{iss.line > 1 ? `:${iss.line}` : ""}
+                        </div>
                       </div>
-                    </div>
-                    <span className="text-[10px] text-gray-600 shrink-0 mt-1">×{iss.blastRadius} blast</span>
-                  </div>
-                ))}
-              </div>
+                      <span className="mt-1 shrink-0 text-[10px] text-[var(--text-muted)]">
+                        <span className="tnum">×{iss.blastRadius}</span> blast
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
         </>
@@ -345,10 +423,15 @@ export default function RepoPage({ params }: { params: Promise<{ id: string }> }
 
 function Stat({ icon, label, value }: { icon?: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
-      <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1">{icon}{label}</div>
-      <div className="text-xl font-bold text-white">{value.toLocaleString()}</div>
-    </div>
+    <StaggerItem className="panel p-4">
+      {/* Fixed label height so a two-line label ("Graph nodes") does not push
+          its number out of line with the single-line tiles beside it. */}
+      <div className="mb-2 flex min-h-9 items-start gap-1.5">
+        {icon}
+        <span className="eyebrow">{label}</span>
+      </div>
+      <div className="tnum text-xl text-[var(--text-primary)]">{value.toLocaleString()}</div>
+    </StaggerItem>
   );
 }
 
@@ -358,16 +441,23 @@ function ViewTab({ active, onClick, icon, label }: { active: boolean; onClick: (
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${active ? "bg-white text-black" : "text-gray-400 hover:text-white"}`}
+      aria-pressed={active}
+      className={`relative flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-3 text-[13px] font-medium transition-colors duration-200 ${
+        active
+          ? "bg-[var(--ink-600)] text-[var(--text-primary)]"
+          : "text-[var(--text-secondary)] hover:bg-[var(--ink-700)] hover:text-[var(--text-primary)]"
+      }`}
     >
-      {icon}
+      <span className={active ? "text-[var(--signal-500)]" : "text-[var(--text-muted)]"}>{icon}</span>
       <span className="hidden sm:inline">{label}</span>
+      {/* The selected channel is marked by a signal hairline, not just a fill. */}
+      {active && <span className="absolute inset-x-2.5 bottom-1 h-px bg-[var(--signal-500)]" aria-hidden="true" />}
     </button>
   );
 }
 
 function Empty({ msg }: { msg: string }) {
   return (
-    <p className="text-sm text-gray-600 border border-dashed border-white/10 rounded-xl p-10 text-center">{msg}</p>
+    <p className="rounded-xl border border-dashed border-[var(--line)] p-10 text-center text-sm text-[var(--text-muted)]">{msg}</p>
   );
 }

@@ -68,11 +68,25 @@ export function proxy(req: NextRequest) {
     if (!isAllowedOwnerLogin(session.login)) {
       if (isApi) return NextResponse.json({ error: "This deployment is private to its owner." }, { status: 403 });
       return new NextResponse(
-        "<!doctype html><html><body style=\"font-family:system-ui;background:#050505;color:#e5e5e5;" +
-          "display:flex;align-items:center;justify-content:center;height:100vh;margin:0\">" +
-          "<div style=\"text-align:center\"><h1>Access Restricted</h1>" +
-          "<p>This CodeGraph instance is private to its owner's GitHub account.</p></div></body></html>",
-        { status: 403, headers: { "Content-Type": "text/html" } },
+        // Inline, self-contained HTML: this runs in middleware, before any React or
+        // stylesheet exists, so the tokens have to be literals. Kept in step with
+        // globals.css by hand — for a gated visitor this is the FIRST and possibly only
+        // screen they ever see, and the old palette here made it look like a different
+        // product's error page.
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+          '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+          "<title>CodeGraph — access restricted</title></head>" +
+          '<body style="font-family:ui-sans-serif,system-ui,sans-serif;background:#06080a;color:#e8edf2;' +
+          'display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px">' +
+          '<div style="text-align:center;max-width:26rem">' +
+          '<div style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.18em;' +
+          'text-transform:uppercase;color:#707e8b;margin-bottom:14px">Access restricted</div>' +
+          '<h1 style="font-size:1.6rem;font-weight:400;margin:0 0 12px;letter-spacing:-.02em">' +
+          'This instance is <em style="color:#c6f24e">private</em>.</h1>' +
+          '<p style="color:#93a1ae;line-height:1.6;margin:0;font-size:14px">' +
+          "This CodeGraph deployment is restricted to its owner&rsquo;s GitHub account.</p>" +
+          "</div></body></html>",
+        { status: 403, headers: { "Content-Type": "text/html; charset=utf-8" } },
       );
     }
   }

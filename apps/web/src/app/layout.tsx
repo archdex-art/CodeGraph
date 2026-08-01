@@ -1,41 +1,43 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
-import { GitBranch } from "lucide-react";
-import { AuthNav } from "@/components/AuthNav";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
+/**
+ * Instrument Serif carries every headline, and its italic is the emphasis
+ * device throughout. A serif against mono data is the whole typographic idea:
+ * the prose is editorial, the numbers are instrumentation, and the contrast
+ * between them is what stops this reading like every other developer tool.
+ *
+ * Single weight by design — the family has one, and reaching for a bold that
+ * does not exist is what produces synthesised, smeared headlines.
+ */
+const instrument = Instrument_Serif({
+  variable: "--font-instrument",
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
-  title: "CodeGraph — App",
-  description: "Index a repository, build its knowledge graph, and get a Health Score.",
+  title: "CodeGraph — see the codebase, then judge it, then fix it",
+  description:
+    "A symbol-level graph of your repository, an explainable Health Score, and fixes proved against your own test suite. One container, one SQLite file, no API key.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[#050505] text-gray-200">
-        <header className="border-b border-white/5 bg-[#050505]/80 backdrop-blur-md sticky top-0 z-50">
-          <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 font-semibold text-white">
-              <GitBranch className="w-5 h-5 text-purple-400" />
-              CodeGraph
-              <span className="text-xs font-normal text-gray-500 border border-white/10 rounded px-1.5 py-0.5 ml-1">app</span>
-            </Link>
-            <nav className="flex items-center gap-6 text-sm text-gray-400">
-              <Link href="/" className="hover:text-white transition-colors">Index</Link>
-              <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
-              <Link href="/settings" className="hover:text-white transition-colors">Settings</Link>
-              <AuthNav />
-            </nav>
-          </div>
-        </header>
-        <main className="flex-1">{children}</main>
-        <footer className="border-t border-white/5 py-6 text-center text-xs text-gray-600">
-          CodeGraph · the world model of your software
-        </footer>
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} ${instrument.variable} h-full antialiased`}
+    >
+      <body className="grain relative flex min-h-full flex-col bg-[var(--ink-900)] text-[var(--text-primary)]">
+        <SiteHeader />
+        <main className="relative z-[2] flex-1">{children}</main>
+        <SiteFooter />
       </body>
     </html>
   );
