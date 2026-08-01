@@ -92,14 +92,20 @@ Every specialist is deterministic — no LLM call, no API key, no non-determinis
 
 ```bash
 git clone https://github.com/archdex-art/CodeGraph.git
-cd CodeGraph/app
-npm install
+cd CodeGraph
+npm install              # one lockfile for the whole workspace
 npm run dev              # http://localhost:4000
 ```
 
-Requires **Node ≥ 22** (uses the built-in `node:sqlite` — no native modules) and **`git`** on `PATH`.
+Requires **Node ≥ 22** (uses the built-in `node:sqlite` — no native modules) and **`git`** on
+`PATH`. Run from the repository root, not from a package: `npm install` resolves every workspace
+from the single root lockfile.
 
-Open `http://localhost:4000`, paste a public repo URL — e.g. `https://github.com/expressjs/express` — and hit **Start Indexing**. In well under a minute you get:
+> Analysis runs **in the web process** by default, so that one command is the whole app. The
+> separate worker (`npm run dev:worker`, with `CG_USE_WORKER=true`) exists for getting indexing
+> off the request path; leaving it off is the supported path and needs no second terminal.
+
+Open `http://localhost:4000`, paste a public repo URL — e.g. `https://github.com/expressjs/express` — and hit **Index**. In well under a minute you get:
 - A **Health Score** (0–100, blast-radius-weighted, explainable) — this is **defect risk**: *how likely is this code to break?* Maintainability and performance risk are reported beside it and never averaged in, so a tidy codebase cannot flatter a fragile one. The score also states the coverage it was computed over, because one measured across 55% of files is a different claim from one across 98%
 - Three visualizations: **Architecture** flowchart, zoomable **Circle-pack**, force-directed **Network**
 - A **Code Intelligence** tab: symbol search, callers/callees, impact analysis, circular-dependency detection, dead-code, Graph-RAG context generation
