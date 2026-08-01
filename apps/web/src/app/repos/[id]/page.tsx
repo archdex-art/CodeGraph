@@ -31,6 +31,37 @@ function rating(score: number): string {
   return "Poor";
 }
 
+/**
+ * The analysis tiers (HLD 8.3). A file is not simply "scanned or not" — it is read
+ * at the deepest level its language and size allowed, and the tier decides which
+ * detections are even possible.
+ *
+ * Ordered deepest-first so the bar reads left-to-right as confidence descending.
+ */
+const TIER_META: Record<string, { label: string; color: string; note: string }> = {
+  full: {
+    label: "Typed",
+    color: "var(--signal-500)",
+    note: "Typed lines are read with a real type checker, so call resolution and interprocedural analysis are available on them. Lexical lines are pattern-matched only, and findings on them are marked low-confidence.",
+  },
+  ast: {
+    label: "AST",
+    color: "var(--violet-500)",
+    note: "AST lines are parsed but untyped: structural rules and intraprocedural dataflow apply, precise call resolution does not.",
+  },
+  lexical: {
+    label: "Lexical",
+    color: "var(--amber-400)",
+    note: "Lexical lines are pattern-matched without a parse, so only syntactic rules apply and their findings are marked low-confidence.",
+  },
+  skipped: {
+    label: "Skipped",
+    color: "var(--text-faint)",
+    note: "Skipped lines were too large, unreadable, or past the budget, and contribute nothing to the score.",
+  },
+};
+const TIER_ORDER = ["full", "ast", "lexical", "skipped"] as const;
+
 export default function RepoOverview() {
   const repo = useRepo();
 
@@ -51,6 +82,20 @@ export default function RepoOverview() {
   const unmeasured = other.filter((p) => p.score === null);
 
   const ranked = [...repo.issues].slice(0, 12);
+
+  /**
+   * Percentages are computed over the tiers PRESENT, not over `locAnalysed`, so the
+   * segments always total 100% of the bar. Tiers the run never produced are absent
+   * rather than drawn at zero width — `ast` is defined in the model but not currently
+   * emitted, and a zero-width segment with a legend entry claims a capability the
+   * index did not exercise.
+   */
+  const tierEntries = TIER_ORDER.map((key) => ({ key, loc: repo.coverage?.tierLoc?.[key] ?? 0 })).filter(
+    (t) => t.loc > 0
+  );
+  const tierTotal = tierEntries.reduce((sum, t) => sum + t.loc, 0) || 1;
+  const tiers = tierEntries.map((t) => ({ ...t, pct: (t.loc / tierTotal) * 100 }));
+  const fullPct = Math.round(((repo.coverage?.tierLoc?.full ?? 0) / tierTotal) * 100);
 
   return (
     <>
@@ -189,6 +234,56 @@ export default function RepoOverview() {
           </div>
         </section>
       </Reveal>
+
+      {/* ---------------------------------------------------------- TIER LADDER */}
+      {repo.coverage?.tierLoc && Object.keys(repo.coverage.tierLoc).length > 0 && (
+        <Reveal>
+          <section className="mt-9">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+              <p className="eyebrow">Analysis depth</p>
+              <p className="text-[12.5px] text-[var(--text-muted)]">
+                <span className="tnum text-[var(--text-secondary)]">{TIER_META.full.label}</span> covers{" "}
+                <span className="tnum text-[var(--text-secondary)]">{fullPct}%</span> of analysed lines
+              </p>
+            </div>
+
+            {/* One bar, segmented and labelled — the depth a line was read at is not a
+                yes/no, and a single "coverage %" hides that half a codebase can be
+                counted while only being pattern-matched. HLD 8.3 records the ladder;
+                until now nothing rendered it. */}
+            <div className="mt-3 flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+              {tiers.map((t) => (
+                <div
+                  key={t.key}
+                  className="h-full first:rounded-l-full last:rounded-r-full"
+                  style={{ width: `${t.pct}%`, background: TIER_META[t.key].color }}
+                  title={`${TIER_META[t.key].label}: ${t.loc.toLocaleString()} LOC (${t.pct.toFixed(1)}%)`}
+                />
+              ))}
+            </div>
+
+            <dl className="mt-3.5 flex flex-wrap gap-x-7 gap-y-2.5">
+              {tiers.map((t) => (
+                <div key={t.key} className="flex items-baseline gap-2">
+                  <span
+                    className="h-2 w-2 shrink-0 translate-y-[-1px] rounded-sm"
+                    style={{ background: TIER_META[t.key].color }}
+                    aria-hidden="true"
+                  />
+                  <dt className="text-[12.5px] text-[var(--text-secondary)]">{TIER_META[t.key].label}</dt>
+                  <dd className="tnum text-[12.5px] text-[var(--text-muted)]">
+                    {t.pct.toFixed(0)}% · {t.loc.toLocaleString()} LOC
+                  </dd>
+                </div>
+              ))}
+            </dl>
+
+            <p className="mt-3 max-w-2xl text-[12px] leading-relaxed text-[var(--text-muted)]">
+              {TIER_META[tiers[0].key].note}
+            </p>
+          </section>
+        </Reveal>
+      )}
 
       {/* ----------------------------------------------------------- STAT STRIP */}
       <Reveal>

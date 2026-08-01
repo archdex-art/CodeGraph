@@ -73,9 +73,41 @@ export default function RepoLayout({
   const hasOwner = rest.length > 0;
   const live = repo.status === "done";
 
+  /**
+   * What is inside a section, shown before you go there.
+   *
+   * Every figure is read off the payload the layout already fetched — no extra
+   * request, and nothing that could disagree with the page it links to. Sections
+   * with no honest count (Overview, Editor, Timeline — the last needs a separate
+   * history fetch) get no badge rather than a zero, because a zero here would read
+   * as "empty" when it means "not counted".
+   *
+   * Neutral, never coloured: these are magnitudes, not alerts, and the accents on
+   * this surface are reserved for readings, structure and risk.
+   */
+  const countFor = (slug: string): number | null => {
+    switch (slug) {
+      case "architecture":
+        return repo.modules?.nodes.length ?? null;
+      case "circle-pack":
+        return repo.graphStats?.files || null;
+      case "network":
+        return repo.viz?.nodes.length || null;
+      case "code-intel":
+        return repo.symbolGraph?.stats.symbols || null;
+      case "agents":
+        return repo.issues.length || null;
+      default:
+        return null;
+    }
+  };
+
+  const compact = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}k` : String(n));
+
   const navLink = (slug: string, label: string, Icon: (typeof SECTIONS)[number]["icon"]) => {
     const href = sectionHref(id, slug);
     const active = pathname === href;
+    const count = countFor(slug);
     return (
       <Link
         key={slug || "overview"}
@@ -89,6 +121,18 @@ export default function RepoLayout({
       >
         <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[var(--signal-500)]" : "text-[var(--text-faint)]"}`} />
         {label}
+        {count !== null && (
+          <span
+            className={`tnum ml-auto hidden rounded px-1.5 py-0.5 text-[10.5px] leading-none transition-colors duration-200 lg:block ${
+              active
+                ? "bg-white/[0.06] text-[var(--text-secondary)]"
+                : "bg-white/[0.03] text-[var(--text-faint)]"
+            }`}
+            title={`${count.toLocaleString()} in this section`}
+          >
+            {compact(count)}
+          </span>
+        )}
         {active && (
           <motion.span
             layoutId="section-marker"
@@ -129,7 +173,16 @@ export default function RepoLayout({
               {GROUPED.map(({ group, items }) => (
                 <div key={group}>
                   {group !== "Report" && <p className="eyebrow mb-1.5 px-3">{group}</p>}
-                  <div className="flex flex-col gap-0.5">
+                  {/* A hairline running the height of the group, with the items indented
+                      off it. Grouping you can see without drawing a box around it — the
+                      eyebrow alone left three lists floating at the same indent, so the
+                      headings were the only thing separating them. The ungrouped
+                      "Report" item stays flush so it reads as the root, not a child. */}
+                  <div
+                    className={`flex flex-col gap-0.5 ${
+                      group !== "Report" ? "ml-3 border-l border-[var(--line-soft)] pl-1.5" : ""
+                    }`}
+                  >
                     {items.map((s) => navLink(s.slug, s.label, s.icon))}
                   </div>
                 </div>
