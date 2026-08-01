@@ -6,6 +6,7 @@ import { ArrowRight, FolderGit2, Loader2, Network, Trash2 } from "lucide-react";
 import { fetchRepos, deleteRepo } from "@/lib/api";
 import type { RepoSummary } from "@/lib/types";
 import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
+import { ScoreDial } from "@/components/ScoreDial";
 
 /**
  * Health bands. Signal is a good reading, amber a caution, coral a risk — the three
@@ -15,7 +16,7 @@ import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primi
  * "which repo needs me first" purely in hue is unusable in greyscale and for the
  * ~8% of men who cannot separate the amber from the coral.
  */
-type Band = { text: string; bg: string; rail: string; word: string };
+type Band = { text: string; bg: string; rail: string; word: string; color: string };
 
 function band(s: number | null): Band {
   if (s === null)
@@ -24,6 +25,7 @@ function band(s: number | null): Band {
       bg: "bg-[var(--ink-600)]",
       rail: "bg-[var(--line-strong)]",
       word: "unmeasured",
+      color: "var(--text-faint)",
     };
   if (s >= 80)
     return {
@@ -31,6 +33,7 @@ function band(s: number | null): Band {
       bg: "bg-[var(--signal-500)]",
       rail: "bg-[var(--signal-500)]",
       word: "healthy",
+      color: "var(--signal-500)",
     };
   if (s >= 60)
     return {
@@ -38,12 +41,14 @@ function band(s: number | null): Band {
       bg: "bg-[var(--amber-400)]",
       rail: "bg-[var(--amber-400)]",
       word: "watch",
+      color: "var(--amber-400)",
     };
   return {
     text: "text-[var(--coral-500)]",
     bg: "bg-[var(--coral-500)]",
     rail: "bg-[var(--coral-500)]",
     word: "at risk",
+    color: "var(--coral-500)",
   };
 }
 
@@ -136,6 +141,7 @@ export default function DashboardPage() {
   });
 
   const meanBand = band(mean);
+  const meanBandColor = meanBand.color;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-16">
@@ -164,21 +170,25 @@ export default function DashboardPage() {
           <section className="panel relative mb-4 overflow-hidden">
             <div className="grid-field pointer-events-none absolute inset-0 opacity-60" />
             <div className="relative grid gap-8 p-7 sm:p-9 lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-12">
+              {/* Same dial as the repo report. One reading, one shape — a gauge here and
+                  a bare numeral there would make the fleet mean look like a different
+                  KIND of number than the score it averages. */}
               <div className="flex items-start gap-5">
-                <div>
-                  <p className="eyebrow">Mean health</p>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className={`tnum text-[64px] leading-none ${meanBand.text}`}>
-                      {mean === null ? "—" : <CountUp to={mean} duration={1} />}
-                    </span>
-                    <span className="tnum text-lg text-[var(--text-muted)]">/100</span>
+                {mean === null ? (
+                  <div>
+                    <p className="eyebrow">Mean health</p>
+                    <p className="tnum mt-2 text-[64px] leading-none text-[var(--text-muted)]">—</p>
+                    <p className="mt-3 text-[13px] text-[var(--text-muted)]">nothing measured yet</p>
                   </div>
-                  <p className="mt-3 flex items-center gap-2 text-[13px]">
-                    <span className={`h-1.5 w-1.5 rounded-full ${meanBand.bg}`} aria-hidden />
-                    <span className={meanBand.text}>{meanBand.word}</span>
-                    <span className="text-[var(--text-muted)]">· defect risk</span>
-                  </p>
-                </div>
+                ) : (
+                  <ScoreDial
+                    value={mean}
+                    color={meanBandColor}
+                    size={150}
+                    label="Mean health"
+                    sublabel={meanBand.word}
+                  />
+                )}
               </div>
 
               <div className="flex flex-col justify-center">

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, ArrowUpRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, ArrowUpRight, Crosshair, Layers, Target } from "lucide-react";
 import type { Dimension } from "@/lib/types";
 import { DIMENSION_META, PILLAR_META, pillarsFrom } from "@/lib/types";
 import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
+import { ScoreDial } from "@/components/ScoreDial";
 import { band, useRepo } from "./repo-context";
 import { SECTIONS, sectionHref } from "./sections";
 
@@ -97,193 +98,235 @@ export default function RepoOverview() {
   const tiers = tierEntries.map((t) => ({ ...t, pct: (t.loc / tierTotal) * 100 }));
   const fullPct = Math.round(((repo.coverage?.tierLoc?.full ?? 0) / tierTotal) * 100);
 
+  // Already ranked by the scorer (severity x blast radius), so the first row IS the
+  // highest-impact finding — no re-sorting here that could disagree with the table.
+  const top = repo.issues[0] ?? null;
+
   return (
     <>
-      {/* ---------------------------------------------------------- CODE HEALTH */}
-      <Reveal>
-        <section>
-          <p className="eyebrow mb-5">Code health</p>
-          <div className="grid gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-            <div>
-              <div className="flex flex-wrap items-center gap-3.5">
-                <span className="tnum text-[56px] leading-none" style={{ color: reading.color }}>
-                  <CountUp to={overall} duration={1.1} />
-                </span>
-                <span className="text-[15px] text-[var(--text-muted)]">out of 100</span>
-                <span
-                  className="rounded-full border px-2.5 py-1 text-[12px]"
-                  style={{
-                    color: reading.color,
-                    borderColor: `color-mix(in oklab, ${reading.color} 34%, transparent)`,
-                    background: `color-mix(in oklab, ${reading.color} 9%, transparent)`,
-                  }}
+      {/* --------------------------------------------------------------- BENTO
+          Four tiles at three different weights. The size of a tile is the claim it
+          makes: the reading is the largest thing on the page, the pillars and the
+          depth it was read at qualify it, and the single highest-impact finding is
+          the one thing you can act on without scrolling. Uniform cards would say
+          all four matter equally, which is not true. */}
+      <div className="grid gap-3 lg:grid-cols-3">
+        {/* ---- Reading -------------------------------------------------- */}
+        <Reveal className="lg:col-span-2">
+          <section className="panel relative h-full overflow-hidden p-6 sm:p-7">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-16 -left-16 h-64 w-64 rounded-full"
+              style={{ background: `radial-gradient(circle, color-mix(in oklab, ${reading.color} 10%, transparent), transparent 70%)` }}
+            />
+            <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
+              <ScoreDial
+                value={overall}
+                color={reading.color}
+                label="Defect risk"
+                sublabel={reading.label}
+              />
+              <div className="min-w-0">
+                <p className="eyebrow mb-3">Code health</p>
+                <p className="text-[14px] leading-relaxed text-[var(--text-secondary)]">
+                  <span className="text-[var(--text-primary)]">{repo.name}</span> scores{" "}
+                  <span className="tnum text-[var(--text-primary)]">{overall}</span> out of 100 on
+                  defect risk, which CodeGraph reads as{" "}
+                  <span style={{ color: reading.color }}>{reading.label.toLowerCase()}</span>.{" "}
+                  {repo.issues.length > 0 ? (
+                    <>
+                      <span className="tnum text-[var(--text-primary)]">{repo.issues.length}</span>{" "}
+                      {repo.issues.length === 1 ? "finding was" : "findings were"} emitted, ranked by
+                      severity weighted with blast radius through the graph.
+                    </>
+                  ) : (
+                    <>No findings were emitted.</>
+                  )}{" "}
+                  {/* ADR-008: the score states the coverage it was computed over, inside the
+                      sentence that makes the claim. */}
+                  {repo.coverage ? (
+                    <span className="text-[var(--text-muted)]">
+                      Scored over{" "}
+                      <span className="tnum">
+                        {repo.coverage.filesSeen === 0
+                          ? "—"
+                          : `${Math.round((repo.coverage.filesAnalysed / repo.coverage.filesSeen) * 100)}%`}
+                      </span>{" "}
+                      of files (<span className="tnum">{repo.coverage.filesAnalysed}</span> of{" "}
+                      <span className="tnum">{repo.coverage.filesSeen}</span>
+                      {repo.coverage.skippedTooLarge > 0 && (
+                        <>, <span className="tnum">{repo.coverage.skippedTooLarge}</span> over the size cap</>
+                      )}
+                      {repo.coverage.skippedNoLanguage > 0 && (
+                        <>, <span className="tnum">{repo.coverage.skippedNoLanguage}</span> unsupported</>
+                      )}
+                      ){repo.coverage.capHit && (
+                        <span className="text-[var(--amber-400)]"> — the scan hit the file cap</span>
+                      )}.
+                    </span>
+                  ) : (
+                    <span className="text-[var(--text-faint)]">
+                      Coverage was not recorded for this index, so what it was computed over is
+                      unknown — reported as unknown rather than as complete.
+                    </span>
+                  )}
+                </p>
+                <Link
+                  href={sectionHref(repo.id, "agents")}
+                  className="group mt-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-[var(--signal-500)] transition-opacity duration-200 hover:opacity-80"
                 >
-                  {reading.label}
-                </span>
+                  Run the swarm on these findings
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </Link>
               </div>
-
-              {/* Prose, because a reader should not have to assemble the meaning from
-                  a grid of numerals. Every clause below is read off the index. */}
-              <p className="mt-5 max-w-2xl text-[14.5px] leading-relaxed text-[var(--text-secondary)]">
-                <span className="text-[var(--text-primary)]">{repo.name}</span> scores{" "}
-                <span className="tnum text-[var(--text-primary)]">{overall}</span> out of 100 on defect
-                risk, which CodeGraph reads as{" "}
-                <span style={{ color: reading.color }}>{reading.label.toLowerCase()}</span>.
-                {measured.map((p) => (
-                  <span key={p.pillar}>
-                    {" "}
-                    {PILLAR_META[p.pillar].label} scores{" "}
-                    <span className="tnum text-[var(--text-primary)]">{p.score}</span>.
-                  </span>
-                ))}
-                {unmeasured.length > 0 && (
-                  <>
-                    {" "}
-                    {unmeasured.map((p) => PILLAR_META[p.pillar].label).join(" and ")} was not measured
-                    for this index — reported as unknown rather than as a pass.
-                  </>
-                )}{" "}
-                The pillars are scored separately and never averaged into one number, so a tidy
-                codebase cannot flatter a fragile one.{" "}
-                {repo.issues.length > 0 ? (
-                  <>
-                    <span className="tnum text-[var(--text-primary)]">{repo.issues.length}</span>{" "}
-                    {repo.issues.length === 1 ? "finding" : "findings"} were emitted, ranked below by
-                    severity weighted with blast radius through the graph.
-                  </>
-                ) : (
-                  <>No findings were emitted.</>
-                )}{" "}
-                {/* ADR-008: the score states the coverage it was computed over, INSIDE the
-                    sentence that makes the claim. It was briefly moved to the header meta
-                    line during a layout rebuild, where it read as index trivia rather than
-                    as a qualifier on the number — a doc guard caught that, correctly. */}
-                {repo.coverage ? (
-                  <span className="text-[var(--text-muted)]">
-                    Scored over{" "}
-                    <span className="tnum">
-                      {repo.coverage.filesSeen === 0
-                        ? "—"
-                        : `${Math.round((repo.coverage.filesAnalysed / repo.coverage.filesSeen) * 100)}%`}
-                    </span>{" "}
-                    of files (<span className="tnum">{repo.coverage.filesAnalysed}</span> of{" "}
-                    <span className="tnum">{repo.coverage.filesSeen}</span>
-                    {repo.coverage.skippedTooLarge > 0 && (
-                      <>
-                        , <span className="tnum">{repo.coverage.skippedTooLarge}</span> over the size cap
-                      </>
-                    )}
-                    {repo.coverage.skippedNoLanguage > 0 && (
-                      <>
-                        , <span className="tnum">{repo.coverage.skippedNoLanguage}</span> unsupported
-                      </>
-                    )}
-                    ){repo.coverage.capHit && <span className="text-[var(--amber-400)]"> — the scan hit the file cap</span>}.
-                  </span>
-                ) : (
-                  <span className="text-[var(--text-faint)]">
-                    Coverage was not recorded for this index, so what it was computed over is
-                    unknown — reported as unknown rather than as complete.
-                  </span>
-                )}
-              </p>
-
-              <Link
-                href={sectionHref(repo.id, "agents")}
-                className="group mt-5 inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] text-[var(--signal-500)] transition-opacity duration-200 hover:opacity-80"
-              >
-                Run the swarm on these findings
-                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-              </Link>
             </div>
-
-            {/* The three pillars as bars. Each states its number and a word, so the
-                bar length is reinforcement rather than the only signal. */}
-            <Stagger className="flex flex-col gap-5 self-center" step={0.08}>
-              {pillars.map((p) => {
-                const meta = PILLAR_META[p.pillar];
-                const score = p.score;
-                const tone = score === null ? "var(--text-faint)" : band(score).color;
-                return (
-                  <StaggerItem key={p.pillar}>
-                    <div className="mb-2 flex items-baseline justify-between gap-4">
-                      <span className="text-[13.5px] text-[var(--text-primary)]" title={meta.question}>
-                        {meta.label}
-                      </span>
-                      <span className="text-[12.5px] text-[var(--text-muted)]">
-                        {score === null ? (
-                          "not measured"
-                        ) : (
-                          <>
-                            <span className="tnum text-[var(--text-secondary)]">{score}</span>/100 ·{" "}
-                            {rating(score)}
-                          </>
-                        )}
-                      </span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-[var(--ink-700)]">
-                      <div
-                        className="h-full rounded-full transition-[width] duration-700"
-                        style={{ width: `${score ?? 0}%`, background: tone }}
-                      />
-                    </div>
-                  </StaggerItem>
-                );
-              })}
-            </Stagger>
-          </div>
-        </section>
-      </Reveal>
-
-      {/* ---------------------------------------------------------- TIER LADDER */}
-      {repo.coverage?.tierLoc && Object.keys(repo.coverage.tierLoc).length > 0 && (
-        <Reveal>
-          <section className="mt-9">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-              <p className="eyebrow">Analysis depth</p>
-              <p className="text-[12.5px] text-[var(--text-muted)]">
-                <span className="tnum text-[var(--text-secondary)]">{TIER_META.full.label}</span> covers{" "}
-                <span className="tnum text-[var(--text-secondary)]">{fullPct}%</span> of analysed lines
-              </p>
-            </div>
-
-            {/* One bar, segmented and labelled — the depth a line was read at is not a
-                yes/no, and a single "coverage %" hides that half a codebase can be
-                counted while only being pattern-matched. HLD 8.3 records the ladder;
-                until now nothing rendered it. */}
-            <div className="mt-3 flex h-2.5 gap-0.5 overflow-hidden rounded-full">
-              {tiers.map((t) => (
-                <div
-                  key={t.key}
-                  className="h-full first:rounded-l-full last:rounded-r-full"
-                  style={{ width: `${t.pct}%`, background: TIER_META[t.key].color }}
-                  title={`${TIER_META[t.key].label}: ${t.loc.toLocaleString()} LOC (${t.pct.toFixed(1)}%)`}
-                />
-              ))}
-            </div>
-
-            <dl className="mt-3.5 flex flex-wrap gap-x-7 gap-y-2.5">
-              {tiers.map((t) => (
-                <div key={t.key} className="flex items-baseline gap-2">
-                  <span
-                    className="h-2 w-2 shrink-0 translate-y-[-1px] rounded-sm"
-                    style={{ background: TIER_META[t.key].color }}
-                    aria-hidden="true"
-                  />
-                  <dt className="text-[12.5px] text-[var(--text-secondary)]">{TIER_META[t.key].label}</dt>
-                  <dd className="tnum text-[12.5px] text-[var(--text-muted)]">
-                    {t.pct.toFixed(0)}% · {t.loc.toLocaleString()} LOC
-                  </dd>
-                </div>
-              ))}
-            </dl>
-
-            <p className="mt-3 max-w-2xl text-[12px] leading-relaxed text-[var(--text-muted)]">
-              {TIER_META[tiers[0].key].note}
-            </p>
           </section>
         </Reveal>
-      )}
+
+        {/* ---- Pillars --------------------------------------------------- */}
+        <Reveal delay={0.06}>
+          <section className="panel flex h-full flex-col justify-center gap-5 p-6">
+            <div className="flex items-center gap-2">
+              <Target className="h-3.5 w-3.5 text-[var(--text-faint)]" />
+              <p className="eyebrow">Pillars · never blended</p>
+            </div>
+            {pillars.map((p) => {
+              const meta = PILLAR_META[p.pillar];
+              const score = p.score;
+              const tone = score === null ? "var(--text-faint)" : band(score).color;
+              return (
+                <div key={p.pillar}>
+                  <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                    <span className="text-[13px] text-[var(--text-primary)]" title={meta.question}>
+                      {meta.label}
+                    </span>
+                    <span className="text-[11.5px] text-[var(--text-muted)]">
+                      {score === null ? (
+                        "not measured"
+                      ) : (
+                        <>
+                          <span className="tnum text-[var(--text-secondary)]">{score}</span> · {rating(score)}
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--ink-700)]">
+                    <div
+                      className="h-full rounded-full transition-[width] duration-700"
+                      style={{ width: `${score ?? 0}%`, background: tone }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        </Reveal>
+
+        {/* ---- Analysis depth -------------------------------------------- */}
+        {tiers.length > 0 && (
+          <Reveal delay={0.1} className="lg:col-span-2">
+            <section className="panel h-full p-6">
+              <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-3.5 w-3.5 text-[var(--text-faint)]" />
+                  <p className="eyebrow">Analysis depth</p>
+                </div>
+                <p className="text-[12px] text-[var(--text-muted)]">
+                  <span className="tnum text-[var(--text-secondary)]">{fullPct}%</span> read with a type
+                  checker
+                </p>
+              </div>
+
+              {/* One bar, segmented and labelled — the depth a line was read at is not a
+                  yes/no, and a single "coverage %" hides that half a codebase can be
+                  counted while only being pattern-matched. HLD 8.3 records the ladder;
+                  nothing rendered it until now. */}
+              <div className="mt-4 flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+                {tiers.map((t) => (
+                  <div
+                    key={t.key}
+                    className="h-full first:rounded-l-full last:rounded-r-full"
+                    style={{ width: `${t.pct}%`, background: TIER_META[t.key].color }}
+                    title={`${TIER_META[t.key].label}: ${t.loc.toLocaleString()} LOC (${t.pct.toFixed(1)}%)`}
+                  />
+                ))}
+              </div>
+
+              <dl className="mt-3.5 flex flex-wrap gap-x-7 gap-y-2.5">
+                {tiers.map((t) => (
+                  <div key={t.key} className="flex items-baseline gap-2">
+                    <span
+                      className="h-2 w-2 shrink-0 translate-y-[-1px] rounded-sm"
+                      style={{ background: TIER_META[t.key].color }}
+                      aria-hidden="true"
+                    />
+                    <dt className="text-[12.5px] text-[var(--text-secondary)]">{TIER_META[t.key].label}</dt>
+                    <dd className="tnum text-[12.5px] text-[var(--text-muted)]">
+                      {t.pct.toFixed(0)}% · {t.loc.toLocaleString()} LOC
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+
+              <p className="mt-3 max-w-2xl text-[12px] leading-relaxed text-[var(--text-muted)]">
+                {TIER_META[tiers[0].key].note}
+              </p>
+            </section>
+          </Reveal>
+        )}
+
+        {/* ---- Highest-impact finding ------------------------------------ */}
+        <Reveal delay={0.14}>
+          {top ? (
+            <Link
+              href={sectionHref(repo.id, "agents")}
+              className="panel group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden p-6 transition-colors duration-200 hover:border-line-strong"
+            >
+              {/* Raised, not inverted. On an ink surface the way to lift one tile is a
+                  brighter face and an edge, not a darker one — a darker card here would
+                  recede, which is the opposite of featuring it. */}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-white/[0.022] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+              />
+              <div className="relative">
+                <div className="flex items-center gap-2">
+                  <Crosshair className="h-3.5 w-3.5 text-[var(--coral-400)]" />
+                  <p className="eyebrow">Act on this first</p>
+                </div>
+                <p className="mt-3.5 text-[15px] leading-snug text-[var(--text-primary)]">{top.title}</p>
+                <p className="mt-1.5 truncate font-mono text-[11.5px] text-[var(--text-muted)]">
+                  {top.file}
+                  {top.line > 1 ? `:${top.line}` : ""}
+                </p>
+              </div>
+              <div className="relative mt-5 flex items-center gap-2.5">
+                <span
+                  className={`rounded-md border px-2 py-1 text-[10px] font-medium tracking-[0.08em] uppercase ${
+                    (SEVERITY[top.severity] ?? SEVERITY[1]).chip
+                  } ${(SEVERITY[top.severity] ?? SEVERITY[1]).tone}`}
+                >
+                  <span className="tnum">S{top.severity}</span> {(SEVERITY[top.severity] ?? SEVERITY[1]).label}
+                </span>
+                <span className="tnum text-[11.5px] text-[var(--text-muted)]">
+                  ×{top.blastRadius} blast
+                </span>
+                <ArrowUpRight className="ml-auto h-4 w-4 text-[var(--text-faint)] transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[var(--signal-500)]" />
+              </div>
+            </Link>
+          ) : (
+            <section className="panel flex h-full flex-col items-start justify-center gap-2.5 p-6">
+              <div className="flex items-center gap-2">
+                <Crosshair className="h-3.5 w-3.5 text-[var(--signal-500)]" />
+                <p className="eyebrow">Nothing to act on</p>
+              </div>
+              <p className="text-[13.5px] leading-relaxed text-[var(--text-secondary)]">
+                No findings were emitted for this index.
+              </p>
+            </section>
+          )}
+        </Reveal>
+      </div>
 
       {/* ----------------------------------------------------------- STAT STRIP */}
       <Reveal>
