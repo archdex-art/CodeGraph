@@ -71,9 +71,21 @@ test.describe("CodeGraph Desktop E2E Smoke Tests", () => {
       expect(url.length, "window has no URL at all").toBeGreaterThan(0);
     }).toPass({ timeout: 15000 });
 
-    const content = await window.content();
-    // Either side of the swap is fine; an empty shell is not.
-    expect(content).toMatch(/CodeGraph|<body[^>]*>[\s\S]*\S/);
+    /**
+     * `content()` must be retried, not awaited once.
+     *
+     * The app is swapping the splash for the server URL around exactly this moment, and
+     * reading a document mid-navigation throws "Unable to retrieve content because the
+     * page is navigating" — which is what CI hit. The invariant being asserted is
+     * "whatever the window shows is real content", and that is true on both sides of the
+     * swap; it is only unobservable *during* it. So retry until it can be read.
+     */
+    await expect(async () => {
+      const content = await window.content();
+      // Either side of the swap is fine; an empty shell is not.
+      expect(content).toMatch(/CodeGraph|<body[^>]*>[\s\S]*\S/);
+    }).toPass({ timeout: 15000 });
+
     expect(navigations.length, `no navigation recorded: ${JSON.stringify(navigations)}`).toBeGreaterThan(0);
   });
 
