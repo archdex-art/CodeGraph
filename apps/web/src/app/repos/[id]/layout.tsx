@@ -156,18 +156,28 @@ export default function RepoLayout({
           </div>
 
           {/* ------------------------------------------------------------ HEADER */}
+          {/* Scale note. Measured before changing anything: the title rendered at 38px
+              against a 56px health numeral, a 24px section heading and 13–15px chrome.
+              That put the repository's NAME within touching distance of the reading the
+              page exists to deliver, and more than half again the size of the headings
+              that organise it.
+
+              On a report the score is the hero and the name is identification, so the
+              title now sits one step above the section headings (28px vs 24px) and well
+              below the numeral. The icon tile came down with it — a 48px tile beside
+              28px type reads as a logo rather than a source marker. */}
           <header className="pt-0 lg:pt-8">
-            <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-5">
-              <div className="flex min-w-0 items-start gap-4">
-                <span className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--ink-800)]">
+            <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
+              <div className="flex min-w-0 items-start gap-3.5">
+                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--ink-800)]">
                   {repo.sourceType === "git" ? (
-                    <GithubMark className="h-5 w-5 text-[var(--text-secondary)]" />
+                    <GithubMark className="h-[18px] w-[18px] text-[var(--text-secondary)]" />
                   ) : (
-                    <FolderGit2 className="h-5 w-5 text-[var(--text-secondary)]" />
+                    <FolderGit2 className="h-[18px] w-[18px] text-[var(--text-secondary)]" />
                   )}
                 </span>
                 <div className="min-w-0">
-                  <h1 className="font-display truncate text-[2rem] leading-tight tracking-tight sm:text-[2.4rem]">
+                  <h1 className="font-display truncate text-[1.75rem] leading-tight tracking-tight">
                     {hasOwner && <span className="text-[var(--text-muted)]">{owner} / </span>}
                     <span className="text-[var(--text-primary)]">{shortName}</span>
                   </h1>
@@ -212,23 +222,28 @@ export default function RepoLayout({
                 </div>
               </div>
 
-              <div className="flex shrink-0 flex-col gap-2.5">
-                <Link
-                  href={sectionHref(id, "agents")}
-                  className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--signal-500)] px-4 text-[13.5px] font-medium text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
-                >
-                  Run the swarm
-                </Link>
+              {/* Side by side, not stacked. Two 44px buttons in a column stood 98px tall
+                  against a header block that is now ~70px — the actions were physically
+                  larger than the thing they act on. Row layout also puts the primary
+                  action on the same optical line as the title. `min-h-10` keeps a
+                  comfortable target while no longer setting the header's height. */}
+              <div className="flex shrink-0 items-center gap-2.5">
                 <Link
                   href={sectionHref(id, "code-intel")}
-                  className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[var(--line)] px-4 text-[13.5px] text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:text-[var(--text-primary)]"
+                  className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-[var(--line)] px-3.5 text-[13px] text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:text-[var(--text-primary)]"
                 >
                   Query the graph
+                </Link>
+                <Link
+                  href={sectionHref(id, "agents")}
+                  className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--signal-500)] px-3.5 text-[13px] font-medium text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
+                >
+                  Run the swarm
                 </Link>
               </div>
             </div>
 
-            <div className="mt-7 h-px bg-[var(--line)]" />
+            <div className="mt-6 h-px bg-[var(--line)]" />
           </header>
 
           <div className="pt-8">{children}</div>
