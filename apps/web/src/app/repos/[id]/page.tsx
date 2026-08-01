@@ -1,28 +1,19 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Gauge, Boxes, Network, FileWarning, Share2, LayoutGrid, CircleDot, BrainCircuit, Bot, Code2, AlertTriangle, History } from "lucide-react";
-import { fetchRepo } from "@/lib/api";
-import type { RepoDetail, Dimension } from "@/lib/types";
+import { AlertTriangle, ArrowRight, ArrowUpRight } from "lucide-react";
+import type { Dimension } from "@/lib/types";
 import { DIMENSION_META, PILLAR_META, pillarsFrom } from "@/lib/types";
 import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
-import { NetworkView } from "@/components/NetworkView";
-import { CirclePackView } from "@/components/CirclePackView";
-import { ArchitectureView } from "@/components/ArchitectureView";
-import { CodeIntelPanel } from "@/components/CodeIntelPanel";
-import { AgentSwarm } from "@/components/AgentSwarm";
-import { CodeEditor } from "@/components/CodeEditor";
-import { TimelineView } from "@/components/TimelineView";
-
-type ViewMode = "architecture" | "pack" | "network" | "intel" | "agents" | "editor" | "timeline";
+import { band, useRepo } from "./repo-context";
+import { SECTIONS, sectionHref } from "./sections";
 
 /**
  * Severity carries a WORD as well as a colour.
  *
- * This list is the page's action queue, and a queue whose priority is encoded
- * only in hue is unreadable to anyone who cannot separate coral from amber —
- * roughly one in twelve men. The colour is the fast scan; the label is the fact.
+ * This table is the page's action queue, and a queue whose priority is encoded only
+ * in hue is unreadable to anyone who cannot separate coral from amber — roughly one
+ * in twelve men. The colour is the fast scan; the label is the fact.
  */
 const SEVERITY: Record<number, { label: string; tone: string; chip: string }> = {
   5: { label: "Critical", tone: "text-[var(--coral-400)]", chip: "border-[var(--coral-500)]/40 bg-[var(--coral-500)]/10" },
@@ -32,432 +23,345 @@ const SEVERITY: Record<number, { label: string; tone: string; chip: string }> = 
   1: { label: "Info", tone: "text-[var(--text-muted)]", chip: "border-[var(--line)] bg-[var(--ink-700)]" },
 };
 
-/**
- * A reading and the word for it. Signal is the only "good" colour on the
- * surface, so a healthy score is the one place it belongs; amber and coral are
- * warning and risk respectively and mean nothing else anywhere on the page.
- */
-function band(s: number): { color: string; label: string } {
-  if (s >= 80) return { color: "var(--signal-500)", label: "Healthy" };
-  if (s >= 60) return { color: "var(--amber-400)", label: "Watch" };
-  return { color: "var(--coral-500)", label: "At risk" };
+/** Word for a pillar reading, so a bar is never the only carrier. */
+function rating(score: number): string {
+  if (score >= 90) return "Excellent";
+  if (score >= 80) return "Good";
+  if (score >= 60) return "Fair";
+  return "Poor";
 }
 
-export default function RepoPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const [repo, setRepo] = useState<RepoDetail | null>(null);
-  const [notFound, setNotFound] = useState(false);
-  const [view, setView] = useState<ViewMode>("architecture");
-  // Tabs a user has opened at least once during this page visit. A visited tab
-  // stays mounted (just hidden via CSS) instead of unmounting on tab switch —
-  // otherwise AgentSwarm's report, CodeIntel's search/prompt, and any unsaved
-  // Editor buffers reset every time you switch away and back.
-  const [visited, setVisited] = useState<Set<ViewMode>>(new Set(["architecture"]));
+export default function RepoOverview() {
+  const repo = useRepo();
 
-  useEffect(() => {
-    fetchRepo(id).then(setRepo).catch(() => setNotFound(true));
-  }, [id]);
-
-  function selectView(v: ViewMode) {
-    setView(v);
-    setVisited((prev) => (prev.has(v) ? prev : new Set(prev).add(v)));
-  }
-
-  if (notFound) {
-    return (
-      <div className="mx-auto max-w-4xl px-6 py-24 text-center">
-        <p className="eyebrow mb-3">404</p>
-        <p className="text-[var(--text-secondary)]">
-          Repository not found.{" "}
-          <Link
-            href="/dashboard"
-            className="cursor-pointer text-[var(--signal-500)] underline decoration-[var(--signal-500)]/30 underline-offset-4 transition-colors duration-200 hover:decoration-[var(--signal-500)]"
-          >
-            Back to dashboard
-          </Link>
-        </p>
-      </div>
-    );
-  }
-  if (!repo) {
-    return (
-      <div className="flex items-center justify-center gap-2.5 py-24 text-sm text-[var(--text-muted)]">
-        <Loader2 className="h-4 w-4 animate-spin text-[var(--signal-500)]" /> Loading report…
-      </div>
-    );
-  }
-
-  // Derived, never stored — see pillarsFrom. Same function the scorer uses, same data.
   const pillars = pillarsFrom(repo.dimensions ?? []);
   const surfaced = pillars.find((p) => PILLAR_META[p.pillar].surfaced);
   /**
-   * The headline is DERIVED from the stored dimensions, not read from the stored `score`.
-   *
-   * That column holds whatever the model produced when the repo was indexed — for anything
-   * indexed before the pillar split, a blend that included maintainability. Reading it would
-   * put an old-model headline directly above new-model pillar numbers computed from the same
-   * row, which is the worst of both: inconsistent AND unexplainable.
-   *
-   * Deriving makes every existing repo show the correct number with no re-index. Falls back to
-   * the stored score only when dimensions are missing entirely (a row from before that column
-   * existed), where there is nothing to derive from.
+   * The headline is DERIVED from the stored dimensions, not read from the stored
+   * `score`. That column holds whatever the model produced when the repo was indexed —
+   * for anything indexed before the pillar split, a blend that included
+   * maintainability. Reading it would put an old-model headline directly above
+   * new-model pillar numbers computed from the same row: inconsistent AND
+   * unexplainable. Deriving makes every existing repo correct with no re-index.
    */
   const overall = surfaced?.score ?? repo.score ?? 0;
-  const wide = view === "editor";
   const reading = band(overall);
+  const other = pillars.filter((p) => !PILLAR_META[p.pillar].surfaced);
+  const measured = other.filter((p) => p.score !== null);
+  const unmeasured = other.filter((p) => p.score === null);
+
+  const ranked = [...repo.issues].slice(0, 12);
 
   return (
-    <div className={`mx-auto px-6 py-12 ${wide ? "max-w-[1600px]" : "max-w-5xl"}`}>
-      <Link
-        href="/dashboard"
-        className="mb-8 inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text-primary)]"
-      >
-        <ArrowLeft className="h-4 w-4" /> Dashboard
-      </Link>
-
-      <div className="mb-10">
-        <p className="eyebrow mb-2.5">Repository report</p>
-        <h1 className="font-display text-4xl tracking-tight text-[var(--text-primary)] sm:text-5xl">{repo.name}</h1>
-        {repo.sourceType === "git" ? (
-          <a
-            href={repo.url}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2 inline-block cursor-pointer font-mono text-[13px] text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--signal-500)]"
-          >
-            {repo.url}
-          </a>
-        ) : (
-          <span className="mt-2 inline-block font-mono text-[13px] text-[var(--text-muted)]">local · {repo.url}</span>
-        )}
-      </div>
-
-      {/* The hero readout, then the graph census beside it. */}
-      <div className="mb-6 grid gap-6 lg:grid-cols-5">
-        <Reveal className="lg:col-span-2">
-          <div className="panel relative h-full overflow-hidden p-7">
-            {/* The light comes off the numeral, not the corner: the glow is
-                positioned behind the reading and tinted by its band, so the
-                panel looks lit by the measurement rather than decorated. */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -top-6 -left-10 h-56 w-56 rounded-full"
-              style={{ background: `radial-gradient(circle, color-mix(in oklab, ${reading.color} 11%, transparent), transparent 68%)` }}
-            />
-            <div className="relative">
-              <div className="mb-6 flex items-center gap-2">
-                <Gauge className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <span className="eyebrow">Codebase health score</span>
-              </div>
-
-              <div className="flex items-end gap-2">
-                <div className="leading-[0.85]" style={{ color: reading.color }}>
-                  <CountUp to={overall} className="tnum text-[72px] font-normal" />
-                </div>
-                <span className="tnum pb-1.5 text-xl text-[var(--text-faint)]">/100</span>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+    <>
+      {/* ---------------------------------------------------------- CODE HEALTH */}
+      <Reveal>
+        <section>
+          <p className="eyebrow mb-5">Code health</p>
+          <div className="grid gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+            <div>
+              <div className="flex flex-wrap items-center gap-3.5">
+                <span className="tnum text-[56px] leading-none" style={{ color: reading.color }}>
+                  <CountUp to={overall} duration={1.1} />
+                </span>
+                <span className="text-[15px] text-[var(--text-muted)]">out of 100</span>
                 <span
-                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{ background: reading.color }}
-                  aria-hidden="true"
-                />
-                {/* The band is named, not just coloured. */}
-                <span className="text-[13px] font-medium" style={{ color: reading.color }}>{reading.label}</span>
-                {/* Naming what the number measures. It is the defect-risk pillar alone (PLAN.md
-                    §5.1) — maintainability used to be 22% of it, which made the headline partly a
-                    tidiness score while being read as risk. */}
-                <span className="text-[13px] text-[var(--text-muted)]">{PILLAR_META.defect_risk.question}</span>
+                  className="rounded-full border px-2.5 py-1 text-[12px]"
+                  style={{
+                    color: reading.color,
+                    borderColor: `color-mix(in oklab, ${reading.color} 34%, transparent)`,
+                    background: `color-mix(in oklab, ${reading.color} 9%, transparent)`,
+                  }}
+                >
+                  {reading.label}
+                </span>
               </div>
 
-              {pillars.some((p) => !PILLAR_META[p.pillar].surfaced) && (
-                <>
-                  <div className="rule-fade my-5" />
-                  <div className="flex flex-wrap gap-x-6 gap-y-2">
-                    {pillars
-                      .filter((p) => !PILLAR_META[p.pillar].surfaced)
-                      .map((p) => (
-                        <span key={p.pillar} className="flex items-baseline gap-2" title={PILLAR_META[p.pillar].question}>
-                          <span className="eyebrow">{PILLAR_META[p.pillar].label}</span>
-                          {/* Not folded into the headline, and not rendered as a pass when nothing
-                              was measured — an unscored pillar reads "n/a", never 100. */}
-                          <span className={`tnum text-[13px] ${p.score === null ? "text-[var(--text-faint)]" : "text-[var(--text-secondary)]"}`}>
-                            {p.score === null ? "n/a" : p.score}
-                          </span>
-                        </span>
-                      ))}
-                  </div>
-                </>
-              )}
-
-              {/* ADR-008: the score reports its own coverage, so one computed over a partial scan
-                  cannot masquerade as one computed over the whole repository. */}
-              <div className="mt-5 text-[11.5px] leading-relaxed text-[var(--text-muted)]">
+              {/* Prose, because a reader should not have to assemble the meaning from
+                  a grid of numerals. Every clause below is read off the index. */}
+              <p className="mt-5 max-w-2xl text-[14.5px] leading-relaxed text-[var(--text-secondary)]">
+                <span className="text-[var(--text-primary)]">{repo.name}</span> scores{" "}
+                <span className="tnum text-[var(--text-primary)]">{overall}</span> out of 100 on defect
+                risk, which CodeGraph reads as{" "}
+                <span style={{ color: reading.color }}>{reading.label.toLowerCase()}</span>.
+                {measured.map((p) => (
+                  <span key={p.pillar}>
+                    {" "}
+                    {PILLAR_META[p.pillar].label} scores{" "}
+                    <span className="tnum text-[var(--text-primary)]">{p.score}</span>.
+                  </span>
+                ))}
+                {unmeasured.length > 0 && (
+                  <>
+                    {" "}
+                    {unmeasured.map((p) => PILLAR_META[p.pillar].label).join(" and ")} was not measured
+                    for this index — reported as unknown rather than as a pass.
+                  </>
+                )}{" "}
+                The pillars are scored separately and never averaged into one number, so a tidy
+                codebase cannot flatter a fragile one.{" "}
+                {repo.issues.length > 0 ? (
+                  <>
+                    <span className="tnum text-[var(--text-primary)]">{repo.issues.length}</span>{" "}
+                    {repo.issues.length === 1 ? "finding" : "findings"} were emitted, ranked below by
+                    severity weighted with blast radius through the graph.
+                  </>
+                ) : (
+                  <>No findings were emitted.</>
+                )}{" "}
+                {/* ADR-008: the score states the coverage it was computed over, INSIDE the
+                    sentence that makes the claim. It was briefly moved to the header meta
+                    line during a layout rebuild, where it read as index trivia rather than
+                    as a qualifier on the number — a doc guard caught that, correctly. */}
                 {repo.coverage ? (
-                  <span
-                    title={
-                      `${repo.coverage.filesAnalysed} of ${repo.coverage.filesSeen} files scanned · ` +
-                      `${repo.coverage.skippedNoLanguage} unsupported language · ` +
-                      `${repo.coverage.skippedTooLarge} over the size cap · ` +
-                      `${repo.coverage.skippedUnreadable} unreadable`
-                    }
-                  >
+                  <span className="text-[var(--text-muted)]">
                     Scored over{" "}
-                    <span className="tnum text-[var(--text-secondary)]">
+                    <span className="tnum">
                       {repo.coverage.filesSeen === 0
                         ? "—"
                         : `${Math.round((repo.coverage.filesAnalysed / repo.coverage.filesSeen) * 100)}%`}
                     </span>{" "}
-                    of files · <span className="tnum">{repo.coverage.locAnalysed.toLocaleString()}</span> LOC
-                    {/* A truncated walk is the one case where the denominator itself is unknown,
-                        so it is called out rather than folded into a percentage. */}
-                    {repo.coverage.capHit && (
-                      <span className="text-[var(--amber-400)]"> · scan hit the file cap</span>
+                    of files (<span className="tnum">{repo.coverage.filesAnalysed}</span> of{" "}
+                    <span className="tnum">{repo.coverage.filesSeen}</span>
+                    {repo.coverage.skippedTooLarge > 0 && (
+                      <>
+                        , <span className="tnum">{repo.coverage.skippedTooLarge}</span> over the size cap
+                      </>
                     )}
+                    {repo.coverage.skippedNoLanguage > 0 && (
+                      <>
+                        , <span className="tnum">{repo.coverage.skippedNoLanguage}</span> unsupported
+                      </>
+                    )}
+                    ){repo.coverage.capHit && <span className="text-[var(--amber-400)]"> — the scan hit the file cap</span>}.
                   </span>
                 ) : (
-                  // Absent coverage is UNKNOWN, never 100%. Repos indexed before ADR-008 land here.
-                  <span className="text-[var(--text-faint)]" title="This repo was indexed before coverage was recorded. Re-index to measure it.">
-                    Coverage not recorded for this index
+                  <span className="text-[var(--text-faint)]">
+                    Coverage was not recorded for this index, so what it was computed over is
+                    unknown — reported as unknown rather than as complete.
                   </span>
                 )}
-              </div>
+              </p>
+
+              <Link
+                href={sectionHref(repo.id, "agents")}
+                className="group mt-5 inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] text-[var(--signal-500)] transition-opacity duration-200 hover:opacity-80"
+              >
+                Run the swarm on these findings
+                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </Link>
             </div>
-          </div>
-        </Reveal>
 
-        <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:col-span-3" delay={0.1}>
-          <Stat icon={<Network className="h-3.5 w-3.5 text-[var(--violet-400)]" />} label="Graph nodes" value={repo.graphStats?.nodes || 0} />
-          <Stat icon={<Boxes className="h-3.5 w-3.5 text-[var(--violet-400)]" />} label="Graph edges" value={repo.graphStats?.edges || 0} />
-          <Stat label="Files" value={repo.graphStats?.files || 0} />
-          <Stat label="Lines of code" value={repo.loc} />
-          <Stat label="Directories" value={repo.graphStats?.dirs || 0} />
-          <Stat label="Dependencies" value={repo.graphStats?.dependencies || 0} />
-          <Stat label="Issues found" value={repo.issues.length} />
-          <Stat label="Languages" value={repo.languages?.length || 0} />
-        </Stagger>
-      </div>
-
-      {repo.symbolGraph?.truncated && (
-        <div className="mb-6 flex items-start gap-3 rounded-xl border border-[var(--amber-400)]/25 bg-[var(--amber-400)]/[0.05] px-4 py-3.5">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--amber-400)]" />
-          <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-            <span className="font-medium text-[var(--amber-400)]">Partial results.</span> This repository has more symbols than the{" "}
-            <span className="tnum">{repo.symbolGraph.stats.symbols.toLocaleString()}</span>-symbol
-            analysis cap — the health score, agent findings, and code graph below only reflect the first{" "}
-            <span className="tnum">{repo.symbolGraph.stats.symbols.toLocaleString()}</span> symbols indexed, not the whole codebase.
-          </p>
-        </div>
-      )}
-
-      {/* Codebase visualization (3 views) */}
-      <div className="mb-6">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="eyebrow mb-1.5 flex items-center gap-2">
-              <Share2 className="h-3 w-3" /> Channel
-            </p>
-            <h2 className="font-display text-2xl tracking-tight text-[var(--text-primary)]">Codebase intelligence</h2>
-          </div>
-          <div className="inline-flex flex-wrap gap-1 rounded-xl border border-[var(--line)] bg-[var(--ink-850)] p-1">
-            <ViewTab active={view === "architecture"} onClick={() => selectView("architecture")} icon={<LayoutGrid className="w-4 h-4" />} label="Architecture" />
-            <ViewTab active={view === "pack"} onClick={() => selectView("pack")} icon={<CircleDot className="w-4 h-4" />} label="Circle pack" />
-            <ViewTab active={view === "network"} onClick={() => selectView("network")} icon={<Network className="w-4 h-4" />} label="Network" />
-            <ViewTab active={view === "intel"} onClick={() => selectView("intel")} icon={<BrainCircuit className="w-4 h-4" />} label="Code Intel" />
-            <ViewTab active={view === "agents"} onClick={() => selectView("agents")} icon={<Bot className="w-4 h-4" />} label="Agents" />
-            <ViewTab active={view === "editor"} onClick={() => selectView("editor")} icon={<Code2 className="w-4 h-4" />} label="Editor" />
-            <ViewTab active={view === "timeline"} onClick={() => selectView("timeline")} icon={<History className="w-4 h-4" />} label="Timeline" />
-          </div>
-        </div>
-
-        {/* Each visited tab stays mounted (hidden via CSS, not unmounted) so
-            in-flight state — agent reports, code-intel search, editor tabs —
-            survives switching away and back. */}
-        {visited.has("architecture") && (
-          <div className={view === "architecture" ? "" : "hidden"}>
-            {repo.modules && repo.modules.nodes.length > 0
-              ? <ArchitectureView modules={repo.modules} />
-              : <Empty msg="No module structure detected." />}
-          </div>
-        )}
-
-        {visited.has("pack") && (
-          <div className={view === "pack" ? "" : "hidden"}>
-            {repo.tree && repo.tree.children && repo.tree.children.length > 0
-              ? <CirclePackView tree={repo.tree} />
-              : <Empty msg="No file tree available." />}
-          </div>
-        )}
-
-        {visited.has("network") && (
-          <div className={view === "network" ? "" : "hidden"}>
-            {repo.viz && repo.viz.nodes.length > 0
-              ? <NetworkView graph={repo.viz} />
-              : <Empty msg="No import network for this repository." />}
-          </div>
-        )}
-
-        {visited.has("intel") && (
-          <div className={view === "intel" ? "" : "hidden"}>
-            <CodeIntelPanel repoId={repo.id} graph={repo.symbolGraph} />
-          </div>
-        )}
-
-        {visited.has("agents") && (
-          <div className={view === "agents" ? "" : "hidden"}>
-            <AgentSwarm repoId={repo.id} />
-          </div>
-        )}
-
-        {visited.has("editor") && (
-          <div className={view === "editor" ? "" : "hidden"}>
-            {repo.hasWorkspace
-              ? <CodeEditor key={repo.id} repo={repo} visible={view === "editor"} />
-              : <Empty msg="No live workspace for this repository yet — re-index it to enable the built-in editor." />}
-          </div>
-        )}
-
-        {visited.has("timeline") && (
-          <div className={view === "timeline" ? "" : "hidden"}>
-            <TimelineView repoId={repo.id} />
-          </div>
-        )}
-      </div>
-
-      {view !== "editor" && (
-        <>
-          {/* Dimensions */}
-          <div className="panel mb-6 p-6">
-            <p className="eyebrow mb-1.5">Breakdown</p>
-            <h2 className="font-display mb-5 text-xl tracking-tight text-[var(--text-primary)]">Score breakdown</h2>
-            <Stagger className="space-y-4">
-              {repo.dimensions.map((d) => {
-                const meta = DIMENSION_META[d.dimension as Dimension];
-                const dim = band(d.score);
+            {/* The three pillars as bars. Each states its number and a word, so the
+                bar length is reinforcement rather than the only signal. */}
+            <Stagger className="flex flex-col gap-5 self-center" step={0.08}>
+              {pillars.map((p) => {
+                const meta = PILLAR_META[p.pillar];
+                const score = p.score;
+                const tone = score === null ? "var(--text-faint)" : band(score).color;
                 return (
-                  <StaggerItem key={d.dimension}>
+                  <StaggerItem key={p.pillar}>
                     <div className="mb-2 flex items-baseline justify-between gap-4">
-                      <span className="text-sm text-[var(--text-primary)]">
-                        {meta.label}{" "}
-                        <span className="text-xs text-[var(--text-muted)]">
-                          · <span className="tnum">{d.issueCount}</span> issues · weight{" "}
-                          <span className="tnum">{Math.round(meta.weight * 100)}%</span>
-                        </span>
+                      <span className="text-[13.5px] text-[var(--text-primary)]" title={meta.question}>
+                        {meta.label}
                       </span>
-                      <span className="tnum text-sm" style={{ color: dim.color }}>{d.score}</span>
+                      <span className="text-[12.5px] text-[var(--text-muted)]">
+                        {score === null ? (
+                          "not measured"
+                        ) : (
+                          <>
+                            <span className="tnum text-[var(--text-secondary)]">{score}</span>/100 ·{" "}
+                            {rating(score)}
+                          </>
+                        )}
+                      </span>
                     </div>
-                    {/* The rail is a measuring track, so it keeps its full width
-                        visible and the fill reports against it. */}
                     <div className="h-1.5 overflow-hidden rounded-full bg-[var(--ink-700)]">
-                      <div className="h-full rounded-full" style={{ width: `${d.score}%`, background: dim.color }} />
+                      <div
+                        className="h-full rounded-full transition-[width] duration-700"
+                        style={{ width: `${score ?? 0}%`, background: tone }}
+                      />
                     </div>
                   </StaggerItem>
                 );
               })}
             </Stagger>
           </div>
+        </section>
+      </Reveal>
 
-          {/* Languages */}
-          {repo.languages && repo.languages.length > 0 && (
-            <div className="panel mb-6 p-6">
-              <p className="eyebrow mb-1.5">Composition</p>
-              <h2 className="font-display mb-5 text-xl tracking-tight text-[var(--text-primary)]">Languages</h2>
-              <div className="flex flex-wrap gap-2">
-                {repo.languages.slice(0, 3).map((l) => (
-                  <span key={l.language} className="rounded-full border border-[var(--line)] bg-[var(--ink-800)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
-                    {l.language} <span className="tnum text-[var(--text-muted)]">· {l.loc.toLocaleString()} LOC</span>
-                  </span>
-                ))}
-                {repo.languages.length > 3 && (
-                  <span className="rounded-full border border-[var(--line-soft)] px-3 py-1.5 text-xs text-[var(--text-muted)]">
-                    +<span className="tnum">{repo.languages.length - 3}</span> more
-                  </span>
-                )}
-              </div>
+      {/* ----------------------------------------------------------- STAT STRIP */}
+      <Reveal>
+        <dl className="mt-10 grid grid-cols-2 border-y border-[var(--line)] sm:grid-cols-3 lg:grid-cols-5">
+          {[
+            { k: "Files", v: repo.graphStats?.files ?? 0 },
+            { k: "Symbols", v: repo.symbolGraph?.stats.symbols ?? repo.graphStats?.nodes ?? 0 },
+            { k: "Graph edges", v: repo.graphStats?.edges ?? 0 },
+            { k: "Dependencies", v: repo.graphStats?.dependencies ?? 0 },
+            { k: "Findings", v: repo.issues.length },
+          ].map((s, i) => (
+            <div
+              key={s.k}
+              className={`px-5 py-6 ${i > 0 ? "sm:border-l sm:border-[var(--line)]" : ""} ${
+                i % 2 === 1 ? "border-l border-[var(--line)] sm:border-l" : ""
+              }`}
+            >
+              <dt className="eyebrow">{s.k}</dt>
+              <dd className="tnum mt-2 text-[26px] leading-none text-[var(--text-primary)]">
+                {s.v.toLocaleString()}
+              </dd>
             </div>
-          )}
+          ))}
+        </dl>
+      </Reveal>
 
-          {/* Top issues */}
-          <div className="panel p-6">
-            <p className="eyebrow mb-1.5 flex items-center gap-2">
-              <FileWarning className="h-3 w-3" /> Findings
-            </p>
-            <h2 className="font-display text-xl tracking-tight text-[var(--text-primary)]">Top issues by impact</h2>
-            <p className="mt-1 mb-5 text-xs text-[var(--text-muted)]">Ranked by severity × blast radius (graph fan-in).</p>
-            {repo.issues.length === 0 ? (
-              <p className="flex items-center gap-2.5 text-sm text-[var(--signal-500)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--signal-500)]" aria-hidden="true" />
-                No issues detected. Clean codebase.
-              </p>
-            ) : (
-              <ul className="divide-y divide-[var(--line-soft)]">
-                {repo.issues.slice(0, 40).map((iss) => {
-                  const sev = SEVERITY[iss.severity] ?? SEVERITY[1];
-                  return (
-                    <li key={iss.id} className="flex items-start gap-3 py-3">
-                      {/* Colour AND word: S-number for the scan, label for the fact. */}
-                      <span className={`mt-0.5 shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium tracking-[0.08em] uppercase ${sev.chip} ${sev.tone}`}>
-                        <span className="tnum">S{iss.severity}</span> {sev.label}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm text-[var(--text-primary)]">{iss.title}</div>
-                        <div className="truncate font-mono text-xs text-[var(--text-muted)]">
-                          {iss.file}{iss.line > 1 ? `:${iss.line}` : ""}
-                        </div>
-                      </div>
-                      <span className="mt-1 shrink-0 text-[10px] text-[var(--text-muted)]">
-                        <span className="tnum">×{iss.blastRadius}</span> blast
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+      {repo.symbolGraph?.truncated && (
+        <div className="mt-6 flex items-start gap-3 rounded-xl border border-[var(--amber-400)]/25 bg-[var(--amber-400)]/[0.05] px-4 py-3.5">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--amber-400)]" />
+          <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+            Symbol graph truncated — code intelligence covers{" "}
+            <span className="tnum">{repo.symbolGraph.stats.symbols.toLocaleString()}</span> symbols
+            indexed, not the whole codebase.
+          </p>
+        </div>
+      )}
+
+      {/* -------------------------------------------------- WHERE RISK CONCENTRATES */}
+      <Reveal>
+        <section className="mt-12">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="font-display text-[1.5rem] tracking-tight text-[var(--text-primary)]">
+              Where the risk concentrates
+            </h2>
+            {repo.issues.length > ranked.length && (
+              <Link
+                href={sectionHref(repo.id, "code-intel")}
+                className="cursor-pointer text-[13px] text-[var(--signal-500)] transition-opacity duration-200 hover:opacity-80"
+              >
+                All <span className="tnum">{repo.issues.length}</span> findings
+              </Link>
             )}
           </div>
-        </>
-      )}
-    </div>
-  );
-}
+          <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-[var(--text-muted)]">
+            Ranked by severity weighted with blast radius — how many symbols reach this one through
+            the graph — rather than by severity alone.
+          </p>
 
-function Stat({ icon, label, value }: { icon?: React.ReactNode; label: string; value: number }) {
-  return (
-    <StaggerItem className="panel p-4">
-      {/* Fixed label height so a two-line label ("Graph nodes") does not push
-          its number out of line with the single-line tiles beside it. */}
-      <div className="mb-2 flex min-h-9 items-start gap-1.5">
-        {icon}
-        <span className="eyebrow">{label}</span>
-      </div>
-      <div className="tnum text-xl text-[var(--text-primary)]">{value.toLocaleString()}</div>
-    </StaggerItem>
-  );
-}
+          {repo.issues.length === 0 ? (
+            <p className="mt-6 flex items-center gap-2.5 text-sm text-[var(--signal-500)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--signal-500)]" aria-hidden="true" />
+              No findings detected in this index.
+            </p>
+          ) : (
+            <div className="mt-6 overflow-hidden">
+              <div className="hidden grid-cols-[minmax(0,1fr)_7rem_5rem_5rem] gap-4 border-b border-[var(--line)] pb-2.5 sm:grid">
+                <span className="eyebrow">Finding</span>
+                <span className="eyebrow">Severity</span>
+                <span className="eyebrow text-right">Blast</span>
+                <span className="eyebrow text-right">Churn</span>
+              </div>
+              <Stagger className="divide-y divide-[var(--line-soft)]" step={0.03}>
+                {ranked.map((iss) => {
+                  const sev = SEVERITY[iss.severity] ?? SEVERITY[1];
+                  return (
+                    <StaggerItem key={iss.id}>
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3.5 sm:grid-cols-[minmax(0,1fr)_7rem_5rem_5rem]">
+                        <div className="min-w-0">
+                          <p className="truncate text-[14px] text-[var(--text-primary)]">{iss.title}</p>
+                          <p className="mt-0.5 truncate font-mono text-[11.5px] text-[var(--text-muted)]">
+                            {iss.file}
+                            {iss.line > 1 ? `:${iss.line}` : ""}
+                          </p>
+                        </div>
+                        <span
+                          className={`justify-self-start rounded-md border px-2 py-1 text-[10px] font-medium tracking-[0.08em] uppercase ${sev.chip} ${sev.tone}`}
+                        >
+                          <span className="tnum">S{iss.severity}</span> {sev.label}
+                        </span>
+                        <span className="tnum hidden text-right text-[13px] text-[var(--text-secondary)] sm:block">
+                          ×{iss.blastRadius}
+                        </span>
+                        <span className="tnum hidden text-right text-[13px] text-[var(--text-muted)] sm:block">
+                          {iss.churn ?? "—"}
+                        </span>
+                      </div>
+                    </StaggerItem>
+                  );
+                })}
+              </Stagger>
+            </div>
+          )}
+        </section>
+      </Reveal>
 
+      {/* --------------------------------------------------------- SCORE DETAIL */}
+      <Reveal>
+        <section className="mt-12">
+          <h2 className="font-display text-[1.5rem] tracking-tight text-[var(--text-primary)]">
+            How the score was reached
+          </h2>
+          <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-[var(--text-muted)]">
+            Five dimensions, each weighted, each traceable to the findings that moved it.
+          </p>
+          <Stagger className="mt-6 space-y-4">
+            {repo.dimensions.map((d) => {
+              const meta = DIMENSION_META[d.dimension as Dimension];
+              const dim = band(d.score);
+              return (
+                <StaggerItem key={d.dimension}>
+                  <div className="mb-2 flex items-baseline justify-between gap-4">
+                    <span className="text-[13.5px] text-[var(--text-primary)]">
+                      {meta.label}{" "}
+                      <span className="text-[12px] text-[var(--text-muted)]">
+                        · <span className="tnum">{d.issueCount}</span> issues · weight{" "}
+                        <span className="tnum">{Math.round(meta.weight * 100)}%</span>
+                      </span>
+                    </span>
+                    <span className="tnum text-[13.5px]" style={{ color: dim.color }}>
+                      {d.score}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--ink-700)]">
+                    <div className="h-full rounded-full" style={{ width: `${d.score}%`, background: dim.color }} />
+                  </div>
+                </StaggerItem>
+              );
+            })}
+          </Stagger>
+        </section>
+      </Reveal>
 
-function ViewTab({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`relative flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-3 text-[13px] font-medium transition-colors duration-200 ${
-        active
-          ? "bg-[var(--ink-600)] text-[var(--text-primary)]"
-          : "text-[var(--text-secondary)] hover:bg-[var(--ink-700)] hover:text-[var(--text-primary)]"
-      }`}
-    >
-      <span className={active ? "text-[var(--signal-500)]" : "text-[var(--text-muted)]"}>{icon}</span>
-      <span className="hidden sm:inline">{label}</span>
-      {/* The selected channel is marked by a signal hairline, not just a fill. */}
-      {active && <span className="absolute inset-x-2.5 bottom-1 h-px bg-[var(--signal-500)]" aria-hidden="true" />}
-    </button>
-  );
-}
-
-function Empty({ msg }: { msg: string }) {
-  return (
-    <p className="rounded-xl border border-dashed border-[var(--line)] p-10 text-center text-sm text-[var(--text-muted)]">{msg}</p>
+      {/* ------------------------------------------------------- SECTION INDEX */}
+      <Reveal>
+        <section className="mt-12">
+          <h2 className="font-display text-[1.5rem] tracking-tight text-[var(--text-primary)]">
+            Read more about {repo.name}
+          </h2>
+          <Stagger className="mt-5 grid gap-2.5 sm:grid-cols-2" step={0.05}>
+            {SECTIONS.filter((s) => s.slug).map((s) => (
+              <StaggerItem key={s.slug}>
+                <Link
+                  href={sectionHref(repo.id, s.slug)}
+                  className="panel group flex h-full cursor-pointer items-start gap-3.5 p-4 transition-colors duration-200 hover:border-line-strong"
+                >
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--ink-800)]">
+                    <s.icon className="h-4 w-4 text-[var(--text-muted)] transition-colors duration-200 group-hover:text-[var(--signal-500)]" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5 text-[14px] text-[var(--text-primary)]">
+                      {s.label}
+                      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-faint)] transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[var(--signal-500)]" />
+                    </span>
+                    <span className="mt-1 block text-[12.5px] leading-relaxed text-[var(--text-muted)]">
+                      {s.blurb}
+                    </span>
+                  </span>
+                </Link>
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </section>
+      </Reveal>
+    </>
   );
 }
