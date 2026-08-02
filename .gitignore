@@ -8,14 +8,17 @@ out/
 next-env.d.ts
 *.tsbuildinfo
 
-# App runtime data (SQLite DB lives on the Render disk, not in git)
-app/data/*.sqlite
-app/data/*.sqlite-shm
-app/data/*.sqlite-wal
+# App runtime data. The WHOLE directory, not an enumeration of the kinds of file
+# seen so far: the previous version listed *.sqlite* and workspaces/, and then
+# `data/timeline/` appeared and 115k lines of indexed-repo snapshots were committed
+# past it. Nothing under here belongs to this repo's history — the SQLite DB and the
+# cloned target repos live on the Render disk, and the container creates the dir.
+apps/web/data/
 
-# Built-in editor: persistent per-repo git workspaces (cloned target repos —
-# runtime state on the Render disk, never part of this repo's own history)
-app/data/workspaces/
+# Compiled worker. Built inside the Docker builder stage
+# (`RUN npm run build --workspace @codegraph/worker`) and copied from there, so a
+# committed copy is never the one that runs — only noise in every diff that touches it.
+apps/*/dist/
 
 # Python
 __pycache__/

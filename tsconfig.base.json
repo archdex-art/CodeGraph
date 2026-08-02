@@ -1,0 +1,47 @@
+{
+  // Shared compiler baseline for every workspace (LLD §1.2).
+  //
+  // The four flags below `strict` are here because each one maps to a class of
+  // bug this codebase has actually shipped:
+  //   noUncheckedIndexedAccess  → the `lines[i]` pattern in the line-based
+  //                               codemods (REVIEW_2026-07-29 B1 is one instance)
+  //   exactOptionalPropertyTypes→ `{ degraded?: string }` silently accepting
+  //                               `undefined` and serialising it into run records
+  //   noImplicitOverride        → silent method shadowing in the agent classes
+  //   noFallthroughCasesInSwitch→ severity/dimension switch ladders
+  //
+  // New packages MUST inherit this file unmodified. `apps/web` currently
+  // relaxes two flags (see apps/web/tsconfig.json) because turning them on
+  // there surfaces pre-existing bugs whose fixes would be behaviour changes —
+  // out of scope for a structural phase.
+  "compilerOptions": {
+    "target": "ES2022",
+    // `lib` is ES2024 while `target` stays ES2022: this widens the type
+    // declarations available without changing the syntax level emitted.
+    //
+    // Raised at the baseline rather than per package because three packages needed
+    // it independently during the LLD §13.2 moves. The trigger is
+    // `Promise.withResolvers` in `core-graph`'s `graph.ts:76`, and because packages
+    // publish raw TypeScript (§1.1) every consumer re-checks that source under its
+    // own `lib` and hits the identical error. Overriding it per consumer is the
+    // same fix written N times, and the Nth is the one somebody forgets.
+    //
+    // Safe on every supported runtime: `Promise.withResolvers` ships in Node 22,
+    // this project requires Node 22+, and CI pins 24.
+    "lib": ["ES2024"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@codegraph/sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@codegraph/config": "*",
+    "@codegraph/core-domain": "*",
+    "@codegraph/observability": "*",
+    "@codegraph/verify": "*"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

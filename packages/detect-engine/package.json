@@ -1,0 +1,23 @@
+{
+  "name": "@codegraph/detect-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@codegraph/analysis-model": "*",
+    "@codegraph/core-graph": "*",
+    "@codegraph/score-engine": "*",
+    "eslint": "^9.39.0",
+    "eslint-plugin-security": "^3.0.1",
+    "@typescript-eslint/parser": "^8.65.0",
+    "typescript": "^5"
+  }
+}

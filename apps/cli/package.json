@@ -1,0 +1,24 @@
+{
+  "name": "@codegraph/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "codegraph": "./bin.mjs"
+  },
+  "scripts": {
+    "start": "tsx src/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@codegraph/analysis": "*",
+    "@codegraph/config": "*",
+    "@codegraph/core-domain": "*",
+    "@codegraph/observability": "*",
+    "@codegraph/remediate-engine": "*",
+    "@codegraph/sandbox": "*",
+    "@codegraph/verify": "*",
+    "tsx": "^4"
+  }
+}

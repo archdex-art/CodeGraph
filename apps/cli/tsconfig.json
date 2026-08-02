@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // NOT THIS APP'S DEBT. Measured: of the errors these two flags produce here, **0**
+    // originate in `src/`. All of them are dependency source — `analysis/indexer.ts` 45,
+    // `core-graph/extractors.ts` 39, `graph.ts` 20, `query.ts` 5, `ast-extractor.ts` 5 —
+    // re-checked under this app's flags because packages publish raw TypeScript
+    // (`exports: "./src/index.ts"`, LLD §1.1) rather than built declarations, so a consumer's
+    // `tsc` follows imports into the dependency and type-checks all of it again.
+    //
+    // This is the fifth tsconfig carrying these two lines for that reason (see apps/worker and
+    // the long note in apps/web). The fix is for packages to publish declarations, which is a
+    // build step per package.
+    //
+    // Nothing in `src/` relies on the relaxation, and three real bugs were fixed rather than
+    // relaxed away to keep it true — including `--rule` with no value silently binding
+    // undefined and then running every fixer.
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}

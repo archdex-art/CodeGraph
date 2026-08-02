@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // INHERITED DEBT, not a standard for new code in this package. Same situation
+    // and same reasoning as `packages/core-graph/tsconfig.json` and
+    // `apps/web/tsconfig.json` — see the long note in the latter. Measured on the
+    // moved files with the baseline unrelaxed (`tsc --noEmit`, no other change):
+    //
+    //   noUncheckedIndexedAccess + exactOptionalPropertyTypes → 45 errors
+    //   every other baseline flag                             →  0 errors
+    //
+    // All 45 are in `indexer.ts`, in the file-walk and rule-match paths where the
+    // compiler is right and clearing it means deciding what the walker DOES on
+    // out-of-range input. That is a behaviour change; P2 is structural (HLD §17).
+    //
+    // P3 owns clearing this, because P3 is what rewrites these paths: §13 splits
+    // this package into `pipeline`, `detect-engine`, `score-engine`, and `viz`,
+    // and new code in those is written under the unrelaxed baseline.
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}

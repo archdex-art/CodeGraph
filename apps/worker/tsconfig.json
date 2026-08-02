@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // NOT THIS APP'S DEBT. Measured: of the 114 errors these two flags produce here,
+    // **0** originate in `src/`. All 114 are dependency source — `analysis/indexer.ts`
+    // 45, `core-graph/extractors.ts` 39, `graph.ts` 20, `query.ts` 5,
+    // `ast-extractor.ts` 5 — re-checked under this app's flags because packages
+    // publish raw TypeScript (`exports: "./src/index.ts"`, LLD §1.1) instead of built
+    // declarations, so a consumer's `tsc` follows imports into the dependency and
+    // type-checks all of it again.
+    //
+    // This is the fourth tsconfig carrying these two lines for that reason (see the
+    // long note in `apps/web/tsconfig.json`). Four is the point at which the
+    // convention, not the code, is the problem: the fix is for packages to publish
+    // declarations, which is a build step per package and a change this phase is not.
+    //
+    // Nothing in `src/` relies on the relaxation. Keep it that way — the worker is new
+    // code and should hold to the baseline.
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}

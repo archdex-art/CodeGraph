@@ -1,0 +1,23 @@
+# TypeScript build output
+dist/
+
+# Assembled Next.js standalone server + native assets (produced by build:orchestrate).
+# NOTE: no leading whitespace. git does NOT strip it, so ` /build/` is a pattern that matches
+# nothing — this rule existed and was silently inert, and 11 build artifacts (including four
+# .wasm binaries) were committed past it.
+/build/
+
+# electron-builder output
+dist-bin/
+
+# Playwright artifacts
+test-results/
+playwright-report/
+
+# Stray compiled JS emitted next to sources
+shared/**/*.js
+shared/**/*.js.map
+
+# Misc
+.DS_Store
+*.log

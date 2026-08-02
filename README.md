@@ -70,7 +70,7 @@ flowchart TB
     WORKSPACE -.commit/push.-> GITREMOTE
 ```
 
-**Request flow, in one line:** *Browser → API route → backend lib → SQLite*, with jobs run fire-and-forget in the same Node process (no external queue — see [Known constraints](./ARCHITECTURE.md#known-constraints-learned-the-hard-way--see-docspostmortems)). Full detail, including the security model: [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+**Request flow, in one line:** *Browser → API route → SQLite-backed job queue → worker process → SQLite*. Analysis runs in a **separate `apps/worker` process** that spawns a child per job, not inline in the web server — that is what keeps `web-tree-sitter`'s ever-growing WASM heap from OOM-killing a 512 MB host ([ADR-001](./docs/design/HLD.md), [postmortem](./docs/postmortems/2026-07-10-tree-sitter-oom.md)). Still one container and one SQLite file: the queue is a table, not a broker. `npm run dev` analyses inline for convenience; the shipped image sets `CG_USE_WORKER=true`. Full detail, including the security model: [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ### The agent swarm, specifically
 
@@ -92,15 +92,21 @@ Every specialist is deterministic — no LLM call, no API key, no non-determinis
 
 ```bash
 git clone https://github.com/archdex-art/CodeGraph.git
-cd CodeGraph/app
-npm install
+cd CodeGraph
+npm install              # one lockfile for the whole workspace
 npm run dev              # http://localhost:4000
 ```
 
-Requires **Node ≥ 22** (uses the built-in `node:sqlite` — no native modules) and **`git`** on `PATH`.
+Requires **Node ≥ 22** (uses the built-in `node:sqlite` — no native modules) and **`git`** on
+`PATH`. Run from the repository root, not from a package: `npm install` resolves every workspace
+from the single root lockfile.
 
-Open `http://localhost:4000`, paste a public repo URL — e.g. `https://github.com/expressjs/express` — and hit **Start Indexing**. In well under a minute you get:
-- A **Health Score** (0–100, blast-radius-weighted, explainable)
+> Analysis runs **in the web process** by default, so that one command is the whole app. The
+> separate worker (`npm run dev:worker`, with `CG_USE_WORKER=true`) exists for getting indexing
+> off the request path; leaving it off is the supported path and needs no second terminal.
+
+Open `http://localhost:4000`, paste a public repo URL — e.g. `https://github.com/expressjs/express` — and hit **Index**. In well under a minute you get:
+- A **Health Score** (0–100, blast-radius-weighted, explainable) — this is **defect risk**: *how likely is this code to break?* Maintainability and performance risk are reported beside it and never averaged in, so a tidy codebase cannot flatter a fragile one. The score also states the coverage it was computed over, because one measured across 55% of files is a different claim from one across 98%
 - Three visualizations: **Architecture** flowchart, zoomable **Circle-pack**, force-directed **Network**
 - A **Code Intelligence** tab: symbol search, callers/callees, impact analysis, circular-dependency detection, dead-code, Graph-RAG context generation
 - An **Agents** tab: run the swarm, get a ranked remediation plan, click **Generate verified fix PR** on any finding
@@ -108,38 +114,98 @@ Open `http://localhost:4000`, paste a public repo URL — e.g. `https://github.c
 
 No sign-up, no API key, nothing to configure for this path.
 
+**Feature status.** Not everything here is equally finished, and the difference is worth stating
+rather than leaving you to discover it:
+
+| Area | Status | What that means |
+|---|---|---|
+| Indexing · graph · Health Score · Code Intelligence | **stable** | Covered by tests, exercised on every push by the Docker smoke test |
+| Agent swarm · verified remediation · Editor | **stable** | Same, with the verification limits spelled out in the CLI section above |
+| CLI (`codegraph fix`) | **beta** | One command. Works and is tested end to end, but `index` and `score` do not exist yet, so it is a remediation tool rather than the whole workbench |
+| Desktop (Electron) | **beta** | Builds and tests in CI; not published as a signed release |
+| Fleet · Timeline | **experimental** | Useful, thinner test coverage, and the API may change without ceremony |
+
+### The CLI — where `verified` means the most
+
+```bash
+node apps/cli/bin.mjs fix . --verify
+```
+
+Gate 3 of verification runs **your** test suite, and that needs an isolated container. A hosted
+instance cannot provide one, so it reports `verified: partial` and says so. On your machine —
+your toolchain, your dependencies, your call on isolation — it reports `verified: full`.
+
+```
+Applied 3 edit(s) across 1 file(s)
+Health  85 → 93   5 → 2 issues
+
+Verification: full
+  ✓ syntax     0ms — 1 file(s) re-parsed
+  − types      0ms — no tsconfig.json in the project
+  ✓ tests      205ms — npm test --silent
+  ✓ reanalysis 186ms — no new findings introduced; no target finding was named, so this
+                       does not prove a specific finding was fixed
+```
+
+That last line is the tool refusing to overstate: a batch run cannot attribute an edit to one
+finding, so it verifies "nothing new broke" and says so rather than implying more. Fix a single
+finding from the UI and gate 4 makes the stronger claim — that *this* finding's fingerprint is
+gone.
+
+Your source is never modified: the work happens in a temp copy and you get a unified diff to
+pipe into `git apply`. The exit code is the verdict, so it works as a pre-commit hook — `0` for
+verified, `1` for a gate that rejected the patch.
+
+`--rule <id>` narrows to one rule, `--file <path>` to one file, `--json` for machine output.
+
 ## Installation & deployment
 
 | Mode | Command | Notes |
 |---|---|---|
-| **Local dev** | `cd app && npm install && npm run dev` | Hot reload, `http://localhost:4000` |
-| **Production (standalone Node)** | `npm run build && npm run start` | Emits `.next/standalone/server.js` |
-| **Docker (recommended for prod)** | `cd app && docker compose up --build` | Multi-stage `node:24-slim` build; runs as root deliberately (see [`docs/postmortems/`](./docs/postmortems) for why) |
+| **Local dev** | `npm ci && npm run dev` | Repo root. Hot reload, `http://localhost:4000` |
+| **Production (standalone Node)** | `npm ci && npm run build && npm run start` | Emits `apps/web/.next/standalone/apps/web/server.js` |
+| **Docker (recommended for prod)** | `docker compose up --build` | Repo root — the build context is the whole workspace. Multi-stage `node:24-slim`; runs as root deliberately (see [`docs/postmortems/`](./docs/postmortems) for why) |
 | **Render** | `render.yaml` at repo root | Blueprint deploy; persistent disk for SQLite + editor workspaces |
 
 Optional features (all off by default, zero config needed if you don't want them):
 - **HTTP Basic Auth gate** — set `CG_BASIC_AUTH_PASSWORD` to lock the whole app behind a shared password.
 - **GitHub sign-in** — set `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` / `CG_SESSION_SECRET` to let users one-click import their own repos, including private ones.
-- **Owner-only lockdown** — with GitHub sign-in configured, additionally set `CG_OWNER_GITHUB_LOGIN` (your GitHub username, or a comma-separated list) to restrict the *entire* app — every page and API route, including the normally-anonymous public bucket — to just that account. Enforced once in `app/src/proxy.ts`.
-- **AI Assistant in the Editor** — set `ANTHROPIC_API_KEY` for a Claude-powered chat panel, and/or `CG_LOCAL_LLM_BASE_URL` + `CG_LOCAL_LLM_MODEL` to point it at your own OpenAI-compatible local model server (Ollama, LM Studio, llama.cpp, vLLM, ...) instead — no data leaves your machine either way you choose the local backend. Either backend gets read/write/search/git on the open repo's workspace, no shell access — see `app/AGENTS.md`. Claude is the only piece of CodeGraph that calls a hosted LLM; everything else, including the agent swarm above and the local-model backend, needs none.
+- **Owner-only lockdown** — with GitHub sign-in configured, additionally set `CG_OWNER_GITHUB_LOGIN` (your GitHub username, or a comma-separated list) to restrict the *entire* app — every page and API route, including the normally-anonymous public bucket — to just that account. Enforced once in `apps/web/src/proxy.ts`.
+- **AI Assistant in the Editor** — set `ANTHROPIC_API_KEY` for a Claude-powered chat panel, and/or `CG_LOCAL_LLM_BASE_URL` + `CG_LOCAL_LLM_MODEL` to point it at your own OpenAI-compatible local model server (Ollama, LM Studio, llama.cpp, vLLM, ...) instead — no data leaves your machine either way you choose the local backend. Either backend gets read/write/search/git on the open repo's workspace, no shell access — see `apps/web/AGENTS.md`. Claude is the only piece of CodeGraph that calls a hosted LLM; everything else, including the agent swarm above and the local-model backend, needs none.
 
-Full env-var reference, OAuth App setup walkthrough, backup/restore, and scaling notes: **[`app/DEPLOY.md`](./app/DEPLOY.md)**.
+Full env-var reference, OAuth App setup walkthrough, backup/restore, and scaling notes: **[`apps/web/DEPLOY.md`](./apps/web/DEPLOY.md)**.
 
 ---
 
 ## Benchmarks
 
-Real numbers from real runs against real repos — not synthetic targets. Reproduce any of these yourself; the exact commands are in [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) and the docs linked below.
+Real numbers from real runs against real repos — not synthetic targets.
+
+Every repo-dependent row below is pinned to the exact commit it was measured against, because these
+numbers move when the target repo moves — and, as it turns out, when *ours* does.
+
+Re-measured 2026-07-30 with `npm run bench`, which reproduces every figure in this table from a
+fresh clone. Three had drifted since the last pass, all because the product changed rather than the
+target: the Health Score moved 77 → 74 when the score was split into pillars (defect risk is now
+surfaced alone) and then 74 → 77 again when `confidence` entered the kernel — the same figure
+twice, for unrelated reasons, which is precisely why every row cites a pinned commit and a command
+rather than a remembered number. The priority buckets moved from `P0:21 · P1:38 · P2:0` to
+`P0:8 · P1:16 · P2:35` when judge calibration was fixed — the table used to describe that empty P2
+as a known calibration issue, long after it was closed. The fix count (31 across 27 files) and
+issue counts (87 → 56) were unchanged.
+
+That is the whole argument for `npm run bench` existing: numbers nobody can re-derive go stale
+quietly, and a README is the last place that should happen.
 
 | What | Result | Source |
 |---|---|---|
-| **Symbol graph extraction** (`expressjs/express`) | 123 symbols, 94 edges, 94 resolved calls; 14 real call cycles found; 49 unreferenced functions flagged | [`app/CODE_INTELLIGENCE.md`](./app/CODE_INTELLIGENCE.md) |
-| **Agent swarm** (`expressjs/express`, live) | 69 findings across 6 active specialists (P0:10 · P1:18 · P2:39 · P3:2); projected Health Score **90 → 100** after fixing P0+P1 | [`app/AGENTS.md`](./app/AGENTS.md) |
-| **Verified remediation** (`expressjs/express`, live) | 31 real fixes applied across 27 files; Health Score **90 → 93** (actual re-index, not projected), issues **53 → 29**; valid, applyable unified git diff | [`app/AGENTS.md`](./app/AGENTS.md) |
-| **Graph-RAG context generation** | Query *"render a view template"* → 5 seeds, 11 slices, ~647 tokens, structured prompt | [`app/CODE_INTELLIGENCE.md`](./app/CODE_INTELLIGENCE.md) |
+| **Symbol graph extraction** (`expressjs/express@a371447`) | 174 symbols across 159 files plus 113 synthetic module nodes; **299 resolved call edges**, up from 38. Symbols with no inbound edge: **72 of 174 (41%)**, down from 155 (89%). Two defects caused that: call-site attribution required a named enclosing function, discarding 46% of already-resolved calls, and the extractor recorded only `CallExpression`, so rendering a component or passing a callback produced no reference. Precision is measured separately against the TypeScript checker as ground truth — **98.4%** over 2,159 calls where both resolvers answered. Of the symbols still unreferenced on *this* repository, the compiler finds a real call site for only **2%**: the rest are exports, entry points and dynamically-dispatched handlers, not missing edges | `npm run bench` |
+| **Agent swarm** (`expressjs/express@a371447`) | 66 findings across 6 active specialists (P0:24 · P1:2 · P2:40 · P3:0); Health Score 89, *simulated* **89 → 90** if P0+P1 are fixed. The projection re-runs the real scorer over the issues that would remain, so it simulates the shipped model rather than estimating — but it is a simulation, not a measurement. The measured result is the row below | `npm run bench` |
+| **Verified remediation** (`expressjs/express@a371447`) | 31 fixes across 27 files; Health Score **89 → 96** and issues **62 → 31**, both from an actual re-index of the fixed tree rather than a projection. Verification level **`partial`** — syntax and re-analysis passed, types and tests skipped (express ships no `tsconfig.json`, and gate 3 runs only under `--verify`). Valid, applyable unified git diff | `npm run bench` |
+| **Graph-RAG context generation** | Query *"render a view template"* → 5 seeds, 11 slices, ~647 tokens, structured prompt | [`apps/web/CODE_INTELLIGENCE.md`](./apps/web/CODE_INTELLIGENCE.md) |
 | **Memory ceiling under Render's real constraints** | Full pipeline survives indexing `octocat/Hello-World` **and** `expressjs/express` end-to-end inside a container capped at `--memory=512m --cpus=0.5` — the exact config that OOM-killed the server before the fix in [`docs/postmortems/2026-07-10-tree-sitter-oom.md`](./docs/postmortems/2026-07-10-tree-sitter-oom.md) | CI `docker-smoke-test` job, runs on every push |
-| **Test suite** | 96/96 passing across 6 files (security, indexer, codeintel, executor, layout, tenant-isolation) | `npm run test` |
-| **Security posture (self-audited, tracked openly)** | Baseline **3/10 → 8/10** after Phase 0–3 hardening (SSRF guard, local-access gate, security headers, auth gate, cross-tenant isolation fix). A follow-up deep audit found **99 further issues (5 critical)** across the full stack, mostly *not yet fixed* — see [Known issues](#known-issues--security-status) below | [`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md), [`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md) |
+| **Test suite** | **82 test files** in the workspace and **10** for the Electron app, plus a Playwright e2e spec run separately (security, indexer, scoring, pillars, coverage, dependencies, codeintel, executor, verify gates, orchestrator, specialists, migrations, tenant-isolation, CLI, README claims, and more). 1,152 and 59 cases respectively as of 2026-08-02 — the file counts are asserted by a test, the case counts are a point-in-time figure that moves with every commit | `npm run test`; `npm test --workspace @codegraph/desktop` |
+| **Security posture (self-audited, tracked openly)** | Baseline **3/10 → 9.1/10**. Phases 0–3 hardening (SSRF guard, local-access gate, security headers, auth gate, cross-tenant isolation fix), then Phase 7 closed **17 of 27** findings from a follow-up deep audit that surfaced **99 issues (5 critical)** across the full stack. Remaining items are tracked, not hidden — plus an independent pen-test pass that verified every control live and fixed a rate-limit `X-Forwarded-For` bypass | [`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md), [`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md) |
 
 ## Comparison with existing tools
 
@@ -162,30 +228,31 @@ Tracked live in [`docs/IMPROVEMENT_PLAN.md`](./docs/IMPROVEMENT_PLAN.md) (the pl
 
 - [x] **Phase 0 — Security lockdown**: SSRF guard, local-access gate, security headers, opt-in auth gate
 - [x] **Phase 1 — Reliability guardrails**: CI (typecheck + tests + adversarial Docker smoke test), branch protection, 4 incident postmortems
-- [x] **Phase 2 — Test coverage**: 96 regression tests locking the security/reliability fixes
+- [x] **Phase 2 — Test coverage**: 265 regression tests locking the security/reliability/accuracy fixes
 - [x] **Phase 3 — Documentation cleanup**: this README, `ARCHITECTURE.md`, legacy docs archived
 - [x] **Phase 0.6 — Multi-tenant isolation** *(pulled forward, was live-severity)*: per-repo ownership, cross-tenant data leak closed
-- [ ] **Phase 4 — Close the agent loop** *(next up)*: real PR creation (branch → commit → push → open PR via GitHub API) from a verified fix, with an explicit confirmation gate and a visible audit trail
+- [~] **Phase 4 — Close the agent loop** *(partly shipped)*: the **explicit confirmation gate exists** — every remote mutation now requires `PublishConsent { confirmed: true }`, and no route constructs one, so nothing publishes as shipped. What remains is the endpoint that takes that consent and performs the branch → commit → push → PR, plus the audit trail
 - [ ] **Phase 5 — Scale & domains** *(stretch)*: a second Tree-sitter language extractor (Python) for AST-grade precision beyond regex, runtime/observability domain (OTel ingestion)
 
 ### Known issues / security status
-This project audits itself and publishes the results rather than hiding them. A comprehensive follow-up audit ([`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md)) found **99 issues (5 critical, 24 high)** beyond what Phases 0–3 already fixed — including a confused-deputy token-relay path in the fix executor and two symlink-escape vectors. These are **tracked, not silently patched over**; fixing them is the next priority ahead of Phase 4. If you're evaluating this for anything beyond local/trusted-host use, read that audit first.
+This project audits itself and publishes the results rather than hiding them. A comprehensive follow-up audit ([`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md)) found **99 issues (5 critical, 24 high)** beyond what Phases 0–3 already fixed — including a confused-deputy token-relay path in the fix executor and two symlink-escape vectors. **Phase 7 has since closed all 5 criticals and 17 of 27 security findings** (symlink-escape fixes, credential redaction, job-ownership checks, OAuth open-redirect guard, session expiry, rate limiting, and more — each with regression tests), and an independent pen-test pass verified the controls live. The remaining items are testing-debt or deliberate product/infra tradeoffs, all **tracked in the open** ([`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md)), not silently patched over. If you're evaluating this for anything beyond local/trusted-host use, read that audit first.
 
 ---
 
 ## Contributing
 
 1. Fork, branch, make your change.
-2. Before opening a PR, run what CI runs — it's the same three commands, no surprises:
+2. Before opening a PR, run what CI runs — from the repo root, not from `apps/web`:
    ```bash
-   cd app
-   npx tsc --noEmit -p tsconfig.json   # typecheck
-   npm run test                         # vitest, must stay green
-   npm run build                        # production build must succeed
+   npm ci                # never `npm install` at the root; see CLAUDE.md
+   npm run typecheck     # every workspace
+   npm run depcruise     # HLD §6.1 layering + cycle gate
+   npm run test          # vitest, must stay green
+   npm run build         # production build must succeed
    ```
 3. `main` is branch-protected — both CI jobs (`Test & Build`, `Docker build + adversarial smoke test`) must pass before a PR can merge.
-4. New security-relevant code needs a regression test in the same PR (see `app/tests/tenant-isolation.test.ts` for the expected style: real scenarios, not mocked-away assertions).
-5. Docs live next to what they describe (`app/*.md` for product detail, root `ARCHITECTURE.md` for the system as a whole) — update the relevant one alongside a behavioral change, not after.
+4. New security-relevant code needs a regression test in the same PR (see `apps/web/tests/tenant-isolation.test.ts` for the expected style: real scenarios, not mocked-away assertions).
+5. Docs live next to what they describe (`apps/web/*.md` for product detail, root `ARCHITECTURE.md` for the system as a whole) — update the relevant one alongside a behavioral change, not after.
 
 Found a security issue? Please open an issue rather than a public PR with exploit details until it's triaged.
 

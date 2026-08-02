@@ -1,0 +1,408 @@
+[
+ {
+  "corpus": "express",
+  "title": "Large file (1218 LOC)",
+  "file": "test/app.router.js",
+  "line": 1,
+  "src": "'use strict'",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Large file (632 LOC)",
+  "file": "lib/application.js",
+  "line": 1,
+  "src": "/*!",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Large file (637 LOC)",
+  "file": "test/Router.js",
+  "line": 1,
+  "src": "'use strict'",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Large file (816 LOC)",
+  "file": "test/express.static.js",
+  "line": 1,
+  "src": "'use strict'",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Large file (621 LOC)",
+  "file": "test/res.send.js",
+  "line": 1,
+  "src": "'use strict'",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Regular expression built from a variable",
+  "file": "test/app.router.js",
+  "line": 1212,
+  "src": "new RegExp(source)",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/vhost/index.js",
+  "line": 38,
+  "src": "if (!module.parent) console.log(req.vhost);",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/route-separation/index.js",
+  "line": 54,
+  "src": "console.log('Express started on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/route-map/index.js",
+  "line": 74,
+  "src": "console.log('Express started on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/params/index.js",
+  "line": 73,
+  "src": "console.log('Express started on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/mvc/lib/boot.js",
+  "line": 17,
+  "src": "verbose && console.log('\\n   %s:', name);",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/mvc/lib/boot.js",
+  "line": 76,
+  "src": "verbose && console.log('     %s %s -> %s', method.toUpperCase(), url, ",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/markdown/index.js",
+  "line": 43,
+  "src": "console.log('Express started on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/error-pages/index.js",
+  "line": 102,
+  "src": "console.log('Express started on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/ejs/index.js",
+  "line": 56,
+  "src": "console.log('Express started on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/cookies/index.js",
+  "line": 52,
+  "src": "console.log('Express started on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/cookie-sessions/index.js",
+  "line": 24,
+  "src": "console.log('Express started on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/auth/index.js",
+  "line": 61,
+  "src": "if (!module.parent) console.log('authenticating %s:%s', name, pass);",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Filesystem path built from a variable",
+  "file": "test/support/tmpl.js",
+  "line": 22,
+  "src": "fs.readFile(fileName, 'utf8', onReadFile);",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/view-locals/index.js",
+  "line": 154,
+  "src": "console.log('Express started on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/static-files/index.js",
+  "line": 39,
+  "src": "console.log('listening on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/static-files/index.js",
+  "line": 41,
+  "src": "console.log('  GET /hello.txt');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/static-files/index.js",
+  "line": 43,
+  "src": "console.log('  GET /css/style.css');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/session/index.js",
+  "line": 36,
+  "src": "console.log('Express started on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "express",
+  "title": "Leftover debug output",
+  "file": "examples/session/redis.js",
+  "line": 39,
+  "src": "console.log('Express app started on port 3000');",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Possible hardcoded secret",
+  "file": "apps/web/tests/security.test.ts",
+  "line": 222,
+  "src": "const PASSWORD = \"s3cret\";",
+  "label": "false",
+  "reason": "test fixture 's3cret' (rule 4)"
+ },
+ {
+  "corpus": "self",
+  "title": "Possible SQL string concatenation",
+  "file": "packages/core-domain/tests/fingerprint.test.ts",
+  "line": 70,
+  "src": "const b = fp(\"js/sql-injection\", \"s\", 'db.query(\"SELECT * FROM account",
+  "label": "false",
+  "reason": "SQL inside a fingerprint test fixture string; no concatenation happens (rule 5)"
+ },
+ {
+  "corpus": "self",
+  "title": "ReDoS-vulnerable regular expression",
+  "file": "packages/vcs/src/signals.ts",
+  "line": 61,
+  "src": "const CONVENTIONAL_RE = /^([a-zA-Z]+)(?:\\([^)]*\\))?!?:/;",
+  "label": "false",
+  "reason": "measured flat to n=8000; does not backtrack (rule 5)"
+ },
+ {
+  "corpus": "self",
+  "title": "ReDoS-vulnerable regular expression",
+  "file": "packages/vcs/src/git.ts",
+  "line": 245,
+  "src": "const m = remoteUrl.match(/^https:\\/\\/(?:[^@]+@)?(.+)$/);",
+  "label": "false",
+  "reason": "measured flat to n=8000; does not backtrack (rule 5)"
+ },
+ {
+  "corpus": "self",
+  "title": "Hardcoded local URL",
+  "file": "apps/web/tests/credentialIsolation.test.ts",
+  "line": 137,
+  "src": "expect(cfg!.baseUrl).toBe(\"http://localhost:11434/v1\");",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Hardcoded local URL",
+  "file": "apps/web/tests/security-hardening.test.ts",
+  "line": 196,
+  "src": "return new NextRequest(`http://localhost/api/jobs/${jobId}`, { headers",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Hardcoded local URL",
+  "file": "apps/desktop/e2e/smoke.test.ts",
+  "line": 47,
+  "src": "expect(url).toContain(\"http://127.0.0.1:\");",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "packages/analysis/src/indexer.ts",
+  "line": 149,
+  "src": "if (existsSync(path.join(full, \".git\"))) {",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "apps/web/src/lib/settings.ts",
+  "line": 257,
+  "src": "return !!config.claudeCodeOauthToken || existsSync(CLAUDE_CREDENTIALS_",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "apps/web/src/lib/gitops/timelineStore.ts",
+  "line": 28,
+  "src": "await writeFile(filePath, JSON.stringify(snapshot, null, 2), \"utf8\");",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Possible hardcoded secret",
+  "file": "apps/web/tests/anthropicKeyCheck.test.ts",
+  "line": 113,
+  "src": "const res = await settingsPost(postRequest({ anthropicApiKey: \"sk-ant-",
+  "label": "false",
+  "reason": "test fixture 'sk-ant-BAD-KEY' (rule 4)"
+ },
+ {
+  "corpus": "self",
+  "title": "Untyped `any`",
+  "file": "apps/web/tests/executor.test.ts",
+  "line": 323,
+  "src": "viz: { nodes: [], edges: [] } as any,",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Possible hardcoded secret",
+  "file": "apps/web/tests/settings.test.ts",
+  "line": 75,
+  "src": "setAssistantSettings({ anthropicApiKey: \"sk-ant-carol-key-longer\" }, 2",
+  "label": "false",
+  "reason": "test fixture 'sk-ant-carol-key-longer' (rule 4)"
+ },
+ {
+  "corpus": "self",
+  "title": "Untyped `any`",
+  "file": "apps/web/src/components/TimelineView.tsx",
+  "line": 506,
+  "src": "function IssueItem({ issue }: { issue: any }) {",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Pre-1.0 dependency: esbuild (^0.28.1)",
+  "file": "apps/desktop/package.json",
+  "line": 1,
+  "src": "{",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "packages/remediate-engine/src/apply.ts",
+  "line": 107,
+  "src": "files = abs !== null && existsSync(abs) ? [abs] : [];",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "packages/verify/tests/gates.test.ts",
+  "line": 36,
+  "src": "writeFileSync(path.join(dir, rel), content);",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "packages/sandbox/tests/sandbox.test.ts",
+  "line": 91,
+  "src": "writeFileSync(path.join(root, \"package.json\"), JSON.stringify({ script",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "packages/fsx/tests/containment.test.ts",
+  "line": 76,
+  "src": "symlinkSync(path.join(outside, \"secret.txt\"), path.join(root, \"leak.tx",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "packages/analysis/tests/cancellation.test.ts",
+  "line": 23,
+  "src": "writeFileSync(",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "packages/analysis/tests/coverage.test.ts",
+  "line": 136,
+  "src": "mkdirSync(path.join(root, \".git\"), { recursive: true });",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "packages/analysis/tests/secret-shape.test.ts",
+  "line": 27,
+  "src": "writeFileSync(path.join(dir, \"a.ts\"), src);",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "apps/web/tests/assistant.test.ts",
+  "line": 208,
+  "src": "const src = readFileSync(path.join(__dirname, \"..\", \"src\", \"components",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "apps/web/tests/indexer.test.ts",
+  "line": 31,
+  "src": "writeFileSync(",
+  "label": "true"
+ },
+ {
+  "corpus": "self",
+  "title": "Filesystem path built from a variable",
+  "file": "apps/web/tests/readme-claims.test.ts",
+  "line": 25,
+  "src": "const README = readFileSync(path.join(root, \"README.md\"), \"utf8\");",
+  "label": "true"
+ }
+]

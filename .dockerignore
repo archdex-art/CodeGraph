@@ -1,0 +1,54 @@
+# Docker reads .dockerignore from the BUILD CONTEXT root, which is now the
+# monorepo root (apps/web/Dockerfile explains why). The previous
+# apps/web/.dockerignore is therefore dead and has been removed — leaving it
+# would look like it were in force while Docker ignored it.
+
+# Dependencies — reinstalled from the lockfile inside the image.
+node_modules
+**/node_modules
+
+# Build output
+.next
+**/.next
+out
+**/out
+*.tsbuildinfo
+
+# Runtime state: the SQLite DB and cloned workspaces live on a mounted disk,
+# never in the image.
+apps/web/data
+**/data/workspaces
+
+.git
+.gitignore
+.github
+
+# Not part of the web image.
+desktop
+docs
+benchmarks
+
+Dockerfile
+**/Dockerfile
+.dockerignore
+docker-compose.yml
+**/docker-compose.yml
+
+npm-debug.log*
+*.log
+.env
+.env*.local
+*.md
+.DS_Store
+coverage
+.vscode
+.idea
+
+# Test suites: the image runs the app, never the tests. Next's standalone writer copies the
+# app directory wholesale, so without this the container ships apps/web/tests too — same
+# finding as apps/desktop/scripts/build/asset-copy.ts EXCLUDED_PATHS, other packaging path.
+# The Dockerfile builds and never invokes vitest, so nothing in the build needs these.
+apps/*/tests
+packages/*/tests
+**/*.test.ts
+**/*.test.tsx

@@ -1,0 +1,301 @@
+// Path-safe filesystem operations over a repo's persistent workspace
+// directory. Every entry point resolves the requested relative path and
+// rejects anything that would escape the workspace root (symlink or `..`
+// traversal), so a malicious repoId/path combination can never touch the
+// host filesystem outside the workspace.
+//
+// This is the ONLY module in the workspace permitted to import node:fs
+// (LLD §10.1), enforced by .dependency-cruiser.cjs.
+import {
+  readdirSync,
+  statSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  renameSync,
+  existsSync,
+  cpSync,
+  lstatSync,
+  readlinkSync,
+  realpathSync,
+} from "node:fs";
+import path from "node:path";
+import type { Dirent } from "node:fs";
+import type { FsEntry } from "@codegraph/core-domain";
+
+export const MAX_EDITABLE_BYTES = 4_000_000; // 4MB — above this, treat as binary/too-large to edit
+export const MAX_WRITE_BYTES = 8_000_000; // 8MB — F011: hard cap on a single editor write/upload/create,
+// independent of MAX_EDITABLE_BYTES (which only governs reads/search truncation). No cap existed on
+// writes at all before this: any request (including anonymous, on the public bucket) could write
+// unbounded-size files repeatedly with no per-repo/global quota on a disk shared with the SQLite DB.
+
+const SKIP_DIRS: Record<string, true> = {
+  ".git": true,
+  node_modules: true,
+  ".next": true,
+  dist: true,
+  build: true,
+  out: true,
+  __pycache__: true,
+  ".venv": true,
+  venv: true,
+  target: true,
+  coverage: true,
+};
+
+// Ancestor walk + symlink-follow budget for `resolveSafe`. A path deeper or more
+// indirected than this is refused rather than trusted; Linux's own ELOOP limit is 40.
+const SYMLINK_MAX_HOPS = 64;
+
+export class WorkspacePathError extends Error {}
+
+/** Resolve `relPath` against `root`, throwing if it escapes the root. */
+export function resolveSafe(root: string, relPath: string): string {
+  const cleaned = (relPath || ".").replace(/^\/+/, "");
+  const full = path.resolve(root, cleaned);
+  const rootResolved = path.resolve(root);
+  if (full !== rootResolved && !full.startsWith(rootResolved + path.sep)) {
+    throw new WorkspacePathError(`Path escapes workspace: ${relPath}`);
+  }
+  // Lexical check passed; now defeat symlink escapes. A symlinked ancestor
+  // (legitimately present in a cloned repo, or attacker-crafted) can make a
+  // lexically-safe path resolve outside root at the OS level. Walk up from
+  // `full` to the nearest existing ancestor (the target itself may not
+  // exist yet, e.g. a create/write of a new file) and verify ITS real path
+  // is still contained in root's real path.
+  let rootReal: string;
+  try {
+    rootReal = realpathSync(rootResolved);
+  } catch {
+    return full; // workspace root doesn't exist yet — nothing to escape into
+  }
+  // `realpathSync` fails identically for "does not exist" and "is a DANGLING
+  // symlink", and the difference is the whole bug: `open(2)` FOLLOWS a dangling
+  // symlink and creates the file at its target, so treating one as the other let
+  // `write("innocent.txt")` create a file anywhere the process can reach, from a
+  // symlink an attacker-authored repository shipped in its own tree. Resolve the
+  // link by hand before falling back to the parent.
+  let probe = full;
+  let resolved = false;
+  for (let hops = 0; hops <= SYMLINK_MAX_HOPS; hops++) {
+    let real: string;
+    try {
+      real = realpathSync(probe);
+    } catch {
+      // `probe` does not exist. Either it is genuinely absent — walk up to its
+      // parent — or it is a dangling symlink, which `open(2)` would follow.
+      let target: string | null = null;
+      try {
+        target = lstatSync(probe).isSymbolicLink() ? readlinkSync(probe) : null;
+      } catch {
+        target = null;
+      }
+      if (target !== null) {
+        probe = path.resolve(path.dirname(probe), target);
+        continue;
+      }
+      const parent = path.dirname(probe);
+      if (parent === probe) {
+        resolved = true; // reached the filesystem root without an existing ancestor
+        break;
+      }
+      probe = parent;
+      continue;
+    }
+    if (real !== rootReal && !real.startsWith(rootReal + path.sep)) {
+      throw new WorkspacePathError(`Path escapes workspace: ${relPath}`);
+    }
+    resolved = true;
+    break;
+  }
+  if (!resolved) {
+    // Ran out of hops: a symlink cycle or a chain too deep to vet. Refusing is the
+    // only safe answer — an unvetted path is exactly what this function exists to reject.
+    throw new WorkspacePathError(`Path escapes workspace: ${relPath}`);
+  }
+  return full;
+}
+
+function toRel(root: string, full: string): string {
+  return path.relative(root, full).split(path.sep).join("/") || ".";
+}
+
+/** List one directory level (lazy tree expansion), dirs first, alphabetical. */
+export function listDir(root: string, relPath: string): FsEntry[] {
+  const full = resolveSafe(root, relPath);
+  const names = readdirSync(full, { withFileTypes: true });
+  const entries: FsEntry[] = [];
+  for (const d of names) {
+    if (d.name.startsWith(".") && d.name !== ".gitignore" && d.name !== ".env.example") {
+      if (d.name === ".git") continue; // never surface .git as an editable dir
+    }
+    if (SKIP_DIRS[d.name] && d.isDirectory()) continue;
+    const childFull = path.join(full, d.name);
+    const rel = toRel(root, childFull);
+    if (d.isDirectory()) {
+      entries.push({ name: d.name, path: rel, type: "dir" });
+    } else if (d.isFile()) {
+      let size = 0;
+      try { size = statSync(childFull).size; } catch { /* race, ignore */ }
+      entries.push({ name: d.name, path: rel, type: "file", size });
+    }
+  }
+  entries.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "dir" ? -1 : 1));
+  return entries;
+}
+
+export interface ReadFileResult {
+  content: string;
+  truncated: boolean;
+  size: number;
+  binary: boolean;
+}
+
+function looksBinary(buf: Buffer): boolean {
+  const n = Math.min(buf.length, 8000);
+  for (let i = 0; i < n; i++) if (buf[i] === 0) return true;
+  return false;
+}
+
+export function readWorkspaceFile(root: string, relPath: string): ReadFileResult {
+  const full = resolveSafe(root, relPath);
+  const st = statSync(full);
+  if (!st.isFile()) throw new Error("Not a file");
+  const buf = readFileSync(full);
+  const binary = looksBinary(buf);
+  if (binary) return { content: "", truncated: false, size: st.size, binary: true };
+  const truncated = buf.length > MAX_EDITABLE_BYTES;
+  const content = truncated ? buf.subarray(0, MAX_EDITABLE_BYTES).toString("utf8") : buf.toString("utf8");
+  return { content, truncated, size: st.size, binary: false };
+}
+
+export function writeWorkspaceFile(root: string, relPath: string, content: string): void {
+  if (Buffer.byteLength(content, "utf8") > MAX_WRITE_BYTES) {
+    throw new WorkspacePathError(`File exceeds the ${MAX_WRITE_BYTES.toLocaleString()}-byte write limit`);
+  }
+  const full = resolveSafe(root, relPath);
+  mkdirSync(path.dirname(full), { recursive: true });
+  writeFileSync(full, content, "utf8");
+}
+
+export interface ReadBytesResult {
+  /**
+   * Explicitly `ArrayBuffer`-backed, not the default `ArrayBufferLike`.
+   * `BodyInit` (what a Response constructor accepts) excludes
+   * SharedArrayBuffer-backed views, so a plain `Uint8Array` here fails to type
+   * check at the one call site that exists.
+   */
+  readonly bytes: Uint8Array<ArrayBuffer>;
+  /** Basename of the resolved file, for a Content-Disposition header. */
+  readonly name: string;
+}
+
+/**
+ * Read a file as raw bytes (the editor's download path).
+ *
+ * Exists so the route handler does not have to call `resolveSafe` and then
+ * `readFileSync` itself. That pattern hands a raw absolute path to a caller and
+ * makes containment something the caller can forget — LLD §10.1's "no raw path
+ * strings escape this module". Returning the basename too removes the last
+ * reason the route had to touch `node:path`.
+ */
+export function readWorkspaceBytes(root: string, relPath: string): ReadBytesResult {
+  const full = resolveSafe(root, relPath);
+  const st = statSync(full);
+  if (!st.isFile()) throw new WorkspacePathError("Not a file");
+  return { bytes: new Uint8Array(readFileSync(full)), name: path.basename(full) };
+}
+
+/**
+ * Write raw bytes (the editor's upload path), under the same size cap as a text
+ * write.
+ *
+ * The cap is enforced here rather than only at the route so it cannot be
+ * bypassed by a second caller. The route additionally rejects an oversized
+ * base64 payload before decoding it, which is a cheaper pre-filter, not a
+ * substitute for this.
+ */
+export function writeWorkspaceBytes(root: string, relPath: string, bytes: Uint8Array): void {
+  if (bytes.byteLength > MAX_WRITE_BYTES) {
+    throw new WorkspacePathError(`File exceeds the ${MAX_WRITE_BYTES.toLocaleString()}-byte write limit`);
+  }
+  const full = resolveSafe(root, relPath);
+  mkdirSync(path.dirname(full), { recursive: true });
+  writeFileSync(full, bytes);
+}
+
+export function createEntry(root: string, relPath: string, type: "file" | "dir"): void {
+  const full = resolveSafe(root, relPath);
+  if (existsSync(full)) throw new Error("Already exists");
+  if (type === "dir") {
+    mkdirSync(full, { recursive: true });
+  } else {
+    mkdirSync(path.dirname(full), { recursive: true });
+    writeFileSync(full, "", "utf8");
+  }
+}
+
+export function renameEntry(root: string, fromRel: string, toRel_: string): void {
+  const from = resolveSafe(root, fromRel);
+  const to = resolveSafe(root, toRel_);
+  mkdirSync(path.dirname(to), { recursive: true });
+  renameSync(from, to);
+}
+
+export function duplicateEntry(root: string, fromRel: string, toRel_: string): void {
+  const from = resolveSafe(root, fromRel);
+  const to = resolveSafe(root, toRel_);
+  if (existsSync(to)) throw new Error("Destination already exists");
+  mkdirSync(path.dirname(to), { recursive: true });
+  cpSync(from, to, { recursive: true });
+}
+
+export interface SearchMatch {
+  file: string;
+  line: number;
+  text: string;
+}
+
+/** Naive recursive text search across the workspace (bounded), used for the
+ *  editor's find-in-files panel. Skips binary files and known noise dirs. */
+export function searchWorkspace(root: string, query: string, maxResults = 200): SearchMatch[] {
+  if (!query.trim()) return [];
+  const needle = query.toLowerCase();
+  const results: SearchMatch[] = [];
+  const stack: string[] = [root];
+  let scanned = 0;
+  const MAX_FILES = 6000;
+  while (stack.length && results.length < maxResults && scanned < MAX_FILES) {
+    const dir = stack.pop()!;
+    let items: Dirent[];
+    try { items = readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    for (const it of items) {
+      if (it.isDirectory()) {
+        if (SKIP_DIRS[it.name]) continue;
+        stack.push(path.join(dir, it.name));
+        continue;
+      }
+      if (!it.isFile()) continue;
+      scanned++;
+      const full = path.join(dir, it.name);
+      let buf: Buffer;
+      try { buf = readFileSync(full); } catch { continue; }
+      if (buf.length > MAX_EDITABLE_BYTES || looksBinary(buf)) continue;
+      const text = buf.toString("utf8");
+      if (!text.toLowerCase().includes(needle)) continue;
+      const lines = text.split("\n");
+      // Iterated by value rather than by index: `lines[i]` is only provably
+      // defined to a human, and `noUncheckedIndexedAccess` is right to object.
+      // `entries()` yields a non-optional string, so the guard disappears
+      // instead of being suppressed with `!` — which is the class of bug that
+      // suppression hides elsewhere in this codebase (REVIEW B1).
+      for (const [index, line] of lines.entries()) {
+        if (results.length >= maxResults) break;
+        if (line.toLowerCase().includes(needle)) {
+          results.push({ file: toRel(root, full), line: index + 1, text: line.trim().slice(0, 240) });
+        }
+      }
+    }
+  }
+  return results;
+}

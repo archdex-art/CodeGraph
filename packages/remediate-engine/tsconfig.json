@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // INHERITED DEBT from ONE moved file, not a standard for this package.
+    //
+    // `providers/fixers.ts` came from `apps/web/src/lib/agents/fixers.ts`, whose tsconfig
+    // relaxes these two (see the long note in `apps/web/tsconfig.json`). Measured with the
+    // baseline unrelaxed, `tsc --noEmit`, no other change:
+    //
+    //   providers/fixers.ts  13 errors  — all `lines[i]` indexing in the line-based codemods
+    //   everything else       0 errors
+    //
+    // All 13 are the `lines[i]` pattern tsconfig.base.json's comment names explicitly, in
+    // paths where clearing it means deciding what a codemod DOES on out-of-range input — a
+    // behaviour change, and this move is structural.
+    //
+    // Everything else here — apply.ts, candidate.ts, types.ts, providers/ast-guards.ts — is
+    // new code and passes at the FULL baseline. Verified by fixing apply.ts's one error rather
+    // than letting this relaxation cover it. Keep it that way: this exists for one file, and
+    // it goes away when the fixers emit ranges (review B1's remaining half).
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}

@@ -1,0 +1,263 @@
+// Server-side git operations over a repo's persistent workspace directory.
+// All commands run via execFile (argv array — never a shell string), so
+// there is no command-injection surface even with attacker-controlled
+// branch names, commit messages, or file paths.
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { childEnv } from "@codegraph/config";
+import type {
+  GitBranch,
+  GitFileStatus,
+  GitLogEntry,
+  GitStatus,
+  GitStatusEntry,
+} from "@codegraph/core-domain";
+import { redactError } from "./redact";
+
+const exec = promisify(execFile);
+
+// childEnv rather than a config value: git needs the inherited environment
+// (PATH, HOME, SSH_AUTH_SOCK, proxy vars) to function. GIT_TERMINAL_PROMPT=0
+// makes a credential prompt fail fast instead of hanging the request forever.
+// Snapshotted at module load, exactly as before.
+const GIT_ENV = childEnv({ GIT_TERMINAL_PROMPT: "0" });
+
+/** True iff `url`'s host is exactly `github.com` — the only host we ever
+ *  attach a GitHub OAuth/PAT token to. Every call site that embeds a token
+ *  into a remote URL (push, PR creation) MUST gate on this first, so a
+ *  session's or user-supplied token can never be sent to an attacker-
+ *  controlled remote (see docs/AUDIT_2026-07-12.md F006). */
+export function isGithubHost(url: string): boolean {
+  try {
+    return new URL(url).hostname === "github.com";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Every git invocation goes through here, which is why redaction lives here.
+ *
+ * `push()` puts a token-bearing remote URL in argv, so a failure produces an
+ * Error whose `.cmd` contains a live credential — and `.cmd` was NOT redacted
+ * anywhere in v1. Only `.message` was, at one route boundary. Doing it at the
+ * choke point makes LLD §10.2's "every error path through vcs passes through
+ * redactCredentials" structurally true rather than a rule 15 call sites have to
+ * remember.
+ */
+async function git(cwd: string, args: string[]): Promise<string> {
+  try {
+    const { stdout } = await exec("git", args, { cwd, env: GIT_ENV, maxBuffer: 1024 * 1024 * 32 });
+    return stdout;
+  } catch (e) {
+    throw redactError(e);
+  }
+}
+
+export async function isGitRepo(dir: string): Promise<boolean> {
+  try {
+    await git(dir, ["rev-parse", "--is-inside-work-tree"]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Current commit hash of `dir`'s checked-out HEAD, or null if it isn't a
+ *  git repo (e.g. a local-folder source) or has no commits yet. */
+export async function getHeadHash(dir: string): Promise<string | null> {
+  try {
+    return (await git(dir, ["rev-parse", "HEAD"])).trim();
+  } catch {
+    return null;
+  }
+}
+
+function mapPorcelainCode(x: string, y: string): GitFileStatus {
+  if (x === "?" && y === "?") return "untracked";
+  if (x === "U" || y === "U" || (x === "A" && y === "A") || (x === "D" && y === "D")) return "conflicted";
+  if (x === "A") return "added";
+  if (x === "D" || y === "D") return "deleted";
+  if (x === "R") return "renamed";
+  return "modified";
+}
+
+export async function getStatus(dir: string): Promise<GitStatus> {
+  const raw = await git(dir, ["status", "--porcelain=v2", "--branch"]);
+  let branch = "HEAD";
+  let ahead = 0;
+  let behind = 0;
+  let detached = false;
+  const entries: GitStatusEntry[] = [];
+  for (const line of raw.split("\n")) {
+    if (!line) continue;
+    if (line.startsWith("# branch.head ")) {
+      branch = line.slice("# branch.head ".length).trim();
+      if (branch === "(detached)") detached = true;
+      continue;
+    }
+    if (line.startsWith("# branch.ab ")) {
+      const m = line.match(/\+(\d+) -(\d+)/);
+      if (m) { ahead = Number(m[1]); behind = Number(m[2]); }
+      continue;
+    }
+    if (line.startsWith("#")) continue;
+    // Ordinary changed entry: "1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>"
+    // Renamed/copied entry:   "2 <XY> ... <path>\t<origPath>"
+    // Untracked entry:        "? <path>"
+    const parts = line.split(" ");
+    const kind = parts[0];
+    if (kind === "?") {
+      const p = line.slice(2);
+      entries.push({ path: p, status: "untracked", staged: false });
+    } else if (kind === "1" || kind === "2") {
+      const xy = parts[1] || "..";
+      const x = xy[0] ?? ".";
+      const y = xy[1] ?? ".";
+      const status = mapPorcelainCode(x, y);
+      const staged = x !== "." && x !== "?";
+      const rest = line.split("\t");
+      const pathPart = kind === "2" ? (rest[0] ?? "").split(" ").slice(9).join(" ") : parts.slice(8).join(" ");
+      entries.push({ path: pathPart || parts[parts.length - 1] || "", status, staged });
+    } else if (kind === "u") {
+      const p = parts.slice(10).join(" ");
+      entries.push({ path: p, status: "conflicted", staged: false });
+    }
+  }
+  return { branch, ahead, behind, clean: entries.length === 0, entries, detached };
+}
+
+export async function listBranches(dir: string): Promise<GitBranch[]> {
+  // %(symref:short) is non-empty only for symbolic refs (e.g. the remote's
+  // HEAD -> origin/master alias) — those aren't real branches, skip them.
+  const raw = await git(dir, ["branch", "-a", "--format=%(refname:short)|%(HEAD)|%(symref:short)"]);
+  const out: GitBranch[] = [];
+  const seen = new Set<string>();
+  for (const line of raw.split("\n")) {
+    if (!line.trim()) continue;
+    const [name, head, symref] = line.split("|");
+    if (!name || seen.has(name) || symref) continue;
+    seen.add(name);
+    const remote = name.startsWith("origin/");
+    out.push({ name, current: head === "*", remote });
+  }
+  return out;
+}
+
+export async function createBranch(dir: string, name: string, from?: string): Promise<void> {
+  const args = from ? ["checkout", "-b", name, from] : ["checkout", "-b", name];
+  await git(dir, args);
+}
+
+export async function checkoutBranch(dir: string, name: string): Promise<void> {
+  await git(dir, ["checkout", name]);
+}
+
+export async function pull(dir: string): Promise<string> {
+  return git(dir, ["pull", "--ff-only"]);
+}
+
+export async function push(dir: string, remoteUrl?: string): Promise<string> {
+  if (remoteUrl) {
+    const branch = (await git(dir, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
+    return git(dir, ["push", remoteUrl, `HEAD:${branch}`]);
+  }
+  return git(dir, ["push"]);
+}
+
+export async function commit(dir: string, message: string, authorName = "CodeGraph Editor", authorEmail = "editor@codegraph.dev"): Promise<string> {
+  await git(dir, ["add", "-A"]);
+  return git(dir, ["-c", `user.name=${authorName}`, "-c", `user.email=${authorEmail}`, "commit", "-m", message]);
+}
+
+export async function diffFile(dir: string, relPath: string): Promise<string> {
+  try {
+    return await git(dir, ["diff", "HEAD", "--", relPath]);
+  } catch {
+    return "";
+  }
+}
+
+export async function diffCommitsFile(dir: string, base: string, head: string, relPath: string): Promise<string> {
+  try {
+    return await git(dir, ["diff", `${base}..${head}`, "--", relPath]);
+  } catch {
+    return "";
+  }
+}
+
+export async function getCommitDiffFiles(dir: string, base: string, head: string): Promise<Array<{ status: string, path: string }>> {
+  try {
+    const out = await git(dir, ["diff", "--name-status", `${base}..${head}`]);
+    if (!out.trim()) return [];
+    // One pass. The original mapped twice — taking the first character of the
+    // status, re-joining the path, then re-splitting it by tab — and its own
+    // comment ("To be safe:") admitted it was unsure. `--name-status` prints
+    // `R100\told\tnew` for a rename, so the NEW path is always the last field.
+    return out
+      .trim()
+      .split("\n")
+      .flatMap((line) => {
+        const fields = line.split("\t");
+        const status = fields[0]?.trim()[0];
+        const filePath = fields[fields.length - 1]?.trim();
+        // A line missing either half is not a diff entry; dropping it is
+        // truthful, where the previous version emitted `status: undefined`.
+        if (!status || !filePath) return [];
+        return [{ status, path: filePath }];
+      });
+  } catch {
+    return [];
+  }
+}
+
+export async function restoreFile(dir: string, relPath: string): Promise<void> {
+  try {
+    // use checkout instead of restore for maximum compatibility with older git versions
+    await git(dir, ["checkout", "HEAD", "--", relPath]);
+  } catch (e) {
+    // If it's an untracked file, checkout HEAD -- file fails. We fall back to cleaning it.
+    try {
+      await git(dir, ["clean", "-f", "--", relPath]);
+    } catch {
+      throw new Error(`Failed to revert file: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+}
+
+/**
+ * Upper bound on one `log()` call. The whole result is buffered in memory as a single
+ * string before it is split, so an unbounded count is a memory amplifier: one request
+ * asking for a million commits of a large repository is answered by reading all of it.
+ */
+const MAX_LOG_LIMIT = 1000;
+
+export async function log(dir: string, limit = 30): Promise<GitLogEntry[]> {
+  // `-${limit}` puts the caller's number straight into an argv token, and the callers are
+  // HTTP routes doing `Number(searchParams.get("limit")) || 30`. A negative value produced
+  // `--5`, which git rejects with a usage error — surfacing as a 500 on a request that is
+  // merely malformed. Non-integers (`1.5`, `1e21`) failed the same way. Normalise here
+  // rather than at each route: this is the function that owns the argv.
+  const count = Number.isFinite(limit)
+    ? Math.min(MAX_LOG_LIMIT, Math.max(1, Math.trunc(limit)))
+    : 30;
+  const sep = "\u0001";
+  const raw = await git(dir, ["log", `-${count}`, `--pretty=format:%H${sep}%an${sep}%ad${sep}%s`, "--date=iso-strict"]);
+  if (!raw.trim()) return [];
+  return raw.split("\n").map((line) => {
+    // Destructuring defaults, not `!`: git's own --pretty format always emits
+    // all four fields, so these are unreachable for well-formed output, but an
+    // empty string is a truthful value where `undefined` would silently vanish
+    // from the JSON response.
+    const [hash = "", author = "", date = "", ...rest] = line.split(sep);
+    return { hash, author, date, message: rest.join(sep) };
+  });
+}
+
+/** Build a remote URL with an embedded PAT for push auth (never persisted;
+ *  the token only ever lives in-memory for the duration of this call). */
+export function withToken(remoteUrl: string, token: string): string {
+  const m = remoteUrl.match(/^https:\/\/(?:[^@]+@)?(.+)$/);
+  if (!m) return remoteUrl;
+  return `https://x-access-token:${token}@${m[1]}`;
+}

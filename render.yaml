@@ -1,11 +1,16 @@
-# Render Blueprint — deploys the CodeGraph app (app/) as a Docker web service.
+# Render Blueprint — deploys the CodeGraph web app (apps/web/) as a Docker
+# web service.
 # Docs: https://render.com/docs/blueprint-spec
 services:
   - type: web
     name: codegraph
     runtime: docker
-    dockerfilePath: ./app/Dockerfile
-    dockerContext: ./app
+    # Context MUST be the repo root, not apps/web: the image installs from the
+    # root lockfile and traces imports into packages/*, both of which sit
+    # outside apps/web. Pinning the context to the app directory builds an
+    # image that cannot resolve the workspace (docs/design/SPIKES.md §1).
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
     # Persistent disks require a paid instance type; Starter is the minimum.
     plan: starter
     region: oregon
