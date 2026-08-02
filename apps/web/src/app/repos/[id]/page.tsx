@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, ArrowUpRight, Crosshair, Layers, Target } from "lucide-react";
+import { AlertTriangle, ArrowRight, ArrowUpRight, Crosshair, Layers, SquareArrowOutUpRight, Target } from "lucide-react";
 import type { Dimension } from "@/lib/types";
 import { DIMENSION_META, PILLAR_META, pillarsFrom } from "@/lib/types";
 import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
@@ -392,18 +392,19 @@ export default function RepoOverview() {
             </p>
           ) : (
             <div className="mt-lg overflow-hidden">
-              <div className="hidden grid-cols-[minmax(0,1fr)_7rem_5rem_5rem] gap-md border-b border-[var(--line)] pb-sm sm:grid">
+              <div className="hidden grid-cols-[minmax(0,1fr)_7rem_5rem_5rem_2.5rem] gap-md border-b border-[var(--line)] pb-sm sm:grid">
                 <span className="eyebrow">Finding</span>
                 <span className="eyebrow">Severity</span>
                 <span className="eyebrow text-right">Blast</span>
                 <span className="eyebrow text-right">Churn</span>
+                <span className="sr-only">Open in editor</span>
               </div>
               <Stagger className="divide-y divide-[var(--line-soft)]" step={0.03}>
                 {ranked.map((iss) => {
                   const sev = SEVERITY[iss.severity] ?? SEVERITY[1];
                   return (
                     <StaggerItem key={iss.id}>
-                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-md py-md sm:grid-cols-[minmax(0,1fr)_7rem_5rem_5rem]">
+                      <div className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-md py-md sm:grid-cols-[minmax(0,1fr)_7rem_5rem_5rem_2.5rem]">
                         <div className="min-w-0">
                           <p className="truncate text-meta text-[var(--text-primary)]">{iss.title}</p>
                           <p className="mt-2xs truncate font-mono text-micro text-[var(--text-muted)]">
@@ -422,6 +423,30 @@ export default function RepoOverview() {
                         <span className="tnum hidden text-right text-meta text-[var(--text-muted)] sm:block">
                           {iss.churn ?? "—"}
                         </span>
+                        {/* Straight to the line. A finding names a file and a line and
+                            then makes you go and find them yourself, which is the one
+                            step of this workflow the product can just do.
+
+                            Enabled only with a live workspace: without a clone there is
+                            nothing for the editor to open, and a link that lands on an
+                            empty state is worse than a disabled control that says why. */}
+                        {repo.hasWorkspace ? (
+                          <Link
+                            href={`${sectionHref(repo.id, "editor")}?file=${encodeURIComponent(iss.file)}&line=${iss.line}`}
+                            aria-label={`Open ${iss.file} at line ${iss.line} in the editor`}
+                            title={`Open ${iss.file}:${iss.line} in the editor`}
+                            className="col-start-2 row-start-1 flex h-8 w-8 cursor-pointer items-center justify-center justify-self-end rounded-md text-[var(--text-faint)] opacity-0 transition-colors duration-200 hover:bg-white/[0.04] hover:text-[var(--signal-500)] focus-visible:opacity-100 group-hover:opacity-100 sm:col-start-5 max-sm:opacity-100"
+                          >
+                            <SquareArrowOutUpRight className="h-3.5 w-3.5" />
+                          </Link>
+                        ) : (
+                          <span
+                            title="Re-index this repository to enable the built-in editor"
+                            className="hidden h-8 w-8 items-center justify-center justify-self-end text-[var(--text-faint)] opacity-40 sm:flex"
+                          >
+                            <SquareArrowOutUpRight className="h-3.5 w-3.5" />
+                          </span>
+                        )}
                       </div>
                     </StaggerItem>
                   );

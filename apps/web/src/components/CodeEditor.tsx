@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { OnMount } from "@monaco-editor/react";
 import {
-  FolderTree, Search as SearchIcon, GitBranch as GitBranchIcon, Trash2, X, Save, Circle, GitCompare,
+  FolderTree, Search as SearchIcon, GitBranch as GitBranchIcon, Trash2, X, Save, Circle, GitCompare, TriangleAlert,
 } from "lucide-react";
 import { FileExplorer } from "./editor/FileExplorer";
 import { GitPanel } from "./editor/GitPanel";
@@ -15,6 +15,7 @@ import type { AssistantProviders } from "@/lib/types";
 import { Bot } from "lucide-react";
 import { logger } from "@codegraph/observability";
 import { TrashPanel } from "./editor/TrashPanel";
+import { IssuesPanel } from "./editor/IssuesPanel";
 import { StatusBar, type SaveState } from "./editor/StatusBar";
 import { fsRead, fsWrite, gitStatus as fetchGitStatus, gitCommit, gitPush, getSaveMode, setSaveMode as persistSaveMode, trashList } from "@/lib/api";
 import { languageForPath } from "@/lib/editorLang";
@@ -23,7 +24,7 @@ import type { GitStatus, RepoDetail, SaveMode } from "@/lib/types";
 const MonacoEditor = dynamic(() => import("@monaco-editor/react").then((m) => m.Editor), { ssr: false });
 const MonacoDiffEditor = dynamic(() => import("@monaco-editor/react").then((m) => m.DiffEditor), { ssr: false });
 
-type Panel = "explorer" | "search" | "git" | "trash";
+type Panel = "explorer" | "search" | "git" | "trash" | "issues";
 
 interface Tab {
   path: string;
@@ -61,11 +62,38 @@ function loadPersisted(repoId: string): PersistedState {
   }
 }
 
-export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible?: boolean }) {
+export function CodeEditor({
+  repo,
+  visible = true,
+  openTarget = null,
+}: {
+  repo: RepoDetail;
+  visible?: boolean;
+  /**
+   * A file (and optionally a line) to open on arrival — how the report's findings
+   * link into the editor. Identified by `key` rather than by value so that clicking
+   * the SAME finding twice still re-reveals it: the second navigation carries an
+   * identical file and line, and comparing those alone makes it a no-op.
+   */
+  openTarget?: { key: string; file: string; line: number } | null;
+}) {
   const repoId = repo.id;
   const persisted = useMemo(() => loadPersisted(repoId), [repoId]);
 
-  const [panel, setPanel] = useState<Panel>("explorer");
+  /**
+   * Arriving on a finding selects the Issues panel — adjusted DURING RENDER against the
+   * previous target key, not synced in an effect. React documents this as the way to
+   * reset state when a prop changes; doing it in an effect renders the wrong panel for
+   * one frame first and is a cascading render besides. The panel stays user-controlled
+   * afterwards: only a NEW target moves it again.
+   */
+  const openTargetKey = openTarget?.key ?? null;
+  const [panel, setPanel] = useState<Panel>(openTarget ? "issues" : "explorer");
+  const [seenTargetKey, setSeenTargetKey] = useState(openTargetKey);
+  if (openTargetKey !== seenTargetKey) {
+    setSeenTargetKey(openTargetKey);
+    if (openTargetKey) setPanel("issues");
+  }
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activePath, setActivePath] = useState<string | null>(null);
   const [loadingPath, setLoadingPath] = useState<string | null>(null);
@@ -102,7 +130,7 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
     }
   }, [repoId]);
   const [trashCount, setTrashCount] = useState(0);
-  const [pendingReveal, setPendingReveal] = useState<number | null>(null);
+  const [pendingReveal, setPendingReveal] = useState<{ path: string; line: number } | null>(null);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const restoredRef = useRef(false);
 
@@ -115,14 +143,28 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
     (async () => {
       const st = loadPersisted(repoId);
       const restoredTabs: Tab[] = [];
-      for (const p of st.openTabs) {
+      // Deduped: a stored list is replayed verbatim on every load, so one duplicate
+      // written by any bug — or by two windows persisting over each other — reopens
+      // the same file in two tabs forever. Found exactly that way.
+      for (const p of [...new Set(st.openTabs)]) {
         try {
           const { content, binary } = await fsRead(repoId, p);
           if (!binary) restoredTabs.push({ path: p, content, original: content, dirty: false });
         } catch { /* file gone, skip */ }
       }
-      setTabs(restoredTabs);
-      setActivePath(st.activeTab && restoredTabs.some((t) => t.path === st.activeTab) ? st.activeTab : restoredTabs[0]?.path ?? null);
+      // Merged, not assigned. A deep link (`?file=…`) opens its file immediately, while
+      // this restore is still awaiting one `fsRead` per stored tab — and a bare
+      // `setTabs(restoredTabs)` would throw that arrival away, leaving the URL's file
+      // revealed in an editor whose tab no longer exists.
+      setTabs((arrived) => [
+        ...restoredTabs,
+        ...arrived.filter((t) => !restoredTabs.some((r) => r.path === t.path)),
+      ]);
+      setActivePath((current) =>
+        current ?? (st.activeTab && restoredTabs.some((t) => t.path === st.activeTab)
+          ? st.activeTab
+          : restoredTabs[0]?.path ?? null)
+      );
       restoredRef.current = true;
     })();
   }, [repoId]);
@@ -160,9 +202,26 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
 
   const activeTab = tabs.find((t) => t.path === activePath) || null;
 
+  /**
+   * Open a file, at most once.
+   *
+   * The "already open?" test reads `tabsRef`, not the `tabs` closure, and the append
+   * dedupes inside the updater — because the read and the append are separated by an
+   * await, so two calls for the same path can both pass the guard before either lands.
+   * That is not hypothetical: arriving on a finding fires the open once, React's
+   * StrictMode double-invokes the effect in development, and the editor came up with
+   * the same file in two tabs. `inFlight` closes the window; the updater's `some`
+   * check is the backstop that does not depend on it.
+   *
+   * Reading through the ref also keeps this callback stable across tab changes, which
+   * is what lets the arrival effect depend on the target key alone.
+   */
+  const inFlightOpens = useRef<Set<string>>(new Set());
+
   const openFile = useCallback(async (path: string) => {
-    const existing = tabs.find((t) => t.path === path);
-    if (existing) { setActivePath(path); return; }
+    if (tabsRef.current.some((t) => t.path === path)) { setActivePath(path); return; }
+    if (inFlightOpens.current.has(path)) return;
+    inFlightOpens.current.add(path);
     setLoadingPath(path);
     try {
       const { content, binary, truncated } = await fsRead(repoId, path);
@@ -174,20 +233,46 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
         // still open — best effort — flag to user
         logger.warn("File truncated for editing (exceeds size cap)", { path });
       }
-      setTabs((prev) => [...prev, { path, content, original: content, dirty: false }]);
+      setTabs((prev) =>
+        prev.some((t) => t.path === path) ? prev : [...prev, { path, content, original: content, dirty: false }]
+      );
       setActivePath(path);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to open file");
     } finally {
+      inFlightOpens.current.delete(path);
       setLoadingPath(null);
     }
-  }, [repoId, tabs]);
+  }, [repoId]);
 
   const openAtLine = useCallback(async (path: string, line: number) => {
     await openFile(path);
     setActivePath(path);
-    setPendingReveal(line);
+    // The reveal carries its PATH, not just a line number: switching tabs remounts
+    // Monaco (`key={activeTab.path}`), so a bare line would be applied to whichever
+    // instance happens to be alive — which is the outgoing one.
+    setPendingReveal({ path, line });
   }, [openFile]);
+
+  /**
+   * Arrive on a finding: open its file and reveal its line.
+   *
+   * Keyed on `openTarget.key` ALONE. Depending on `openAtLine` would re-run this on
+   * every tab change — `openFile` closes over `tabs` — and yank the cursor back to the
+   * finding while you were reading somewhere else, so the callback is reached through
+   * a ref. Which panel is showing is decided during render, above; this effect only
+   * does the part that is genuinely a side effect: fetching the file.
+   */
+  const openAtLineRef = useRef(openAtLine);
+  useEffect(() => {
+    openAtLineRef.current = openAtLine;
+  }, [openAtLine]);
+
+  useEffect(() => {
+    if (!openTarget) return;
+    void openAtLineRef.current(openTarget.file, openTarget.line);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openTargetKey]);
 
   function closeTab(path: string, force = false) {
     const t = tabs.find((x) => x.path === path);
@@ -263,18 +348,52 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
     persistSaveMode(repoId, m).catch(() => {});
   }
 
+  /**
+   * Revealing a line is harder than it looks here, for two reasons that both bite:
+   *
+   * 1. The editor is a dynamic import, so a reveal requested on arrival (`?file=…&line=…`)
+   *    happens BEFORE Monaco exists. An effect cannot catch that moment, because
+   *    mounting the editor writes a ref, which schedules no render — the deep link
+   *    opened the right file at line 1.
+   * 2. `key={activeTab.path}` means switching tabs UNMOUNTS and remounts Monaco. A
+   *    reveal fired while the outgoing instance is still in `editorRef` lands on a dying
+   *    editor and is lost — clicking an issue in another file switched tab and stayed at
+   *    line 1.
+   *
+   * So the reveal is applied by whichever instance actually owns the requested path:
+   * the mount handler when the editor arrives after the request, the effect when the
+   * request arrives after the editor. `mountedPathRef` is what distinguishes them.
+   */
+  const pendingRevealRef = useRef<{ path: string; line: number } | null>(null);
+  useEffect(() => {
+    pendingRevealRef.current = pendingReveal;
+  }, [pendingReveal]);
+
+  const mountedPathRef = useRef<string | null>(null);
+
+  const applyReveal = (editor: Parameters<OnMount>[0], line: number) => {
+    editor.revealLineInCenter(line);
+    editor.setPosition({ lineNumber: line, column: 1 });
+    editor.focus();
+  };
+
   const handleEditorMount: OnMount = (editor) => {
     editorRef.current = editor;
+    mountedPathRef.current = activePath;
     editor.onDidChangeCursorPosition((e) => setCursor({ line: e.position.lineNumber, col: e.position.column }));
+    const target = pendingRevealRef.current;
+    if (target && target.path === activePath) {
+      applyReveal(editor, target.line);
+      setPendingReveal(null);
+    }
   };
 
   useEffect(() => {
-    if (pendingReveal != null && editorRef.current) {
-      editorRef.current.revealLineInCenter(pendingReveal);
-      editorRef.current.setPosition({ lineNumber: pendingReveal, column: 1 });
-      editorRef.current.focus();
-      setPendingReveal(null);
-    }
+    if (!pendingReveal || !editorRef.current) return;
+    // Not this file's editor yet — the remount will pick the request up on mount.
+    if (pendingReveal.path !== activePath || mountedPathRef.current !== activePath) return;
+    applyReveal(editorRef.current, pendingReveal.line);
+    setPendingReveal(null);
   }, [pendingReveal, activePath]);
 
   // The parent page keeps this component mounted (hidden via CSS) when its tab
@@ -295,6 +414,13 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
         <div className="w-12 border-r border-white/10 flex flex-col items-center py-sm gap-2xs bg-black/20 shrink-0">
           <ActivityBtn active={panel === "explorer"} onClick={() => setPanel("explorer")} icon={<FolderTree className="w-4.5 h-4.5" />} title="Explorer" />
           <ActivityBtn active={panel === "search"} onClick={() => setPanel("search")} icon={<SearchIcon className="w-4.5 h-4.5" />} title="Search" />
+          <ActivityBtn
+            active={panel === "issues"}
+            onClick={() => setPanel("issues")}
+            icon={<TriangleAlert className="w-4.5 h-4.5" />}
+            title="Issues"
+            badge={repo.issues.length > 0 ? repo.issues.length : undefined}
+          />
           {hasGit && (
             <ActivityBtn active={panel === "git"} onClick={() => setPanel("git")} icon={<GitBranchIcon className="w-4.5 h-4.5" />} title="Source Control" badge={gitStat && gitStat.entries.length > 0 ? gitStat.entries.length : undefined} />
           )}
@@ -315,6 +441,9 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
           </div>
           <div className={panel === "search" ? "block h-full" : "hidden"}>
             <SearchPanel repoId={repoId} onOpenResult={openAtLine} />
+          </div>
+          <div className={panel === "issues" ? "block h-full" : "hidden"}>
+            <IssuesPanel issues={repo.issues} activePath={activePath} onOpenIssue={openAtLine} />
           </div>
           {hasGit && (
             <div className={panel === "git" ? "block h-full" : "hidden"}>
