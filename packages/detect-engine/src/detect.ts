@@ -3,7 +3,7 @@ import {
   callAt,
   classifyTaint,
   contextAt,
-  syntacticSpans,
+  spansFor,
   tierForExt,
   type SourceContext,
   type TaintQuery,
@@ -345,7 +345,7 @@ export async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, numb
      * languages the TS scanner does not cover (Python), which makes every position `code` and
      * leaves those files scored exactly as before - see `syntacticSpans`.
      */
-    const spans = syntacticSpans(f.text, f.ext);
+    const spans = spansFor(f.text, f.ext);
     // Absolute offset of each line start, so a per-line regex index becomes a file offset.
     const lineStart: number[] = new Array(lines.length);
     for (let i = 0, at = 0; i < lines.length; i++) {
