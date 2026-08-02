@@ -32,7 +32,7 @@ SCAN_ROOTS = ("apps", "packages")
 SOURCE_SUFFIXES = {".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"}
 
 # Never scanned: build output, dependencies, and generated types.
-SKIP_DIR_NAMES = {"node_modules", ".next", "dist", "build", "out", "coverage", ".git"}
+SKIP_DIR_NAMES = {"node_modules", ".next", "dist", "dist-bin", "build", "out", "coverage", ".git"}
 
 
 @dataclass(frozen=True)
