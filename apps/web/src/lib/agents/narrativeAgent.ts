@@ -1,5 +1,5 @@
 import { effectiveLocalLlmConfig, ANONYMOUS_USER_ID } from "../settings";
-import type { ArchitectureMetrics, EvolutionEvent } from "../gitops/evolutionEngine";
+import type { ArchitectureMetrics, EvolutionEvent } from "../gitops/types";
 import { logger } from "@codegraph/observability";
 
 /**

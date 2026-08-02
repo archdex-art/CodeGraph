@@ -1,7 +1,7 @@
 import { getTimeline, Strategies, type TimelineSnapshot, type SelectionStrategy } from "./timeline";
 import { loadSnapshot } from "./snapshotLoader";
-import { analyzeSnapshot, buildSnapshot, type ArchitectureSnapshot, type SnapshotMetrics } from "./historicalAnalysis";
-import type { ArchitectureEvolution } from "./evolutionEngine";
+import { analyzeSnapshot, buildSnapshot } from "./historicalAnalysis";
+import type { ArchitectureEvolution, ArchitectureSnapshot, SnapshotMetrics } from "./types";
 import { saveSnapshot, loadSnapshotCache, hasSnapshot, listSnapshots } from "./timelineStore";
 import { TimelineController } from "./timelineController";
 import { getIndexedHead } from "../store";
