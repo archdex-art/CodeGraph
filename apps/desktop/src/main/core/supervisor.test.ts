@@ -103,4 +103,68 @@ describe("Supervisor", () => {
     expect(serverManager.spawnServer).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledWith("Supervisor", expect.stringContaining("Reboot requested"));
   });
+
+  /**
+   * The restart loop's real failure modes. Each of these leaves a live Next.js process behind
+   * that nothing in the app can ever reach again: it holds its port, its memory and its SQLite
+   * handle until the machine reboots. None of them are visible from a single happy-path boot,
+   * which is why they survived the original suite.
+   */
+  describe("restart lifecycle", () => {
+    it("kills the unresponsive server before starting a replacement", async () => {
+      // Health failure means "alive but not answering", not "dead". The next attempt allocates
+      // a NEW port, so without an explicit stop the old process simply keeps running.
+      vi.mocked(serverManager.waitForHealth).mockResolvedValueOnce(false);
+      vi.stubGlobal("setTimeout", (fn: () => void) => fn());
+
+      await supervisor.boot();
+
+      expect(serverManager.stop).toHaveBeenCalled();
+      const stopOrder = vi.mocked(serverManager.stop).mock.invocationCallOrder[0];
+      const secondSpawn = vi.mocked(serverManager.spawnServer).mock.invocationCallOrder[1];
+      expect(secondSpawn).toBeGreaterThan(stopOrder);
+
+      vi.unstubAllGlobals();
+    });
+
+    it("does not start a second server when a crash and a health failure hit the same attempt", async () => {
+      // The realistic sequence: the child dies, `exit` fires immediately, and the health probe
+      // for that same attempt is still counting down. Both are failures of ONE attempt; acting
+      // on both forks the boot into two concurrent servers.
+      let crash: ((code: number | null) => void) | undefined;
+      vi.mocked(serverManager.spawnServer).mockImplementation((onCrash) => {
+        crash = onCrash;
+      });
+      vi.mocked(serverManager.waitForHealth).mockImplementationOnce(async () => {
+        crash?.(1);
+        return false;
+      });
+      vi.stubGlobal("setTimeout", (fn: () => void) => fn());
+
+      await supervisor.boot();
+
+      // One initial spawn plus exactly one recovery spawn.
+      expect(serverManager.spawnServer).toHaveBeenCalledTimes(2);
+
+      vi.unstubAllGlobals();
+    });
+
+    it("cancels a pending restart when the app shuts down", async () => {
+      // Quitting one second after a crash: the retry timer is still armed, and firing it after
+      // the app is gone spawns a server with nothing left alive to stop it.
+      vi.useFakeTimers();
+      try {
+        vi.mocked(serverManager.waitForHealth).mockResolvedValue(false);
+        await supervisor.boot();
+        expect(serverManager.spawnServer).toHaveBeenCalledTimes(1);
+
+        await supervisor.shutdown();
+        await vi.advanceTimersByTimeAsync(10_000);
+
+        expect(serverManager.spawnServer).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });

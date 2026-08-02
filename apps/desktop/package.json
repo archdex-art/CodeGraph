@@ -17,6 +17,7 @@
   "build": {
     "appId": "com.codegraph.app",
     "productName": "CodeGraph",
+    "electronVersion": "29.4.6",
     "directories": {
       "output": "dist-bin"
     },
@@ -24,12 +25,14 @@
       "dist/src/main/**/*",
       "dist/src/preload/**/*",
       "dist/shared/**/*",
-      "build/**/*",
+      "static/**/*",
       "package.json"
     ],
-    "asarUnpack": [
-      "build/standalone/node_modules/@anthropic-ai/**/*",
-      "build/standalone/apps/web/wasm/**/*"
+    "extraResources": [
+      {
+        "from": "build/standalone",
+        "to": "standalone"
+      }
     ],
     "mac": {
       "target": "dmg",
