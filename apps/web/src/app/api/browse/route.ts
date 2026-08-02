@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readdirSync, statSync, existsSync, realpathSync } from "node:fs";
+import { readdirSync, statSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
-import { config } from "@codegraph/config";
-import { localAccessAllowed, LOCAL_ACCESS_DISABLED_MESSAGE } from "@/lib/localAccess";
+import {
+  localAccessAllowed,
+  withinLocalAccessRoot,
+  LOCAL_ACCESS_DISABLED_MESSAGE,
+  LOCAL_ACCESS_ROOT_MESSAGE,
+} from "@/lib/localAccess";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
 import { logger } from "@codegraph/observability";
 
@@ -25,22 +29,8 @@ function resolveBrowsePath(input: string): string {
   return path.resolve(raw.replace(/^~(?=$|\/)/, homedir()));
 }
 
-// F016: optional defense-in-depth containment. `localAccessAllowed()` is
-// the primary gate (an explicit single-operator opt-in); this adds a
-// secondary boundary so a local-access misconfiguration doesn't
-// automatically mean full-filesystem read exposure. Off by default —
-// unset CG_LOCAL_ACCESS_ROOT preserves today's unrestricted behavior.
-function withinConfiguredRoot(target: string): boolean {
-  const configuredRoot = config.localAccessRoot;
-  if (!configuredRoot) return true;
-  try {
-    const rootReal = realpathSync(path.resolve(configuredRoot));
-    const targetReal = existsSync(target) ? realpathSync(target) : path.resolve(target);
-    return targetReal === rootReal || targetReal.startsWith(rootReal + path.sep);
-  } catch {
-    return false;
-  }
-}
+// Containment lives in `@/lib/localAccess` so `/api/index` enforces the same boundary;
+// it used to be defined here and only this route applied it.
 
 export async function GET(req: NextRequest) {
   if (!localAccessAllowed()) {
@@ -52,8 +42,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Too many browse requests. Try again shortly." }, { status: 429, headers: { "Retry-After": String(limited.retryAfter) } });
   }
   const target = resolveBrowsePath(new URL(req.url).searchParams.get("path") || "");
-  if (!withinConfiguredRoot(target)) {
-    return NextResponse.json({ error: "Path is outside the configured local-access root" }, { status: 403 });
+  if (!withinLocalAccessRoot(target)) {
+    return NextResponse.json({ error: LOCAL_ACCESS_ROOT_MESSAGE }, { status: 403 });
   }
 
   if (!existsSync(target)) {

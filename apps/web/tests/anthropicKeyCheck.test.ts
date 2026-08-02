@@ -143,3 +143,42 @@ describe("POST /api/settings/assistant rejects a confirmed-invalid key before pe
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
+
+describe("key verification is bounded", () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("passes an abort signal, so a stalled Anthropic cannot hang the settings save", async () => {
+    // `fetch` has no default timeout. Without a signal, an endpoint that accepts the
+    // connection and never answers left the POST handler awaiting forever.
+    //
+    // The mock stalls exactly like that endpoint and settles ONLY through the caller's
+    // signal, so a route that passes none never returns and this test fails by timeout
+    // rather than passing vacuously. It aborts the signal itself instead of waiting out
+    // the route's real 8s deadline — what has to be proven is that an abortable signal
+    // reaches `fetch`, not how long Node takes to fire it.
+    let observed: AbortSignal | null | undefined;
+    global.fetch = vi.fn((_url: string | URL | Request, init?: RequestInit) => {
+      observed = init?.signal;
+      return new Promise<Response>((_resolve, reject) => {
+        if (!observed) return; // never settles — exactly the bug
+        observed.addEventListener("abort", () => reject(new Error("The operation was aborted")));
+        queueMicrotask(() => (observed as AbortSignal & { onabort?: () => void }).dispatchEvent(new Event("abort")));
+      });
+    }) as unknown as typeof fetch;
+
+    const request = new NextRequest("http://localhost/api/settings/assistant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ anthropicApiKey: "sk-ant-STALLED" }),
+    });
+
+    // A network failure is not evidence the key is bad, so the save still succeeds.
+    const res = await settingsPost(request);
+    expect(res.status).toBe(200);
+    expect(getAssistantSettings(0).anthropicApiKey).toBe("sk-ant-STALLED");
+    expect(observed).toBeInstanceOf(AbortSignal);
+  }, 20_000);
+});

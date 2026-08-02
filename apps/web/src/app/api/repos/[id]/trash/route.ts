@@ -3,14 +3,22 @@ import { getWorkspaceDir } from "@/lib/store";
 import { repoAccessDenied } from "@/lib/authz";
 import { listTrash, restoreFromTrash, purgeTrashEntry, emptyTrash } from "@/lib/trash";
 import { WorkspacePathError } from "@codegraph/fsx";
+import { logger } from "@codegraph/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function err(e: unknown, fallback = 500) {
-  const msg = e instanceof Error ? e.message : String(e);
-  const status = e instanceof WorkspacePathError ? 400 : fallback;
-  return NextResponse.json({ error: msg }, { status });
+  // Same policy as the fs route, which this used to differ from: WorkspacePathError
+  // messages are authored to be client-safe, but a raw ENOENT/EEXIST from node:fs embeds
+  // the server's ABSOLUTE workspace path — and every trash operation is a filesystem move,
+  // so those were the common case here. Returning them disclosed the data directory
+  // layout to any caller who could name a missing entry (F023).
+  if (e instanceof WorkspacePathError) {
+    return NextResponse.json({ error: e.message }, { status: 400 });
+  }
+  logger.warn("trash route error", { error: e instanceof Error ? e.message : String(e) });
+  return NextResponse.json({ error: "Trash operation failed" }, { status: fallback });
 }
 
 // GET /api/repos/:id/trash -> { entries: TrashEntry[] }

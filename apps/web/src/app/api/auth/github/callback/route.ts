@@ -3,6 +3,7 @@ import { exchangeCodeForToken, fetchGithubUser, publicBaseUrl } from "@/lib/gith
 import { setSessionCookie } from "@/lib/session";
 import { timingSafeEqual } from "@/lib/basicAuth";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
+import { isSafeReturnPath } from "@codegraph/vcs";
 import { logger } from "@codegraph/observability";
 
 export const runtime = "nodejs";
@@ -20,7 +21,13 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state");
   const expectedState = req.cookies.get("cg_oauth_state")?.value;
-  const returnTo = req.cookies.get("cg_oauth_return")?.value || "/";
+  // Re-validated here, not just where it was set. `new URL(returnTo, base)` honours an
+  // ABSOLUTE url, so a `cg_oauth_return` cookie holding `https://evil.com` would redirect
+  // a freshly signed-in user off-site — with the session cookie already set. The set-time
+  // check in /api/auth/github only covers values this app wrote; a cookie is client-side
+  // state and any sibling subdomain or script that can write it bypasses that check.
+  const rawReturnTo = req.cookies.get("cg_oauth_return")?.value || "/";
+  const returnTo = isSafeReturnPath(rawReturnTo) ? rawReturnTo : "/";
   const base = publicBaseUrl(req.nextUrl.origin);
 
   // F022: constant-time compare for consistency with basicAuth.ts's own
