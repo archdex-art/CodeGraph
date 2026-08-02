@@ -116,6 +116,39 @@ describe("claimJob", () => {
     expect(reclaimed?.attempts).toBe(2);
   });
 
+  it("stops reclaiming an abandoned job once its attempt budget is spent", () => {
+    // The crash path had no budget. A payload that kills its worker every time was
+    // re-leased forever — `attempts` climbing past `max_attempts` without ever being
+    // read, because only `failJob` (the *reported* path) enforces the budget, and a
+    // worker that dies never reports. The job never went terminal, so nothing ever
+    // surfaced it as failed and the crash loop was invisible.
+    enqueue("poison", "repo-1", { maxAttempts: 2 });
+
+    const expired = () => Date.now() - 1_000;
+    expect(claimJob("w1", expired())?.attempts).toBe(1); // worker dies
+    expect(claimJob("w2", expired())?.attempts).toBe(2); // budget now spent
+
+    // Third poll: no third lease, and the row is terminal rather than stuck 'leased'.
+    expect(claimJob("w3", Date.now() + 30_000)).toBeNull();
+    const retired = findQueuedJob("poison");
+    expect(retired?.status).toBe("failed");
+    expect(retired?.attempts).toBe(2);
+    expect(retired?.lease_until).toBeNull();
+    expect(retired?.worker_id).toBeNull();
+  });
+
+  it("keeps draining healthy jobs while a poison job is retired", () => {
+    // The queue-level consequence. The expired lease sorts ahead of a queued job, so
+    // an unbudgeted poison job was handed out on every poll and everything behind it
+    // starved.
+    enqueue("poison", "repo-1", { maxAttempts: 1, priority: 5 });
+    enqueue("healthy", "repo-2", { priority: 1 });
+
+    expect(claimJob("w1", Date.now() - 1_000)?.id).toBe("poison"); // dies, budget spent
+    expect(claimJob("w2", Date.now() + 30_000)?.id).toBe("healthy");
+    expect(findQueuedJob("poison")?.status).toBe("failed");
+  });
+
   it("does not reclaim a job whose lease is still valid", () => {
     enqueue("job-1");
     claimJob("worker-a", Date.now() + 30_000);

@@ -118,12 +118,20 @@ export function enqueueJob(job: NewJob): { id: string; deduplicated: boolean } {
     if (existing) return { id: existing.id, deduplicated: true };
   }
 
-  db()
+  // `INSERT ... ON CONFLICT DO NOTHING` rather than a bare INSERT: the SELECT
+  // above loses to a concurrent request that inserts between the read and the
+  // write, and the loser then threw "UNIQUE constraint failed:
+  // jobs.idempotency_key" out of the route — a 500 for exactly the
+  // double-submitted POST the key exists to make harmless. Reproduced by racing
+  // two processes on one CG_DATA_DIR. The conflict target is `idx_jobs_idem`'s,
+  // so a duplicate `id` (a different bug) still throws.
+  const inserted = db()
     .prepare(
       `INSERT INTO jobs
          (id, repo_id, status, progress, message, kind, payload_json,
           priority, attempts, max_attempts, idempotency_key, created_at, updated_at)
-       VALUES (?, ?, 'queued', 0, 'Queued', ?, ?, ?, 0, ?, ?, ?, ?)`
+       VALUES (?, ?, 'queued', 0, 'Queued', ?, ?, ?, 0, ?, ?, ?, ?)
+       ON CONFLICT(idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING`
     )
     .run(
       job.id,
@@ -136,7 +144,14 @@ export function enqueueJob(job: NewJob): { id: string; deduplicated: boolean } {
       now,
       now
     );
-  return { id: job.id, deduplicated: false };
+  if (Number(inserted.changes) > 0) return { id: job.id, deduplicated: false };
+
+  // Lost the race. Re-read to return the winner's id, which is what a caller
+  // needs to attach to the in-flight job's progress stream.
+  const winner = db()
+    .prepare("SELECT id FROM jobs WHERE idempotency_key = ?")
+    .get(key) as { id: string } | undefined;
+  return winner ? { id: winner.id, deduplicated: true } : { id: job.id, deduplicated: false };
 }
 
 /**
@@ -151,6 +166,14 @@ export function enqueueJob(job: NewJob): { id: string; deduplicated: boolean } {
  * reaper never gets to report anything, so counting attempts at completion would
  * let exactly the crash this architecture exists to survive retry forever.
  *
+ * Which is also why the expired-lease arm is BUDGETED. It used to reclaim
+ * unconditionally, so a job that killed its worker every time — a poison payload,
+ * a repository that OOMs the parser — was re-leased forever, `attempts` climbing
+ * past `max_attempts` without ever being read. It never went terminal, and since
+ * it sorts oldest-first it was handed out ahead of every other queued job, so the
+ * queue stopped draining as well. `failJob` enforces the budget on the reported
+ * path; nothing enforced it on the crash path.
+ *
  * Atomic under WAL: the UPDATE ... WHERE id = (SELECT ... LIMIT 1) form means two
  * workers polling simultaneously cannot select the same row, because the write
  * lock is taken before the subquery's row is resolved.
@@ -160,6 +183,18 @@ export function claimJob(
   leaseUntil: number,
   now: number = Date.now()
 ): QueuedJobRow | null {
+  // Retire out-of-budget abandoned leases before claiming. A separate statement
+  // rather than a transaction with the claim below: it is idempotent (a second
+  // poller matches zero rows) and a crash between the two loses nothing, so the
+  // only thing a transaction would add is a write lock held across both.
+  db()
+    .prepare(
+      `UPDATE jobs
+          SET status='failed', error=?, lease_until=NULL, worker_id=NULL, updated_at=?
+        WHERE status='leased' AND lease_until < ? AND attempts >= max_attempts`
+    )
+    .run("Abandoned: worker lease expired with no attempts remaining", now, now);
+
   const row = db()
     .prepare(
       `UPDATE jobs
@@ -167,7 +202,7 @@ export function claimJob(
         WHERE id = (
           SELECT id FROM jobs
            WHERE (status='queued')
-              OR (status='leased' AND lease_until < ?)
+              OR (status='leased' AND lease_until < ? AND attempts < max_attempts)
            ORDER BY priority DESC, created_at ASC
            LIMIT 1
         )

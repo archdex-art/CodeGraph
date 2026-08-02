@@ -25,16 +25,49 @@ export function dataDir(): string {
   return config.dataDir;
 }
 
+/** Sleep on this thread. `DatabaseSync` is synchronous, so the retry below must be too. */
+const SLEEP_BUFFER = new Int32Array(new SharedArrayBuffer(4));
+
 function open(): SqliteDatabase {
   const dir = dataDir();
   mkdirSync(dir, { recursive: true });
   const db = new DatabaseSyncCtor(path.join(dir, "codegraph.sqlite"));
+  // busy_timeout FIRST, before any other pragma. Without a busy handler
+  // installed, every subsequent lock wait fails instantly with SQLITE_BUSY
+  // ("database is locked") whenever a second process touches the same file —
+  // which the shipped image does on every boot, since the container runs the web
+  // tier and `apps/worker` side by side and `db()` opens lazily on first use.
+  // Reproduced with concurrent `tsx` processes against one CG_DATA_DIR: ~7 of 8
+  // races threw at the WAL pragma below.
+  db.exec("PRAGMA busy_timeout = 5000;");
+
   // WAL lets a reader and the writer coexist, which matters because indexing
   // holds the write path for a while.
-  db.exec("PRAGMA journal_mode = WAL;");
-  // Without this, a concurrent write fails instantly with SQLITE_BUSY instead of
-  // waiting for the other transaction to finish.
-  db.exec("PRAGMA busy_timeout = 5000;");
+  //
+  // Retried rather than executed once, because busy_timeout does NOT cover this
+  // statement: converting the journal mode needs an exclusive lock, and SQLite
+  // returns SQLITE_BUSY for a journal_mode change without invoking the busy
+  // handler. That is only reachable on the FIRST open of a new file — the
+  // container's cold start on an empty persistent disk, where both processes
+  // race to convert the same rollback-mode database — and the loser used to die
+  // with an unhandled "database is locked". One process wins, so the loser's next
+  // read simply sees `wal` and stops.
+  const deadline = Date.now() + 5_000;
+  for (;;) {
+    const mode = db.prepare("PRAGMA journal_mode").get() as { journal_mode?: string } | undefined;
+    if (mode?.journal_mode?.toLowerCase() === "wal") break;
+    // The deadline bounds BOTH failure shapes: the pragma throwing, and the
+    // pragma returning without having converted. Neither may spin forever.
+    if (Date.now() >= deadline) {
+      throw new Error(`Could not put ${dir} into WAL mode: still ${mode?.journal_mode ?? "unknown"}`);
+    }
+    try {
+      db.exec("PRAGMA journal_mode = WAL;");
+    } catch {
+      Atomics.wait(SLEEP_BUFFER, 0, 0, 25);
+    }
+  }
+
   db.exec("PRAGMA foreign_keys = ON;");
   runMigrations(db);
   return db;

@@ -225,9 +225,24 @@ export async function restoreFile(dir: string, relPath: string): Promise<void> {
   }
 }
 
+/**
+ * Upper bound on one `log()` call. The whole result is buffered in memory as a single
+ * string before it is split, so an unbounded count is a memory amplifier: one request
+ * asking for a million commits of a large repository is answered by reading all of it.
+ */
+const MAX_LOG_LIMIT = 1000;
+
 export async function log(dir: string, limit = 30): Promise<GitLogEntry[]> {
+  // `-${limit}` puts the caller's number straight into an argv token, and the callers are
+  // HTTP routes doing `Number(searchParams.get("limit")) || 30`. A negative value produced
+  // `--5`, which git rejects with a usage error — surfacing as a 500 on a request that is
+  // merely malformed. Non-integers (`1.5`, `1e21`) failed the same way. Normalise here
+  // rather than at each route: this is the function that owns the argv.
+  const count = Number.isFinite(limit)
+    ? Math.min(MAX_LOG_LIMIT, Math.max(1, Math.trunc(limit)))
+    : 30;
   const sep = "\u0001";
-  const raw = await git(dir, ["log", `-${limit}`, `--pretty=format:%H${sep}%an${sep}%ad${sep}%s`, "--date=iso-strict"]);
+  const raw = await git(dir, ["log", `-${count}`, `--pretty=format:%H${sep}%an${sep}%ad${sep}%s`, "--date=iso-strict"]);
   if (!raw.trim()) return [];
   return raw.split("\n").map((line) => {
     // Destructuring defaults, not `!`: git's own --pretty format always emits
