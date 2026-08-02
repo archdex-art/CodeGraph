@@ -52,7 +52,7 @@ export { extractorFor, supportedExts } from "./extractors";
 export type { RawSymbolExtended } from "./ast-extractor";
 export { astTsExtractor, initTreeSitter } from "./ast-extractor";
 
-export { syntacticSpans, contextAt, tierForExt } from "./source-context";
+export { syntacticSpans, lexicalSpans, spansFor, contextAt, tierForExt } from "./source-context";
 export type { SourceContext, SourceSpan, AnalysisTier } from "./source-context";
 export { classifyTaint, callAt } from "./dataflow";
 export type { TaintQuery, TaintVerdict } from "./dataflow";

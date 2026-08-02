@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   GitBranch, GitCommit, ArrowUp, ArrowDown, Loader2, Plus, RefreshCw, Undo2,
   FileEdit, FilePlus, FileMinus, FileQuestion, AlertTriangle, ChevronDown, ChevronRight,
@@ -54,21 +54,35 @@ export function GitPanel({
   const [newBranchName, setNewBranchName] = useState("");
   const [logOpen, setLogOpen] = useState(false);
 
+  // `refresh()` fires both from the refreshToken effect (every editor save) and
+  // from `run()` after every git mutation, so two can be in flight at once and
+  // git latency decides which lands last. Newest request wins.
+  const refreshSeq = useRef(0);
+
   const refresh = useCallback(async () => {
+    const seq = ++refreshSeq.current;
     try {
       const [s, b] = await Promise.all([gitStatus(repoId), gitBranches(repoId)]);
+      if (seq !== refreshSeq.current) return;
       setStatus(s);
       setBranches(b);
       setNotARepo(false);
     } catch {
+      if (seq !== refreshSeq.current) return;
       setNotARepo(true);
       setStatus(null);
     }
   }, [repoId]);
 
   useEffect(() => { refresh(); }, [refresh, refreshToken]);
+
   useEffect(() => {
-    if (logOpen) gitLog(repoId, 30).then(setLog).catch(() => setLog([]));
+    if (!logOpen) return;
+    let active = true;
+    gitLog(repoId, 30)
+      .then((l) => { if (active) setLog(l); })
+      .catch(() => { if (active) setLog([]); });
+    return () => { active = false; };
   }, [logOpen, repoId, refreshToken]);
 
   async function run(label: string, fn: () => Promise<void>) {
@@ -138,9 +152,9 @@ export function GitPanel({
 
   if (notARepo) {
     return (
-      <div className="p-3 text-xs text-gray-500 space-y-2">
+      <div className="p-md text-meta text-gray-500 space-y-sm">
         <p>This workspace is not a Git repository (local folder). Git sync is unavailable — use “Save locally”.</p>
-        <button onClick={refresh} className="flex items-center gap-1 text-gray-400 hover:text-white">
+        <button onClick={refresh} className="flex items-center gap-2xs text-gray-400 hover:text-white">
           <RefreshCw className="w-3 h-3" /> Retry
         </button>
       </div>
@@ -150,14 +164,14 @@ export function GitPanel({
   const hasConflicts = status?.entries.some((e) => e.status === "conflicted");
 
   return (
-    <div className="text-xs">
+    <div className="text-meta">
       {/* Save mode */}
-      <div className="px-3 pt-3 pb-2 space-y-2 border-b border-white/5">
-        <div className="text-[11px] uppercase tracking-wide text-gray-500">Save Mode</div>
+      <div className="px-md pt-md pb-sm space-y-sm border-b border-white/5">
+        <div className="text-meta uppercase tracking-wide text-gray-500">Save Mode</div>
         <select
           value={saveMode}
           onChange={(e) => onSaveModeChange(e.target.value as SaveMode)}
-          className="w-full bg-[#0a0a0a] border border-white/10 rounded px-2 py-1.5 text-gray-200 focus:outline-none focus:border-purple-500/50"
+          className="w-full bg-[#0a0a0a] border border-white/10 rounded-xs px-sm py-xs text-gray-200 focus:outline-none focus:border-purple-500/50"
         >
           <option value="local">Save locally only</option>
           <option value="git-manual">Save to Git — manual commit</option>
@@ -165,7 +179,7 @@ export function GitPanel({
         </select>
         {saveMode === "git-auto" && (
           <>
-            <label className="flex items-center gap-2 text-gray-400">
+            <label className="flex items-center gap-sm text-gray-400">
               <input type="checkbox" checked={autoPush} onChange={(e) => onAutoPushChange(e.target.checked)} />
               Auto-push after commit
             </label>
@@ -173,15 +187,15 @@ export function GitPanel({
               value={commitTemplate}
               onChange={(e) => onCommitTemplateChange(e.target.value)}
               placeholder="Commit message template — {file}, {time}"
-              className="w-full bg-[#0a0a0a] border border-white/10 rounded px-2 py-1.5 text-gray-300 placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
+              className="w-full bg-[#0a0a0a] border border-white/10 rounded-xs px-sm py-xs text-gray-300 placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
             />
           </>
         )}
       </div>
 
       {/* Branch */}
-      <div className="px-3 py-2.5 border-b border-white/5 space-y-1.5">
-        <div className="flex items-center gap-2">
+      <div className="px-md py-sm border-b border-white/5 space-y-xs">
+        <div className="flex items-center gap-sm">
           <GitBranch className="w-3.5 h-3.5 text-purple-400 shrink-0" />
           <select
             value={status?.branch || ""}
@@ -196,34 +210,34 @@ export function GitPanel({
             ))}
           </select>
           {status && (status.ahead > 0 || status.behind > 0) && (
-            <span className="flex items-center gap-1 text-gray-500 shrink-0">
+            <span className="flex items-center gap-2xs text-gray-500 shrink-0">
               {status.ahead > 0 && <span className="flex items-center"><ArrowUp className="w-3 h-3" />{status.ahead}</span>}
               {status.behind > 0 && <span className="flex items-center"><ArrowDown className="w-3 h-3" />{status.behind}</span>}
             </span>
           )}
         </div>
         {!newBranchOpen ? (
-          <button onClick={() => setNewBranchOpen(true)} className="flex items-center gap-1 text-gray-500 hover:text-white">
+          <button onClick={() => setNewBranchOpen(true)} className="flex items-center gap-2xs text-gray-500 hover:text-white">
             <Plus className="w-3 h-3" /> New branch
           </button>
         ) : (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2xs">
             <input
               autoFocus
               value={newBranchName}
               onChange={(e) => setNewBranchName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") doCreateBranch(); if (e.key === "Escape") setNewBranchOpen(false); }}
               placeholder="feature/my-branch"
-              className="flex-1 bg-[#0a0a0a] border border-white/10 rounded px-2 py-1 text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
+              className="flex-1 bg-[#0a0a0a] border border-white/10 rounded-xs px-sm py-2xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
             />
-            <button onClick={doCreateBranch} className="text-emerald-400 hover:text-emerald-300 px-1">Create</button>
+            <button onClick={doCreateBranch} className="text-emerald-400 hover:text-emerald-300 px-2xs">Create</button>
           </div>
         )}
-        <div className="flex gap-2 pt-1">
-          <button onClick={doPull} disabled={!!busy} className="flex-1 flex items-center justify-center gap-1 border border-white/10 rounded px-2 py-1.5 text-gray-300 hover:bg-white/5 disabled:opacity-40">
+        <div className="flex gap-sm pt-2xs">
+          <button onClick={doPull} disabled={!!busy} className="flex-1 flex items-center justify-center gap-2xs border border-white/10 rounded-xs px-sm py-xs text-gray-300 hover:bg-white/5 disabled:opacity-40">
             {busy === "pull" ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowDown className="w-3 h-3" />} Pull
           </button>
-          <button onClick={doPush} disabled={!!busy} className="flex-1 flex items-center justify-center gap-1 border border-white/10 rounded px-2 py-1.5 text-gray-300 hover:bg-white/5 disabled:opacity-40">
+          <button onClick={doPush} disabled={!!busy} className="flex-1 flex items-center justify-center gap-2xs border border-white/10 rounded-xs px-sm py-xs text-gray-300 hover:bg-white/5 disabled:opacity-40">
             {busy === "push" ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowUp className="w-3 h-3" />} Push
           </button>
         </div>
@@ -232,31 +246,31 @@ export function GitPanel({
           value={token}
           onChange={(e) => setToken(e.target.value)}
           placeholder="GitHub PAT for push (optional)"
-          className="w-full bg-[#0a0a0a] border border-white/10 rounded px-2 py-1 text-gray-300 placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
+          className="w-full bg-[#0a0a0a] border border-white/10 rounded-xs px-sm py-2xs text-gray-300 placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
         />
       </div>
 
       {hasConflicts && (
-        <div className="mx-3 mt-2 flex items-start gap-2 rounded border border-rose-500/30 bg-rose-500/10 p-2 text-rose-300">
-          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+        <div className="mx-md mt-sm flex items-start gap-sm rounded-xs border border-rose-500/30 bg-rose-500/10 p-sm text-rose-300">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-2xs" />
           <span>Merge conflicts detected. Open the flagged file(s), resolve the {"<<<<<<< / ======= / >>>>>>>"} markers manually, then commit.</span>
         </div>
       )}
-      {error && <p className="mx-3 mt-2 text-rose-400">{error}</p>}
+      {error && <p className="mx-md mt-sm text-rose-400">{error}</p>}
 
       {/* Status entries */}
-      <div className="px-3 py-2.5 border-b border-white/5">
-        <div className="text-[11px] uppercase tracking-wide text-gray-500 mb-1.5">
+      <div className="px-md py-sm border-b border-white/5">
+        <div className="text-meta uppercase tracking-wide text-gray-500 mb-xs">
           Changes {status && status.entries.length > 0 ? `(${status.entries.length})` : ""}
         </div>
         {status && status.entries.length === 0 && <p className="text-gray-600">Working tree clean.</p>}
-        <div className="space-y-0.5 max-h-56 overflow-auto">
+        <div className="space-y-2xs max-h-56 overflow-auto">
           {status?.entries.map((e) => {
             const meta = STATUS_META[e.status];
             return (
               <div
                 key={e.path}
-                className="group flex items-center gap-2 w-full text-left px-1.5 py-1 rounded hover:bg-white/5 cursor-pointer"
+                className="group flex items-center gap-sm w-full text-left px-xs py-2xs rounded-xs hover:bg-white/5 cursor-pointer"
                 onClick={() => showDiff(e)}
               >
                 <span className={meta.color}>{meta.icon}</span>
@@ -264,11 +278,11 @@ export function GitPanel({
                 <button
                   onClick={(evt) => revertFile(evt, e.path)}
                   title="Revert changes"
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/10 hover:text-white text-gray-500"
+                  className="opacity-0 group-hover:opacity-100 p-2xs rounded-xs hover:bg-white/10 hover:text-white text-gray-500"
                 >
                   <Undo2 className="w-3.5 h-3.5" />
                 </button>
-                <span className={`${meta.color} font-mono ml-1`}>{meta.letter}</span>
+                <span className={`${meta.color} font-mono ml-2xs`}>{meta.letter}</span>
               </div>
             );
           })}
@@ -276,34 +290,34 @@ export function GitPanel({
       </div>
 
       {/* Commit */}
-      <div className="px-3 py-2.5 border-b border-white/5 space-y-2">
+      <div className="px-md py-sm border-b border-white/5 space-y-sm">
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Commit message"
           rows={3}
-          className="w-full bg-[#0a0a0a] border border-white/10 rounded px-2 py-1.5 text-gray-200 placeholder-gray-600 resize-none focus:outline-none focus:border-purple-500/50"
+          className="w-full bg-[#0a0a0a] border border-white/10 rounded-xs px-sm py-xs text-gray-200 placeholder-gray-600 resize-none focus:outline-none focus:border-purple-500/50"
         />
-        <div className="flex gap-2">
-          <button onClick={doCommit} disabled={!!busy || !status || status.entries.length === 0} className="flex-1 flex items-center justify-center gap-1 bg-white text-black rounded px-2 py-1.5 font-medium hover:bg-gray-200 disabled:opacity-30">
+        <div className="flex gap-sm">
+          <button onClick={doCommit} disabled={!!busy || !status || status.entries.length === 0} className="flex-1 flex items-center justify-center gap-2xs bg-white text-black rounded-xs px-sm py-xs font-medium hover:bg-gray-200 disabled:opacity-30">
             {busy === "commit" ? <Loader2 className="w-3 h-3 animate-spin" /> : <GitCommit className="w-3 h-3" />} Commit
           </button>
-          <button onClick={doCommitAndPush} disabled={!!busy} className="flex-1 flex items-center justify-center gap-1 border border-emerald-500/30 text-emerald-300 rounded px-2 py-1.5 font-medium hover:bg-emerald-500/10 disabled:opacity-30">
+          <button onClick={doCommitAndPush} disabled={!!busy} className="flex-1 flex items-center justify-center gap-2xs border border-emerald-500/30 text-emerald-300 rounded-xs px-sm py-xs font-medium hover:bg-emerald-500/10 disabled:opacity-30">
             {busy === "commit+push" ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowUp className="w-3 h-3" />} Commit &amp; Push
           </button>
         </div>
       </div>
 
       {/* Log */}
-      <div className="px-3 py-2.5">
-        <button onClick={() => setLogOpen((v) => !v)} className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-gray-500 hover:text-gray-300">
+      <div className="px-md py-sm">
+        <button onClick={() => setLogOpen((v) => !v)} className="flex items-center gap-2xs text-meta uppercase tracking-wide text-gray-500 hover:text-gray-300">
           {logOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} History
         </button>
         {logOpen && (
-          <div className="mt-1.5 space-y-2 max-h-64 overflow-auto">
+          <div className="mt-xs space-y-sm max-h-64 overflow-auto">
             {log.length === 0 && <p className="text-gray-600">No commits yet.</p>}
             {log.map((c) => (
-              <div key={c.hash} className="border-l-2 border-white/10 pl-2">
+              <div key={c.hash} className="border-l-2 border-white/10 pl-sm">
                 <p className="text-gray-200 truncate">{c.message}</p>
                 <p className="text-gray-600">{c.author} · {new Date(c.date).toLocaleString()} · <span className="font-mono">{c.hash.slice(0, 7)}</span></p>
               </div>

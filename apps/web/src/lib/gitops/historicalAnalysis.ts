@@ -2,28 +2,8 @@ import { indexRepo } from "../indexer";
 import type { TimelineSnapshot } from "./timeline";
 import type { LoadedSnapshot } from "./snapshotLoader";
 import type { IndexResult, CodeSymbol } from "../types";
-import { analyzeEvolution, type ArchitectureEvolution } from "./evolutionEngine";
-
-export interface SnapshotMetrics {
-  loc: number;
-  fileCount: number;
-  dirCount: number;
-  classes: number;
-  functions: number;
-  interfaces: number;
-  averageComplexity: number;
-  maxComplexity: number;
-  averageFanIn: number;
-  averageFanOut: number;
-  orphanModules: number;
-  dependencies: number;
-}
-export interface ArchitectureSnapshot {
-  timeline: TimelineSnapshot;
-  result: IndexResult;
-  metrics: SnapshotMetrics;
-  evolution?: ArchitectureEvolution;
-}
+import { analyzeEvolution } from "./evolutionEngine";
+import type { ArchitectureSnapshot, SnapshotMetrics } from "./types";
 
 export async function analyzeSnapshot(
   timelineEntry: TimelineSnapshot,

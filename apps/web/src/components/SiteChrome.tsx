@@ -78,23 +78,23 @@ export function SiteHeader() {
       }`}
       style={{ transitionTimingFunction: "var(--ease-out-expo)" }}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+      <div className="shell flex h-2xl items-center justify-between">
         <Link
           href="/"
-          className="group flex items-center gap-2.5 text-[15px] font-medium tracking-tight text-[var(--text-primary)]"
+          className="group flex items-center gap-sm text-body font-medium tracking-tight text-[var(--text-primary)]"
         >
           <Mark className="h-[22px] w-[22px] text-[var(--text-secondary)] transition-transform duration-500 group-hover:scale-110" />
           CodeGraph
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-2xs md:flex">
           {NAV.map((item) => {
             const active = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className="relative rounded-lg px-3 py-1.5 text-[13.5px] text-[var(--text-secondary)] transition-colors duration-200 hover:text-[var(--text-primary)]"
+                className="relative rounded-lg px-sm py-xs text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:text-[var(--text-primary)]"
               >
                 {active && (
                   <motion.span
@@ -107,7 +107,7 @@ export function SiteHeader() {
               </Link>
             );
           })}
-          <div className="ml-3 border-l border-[var(--line)] pl-3">
+          <div className="ml-sm border-l border-[var(--line)] pl-sm">
             <AuthNav />
           </div>
         </nav>
@@ -139,17 +139,17 @@ export function SiteHeader() {
             transition={{ duration: 0.36, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden border-t border-[var(--line)] bg-[rgba(6,8,10,0.96)] backdrop-blur-xl md:hidden"
           >
-            <div className="flex flex-col gap-1 px-6 py-4">
+            <div className="flex flex-col gap-2xs px-lg py-md">
               {NAV.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex min-h-11 items-center rounded-lg px-3 text-[15px] text-[var(--text-secondary)] transition-colors hover:bg-white/[0.04] hover:text-[var(--text-primary)]"
+                  className="flex min-h-11 items-center rounded-lg px-sm text-body text-[var(--text-secondary)] transition-colors hover:bg-white/[0.04] hover:text-[var(--text-primary)]"
                 >
                   {item.label}
                 </Link>
               ))}
-              <div className="mt-2 border-t border-[var(--line)] pt-3">
+              <div className="mt-sm border-t border-[var(--line)] pt-sm">
                 <AuthNav />
               </div>
             </div>
@@ -162,15 +162,15 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="relative mt-24 border-t border-[var(--line)]">
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2.5">
+    <footer className="relative mt-3xl border-t border-[var(--line)]">
+      <div className="shell py-xl">
+        <div className="flex flex-col gap-lg sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-sm">
             <Mark className="h-5 w-5 text-[var(--text-muted)]" />
-            <span className="text-sm text-[var(--text-secondary)]">CodeGraph</span>
-            <span className="eyebrow ml-1">MIT</span>
+            <span className="text-meta text-[var(--text-secondary)]">CodeGraph</span>
+            <span className="eyebrow ml-2xs">MIT</span>
           </div>
-          <p className="max-w-md text-[13px] leading-relaxed text-[var(--text-muted)]">
+          <p className="max-w-note text-meta text-[var(--text-muted)]">
             One container. One SQLite file. No API key. Every number on this page was
             measured on a real repository, and the commands that measure it are in the repo.
           </p>

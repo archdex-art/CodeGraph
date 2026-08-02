@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export interface NGNode {
   id: string;
@@ -52,6 +52,32 @@ function edgePath(s: NGNode, t: NGNode) {
   return { d: `M ${start.x} ${start.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${end.x} ${end.y}`, end };
 }
 
+export interface NGBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/** The transform that fits `bounds` inside `vp`. Pure — exported for tests. */
+export function fitView(bounds: NGBounds, vp: { w: number; h: number }): View {
+  const pad = 40;
+  const spanX = Math.max(1, bounds.maxX - bounds.minX);
+  const spanY = Math.max(1, bounds.maxY - bounds.minY);
+  const scale = Math.max(0.15, Math.min(2.2, Math.min((vp.w - pad * 2) / spanX, (vp.h - pad * 2) / spanY)));
+  return {
+    scale,
+    ox: vp.w / 2 - ((bounds.minX + bounds.maxX) / 2) * scale,
+    oy: vp.h / 2 - ((bounds.minY + bounds.maxY) / 2) * scale,
+  };
+}
+
+/** The transform that centres `n` without zooming further than [0.8, 2]. Pure. */
+export function centreView(n: { x: number; y: number }, v: View, vp: { w: number; h: number }): View {
+  const scale = Math.max(0.8, Math.min(2, v.scale || 1));
+  return { scale, ox: vp.w / 2 - n.x * scale, oy: vp.h / 2 - n.y * scale };
+}
+
 export function NodeGraph({
   nodes,
   edges,
@@ -73,6 +99,11 @@ export function NodeGraph({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [selId, setSelId] = useState<string | null>(null);
   const drag = useRef<{ on: boolean; lx: number; ly: number; moved: boolean }>({ on: false, lx: 0, ly: 0, moved: false });
+  // Mirrors `drag.current.on` for the cursor. The ref alone cannot drive it:
+  // mutating a ref schedules no render, so the "grabbing" cursor only appeared
+  // once some *other* update happened to re-render — i.e. after the first
+  // mouse-move, never on mouse-down alone.
+  const [grabbing, setGrabbing] = useState(false);
 
   const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
@@ -99,20 +130,7 @@ export function NodeGraph({
     return { minX, minY, maxX, maxY };
   }, [nodes]);
 
-  const fit = useMemo(
-    () => () => {
-      const pad = 40;
-      const spanX = Math.max(1, bounds.maxX - bounds.minX);
-      const spanY = Math.max(1, bounds.maxY - bounds.minY);
-      const scale = Math.max(0.15, Math.min(2.2, Math.min((vp.w - pad * 2) / spanX, (vp.h - pad * 2) / spanY)));
-      setView({
-        scale,
-        ox: vp.w / 2 - ((bounds.minX + bounds.maxX) / 2) * scale,
-        oy: vp.h / 2 - ((bounds.minY + bounds.maxY) / 2) * scale,
-      });
-    },
-    [bounds, vp]
-  );
+  const fit = useCallback(() => setView(fitView(bounds, vp)), [bounds, vp]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -132,23 +150,36 @@ export function NodeGraph({
     return () => ro.disconnect();
   }, [height]);
 
-  useEffect(() => {
-    fit();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bounds, vp.w, vp.h]);
+  // Auto-fit on layout/viewport change, and centre on an externally-selected
+  // node. Both are derived during render rather than synced from an effect:
+  // the effect version always committed one frame with the stale transform
+  // first (on mount that is the unfitted `scale: 1, ox: 0, oy: 0`, i.e. a
+  // graph drawn off-screen), then corrected it after paint.
+  const [fitted, setFitted] = useState<{ bounds: NGBounds; w: number; h: number } | null>(null);
+  if (!fitted || fitted.bounds !== bounds || fitted.w !== vp.w || fitted.h !== vp.h) {
+    setFitted({ bounds, w: vp.w, h: vp.h });
+    setView(fitView(bounds, vp));
+  }
 
-  // Search-to-focus: center the view on the externally-selected node.
+  const [focusApplied, setFocusApplied] = useState<{ id?: string | null; map?: Map<string, NGNode> }>({});
+  if (focusApplied.id !== focusId || focusApplied.map !== nodeMap) {
+    setFocusApplied({ id: focusId, map: nodeMap });
+    const target = focusId ? nodeMap.get(focusId) : undefined;
+    if (target) {
+      setSelId(target.id);
+      setView((v) => centreView(target, v, vp));
+    }
+  }
+
+  // Notifying the parent is a side effect, so it stays in an effect. `onSelect`
+  // is read through a ref because callers pass an inline arrow: depending on it
+  // directly would re-fire the notification on every render.
+  const onSelectRef = useRef(onSelect);
   useEffect(() => {
-    if (!focusId) return;
-    const n = nodeMap.get(focusId);
-    if (!n) return;
-    setSelId(focusId);
-    onSelect?.(focusId);
-    setView((v) => {
-      const scale = Math.max(0.8, Math.min(2, v.scale || 1));
-      return { scale, ox: vp.w / 2 - n.x * scale, oy: vp.h / 2 - n.y * scale };
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    onSelectRef.current = onSelect;
+  });
+  useEffect(() => {
+    if (focusId && nodeMap.has(focusId)) onSelectRef.current?.(focusId);
   }, [focusId, nodeMap]);
 
   const active = hoverId ?? selId;
@@ -181,6 +212,7 @@ export function NodeGraph({
   }
   function onDown(e: React.MouseEvent) {
     drag.current = { on: true, lx: e.clientX, ly: e.clientY, moved: false };
+    setGrabbing(true);
   }
   function onMove(e: React.MouseEvent) {
     if (!drag.current.on) return;
@@ -193,6 +225,7 @@ export function NodeGraph({
   }
   function onUp() {
     drag.current.on = false;
+    setGrabbing(false);
   }
 
   const tf = `translate(${view.ox} ${view.oy}) scale(${view.scale})`;
@@ -207,7 +240,7 @@ export function NodeGraph({
         width={vp.w}
         height={vp.h}
         className="block select-none"
-        style={{ cursor: drag.current.on ? "grabbing" : "grab" }}
+        style={{ cursor: grabbing ? "grabbing" : "grab" }}
         onWheel={onWheel}
         onMouseDown={onDown}
         onMouseMove={onMove}
@@ -308,18 +341,18 @@ export function NodeGraph({
       </svg>
 
       {/* Controls */}
-      <div className="absolute top-3 right-3 flex items-center gap-1.5">
-        <button onClick={() => zoomBy(1 / 1.25)} aria-label="Zoom out" className="text-sm leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded w-7 h-7 flex items-center justify-center">
+      <div className="absolute top-md right-md flex items-center gap-xs">
+        <button onClick={() => zoomBy(1 / 1.25)} aria-label="Zoom out" className="text-meta leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs w-7 h-7 flex items-center justify-center">
           −
         </button>
-        <button onClick={() => zoomBy(1.25)} aria-label="Zoom in" className="text-sm leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded w-7 h-7 flex items-center justify-center">
+        <button onClick={() => zoomBy(1.25)} aria-label="Zoom in" className="text-meta leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs w-7 h-7 flex items-center justify-center">
           +
         </button>
-        <button onClick={fit} className="text-[10px] text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded px-2 py-1 h-7">
+        <button onClick={fit} className="text-micro text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs px-sm py-2xs h-7">
           Fit view
         </button>
       </div>
-      <div className="absolute bottom-3 left-3 text-[10px] text-gray-600">
+      <div className="absolute bottom-md left-md text-micro text-gray-600">
         scroll = zoom · drag = pan · hover a node to highlight its connections
       </div>
     </div>

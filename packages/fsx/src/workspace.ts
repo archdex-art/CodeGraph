@@ -15,6 +15,8 @@ import {
   renameSync,
   existsSync,
   cpSync,
+  lstatSync,
+  readlinkSync,
   realpathSync,
 } from "node:fs";
 import path from "node:path";
@@ -41,6 +43,10 @@ const SKIP_DIRS: Record<string, true> = {
   coverage: true,
 };
 
+// Ancestor walk + symlink-follow budget for `resolveSafe`. A path deeper or more
+// indirected than this is refused rather than trusted; Linux's own ELOOP limit is 40.
+const SYMLINK_MAX_HOPS = 64;
+
 export class WorkspacePathError extends Error {}
 
 /** Resolve `relPath` against `root`, throwing if it escapes the root. */
@@ -63,20 +69,49 @@ export function resolveSafe(root: string, relPath: string): string {
   } catch {
     return full; // workspace root doesn't exist yet — nothing to escape into
   }
+  // `realpathSync` fails identically for "does not exist" and "is a DANGLING
+  // symlink", and the difference is the whole bug: `open(2)` FOLLOWS a dangling
+  // symlink and creates the file at its target, so treating one as the other let
+  // `write("innocent.txt")` create a file anywhere the process can reach, from a
+  // symlink an attacker-authored repository shipped in its own tree. Resolve the
+  // link by hand before falling back to the parent.
   let probe = full;
-  for (;;) {
+  let resolved = false;
+  for (let hops = 0; hops <= SYMLINK_MAX_HOPS; hops++) {
+    let real: string;
     try {
-      const real = realpathSync(probe);
-      if (real !== rootReal && !real.startsWith(rootReal + path.sep)) {
-        throw new WorkspacePathError(`Path escapes workspace: ${relPath}`);
+      real = realpathSync(probe);
+    } catch {
+      // `probe` does not exist. Either it is genuinely absent — walk up to its
+      // parent — or it is a dangling symlink, which `open(2)` would follow.
+      let target: string | null = null;
+      try {
+        target = lstatSync(probe).isSymbolicLink() ? readlinkSync(probe) : null;
+      } catch {
+        target = null;
       }
-      break;
-    } catch (e) {
-      if (e instanceof WorkspacePathError) throw e;
+      if (target !== null) {
+        probe = path.resolve(path.dirname(probe), target);
+        continue;
+      }
       const parent = path.dirname(probe);
-      if (parent === probe) break; // reached filesystem root without an existing ancestor
+      if (parent === probe) {
+        resolved = true; // reached the filesystem root without an existing ancestor
+        break;
+      }
       probe = parent;
+      continue;
     }
+    if (real !== rootReal && !real.startsWith(rootReal + path.sep)) {
+      throw new WorkspacePathError(`Path escapes workspace: ${relPath}`);
+    }
+    resolved = true;
+    break;
+  }
+  if (!resolved) {
+    // Ran out of hops: a symlink cycle or a chain too deep to vet. Refusing is the
+    // only safe answer — an unvetted path is exactly what this function exists to reject.
+    throw new WorkspacePathError(`Path escapes workspace: ${relPath}`);
   }
   return full;
 }

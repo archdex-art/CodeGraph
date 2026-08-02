@@ -37,14 +37,14 @@ export function ArchitectureView({ modules }: { modules: ModuleGraph }) {
   }, [modules]);
 
   if (!nodes.length) {
-    return <p className="text-sm text-gray-600 border border-dashed border-white/10 rounded-xl p-10 text-center">No module structure detected.</p>;
+    return <p className="text-meta text-gray-600 border border-dashed border-white/10 rounded-xl p-xl text-center">No module structure detected.</p>;
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-sm">
       <GraphSearch nodes={nodes} onFocus={setFocusId} placeholder="Search modules…" />
       <NodeGraph nodes={nodes} edges={edges} height={620} focusId={focusId} />
-      <p className="mt-2 text-[11px] text-gray-600">
+      <p className="mt-sm max-w-note text-micro text-gray-600">
         Top-level modules layered by dependency direction (entry points on top). Arrow thickness/number = import count · color = dominant language · dot = issues.
       </p>
     </div>

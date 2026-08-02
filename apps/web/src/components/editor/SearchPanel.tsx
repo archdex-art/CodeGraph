@@ -49,9 +49,9 @@ export function SearchPanel({
   }
 
   return (
-    <div className="p-3 text-xs space-y-2">
-      <div className="text-[11px] uppercase tracking-wide text-gray-500">Search</div>
-      <div className="flex items-center gap-1.5 bg-[#0a0a0a] border border-white/10 rounded px-2 py-1.5 focus-within:border-purple-500/50">
+    <div className="p-md text-meta space-y-sm">
+      <div className="text-meta uppercase tracking-wide text-gray-500">Search</div>
+      <div className="flex items-center gap-xs bg-[#0a0a0a] border border-white/10 rounded-xs px-sm py-xs focus-within:border-purple-500/50">
         <Search className="w-3.5 h-3.5 text-gray-500 shrink-0" />
         <input
           value={q}
@@ -63,12 +63,12 @@ export function SearchPanel({
         {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500" />}
       </div>
 
-      <button onClick={() => setShowReplace((v) => !v)} className="flex items-center gap-1 text-gray-500 hover:text-white">
+      <button onClick={() => setShowReplace((v) => !v)} className="flex items-center gap-2xs text-gray-500 hover:text-white">
         <Replace className="w-3 h-3" /> {showReplace ? "Hide replace" : "Replace in files"}
       </button>
 
       {showReplace && (
-        <div className="flex items-center gap-1.5 bg-[#0a0a0a] border border-white/10 rounded px-2 py-1.5">
+        <div className="flex items-center gap-xs bg-[#0a0a0a] border border-white/10 rounded-xs px-sm py-xs">
           <input
             value={replacement}
             onChange={(e) => setReplacement(e.target.value)}
@@ -81,24 +81,24 @@ export function SearchPanel({
         </div>
       )}
 
-      <button onClick={runSearch} className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded px-2 py-1.5 text-gray-300">
+      <button onClick={runSearch} className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs px-sm py-xs text-gray-300">
         Search
       </button>
 
-      <div className="space-y-1 max-h-[60vh] overflow-auto">
-        {searched && results.length === 0 && !loading && <p className="text-gray-600 pt-2">No matches.</p>}
+      <div className="space-y-2xs max-h-[60vh] overflow-auto">
+        {searched && results.length === 0 && !loading && <p className="text-gray-600 pt-sm">No matches.</p>}
         {results.map((r, i) => (
           <button
             key={`${r.file}:${r.line}:${i}`}
             onClick={() => onOpenResult(r.file, r.line)}
-            className="block w-full text-left px-2 py-1.5 rounded hover:bg-white/5"
+            className="block w-full text-left px-sm py-xs rounded-xs hover:bg-white/5"
           >
-            <div className="flex items-center gap-1.5 text-gray-400">
+            <div className="flex items-center gap-xs text-gray-400">
               <FileText className="w-3 h-3 shrink-0" />
               <span className="truncate">{r.file}</span>
               <span className="text-gray-600 shrink-0">:{r.line}</span>
             </div>
-            <div className="text-gray-500 truncate pl-4 font-mono">{r.text}</div>
+            <div className="text-gray-500 truncate pl-md font-mono">{r.text}</div>
           </button>
         ))}
       </div>

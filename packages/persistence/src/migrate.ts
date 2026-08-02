@@ -48,6 +48,23 @@ export function runMigrations(db: SqliteDatabase): void {
     // database would silently retry earlier versions on the next boot.
     db.exec("BEGIN IMMEDIATE");
     try {
+      // Re-read INSIDE the write lock. The `pending` list above was computed
+      // without one, and the shipped image boots two processes against the same
+      // file (web tier + apps/worker), so both can compute the same pending list
+      // and then apply it one after the other. The loser used to fail its boot
+      // with "UNIQUE constraint failed: schema_migrations.version" — and for 003,
+      // whose backfill ids are deterministic, it would instead die inside `up()`
+      // on duplicate finding ids. BEGIN IMMEDIATE serialises the two, so this
+      // read is authoritative: if the other process already recorded the version,
+      // there is nothing to do. Reproduced with concurrent `tsx` boots against
+      // one CG_DATA_DIR.
+      const recorded = db
+        .prepare("SELECT 1 FROM schema_migrations WHERE version = ?")
+        .get(migration.version);
+      if (recorded !== undefined) {
+        db.exec("COMMIT");
+        continue;
+      }
       migration.up(db);
       db.prepare("INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(
         migration.version,

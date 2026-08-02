@@ -1,5 +1,5 @@
 import type { VizGraph, GraphNode, GraphEdge, SymbolGraph, CodeSymbol, SymbolEdge } from "../types";
-import type { ArchitectureSnapshot } from "./historicalAnalysis";
+import type { ArchitectureSnapshot } from "./types";
 
 export interface NodeDiff<T> {
   added: T[];

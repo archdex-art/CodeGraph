@@ -21,9 +21,27 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [vp, setVp] = useState({ w: 900, h: 600 });
   const [hover, setHover] = useState<{ d: HierarchyCircularNode<PackDatum>; x: number; y: number } | null>(null);
-  const [, setFrame] = useState(0);
-  const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  /**
+   * The viewport, the focused node and the drag flag live in a ref AND in state.
+   *
+   * The ref is what the wheel/drag/animation handlers read and write: they fire
+   * dozens of times a second and each one needs the value the previous one just
+   * wrote, which a state variable captured in a closure cannot give them.
+   *
+   * The state is what RENDER reads. Reading the ref during render (which this
+   * component used to do, re-rendering via a `setFrame` counter) is a render-purity
+   * violation: the output is not derived from props or state, so React is free to
+   * reuse a previous render or tear under concurrent rendering. It also produced a
+   * visible bug — `cursor: drag.current.on ? "grabbing" : "grab"` was evaluated
+   * during a render that the mousedown never scheduled, so the grabbing cursor only
+   * appeared after some *other* update happened to re-render the tree.
+   *
+   * `applyView`/`applyFocus` keep the two in step, and are only ever called from
+   * event handlers and animation frames — never during render.
+   */
 
   // Guard against a momentarily/CSS-hidden container (e.g. a kept-mounted but
   // inactive tab, which collapses to 0x0 via display:none) so d3's pack()
@@ -42,11 +60,23 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
   const raf = useRef(0);
   const drag = useRef<{ on: boolean; lx: number; ly: number; moved: boolean }>({ on: false, lx: 0, ly: 0, moved: false });
 
+  const [view, setView] = useState<View>([dim / 2, dim / 2, dim]);
+  const [focus, setFocus] = useState<HierarchyCircularNode<PackDatum>>(root);
+  const [grabbing, setGrabbing] = useState(false);
+
+  const applyView = (next: View) => {
+    viewRef.current = next;
+    setView(next);
+  };
+  const applyFocus = (n: HierarchyCircularNode<PackDatum>) => {
+    focusRef.current = n;
+    setFocus(n);
+  };
+
   // Reset view when the layout (size/tree) changes.
   useEffect(() => {
-    viewRef.current = [root.x, root.y, root.r * 2];
-    focusRef.current = root;
-    setFrame((f) => f + 1);
+    applyView([root.x, root.y, root.r * 2]);
+    applyFocus(root);
   }, [root]);
 
   useEffect(() => {
@@ -74,12 +104,11 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
     const step = (now: number) => {
       const p = Math.min(1, (now - t0) / dur);
       const e = ease(p);
-      viewRef.current = [
+      applyView([
         from[0] + (target[0] - from[0]) * e,
         from[1] + (target[1] - from[1]) * e,
         from[2] + (target[2] - from[2]) * e,
-      ];
-      setFrame((f) => f + 1);
+      ]);
       if (p < 1) raf.current = requestAnimationFrame(step);
     };
     cancelAnimationFrame(raf.current);
@@ -87,7 +116,7 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
   }
 
   function focusNode(n: HierarchyCircularNode<PackDatum>) {
-    focusRef.current = n;
+    applyFocus(n);
     zoomTo([n.x, n.y, n.r * 2]);
   }
 
@@ -106,20 +135,19 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
     const f = e.deltaY < 0 ? 1 / 1.15 : 1.15;
     const nd = Math.max(dim / 60, Math.min(dim * 4, cd * f));
     const ns = dim / nd;
-    viewRef.current = [wx - (sx - vp.w / 2) / ns, wy - (sy - vp.h / 2) / ns, nd];
-    setFrame((n) => n + 1);
+    applyView([wx - (sx - vp.w / 2) / ns, wy - (sy - vp.h / 2) / ns, nd]);
   }
 
   function zoomButton(factor: number) {
     cancelAnimationFrame(raf.current);
     const [cx, cy, cd] = viewRef.current;
     const nd = Math.max(dim / 60, Math.min(dim * 4, cd * factor));
-    viewRef.current = [cx, cy, nd];
-    setFrame((n) => n + 1);
+    applyView([cx, cy, nd]);
   }
 
   function onDown(e: React.MouseEvent) {
     drag.current = { on: true, lx: e.clientX, ly: e.clientY, moved: false };
+    setGrabbing(true);
   }
   function onMove(e: React.MouseEvent) {
     if (!drag.current.on) return;
@@ -131,11 +159,11 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
     drag.current.ly = e.clientY;
     const [cx, cy, cd] = viewRef.current;
     const s = dim / cd;
-    viewRef.current = [cx - dx / s, cy - dy / s, cd];
-    setFrame((n) => n + 1);
+    applyView([cx - dx / s, cy - dy / s, cd]);
   }
   function onUp() {
     drag.current.on = false;
+    setGrabbing(false);
   }
 
   const legend = useMemo(() => {
@@ -144,13 +172,13 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
     return [...set].sort();
   }, [root]);
 
-  const [vx, vy, vd] = viewRef.current;
+  const [vx, vy, vd] = view;
   const scale = dim / vd;
   const tx = (x: number) => (x - vx) * scale + vp.w / 2;
   const ty = (y: number) => (y - vy) * scale + vp.h / 2;
 
   const nodes = root.descendants();
-  const atRoot = focusRef.current === root;
+  const atRoot = focus === root;
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -164,9 +192,9 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
   }
 
   return (
-    <div className="space-y-2">
-      <div className="relative w-full max-w-xs">
-        <div className="flex items-center gap-1.5 bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-1.5 focus-within:border-purple-500/50">
+    <div className="space-y-sm">
+      <div className="relative w-full max-w-rail">
+        <div className="flex items-center gap-xs bg-[#0a0a0a] border border-white/10 rounded-lg px-sm py-xs focus-within:border-purple-500/50">
           <Search className="w-3.5 h-3.5 text-gray-500 shrink-0" />
           <input
             value={query}
@@ -177,7 +205,7 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
               if (e.key === "Escape") { setQuery(""); setSearchOpen(false); }
             }}
             placeholder="Search files/folders…"
-            className="bg-transparent flex-1 text-sm text-gray-200 placeholder-gray-600 focus:outline-none min-w-0"
+            className="bg-transparent flex-1 text-meta text-gray-200 placeholder-gray-600 focus:outline-none min-w-0"
           />
           {query && (
             <button onClick={() => { setQuery(""); setSearchOpen(false); }} className="text-gray-500 hover:text-white shrink-0">
@@ -186,14 +214,14 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
           )}
         </div>
         {searchOpen && query && (
-          <div className="absolute z-20 mt-1 w-full max-h-72 overflow-auto rounded-lg border border-white/10 bg-[#111113] shadow-2xl">
+          <div className="absolute z-20 mt-2xs w-full max-h-72 overflow-auto rounded-lg border border-white/10 bg-[#111113] shadow-2xl">
             {matches.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-gray-600">No matches.</p>
+              <p className="px-sm py-sm text-meta text-gray-600">No matches.</p>
             ) : (
               matches.map((n) => (
-                <button key={n.data.path} onClick={() => pickMatch(n)} className="block w-full text-left px-3 py-1.5 hover:bg-white/10">
-                  <div className="text-xs text-gray-200 truncate">{n.data.name}</div>
-                  <div className="text-[10px] text-gray-600 truncate font-mono">{n.data.path}</div>
+                <button key={n.data.path} onClick={() => pickMatch(n)} className="block w-full text-left px-sm py-xs hover:bg-white/10">
+                  <div className="text-meta text-gray-200 truncate">{n.data.name}</div>
+                  <div className="text-micro text-gray-600 truncate font-mono">{n.data.path}</div>
                 </button>
               ))
             )}
@@ -206,7 +234,7 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
           width={vp.w}
           height={vp.h}
           className="block select-none"
-          style={{ cursor: drag.current.on ? "grabbing" : "grab" }}
+          style={{ cursor: grabbing ? "grabbing" : "grab" }}
           onWheel={onWheel}
           onMouseDown={onDown}
           onMouseMove={onMove}
@@ -250,7 +278,7 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
                 x={x}
                 y={y - r + 12}
                 textAnchor="middle"
-                fontSize={11}
+                fontSize={10}
                 fill="rgba(229,231,235,0.7)"
                 style={{ pointerEvents: "none" }}
               >
@@ -260,34 +288,34 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
           })}
         </svg>
 
-        <div className="absolute top-3 left-3 flex items-center gap-2 text-xs">
+        <div className="absolute top-md left-md flex items-center gap-sm text-meta">
           <button
             onClick={() => zoomButton(1 / 1.3)}
             aria-label="Zoom in"
-            className="text-sm leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded w-7 h-7 flex items-center justify-center"
+            className="text-meta leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs w-7 h-7 flex items-center justify-center"
           >
             +
           </button>
           <button
             onClick={() => zoomButton(1.3)}
             aria-label="Zoom out"
-            className="text-sm leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded w-7 h-7 flex items-center justify-center"
+            className="text-meta leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs w-7 h-7 flex items-center justify-center"
           >
             −
           </button>
           <button
             onClick={() => focusNode(root)}
-            className="text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded px-2 py-1 h-7"
+            className="text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs px-sm py-2xs h-7"
           >
             Reset
           </button>
-          {!atRoot && <span className="text-gray-500 font-mono">{focusRef.current.data.path}</span>}
+          {!atRoot && <span className="text-gray-500 font-mono">{focus.data.path}</span>}
         </div>
-        <div className="absolute top-3 right-3 text-[10px] text-gray-600">scroll = zoom · drag = pan · click a directory to focus · size = LOC · color = file type</div>
+        <div className="absolute top-md right-md text-micro text-gray-600">scroll = zoom · drag = pan · click a directory to focus · size = LOC · color = file type</div>
 
-        <div className="absolute bottom-3 right-3 flex flex-col gap-1 text-[10px] text-gray-400 flex-wrap max-h-[55%]">
+        <div className="absolute bottom-md right-md flex flex-col gap-2xs text-micro text-gray-400 flex-wrap max-h-[55%]">
           {legend.map((e) => (
-            <span key={e} className="flex items-center gap-1.5">
+            <span key={e} className="flex items-center gap-xs">
               <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: extColor(e) }} />
               {e}
             </span>
@@ -296,11 +324,11 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
 
         {hover && (
           <div
-            className="pointer-events-none absolute z-10 rounded-lg border border-white/10 bg-[#0d0d0d] px-3 py-2 text-xs shadow-xl"
+            className="pointer-events-none absolute z-10 rounded-lg border border-white/10 bg-[#0d0d0d] px-md py-sm text-meta shadow-xl"
             style={{ left: Math.min(hover.x + 12, vp.w - 220), top: hover.y + 12, maxWidth: 240 }}
           >
             <div className="font-mono text-gray-200 break-all">{hover.d.data.path}</div>
-            <div className="text-gray-500 mt-0.5">
+            <div className="text-gray-500 mt-2xs">
               {hover.d.children ? `${hover.d.descendants().length - 1} items` : `${hover.d.data.loc || 0} LOC`}
               {hover.d.data.issues ? ` · ${hover.d.data.issues} issue(s)` : ""}
             </div>

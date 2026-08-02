@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contextAt, syntacticSpans } from "../src/index";
+import { contextAt, lexicalSpans, spansFor, syntacticSpans } from "../src/index";
 
 /**
  * Context classification, and the bug that made it dangerous.
@@ -83,5 +83,83 @@ describe("syntacticSpans", () => {
   it("does not throw on malformed source", () => {
     // Runs over every file on every index, including half-written ones.
     expect(() => syntacticSpans("const a = `unterminated\n", ".ts")).not.toThrow();
+  });
+});
+
+/**
+ * The lexical fallback, and the false-positive hole it closes.
+ *
+ * `syntacticSpans` returns `[]` outside the TS family, and `detect.ts` reads an empty span
+ * list as "everything is code" — so `context` was a no-op on every non-TS language. Measured
+ * before the fix: a Python file whose only content was a docstring reading "an interactive
+ * eval() is available" and a string containing "# TODO" produced TWO findings, one of them
+ * `Use of eval()` at severity 5, where byte-identical TypeScript produced none.
+ *
+ * Both directions are tested, because the module's own comment is right that a WRONG span is
+ * worse than no span: every case below that asserts `"code"` is guarding a real finding
+ * against being silently swallowed.
+ */
+const lexAt = (src: string, needle: string, ext: string) =>
+  contextAt(lexicalSpans(src, ext), src.indexOf(needle));
+
+describe("lexicalSpans", () => {
+  it("classifies Python comments, strings and docstrings", () => {
+    const src = '# note\nvalue = "text"\ndef f():\n    """doc"""\n    return 1\n';
+    expect(lexAt(src, "note", ".py")).toBe("comment");
+    expect(lexAt(src, "text", ".py")).toBe("string");
+    expect(lexAt(src, "doc", ".py")).toBe("string");
+    expect(lexAt(src, "value", ".py")).toBe("code");
+    expect(lexAt(src, "return 1", ".py")).toBe("code");
+  });
+
+  it("classifies the C-like family", () => {
+    for (const ext of [".go", ".java", ".cs", ".rs", ".cpp"]) {
+      const src = 'int x = 1; // note\nchar *s = "text";\n/* block */\nint y = 2;\n';
+      expect(lexAt(src, "note", ext)).toBe("comment");
+      expect(lexAt(src, "text", ext)).toBe("string");
+      expect(lexAt(src, "block", ext)).toBe("comment");
+      expect(lexAt(src, "int y", ext)).toBe("code");
+    }
+  });
+
+  it("does not let an apostrophe in a comment swallow the rest of the file", () => {
+    // The failure that would turn this fix into the false negatives the module warns about:
+    // treating `don't` as an unterminated string hides every finding below it.
+    const src = "# don't do this\nos.system(cmd)\n";
+    expect(lexAt(src, "os.system", ".py")).toBe("code");
+  });
+
+  it("does not let an unterminated single-quoted string run past its line", () => {
+    const src = "value = 'oops\nos.system(cmd)\n";
+    expect(lexAt(src, "os.system", ".py")).toBe("code");
+  });
+
+  it("honours escapes rather than closing early", () => {
+    const src = 'value = "a\\"b"\nos.system(cmd)\n';
+    expect(lexAt(src, "os.system", ".py")).toBe("code");
+  });
+
+  it("keeps a triple-quoted docstring as ONE span across lines", () => {
+    const src = 'def f():\n    """line one\n    line two"""\n    return eval(x)\n';
+    expect(lexAt(src, "line two", ".py")).toBe("string");
+    expect(lexAt(src, "eval(x)", ".py")).toBe("code");
+  });
+
+  it("returns nothing for a language it has no rules for, so callers fail open", () => {
+    expect(lexicalSpans("# TODO\n", ".unknownext")).toEqual([]);
+  });
+
+  it("does not throw on unterminated constructs", () => {
+    expect(() => lexicalSpans('s = "unterminated\n', ".py")).not.toThrow();
+    expect(() => lexicalSpans("/* unterminated\n", ".go")).not.toThrow();
+  });
+});
+
+describe("spansFor", () => {
+  it("parses the TS family and lexes everything else", () => {
+    expect(contextAt(spansFor('const a = "x"; // n', ".ts"), 12)).toBe("string");
+    expect(contextAt(spansFor('a = "x"  # n', ".py"), 5)).toBe("string");
+    // No rules, no spans: every position stays `code` and nothing is suppressed.
+    expect(spansFor("anything", ".bin")).toEqual([]);
   });
 });

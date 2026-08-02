@@ -128,6 +128,119 @@ function computeSpans(text: string, ext: string): SourceSpan[] {
 }
 
 /**
+ * Comment and string ranges for the languages the TypeScript parser cannot read.
+ *
+ * **Why this exists, given the paragraph above says it should not.** That paragraph is right
+ * about JavaScript and wrong about everything else, and the cost of the gap was measured, not
+ * argued: with no spans, `detect.ts` treats every position as `code`, so `context` is a no-op
+ * outside the TS family. A Python file containing only a docstring that says "an interactive
+ * eval() is available" and a string containing "# TODO" produced TWO findings — one of them
+ * `Use of eval()` at **severity 5** — where the byte-identical TypeScript produced none.
+ * Choosing not to lex did not avoid the risk; it took 100% of it in the other direction.
+ *
+ * The hazards that motivated the refusal are JS-specific: regex-versus-division, template
+ * substitutions, `rescanTemplateToken`. None of them exist in Python, Go, Java, Ruby, C#,
+ * Rust, C or PHP, whose comment and string grammars are the boring ones. The TS family keeps
+ * the parser; only the languages with a tractable lexical grammar come through here.
+ *
+ * Deliberately conservative in the direction that matters. Anything it cannot classify stays
+ * `code`, so an unrecognised construct fails toward REPORTING a finding rather than silently
+ * swallowing one — the trade the original comment asks for, just applied to a case where
+ * doing nothing was not neutral.
+ */
+interface LexRules {
+  line: readonly string[];
+  block: readonly (readonly [string, string])[];
+  /** Longest-first: `"""` must be tried before `"`. */
+  quote: readonly string[];
+  /** Languages where a backslash escapes the next character inside a string. */
+  escape: boolean;
+}
+
+const C_LIKE: LexRules = { line: ["//"], block: [["/*", "*/"]], quote: ['"', "'"], escape: true };
+const HASH_LIKE = (quotes: readonly string[]): LexRules => ({
+  line: ["#"],
+  block: [],
+  quote: quotes,
+  escape: true,
+});
+
+const LEX_BY_EXT: Record<string, LexRules> = {
+  // Triple quotes first so a docstring is one span, not three empty strings.
+  ".py": HASH_LIKE(['"""', "'''", '"', "'"]),
+  ".rb": HASH_LIKE(['"', "'"]),
+  ".sh": HASH_LIKE(['"', "'"]),
+  ".go": C_LIKE,
+  ".rs": C_LIKE,
+  ".java": C_LIKE,
+  ".kt": C_LIKE,
+  ".scala": C_LIKE,
+  ".swift": C_LIKE,
+  ".cs": C_LIKE,
+  ".c": C_LIKE,
+  ".h": C_LIKE,
+  ".cpp": C_LIKE,
+  ".hpp": C_LIKE,
+  // PHP takes both families; `#` is a line comment there too.
+  ".php": { line: ["//", "#"], block: [["/*", "*/"]], quote: ['"', "'"], escape: true },
+};
+
+export function lexicalSpans(text: string, ext: string): SourceSpan[] {
+  const rules = LEX_BY_EXT[ext];
+  if (!rules) return [];
+  const spans: SourceSpan[] = [];
+  let i = 0;
+
+  while (i < text.length) {
+    const lineTok = rules.line.find((t) => text.startsWith(t, i));
+    if (lineTok) {
+      const nl = text.indexOf("\n", i);
+      const end = nl === -1 ? text.length : nl;
+      spans.push({ start: i, end, kind: "comment" });
+      i = end;
+      continue;
+    }
+
+    const block = rules.block.find(([open]) => text.startsWith(open, i));
+    if (block) {
+      const close = text.indexOf(block[1], i + block[0].length);
+      const end = close === -1 ? text.length : close + block[1].length;
+      spans.push({ start: i, end, kind: "comment" });
+      i = end;
+      continue;
+    }
+
+    const quote = rules.quote.find((q) => text.startsWith(q, i));
+    if (quote) {
+      let j = i + quote.length;
+      while (j < text.length) {
+        if (rules.escape && text[j] === "\\") { j += 2; continue; }
+        if (text.startsWith(quote, j)) { j += quote.length; break; }
+        // A single-quote string does not survive a newline in any language here, and
+        // treating an apostrophe in prose as an unterminated string would swallow the
+        // rest of the file. Triple quotes are the exception and do span lines.
+        if (text[j] === "\n" && quote.length === 1) break;
+        j++;
+      }
+      spans.push({ start: i, end: Math.min(j, text.length), kind: "string" });
+      i = Math.max(j, i + 1);
+      continue;
+    }
+
+    i++;
+  }
+  return spans;
+}
+
+/**
+ * The best spans available for a file: parsed where we can parse, lexed where we cannot,
+ * empty only for a language we have no grammar for at all.
+ */
+export function spansFor(text: string, ext: string): SourceSpan[] {
+  return TS_FAMILY.has(ext) ? syntacticSpans(text, ext) : lexicalSpans(text, ext);
+}
+
+/**
  * Classify an absolute offset. `spans` must come from `syntacticSpans` for the same text.
  *
  * Binary search rather than a scan: this runs once per rule match per file, and the linear

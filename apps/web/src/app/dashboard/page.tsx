@@ -72,9 +72,9 @@ function took(r: RepoSummary): string {
 }
 
 const BTN_PRIMARY =
-  "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-[var(--signal-500)] px-4 text-[13.5px] font-medium text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]";
+  "inline-flex min-h-11 cursor-pointer items-center gap-sm rounded-lg bg-[var(--signal-500)] px-md text-meta font-medium text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]";
 const BTN_GHOST =
-  "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-[var(--line)] px-4 text-[13.5px] text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:bg-white/[0.04] hover:text-[var(--text-primary)]";
+  "inline-flex min-h-11 cursor-pointer items-center gap-sm rounded-lg border border-[var(--line)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:bg-white/[0.04] hover:text-[var(--text-primary)]";
 
 type Order = "risk" | "recent";
 
@@ -144,15 +144,15 @@ export default function DashboardPage() {
   const meanBandColor = meanBand.color;
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-16">
-      <div className="flex flex-wrap items-end justify-between gap-8">
+    <div className="shell py-2xl">
+      <div className="flex flex-wrap items-end justify-between gap-xl">
         <div>
           <p className="eyebrow">Dashboard</p>
-          <h1 className="font-display mt-3 text-4xl tracking-tight text-[var(--text-primary)] sm:text-5xl">
+          <h1 className="font-display mt-md text-h1 tracking-tight text-[var(--text-primary)]">
             Indexed <em>repositories</em>
           </h1>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-sm">
           <Link href="/fleet" className={BTN_GHOST}>
             <Network className="h-4 w-4 text-[var(--violet-400)]" /> Fleet graph
           </Link>
@@ -162,23 +162,23 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="rule-fade my-10" />
+      <div className="rule-fade my-xl" />
 
       {/* ------------------------------------------------------------- READOUT */}
       {repos !== null && repos.length > 0 && (
         <Reveal>
-          <section className="panel relative mb-4 overflow-hidden">
+          <section className="panel relative mb-md overflow-hidden">
             <div className="grid-field pointer-events-none absolute inset-0 opacity-60" />
-            <div className="relative grid gap-8 p-7 sm:p-9 lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-12">
+            <div className="relative grid gap-lg p-lg sm:p-xl lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-2xl">
               {/* Same dial as the repo report. One reading, one shape — a gauge here and
                   a bare numeral there would make the fleet mean look like a different
                   KIND of number than the score it averages. */}
-              <div className="flex items-start gap-5">
+              <div className="flex items-start gap-lg">
                 {mean === null ? (
                   <div>
                     <p className="eyebrow">Mean health</p>
-                    <p className="tnum mt-2 text-[64px] leading-none text-[var(--text-muted)]">—</p>
-                    <p className="mt-3 text-[13px] text-[var(--text-muted)]">nothing measured yet</p>
+                    <p className="tnum mt-sm text-display leading-none text-[var(--text-muted)]">—</p>
+                    <p className="mt-md text-meta text-[var(--text-muted)]">nothing measured yet</p>
                   </div>
                 ) : (
                   <ScoreDial
@@ -194,7 +194,7 @@ export default function DashboardPage() {
               <div className="flex flex-col justify-center">
                 {/* Prose, not just tiles. A sentence states what the numbers mean; a grid
                     of figures leaves the reader to infer it. */}
-                <p className="max-w-xl text-[14.5px] leading-relaxed text-[var(--text-secondary)]">
+                <p className="max-w-note text-meta text-[var(--text-secondary)]">
                   CodeGraph has measured{" "}
                   <span className="tnum text-[var(--text-primary)]">{scored.length}</span> of{" "}
                   <span className="tnum text-[var(--text-primary)]">{repos.length}</span>{" "}
@@ -226,7 +226,7 @@ export default function DashboardPage() {
                   )}
                 </p>
 
-                <dl className="mt-6 flex flex-wrap gap-x-10 gap-y-4">
+                <dl className="mt-lg flex flex-wrap gap-x-xl gap-y-md">
                   {[
                     { k: "Tracked", v: repos.length, tone: "text-[var(--text-primary)]" },
                     { k: "Measured", v: scored.length, tone: "text-[var(--text-primary)]" },
@@ -238,7 +238,7 @@ export default function DashboardPage() {
                   ].map((s) => (
                     <div key={s.k}>
                       <dt className="eyebrow">{s.k}</dt>
-                      <dd className={`tnum mt-1.5 text-2xl leading-none ${s.tone}`}>{s.v}</dd>
+                      <dd className={`tnum mt-xs text-h3 leading-none ${s.tone}`}>{s.v}</dd>
                     </div>
                   ))}
                 </dl>
@@ -250,14 +250,14 @@ export default function DashboardPage() {
 
       {/* --------------------------------------------------------------- TABLE */}
       {repos === null ? (
-        <div className="panel px-6 py-8 sm:px-8">
-          <p className="eyebrow flex items-center gap-2">
+        <div className="panel px-lg py-lg sm:px-xl">
+          <p className="eyebrow flex items-center gap-sm">
             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Reading index
           </p>
-          <p className="mt-3 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">
+          <p className="mt-md max-w-note text-meta text-[var(--text-secondary)]">
             Pulling the repository table and the latest Health Score recorded for each entry.
           </p>
-          <div className="mt-7 grid gap-2" aria-hidden="true">
+          <div className="mt-xl grid gap-sm" aria-hidden="true">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
@@ -266,16 +266,16 @@ export default function DashboardPage() {
               />
             ))}
           </div>
-          <Link href="/" className={`${BTN_GHOST} mt-7`}>
+          <Link href="/" className={`${BTN_GHOST} mt-xl`}>
             Index a repo <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       ) : repos.length === 0 ? (
-        <div className="panel flex flex-col items-start gap-5 px-6 py-12 sm:px-10">
+        <div className="panel flex flex-col items-start gap-lg px-lg py-xl sm:px-xl">
           <FolderGit2 className="h-6 w-6 text-[var(--text-faint)]" />
           <div>
             <p className="eyebrow">No repositories</p>
-            <p className="mt-2.5 max-w-md text-sm leading-relaxed text-[var(--text-secondary)]">
+            <p className="mt-sm max-w-note text-meta text-[var(--text-secondary)]">
               Nothing has been indexed yet. Point CodeGraph at a git URL or a local folder and it
               returns a Health Score, a dependency graph, and the findings behind both.
             </p>
@@ -286,18 +286,18 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-md flex flex-wrap items-center justify-between gap-md">
             <p className="eyebrow">
               {order === "risk" ? "Ranked by where attention is needed" : "Most recently indexed"}
             </p>
-            <div className="flex rounded-lg border border-[var(--line)] bg-[var(--ink-850)] p-0.5">
+            <div className="flex rounded-lg border border-[var(--line)] bg-[var(--ink-850)] p-2xs">
               {(["risk", "recent"] as const).map((o) => (
                 <button
                   key={o}
                   type="button"
                   onClick={() => setOrder(o)}
                   aria-pressed={order === o}
-                  className={`min-h-9 cursor-pointer rounded-[7px] px-3 text-[12.5px] capitalize transition-colors duration-200 ${
+                  className={`min-h-9 cursor-pointer rounded-sm px-sm text-meta capitalize transition-colors duration-200 ${
                     order === o
                       ? "bg-[var(--ink-600)] text-[var(--text-primary)]"
                       : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
@@ -312,7 +312,7 @@ export default function DashboardPage() {
           <div className="panel overflow-hidden">
             {/* Column headers. Hidden below `sm` — a five-column header over two visible
                 columns is noise, and the row labels its own cells at that width. */}
-            <div className="hidden grid-cols-[minmax(0,1fr)_5rem_7rem_5.5rem_2.75rem] items-center gap-4 border-b border-[var(--line)] px-5 py-3 sm:grid">
+            <div className="hidden grid-cols-[minmax(0,1fr)_5rem_7rem_5.5rem_2.75rem] items-center gap-md border-b border-[var(--line)] px-lg py-sm sm:grid">
               <span className="eyebrow">Repository</span>
               <span className="eyebrow text-right">Health</span>
               <span className="eyebrow text-right">Indexed</span>
@@ -354,15 +354,15 @@ export default function DashboardPage() {
                       )}
                       <span aria-hidden="true" className={`absolute inset-y-0 left-0 z-[1] w-[2px] ${rail}`} />
 
-                      <div className="pointer-events-none relative z-[1] grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3.5 pr-2 pl-5 sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5.5rem_2.75rem]">
+                      <div className="pointer-events-none relative z-[1] grid grid-cols-[minmax(0,1fr)_auto] items-center gap-md py-md pr-sm pl-lg sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5.5rem_2.75rem]">
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="truncate text-[14.5px] text-[var(--text-primary)]">
+                          <div className="flex items-center gap-sm">
+                            <span className="truncate text-meta text-[var(--text-primary)]">
                               {r.name}
                             </span>
                             {isWorst && (
                               <span
-                                className="eyebrow shrink-0 rounded border px-1.5 py-0.5 leading-none"
+                                className="eyebrow shrink-0 rounded-xs border px-xs py-2xs leading-none"
                                 style={{
                                   color: "var(--coral-400)",
                                   borderColor: "rgba(255,107,87,0.3)",
@@ -372,11 +372,11 @@ export default function DashboardPage() {
                                 lowest
                               </span>
                             )}
-                            <span className="eyebrow hidden shrink-0 rounded border border-[var(--line)] px-1.5 py-0.5 leading-none md:inline">
+                            <span className="eyebrow hidden shrink-0 rounded-xs border border-[var(--line)] px-xs py-2xs leading-none md:inline">
                               {r.sourceType}
                             </span>
                           </div>
-                          <p className="mt-0.5 truncate font-mono text-[11.5px] text-[var(--text-muted)]">
+                          <p className="mt-2xs truncate font-mono text-micro text-[var(--text-muted)]">
                             {r.url}
                           </p>
                         </div>
@@ -386,28 +386,28 @@ export default function DashboardPage() {
                           {processing ? (
                             <Loader2 className="h-4 w-4 animate-spin text-[var(--text-secondary)]" />
                           ) : r.status === "error" ? (
-                            <span className="tnum text-[19px] leading-none text-[var(--coral-500)]">—</span>
+                            <span className="tnum text-lede leading-none text-[var(--coral-500)]">—</span>
                           ) : (
-                            <span className={`tnum text-[19px] leading-none ${b.text}`}>
+                            <span className={`tnum text-lede leading-none ${b.text}`}>
                               {r.score ?? "—"}
                             </span>
                           )}
-                          <span className="eyebrow mt-1 truncate">
+                          <span className="eyebrow mt-2xs truncate">
                             {processing ? r.status : r.status === "error" ? "failed" : b.word}
                           </span>
                         </div>
 
-                        <span className="hidden text-right font-mono text-[12px] text-[var(--text-muted)] sm:block">
+                        <span className="hidden text-right font-mono text-meta text-[var(--text-muted)] sm:block">
                           {ago(r.finishedAt ?? r.createdAt)}
                         </span>
-                        <span className="tnum hidden text-right text-[12px] text-[var(--text-muted)] sm:block">
+                        <span className="tnum hidden text-right text-meta text-[var(--text-muted)] sm:block">
                           {took(r)}
                         </span>
 
-                        <div className="flex items-center justify-end gap-3 sm:contents">
+                        <div className="flex items-center justify-end gap-sm sm:contents">
                           {/* At <sm the four data columns collapse, so the score comes back
                               here rather than disappearing with them. */}
-                          <span className={`tnum text-[17px] leading-none sm:hidden ${b.text}`}>
+                          <span className={`tnum text-body leading-none sm:hidden ${b.text}`}>
                             {processing ? "…" : r.status === "error" ? "—" : (r.score ?? "—")}
                           </span>
                           <button

@@ -1,3 +1,5 @@
+import * as fs from "fs";
+import * as path from "path";
 import { app } from "electron";
 import { autoUpdater } from "electron-updater";
 import { Logger } from "../core/logger";
@@ -21,22 +23,33 @@ export class UpdateService {
 
   /** Begin periodic update checks. Safe to call unconditionally. */
   public start(): void {
-    if (!app.isPackaged) {
-      this.logger.info("UpdateService", "Skipping auto-update: app is not packaged.");
-      return;
-    }
+    if (!this.canUpdate("Skipping auto-update")) return;
     this.wireListeners();
     void autoUpdater.checkForUpdatesAndNotify().catch((error) => {
       this.logger.error("UpdateService", "checkForUpdatesAndNotify failed.", error);
     });
   }
 
+  /**
+   * An unsigned or feed-less build has no `app-update.yml` next to the app
+   * resources; electron-updater then throws ENOENT on every check. Treat a
+   * missing feed as "updates disabled" instead of an error per launch.
+   */
+  private canUpdate(reason: string): boolean {
+    if (!app.isPackaged) {
+      this.logger.info("UpdateService", `${reason}: app is not packaged.`);
+      return false;
+    }
+    if (!fs.existsSync(path.join(process.resourcesPath, "app-update.yml"))) {
+      this.logger.info("UpdateService", `${reason}: no update feed configured.`);
+      return false;
+    }
+    return true;
+  }
+
   /** Manual check triggered from the application menu. */
   public checkNow(): void {
-    if (!app.isPackaged) {
-      this.logger.info("UpdateService", "Manual update check ignored: app is not packaged.");
-      return;
-    }
+    if (!this.canUpdate("Manual update check ignored")) return;
     this.wireListeners();
     void autoUpdater.checkForUpdates().catch((error) => {
       this.logger.error("UpdateService", "Manual update check failed.", error);

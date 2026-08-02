@@ -54,7 +54,13 @@ export async function POST(req: NextRequest) {
   // (401/403) is rejected here with Anthropic's own error text; a network
   // failure verifying it is NOT evidence the key is bad, so it still saves.
   if (typeof patch.anthropicApiKey === "string" && patch.anthropicApiKey.trim()) {
-    const check = await verifyAnthropicApiKey(patch.anthropicApiKey.trim());
+    // Bounded. `fetch` has no default timeout, so an Anthropic endpoint that accepts the
+    // connection and then stalls (a captive portal, a blocked egress path that blackholes
+    // rather than resets) left this await pending forever — and with it the user's
+    // settings save, holding a request handler open with no way to recover. The helper
+    // already takes a signal; nothing was passing one. An abort lands in its catch and is
+    // reported as `network`, which by design does not block the save.
+    const check = await verifyAnthropicApiKey(patch.anthropicApiKey.trim(), AbortSignal.timeout(8_000));
     if (!check.ok && check.reason === "invalid") {
       return NextResponse.json({ error: `Anthropic rejected this API key: ${check.message}` }, { status: 400 });
     }

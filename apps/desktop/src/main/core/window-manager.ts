@@ -1,9 +1,48 @@
 import { app, BrowserWindow, shell, screen } from "electron";
 import * as path from "path";
+import { fileURLToPath } from "url";
 import { EventBus } from "./event-bus";
 import { Logger } from "./logger";
 import { ConfigManager } from "./config";
 import { WindowBounds, WindowStateStore, sanitizeBounds, DEFAULT_BOUNDS } from "./window-state";
+
+/**
+ * Whether the renderer may navigate itself to `url`.
+ *
+ * Exported and pure because this is the boundary that decides who gets `window.desktop`: the
+ * preload is attached to the webContents, not to a page, so anything this admits inherits
+ * filesystem read/write inside every directory the user has granted.
+ *
+ * The prefix test this replaces was not an origin check. `http://127.0.0.1:41000@evil.com/`
+ * starts with the app origin and resolves to a host of `evil.com`; so does
+ * `http://127.0.0.1:410001/`, a different server on the same machine. Either one silently
+ * hands the desktop API to a foreign page.
+ */
+export function isInAppUrl(appOrigin: string | null, staticRoot: string, url: string): boolean {
+  if (url === "about:blank") return true;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol === "file:") {
+    // Only the bundled splash and error pages. A file: URL carries the preload too, so an
+    // arbitrary HTML file on disk would otherwise be handed the same API.
+    let filePath: string;
+    try {
+      filePath = path.resolve(fileURLToPath(parsed));
+    } catch {
+      return false;
+    }
+    return filePath === staticRoot || filePath.startsWith(staticRoot + path.sep);
+  }
+
+  if (appOrigin === null) return false;
+  return parsed.origin === appOrigin;
+}
 
 /**
  * Manages the Electron BrowserWindow.
@@ -14,6 +53,8 @@ export class WindowManager {
   private mainWindow: BrowserWindow | null = null;
   private appOrigin: string | null = null;
   private readonly stateStore: WindowStateStore;
+  /** The bundled splash/error pages. Also the only file: tree the renderer may navigate to. */
+  private readonly staticRoot = path.resolve(__dirname, "../../../../static");
   private saveTimer: NodeJS.Timeout | null = null;
 
   constructor(
@@ -118,9 +159,7 @@ export class WindowManager {
    */
   private applySecurityPolicy(window: BrowserWindow): void {
     const isInApp = (url: string): boolean =>
-      (this.appOrigin !== null && url.startsWith(this.appOrigin)) ||
-      url.startsWith("file:") ||
-      url === "about:blank";
+      isInAppUrl(this.appOrigin, this.staticRoot, url);
 
     window.webContents.setWindowOpenHandler(({ url }) => {
       if (url.startsWith("http:") || url.startsWith("https:")) {

@@ -46,7 +46,7 @@ export function GithubReposPicker({ onSelect, disabled }: { onSelect: (htmlUrl: 
 
   return (
     <div className="rounded-lg border border-white/10 bg-[#0a0a0a] overflow-hidden">
-      <div className="p-2 border-b border-white/10">
+      <div className="p-sm border-b border-white/10">
         <div className="relative">
           <Search className="w-4 h-4 text-gray-600 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -54,19 +54,19 @@ export function GithubReposPicker({ onSelect, disabled }: { onSelect: (htmlUrl: 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search your repositories…"
-            className="w-full bg-transparent pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none"
+            className="w-full bg-transparent pl-xl pr-sm py-sm text-meta text-white placeholder-gray-600 focus:outline-none"
           />
         </div>
       </div>
       <div className="max-h-72 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center gap-2 text-xs text-gray-500 p-4">
+          <div className="flex items-center gap-sm text-meta text-gray-500 p-md">
             <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading your repositories…
           </div>
         ) : error ? (
-          <p className="text-sm text-rose-400 px-4 py-4">{error}</p>
+          <p className="text-meta text-rose-400 px-md py-md">{error}</p>
         ) : filtered.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-gray-600 text-center">{query ? "No repositories match." : "No repositories found."}</p>
+          <p className="px-md py-lg text-meta text-gray-600 text-center">{query ? "No repositories match." : "No repositories found."}</p>
         ) : (
           <ul>
             {filtered.map((r) => (
@@ -75,19 +75,19 @@ export function GithubReposPicker({ onSelect, disabled }: { onSelect: (htmlUrl: 
                   type="button"
                   disabled={disabled}
                   onClick={() => onSelect(r.htmlUrl)}
-                  className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full text-left flex items-center gap-sm px-sm py-sm hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm text-white truncate">{r.fullName}</span>
+                    <div className="flex items-center gap-xs">
+                      <span className="text-meta text-white truncate">{r.fullName}</span>
                       {r.private && <Lock className="w-3 h-3 text-amber-400 shrink-0" />}
                     </div>
-                    {r.description && <p className="text-xs text-gray-500 truncate mt-0.5">{r.description}</p>}
+                    {r.description && <p className="text-meta text-gray-500 truncate mt-hair">{r.description}</p>}
                   </div>
-                  <div className="flex items-center gap-3 shrink-0 text-xs text-gray-600">
+                  <div className="flex items-center gap-sm shrink-0 text-meta text-gray-600">
                     {r.language && <span>{r.language}</span>}
                     {r.stargazersCount > 0 && (
-                      <span className="flex items-center gap-0.5">
+                      <span className="flex items-center gap-hair">
                         <Star className="w-3 h-3" />
                         {r.stargazersCount}
                       </span>
@@ -104,7 +104,7 @@ export function GithubReposPicker({ onSelect, disabled }: { onSelect: (htmlUrl: 
             type="button"
             onClick={loadMore}
             disabled={loadingMore}
-            className="w-full text-center text-xs text-gray-500 hover:text-white py-2.5 border-t border-white/5 disabled:opacity-50"
+            className="w-full text-center text-meta text-gray-500 hover:text-white py-sm border-t border-white/5 disabled:opacity-50"
           >
             {loadingMore ? "Loading…" : "Load more"}
           </button>

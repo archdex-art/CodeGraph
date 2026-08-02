@@ -81,12 +81,12 @@ export function ScoreDial({
       </svg>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="tnum leading-none" style={{ color, fontSize: size * 0.26 }}>
+        <span className="tnum text-h1 leading-none" style={{ color }}>
           {Math.round(value)}
         </span>
-        {label && <span className="eyebrow mt-2">{label}</span>}
+        {label && <span className="eyebrow mt-sm">{label}</span>}
         {sublabel && (
-          <span className="mt-1 text-[11.5px] text-[var(--text-muted)]">{sublabel}</span>
+          <span className="mt-2xs text-meta text-[var(--text-muted)]">{sublabel}</span>
         )}
       </div>
     </div>

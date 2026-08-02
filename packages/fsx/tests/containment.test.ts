@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -106,6 +106,38 @@ describe("symlink escapes — what a lexical check alone would miss", () => {
     symlinkSync(path.join(root, "src", "index.ts"), path.join(root, "alias.ts"));
     const ws = openWorkspace(root);
     expect(ws.read("alias.ts").content).toContain("export const x");
+  });
+
+  it("rejects a DANGLING symlink pointing outside the root", () => {
+    // The escape the ancestor-walk missed. `realpathSync` fails identically for
+    // "does not exist" and "is a dangling symlink", so the walk fell back to the
+    // parent — the root itself — and passed. But `open(2)` FOLLOWS a dangling
+    // symlink and CREATES the file at its target, so a write through this link
+    // lands outside the workspace.
+    symlinkSync(path.join(outside, "planted.txt"), path.join(root, "innocent.txt"));
+    expect(() => resolveSafe(root, "innocent.txt")).toThrow(WorkspacePathError);
+    const ws = openWorkspace(root);
+    expect(() => ws.write("innocent.txt", "pwned")).toThrow(WorkspacePathError);
+    expect(existsSync(path.join(outside, "planted.txt"))).toBe(false);
+  });
+
+  it("rejects a dangling symlinked ANCESTOR pointing outside the root", () => {
+    symlinkSync(path.join(outside, "nope"), path.join(root, "gate"));
+    expect(() => resolveSafe(root, "gate/child.txt")).toThrow(WorkspacePathError);
+  });
+
+  it("rejects a symlink CYCLE instead of looping or passing", () => {
+    symlinkSync(path.join(root, "b"), path.join(root, "a"));
+    symlinkSync(path.join(root, "a"), path.join(root, "b"));
+    expect(() => resolveSafe(root, "a")).toThrow(WorkspacePathError);
+  });
+
+  it("still ALLOWS creating a NEW file that does not exist yet", () => {
+    // The counterweight to the dangling-symlink rejection: an absent path with no
+    // symlink in it is a normal create, not an escape.
+    const ws = openWorkspace(root);
+    expect(() => ws.write("src/brand-new.ts", "export const y = 2;\n")).not.toThrow();
+    expect(existsSync(path.join(root, "src", "brand-new.ts"))).toBe(true);
   });
 });
 

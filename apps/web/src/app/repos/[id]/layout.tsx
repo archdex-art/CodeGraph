@@ -1,15 +1,45 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, ExternalLink, FolderGit2, Loader2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, FolderGit2, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { GithubMark } from "@/components/GithubMark";
 import { fetchRepo } from "@/lib/api";
 import type { RepoDetail } from "@/lib/types";
 import { RepoProvider } from "./repo-context";
 import { GROUPED, SECTIONS, sectionHref } from "./sections";
+
+/**
+ * The rail's collapsed state, as a minimal external store.
+ *
+ * localStorage is the storage, but it is not a store: writing to it notifies nobody
+ * in the writing tab (`storage` fires only in the OTHER tabs), so a subscriber set
+ * carries the local notification and the event carries the cross-tab one. Both are
+ * needed — open the same report twice and the two rails should agree.
+ */
+const RAIL_KEY = "cg:rail-collapsed";
+const railListeners = new Set<() => void>();
+
+function subscribeRail(onChange: () => void): () => void {
+  railListeners.add(onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    railListeners.delete(onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+/** Must return a stable value for an unchanged store — a boolean is stable by value. */
+function readRail(): boolean {
+  return window.localStorage.getItem(RAIL_KEY) === "1";
+}
+
+function writeRail(collapsed: boolean): void {
+  window.localStorage.setItem(RAIL_KEY, collapsed ? "1" : "0");
+  for (const notify of railListeners) notify();
+}
 
 /**
  * Shell for one repository's report.
@@ -35,6 +65,22 @@ export default function RepoLayout({
   const [repo, setRepo] = useState<RepoDetail | null>(null);
   const [notFound, setNotFound] = useState(false);
 
+  /**
+   * The rail collapses to icons so a graph, an editor or a diff can have the width.
+   *
+   * `useSyncExternalStore` rather than `useState` + an effect, because the state is
+   * genuinely EXTERNAL: it lives in localStorage, it outlives the component, and it
+   * is shared with every other tab. Reading it in an effect meant a cascading render
+   * on every mount (which `react-hooks/set-state-in-effect` flags as an error in this
+   * file), and reading it during render would have desynced from the server HTML.
+   * This hook exists for exactly that shape: `getServerSnapshot` returns the expanded
+   * default, so the server and the first client paint agree, and React re-renders
+   * once with the stored value after hydration.
+   */
+  const collapsed = useSyncExternalStore(subscribeRail, readRail, () => false);
+
+  const toggleRail = () => writeRail(!collapsed);
+
   useEffect(() => {
     fetchRepo(id)
       .then(setRepo)
@@ -45,9 +91,9 @@ export default function RepoLayout({
 
   if (notFound) {
     return (
-      <div className="mx-auto max-w-4xl px-6 py-24 text-center">
-        <p className="eyebrow mb-3">404</p>
-        <p className="text-[var(--text-secondary)]">
+      <div className="shell py-3xl text-center">
+        <p className="eyebrow mb-md">404</p>
+        <p className="mx-auto max-w-measure text-body text-[var(--text-secondary)]">
           Repository not found.{" "}
           <Link
             href="/dashboard"
@@ -62,7 +108,7 @@ export default function RepoLayout({
 
   if (!repo) {
     return (
-      <div className="flex items-center justify-center gap-2.5 py-24 text-sm text-[var(--text-muted)]">
+      <div className="flex items-center justify-center gap-sm py-3xl text-meta text-[var(--text-muted)]">
         <Loader2 className="h-4 w-4 animate-spin text-[var(--signal-500)]" /> Loading report…
       </div>
     );
@@ -104,7 +150,23 @@ export default function RepoLayout({
 
   const compact = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}k` : String(n));
 
-  const navLink = (slug: string, label: string, Icon: (typeof SECTIONS)[number]["icon"]) => {
+  /**
+   * `rail` = the desktop sidebar (collapsible); the mobile strip passes `false` for
+   * `railCollapsed` because it is horizontal and always labelled.
+   *
+   * Collapsed, the label and count are REMOVED from the DOM rather than hidden with
+   * a width transition: a 68px rail cannot hold them, and `overflow:hidden` on text
+   * that is still laid out is what produces the half-clipped word every collapsed
+   * sidebar eventually shows. The label survives as the accessible name and as the
+   * native tooltip, so the control is still identifiable by pointer and by screen
+   * reader.
+   */
+  const navLink = (
+    slug: string,
+    label: string,
+    Icon: (typeof SECTIONS)[number]["icon"],
+    railCollapsed = false
+  ) => {
     const href = sectionHref(id, slug);
     const active = pathname === href;
     const count = countFor(slug);
@@ -113,17 +175,21 @@ export default function RepoLayout({
         key={slug || "overview"}
         href={href}
         aria-current={active ? "page" : undefined}
-        className={`relative flex min-h-10 shrink-0 cursor-pointer items-center gap-2.5 whitespace-nowrap rounded-lg px-3 text-[13.5px] transition-colors duration-200 ${
+        aria-label={railCollapsed ? label : undefined}
+        title={railCollapsed ? (count !== null ? `${label} · ${count.toLocaleString()}` : label) : undefined}
+        className={`relative flex min-h-10 shrink-0 cursor-pointer items-center whitespace-nowrap rounded-md text-meta transition-colors duration-200 ${
+          railCollapsed ? "w-10 justify-center px-0" : "gap-sm px-sm"
+        } ${
           active
             ? "text-[var(--text-primary)] lg:bg-white/[0.04]"
             : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] lg:hover:bg-white/[0.02]"
         }`}
       >
         <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[var(--signal-500)]" : "text-[var(--text-faint)]"}`} />
-        {label}
-        {count !== null && (
+        {!railCollapsed && label}
+        {!railCollapsed && count !== null && (
           <span
-            className={`tnum ml-auto hidden rounded px-1.5 py-0.5 text-[10.5px] leading-none transition-colors duration-200 lg:block ${
+            className={`tnum ml-auto hidden rounded-xs px-xs py-2xs text-micro leading-none transition-colors duration-200 lg:block ${
               active
                 ? "bg-white/[0.06] text-[var(--text-secondary)]"
                 : "bg-white/[0.03] text-[var(--text-faint)]"
@@ -132,6 +198,16 @@ export default function RepoLayout({
           >
             {compact(count)}
           </span>
+        )}
+        {/* Collapsed, the count would not fit — but "this section has 173 things in
+            it" is still worth a glyph, so it degrades to a dot rather than vanishing. */}
+        {railCollapsed && count !== null && count > 0 && (
+          <span
+            aria-hidden="true"
+            className={`absolute right-1 top-1.5 h-1 w-1 rounded-full transition-colors duration-200 ${
+              active ? "bg-[var(--signal-500)]" : "bg-[var(--text-faint)]"
+            }`}
+          />
         )}
         {active && (
           <motion.span
@@ -146,44 +222,98 @@ export default function RepoLayout({
 
   return (
     <RepoProvider value={repo}>
-      <div className="mx-auto max-w-[1440px] px-6 lg:grid lg:grid-cols-[214px_minmax(0,1fr)] lg:gap-9">
+      <div
+        className={`shell lg:grid lg:gap-lg lg:transition-[grid-template-columns] lg:duration-300 lg:[transition-timing-function:var(--ease-out-expo)] ${
+          collapsed
+            ? "lg:grid-cols-[var(--rail-collapsed)_minmax(0,1fr)]"
+            : "lg:grid-cols-[var(--rail)_minmax(0,1fr)]"
+        }`}
+      >
         {/* ------------------------------------------------------------ SIDEBAR */}
-        <aside className="hidden lg:block">
-          <div className="sticky top-[4.5rem] py-8">
-            <Link
-              href="/dashboard"
-              className="mb-5 inline-flex min-h-9 cursor-pointer items-center gap-2 text-[13px] text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text-primary)]"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
-            </Link>
-
-            {/* Which repository you are inside, pinned. On a deep section the page
-                title has scrolled away and this is the only thing still saying it. */}
-            <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--ink-850)] px-3 py-2.5">
-              <span
-                className={`h-1.5 w-1.5 shrink-0 rounded-full ${live ? "bg-[var(--signal-500)]" : "bg-[var(--amber-400)]"}`}
-                aria-hidden="true"
-              />
-              <span className="truncate text-[13px] text-[var(--text-secondary)]" title={repo.name}>
-                {repo.name}
-              </span>
+        <aside className="hidden lg:block" id="report-rail">
+          <div className="sticky top-[4.5rem] py-xl">
+            {/* Collapse control. Sits above everything the rail contains, because it
+                governs all of it — and stays in the same place in both states so the
+                pointer does not have to hunt for the way back. */}
+            <div className={`mb-lg flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
+              {!collapsed && (
+                <Link
+                  href="/dashboard"
+                  className="inline-flex min-h-9 cursor-pointer items-center gap-sm text-meta text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text-primary)]"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={toggleRail}
+                aria-expanded={!collapsed}
+                aria-controls="report-rail"
+                aria-label={collapsed ? "Expand section navigation" : "Collapse section navigation"}
+                title={collapsed ? "Expand navigation" : "Collapse navigation"}
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-[var(--text-faint)] transition-colors duration-200 hover:bg-white/[0.03] hover:text-[var(--text-secondary)]"
+              >
+                {collapsed ? (
+                  <PanelLeftOpen className="h-4 w-4" />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" />
+                )}
+              </button>
             </div>
 
-            <nav aria-label="Report sections" className="flex flex-col gap-5">
+            {/* Which repository you are inside, pinned. On a deep section the page
+                title has scrolled away and this is the only thing still saying it.
+                Collapsed, it keeps only the status dot — the one part of it that is
+                still legible at 68px, and the part that changes. */}
+            {collapsed ? (
+              <div className="mb-lg flex justify-center" title={repo.name}>
+                <Link
+                  href="/dashboard"
+                  aria-label="Back to dashboard"
+                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-[var(--line)] bg-[var(--ink-850)] transition-colors duration-200 hover:border-[var(--line-strong)]"
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${live ? "bg-[var(--signal-500)]" : "bg-[var(--amber-400)]"}`}
+                    aria-hidden="true"
+                  />
+                </Link>
+              </div>
+            ) : (
+              <div className="mb-lg flex items-center gap-sm rounded-md border border-[var(--line)] bg-[var(--ink-850)] px-sm py-sm">
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${live ? "bg-[var(--signal-500)]" : "bg-[var(--amber-400)]"}`}
+                  aria-hidden="true"
+                />
+                <span className="truncate text-meta text-[var(--text-secondary)]" title={repo.name}>
+                  {repo.name}
+                </span>
+              </div>
+            )}
+
+            <nav
+              aria-label="Report sections"
+              className={`flex flex-col ${collapsed ? "items-center gap-md" : "gap-lg"}`}
+            >
               {GROUPED.map(({ group, items }) => (
-                <div key={group}>
-                  {group !== "Report" && <p className="eyebrow mb-1.5 px-3">{group}</p>}
+                <div key={group} className={collapsed ? "flex flex-col items-center gap-2xs" : undefined}>
+                  {/* Collapsed, the group heading is dropped and the separation is
+                      carried by a rule instead: at 68px an eyebrow either wraps or
+                      truncates to two letters, and neither is a heading. */}
+                  {!collapsed && group !== "Report" && <p className="eyebrow mb-xs px-sm">{group}</p>}
+                  {collapsed && group !== "Report" && (
+                    <span className="mb-2xs h-px w-4 bg-[var(--line)]" aria-hidden="true" />
+                  )}
                   {/* A hairline running the height of the group, with the items indented
                       off it. Grouping you can see without drawing a box around it — the
                       eyebrow alone left three lists floating at the same indent, so the
                       headings were the only thing separating them. The ungrouped
                       "Report" item stays flush so it reads as the root, not a child. */}
                   <div
-                    className={`flex flex-col gap-0.5 ${
-                      group !== "Report" ? "ml-3 border-l border-[var(--line-soft)] pl-1.5" : ""
+                    className={`flex flex-col gap-2xs ${
+                      !collapsed && group !== "Report" ? "ml-sm border-l border-[var(--line-soft)] pl-xs" : ""
                     }`}
                   >
-                    {items.map((s) => navLink(s.slug, s.label, s.icon))}
+                    {items.map((s) => navLink(s.slug, s.label, s.icon, collapsed))}
                   </div>
                 </div>
               ))}
@@ -192,18 +322,21 @@ export default function RepoLayout({
         </aside>
 
         {/* --------------------------------------------------------------- MAIN */}
-        <div className="min-w-0 pb-8 lg:border-l lg:border-[var(--line)] lg:pl-9">
+        <div className="min-w-0 pb-xl lg:border-l lg:border-[var(--line)] lg:pl-lg">
           {/* Mobile: the sidebar collapses to a scrollable rail rather than a
               hamburger — section switching is the primary action on this page and
               hiding it behind a menu costs a tap on every move. */}
-          <div className="-mx-6 mb-6 border-b border-[var(--line)] px-6 pt-6 lg:hidden">
+          <div className="-mx-lg mb-lg border-b border-[var(--line)] px-lg pt-lg lg:hidden">
             <Link
               href="/dashboard"
-              className="mb-3 inline-flex min-h-9 cursor-pointer items-center gap-2 text-[13px] text-[var(--text-muted)]"
+              className="mb-md inline-flex min-h-9 cursor-pointer items-center gap-sm text-meta text-[var(--text-muted)]"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
             </Link>
-            <div className="flex gap-1 overflow-x-auto pb-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {/* `min-w-0` is load-bearing: without it this flex child sizes to its
+                content (every section pill laid end to end), so the rail scrolled AND
+                the page grew — 232px of horizontal overflow on a 390px viewport. */}
+            <div className="flex min-w-0 gap-2xs overflow-x-auto pb-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {SECTIONS.map((s) => navLink(s.slug, s.label, s.icon))}
             </div>
           </div>
@@ -216,13 +349,14 @@ export default function RepoLayout({
               that organise it.
 
               On a report the score is the hero and the name is identification, so the
-              title now sits one step above the section headings (28px vs 24px) and well
-              below the numeral. The icon tile came down with it — a 48px tile beside
-              28px type reads as a logo rather than a source marker. */}
-          <header className="pt-0 lg:pt-8">
-            <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
-              <div className="flex min-w-0 items-start gap-3.5">
-                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--ink-800)]">
+              title now sits on `text-h3` (26) — one rung above the in-page section
+              headings at `text-lede` (20), and well below the numeral. The icon tile
+              came down with it: a 48px tile beside 26px type reads as a logo rather
+              than a source marker. */}
+          <header className="pt-0 lg:pt-xl">
+            <div className="flex flex-wrap items-start justify-between gap-x-xl gap-y-md">
+              <div className="flex min-w-0 items-start gap-md">
+                <span className="mt-2xs flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--ink-800)]">
                   {repo.sourceType === "git" ? (
                     <GithubMark className="h-[18px] w-[18px] text-[var(--text-secondary)]" />
                   ) : (
@@ -230,16 +364,16 @@ export default function RepoLayout({
                   )}
                 </span>
                 <div className="min-w-0">
-                  <h1 className="font-display truncate text-[1.75rem] leading-tight tracking-tight">
+                  <h1 className="font-display truncate text-h3 tracking-tight">
                     {hasOwner && <span className="text-[var(--text-muted)]">{owner} / </span>}
                     <span className="text-[var(--text-primary)]">{shortName}</span>
                   </h1>
 
                   {/* Meta row. Every item is something the index actually recorded —
                       there is no description field on a repo, so none is invented. */}
-                  <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12.5px] text-[var(--text-muted)]">
+                  <div className="mt-sm flex flex-wrap items-center gap-x-md gap-y-xs text-meta text-[var(--text-muted)]">
                     {repo.languages?.[0] && (
-                      <span className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-xs">
                         <span className="h-2 w-2 rounded-full bg-[var(--violet-500)]" aria-hidden="true" />
                         {repo.languages[0].language}
                       </span>
@@ -250,7 +384,7 @@ export default function RepoLayout({
                         href={repo.url}
                         target="_blank"
                         rel="noreferrer noopener"
-                        className="flex cursor-pointer items-center gap-1.5 truncate font-mono transition-colors duration-200 hover:text-[var(--text-secondary)]"
+                        className="flex cursor-pointer items-center gap-xs truncate font-mono transition-colors duration-200 hover:text-[var(--text-secondary)]"
                       >
                         {repo.url.replace(/^https?:\/\//, "")}
                         <ExternalLink className="h-3 w-3 shrink-0" />
@@ -260,7 +394,7 @@ export default function RepoLayout({
                     )}
                   </div>
 
-                  <p className="mt-1.5 text-[12.5px] text-[var(--text-faint)]">
+                  <p className="mt-xs text-micro text-[var(--text-faint)]">
                     Indexed {relative(repo.finishedAt ?? repo.createdAt)}
                     {repo.coverage && (
                       <>
@@ -280,26 +414,26 @@ export default function RepoLayout({
                   larger than the thing they act on. Row layout also puts the primary
                   action on the same optical line as the title. `min-h-10` keeps a
                   comfortable target while no longer setting the header's height. */}
-              <div className="flex shrink-0 items-center gap-2.5">
+              <div className="flex shrink-0 items-center gap-sm">
                 <Link
                   href={sectionHref(id, "code-intel")}
-                  className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-[var(--line)] px-3.5 text-[13px] text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:text-[var(--text-primary)]"
+                  className="flex min-h-10 cursor-pointer items-center justify-center gap-sm rounded-md border border-[var(--line)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:text-[var(--text-primary)]"
                 >
                   Query the graph
                 </Link>
                 <Link
                   href={sectionHref(id, "agents")}
-                  className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--signal-500)] px-3.5 text-[13px] font-medium text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
+                  className="flex min-h-10 cursor-pointer items-center justify-center gap-sm rounded-md bg-[var(--signal-500)] px-md text-meta font-medium text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
                 >
                   Run the swarm
                 </Link>
               </div>
             </div>
 
-            <div className="mt-6 h-px bg-[var(--line)]" />
+            <div className="mt-lg h-px bg-[var(--line)]" />
           </header>
 
-          <div className="pt-8">{children}</div>
+          <div className="pt-xl">{children}</div>
         </div>
       </div>
     </RepoProvider>

@@ -51,7 +51,7 @@ vi.mock("electron", () => {
   };
 });
 
-import { WindowManager } from "./window-manager";
+import { WindowManager, isInAppUrl } from "./window-manager";
 import { EventBus } from "./event-bus";
 
 const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as never;
@@ -107,5 +107,43 @@ describe("boot sequence", () => {
     calls.length = 0;
     bus.emit("state:changed", "FAILED", "boom");
     expect(calls.some((c) => c.includes("error.html"))).toBe(true);
+  });
+});
+
+describe("navigation policy", () => {
+  /**
+   * The renderer that survives a navigation keeps the preload, and the preload is
+   * filesystem read/write inside every granted directory. So "may this page navigate
+   * itself here" is an authorization decision, and a prefix test is not one.
+   */
+  const origin = "http://127.0.0.1:41000";
+  const staticRoot = "/app/static";
+  const allowed = (url: string) => isInAppUrl(origin, staticRoot, url);
+
+  it("admits the app's own origin", () => {
+    expect(allowed(origin + "/")).toBe(true);
+    expect(allowed(origin + "/repos/abc")).toBe(true);
+    expect(allowed("about:blank")).toBe(true);
+  });
+
+  it("rejects a foreign host that merely starts with the app origin", () => {
+    // userinfo: the host is evil.com, but `startsWith(appOrigin)` is true.
+    expect(allowed("http://127.0.0.1:41000@evil.com/")).toBe(false);
+    // A different server on the same machine: port 410001, not 41000.
+    expect(allowed("http://127.0.0.1:410001/")).toBe(false);
+    expect(allowed("https://127.0.0.1:41000/")).toBe(false);
+  });
+
+  it("admits only the bundled static pages over file:", () => {
+    expect(allowed("file:///app/static/loading.html")).toBe(true);
+    expect(allowed("file:///app/static/error.html")).toBe(true);
+    expect(allowed("file:///etc/passwd")).toBe(false);
+    expect(allowed("file:///app/static-evil/x.html")).toBe(false);
+    expect(allowed("file:///app/static/../../etc/passwd")).toBe(false);
+  });
+
+  it("rejects everything before a port is known", () => {
+    expect(isInAppUrl(null, staticRoot, "http://127.0.0.1:41000/")).toBe(false);
+    expect(isInAppUrl(null, staticRoot, "not a url")).toBe(false);
   });
 });

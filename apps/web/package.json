@@ -6,7 +6,7 @@
     "dev": "next dev -p 4000",
     "build": "next build",
     "start": "next start -p 4000",
-    "lint": "eslint . --max-warnings=22",
+    "lint": "eslint . --max-warnings=8",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "cg": "tsx terminal/cli.ts"

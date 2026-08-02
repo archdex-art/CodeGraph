@@ -118,11 +118,11 @@ export function IndexConsole() {
   }
 
   const tab = (active: boolean) =>
-    `relative flex min-h-11 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-[13px] font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
+    `relative flex min-h-11 shrink-0 cursor-pointer items-center gap-sm whitespace-nowrap rounded-lg px-md text-meta font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
       active ? "text-[var(--ink-900)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
     }`;
   const field =
-    "w-full rounded-xl border border-[var(--line)] bg-[var(--ink-850)] px-4 py-3.5 font-mono text-[13.5px] text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors duration-200 focus:border-[var(--signal-600)] focus:outline-none disabled:opacity-50";
+    "w-full rounded-xl border border-[var(--line)] bg-[var(--ink-850)] px-md py-md font-mono text-meta text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors duration-200 focus:border-[var(--signal-600)] focus:outline-none disabled:opacity-50";
 
   return (
     /* `min-w-0`: a grid/flex child defaults to `min-width:auto`, so it refuses to shrink
@@ -130,15 +130,21 @@ export function IndexConsole() {
        wide, and without this the whole console grows past the viewport and gets clipped
        by `overflow-hidden` — which reads as broken layout while `scrollWidth` stays
        clean, so it does not trip an overflow check. */
-    <div className="panel relative min-w-0 overflow-hidden p-5 sm:p-6">
+    <div className="panel relative min-w-0 overflow-hidden p-md sm:p-lg">
       {/* Segmented control. The active pill is a shared layout element, so switching
           modes slides it rather than repainting two buttons.
 
-          `max-w-full` + horizontal scroll rather than wrapping: at 390px three labelled
-          tabs do not fit, and letting them wrap breaks each label onto two lines inside
-          its own pill. Dropping to icon-only would fit, but an icon-only control with no
-          label is exactly the affordance people cannot read. */}
-      <div className="mb-5 flex w-full min-w-0 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--ink-850)] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          The control is sized by its LABELS, not by the card: `w-fit` with a `max-w-full`
+          ceiling. It used to be `w-full`, which stretched the track across the whole
+          console and left two-thirds of it as dead rail to the right of "My GitHub" —
+          a segmented control is a group of three choices, and drawing a container far
+          wider than the choices reads as a fourth, empty one.
+
+          The scroll ceiling stays: at 390px three labelled tabs do not fit, and letting
+          them wrap breaks each label onto two lines inside its own pill. Dropping to
+          icon-only would fit, but an icon-only control with no label is exactly the
+          affordance people cannot read. */}
+      <div className="mb-md flex w-fit min-w-0 max-w-full overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--ink-850)] p-2xs [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button type="button" disabled={busy} onClick={() => setMode("git")} className={tab(mode === "git")}>
           {mode === "git" && (
             <motion.span
@@ -189,10 +195,10 @@ export function IndexConsole() {
       <form onSubmit={onSubmit}>
         {mode !== "github" && (
           <>
-            <label htmlFor="cg-target" className="eyebrow mb-2 block">
+            <label htmlFor="cg-target" className="eyebrow mb-sm block">
               {mode === "git" ? "Repository URL" : "Absolute folder path (on the server)"}
             </label>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex flex-col gap-sm sm:flex-row">
               {mode === "git" ? (
                 <input
                   id="cg-target"
@@ -205,7 +211,7 @@ export function IndexConsole() {
                   className={field}
                 />
               ) : (
-                <div className="flex flex-1 gap-2">
+                <div className="flex flex-1 gap-sm">
                   <input
                     id="cg-target"
                     type="text"
@@ -221,7 +227,7 @@ export function IndexConsole() {
                     disabled={busy}
                     onClick={() => setBrowsing(true)}
                     title="Browse for a folder"
-                    className="flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--ink-850)] px-4 text-[13px] text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:text-[var(--text-primary)] disabled:opacity-50"
+                    className="flex min-h-11 shrink-0 cursor-pointer items-center gap-sm rounded-xl border border-[var(--line)] bg-[var(--ink-850)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:text-[var(--text-primary)] disabled:opacity-50"
                   >
                     <FolderSearch className="h-4 w-4" /> Browse
                   </button>
@@ -230,7 +236,7 @@ export function IndexConsole() {
               <button
                 type="submit"
                 disabled={busy || !value.trim()}
-                className="group flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--signal-500)] px-6 py-3.5 text-[13.5px] font-semibold text-[var(--ink-900)] transition-all duration-200 hover:bg-[var(--signal-400)] disabled:cursor-not-allowed disabled:opacity-40 sm:px-7"
+                className="group flex min-h-11 cursor-pointer items-center justify-center gap-sm rounded-xl bg-[var(--signal-500)] px-lg py-md text-meta font-semibold text-[var(--ink-900)] transition-all duration-200 hover:bg-[var(--signal-400)] disabled:cursor-not-allowed disabled:opacity-40 sm:px-lg"
               >
                 {busy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -245,11 +251,11 @@ export function IndexConsole() {
 
         {mode === "github" && (
           <div>
-            <span className="eyebrow mb-2 block">Your repositories</span>
+            <span className="eyebrow mb-sm block">Your repositories</span>
             {!me?.user ? (
               <a
                 href={`/api/auth/github?returnTo=${encodeURIComponent("/")}`}
-                className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--ink-850)] px-4 py-3 text-[13.5px] text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:text-[var(--text-primary)]"
+                className="flex min-h-11 cursor-pointer items-center justify-center gap-sm rounded-xl border border-[var(--line)] bg-[var(--ink-850)] px-md py-sm text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:text-[var(--text-primary)]"
               >
                 <GithubMark className="h-4 w-4" /> Sign in with GitHub to browse your repositories
               </a>
@@ -260,15 +266,15 @@ export function IndexConsole() {
         )}
 
         {mode === "git" && (
-          <div className="mt-3.5 flex flex-wrap items-center gap-2">
-            <span className="eyebrow mr-0.5">Try</span>
+          <div className="mt-md flex flex-wrap items-center gap-sm">
+            <span className="eyebrow mr-hair">Try</span>
             {EXAMPLES.map((ex) => (
               <button
                 key={ex}
                 type="button"
                 disabled={busy}
                 onClick={() => setUrl(ex)}
-                className="cursor-pointer rounded-md border border-[var(--line-soft)] px-2 py-1 font-mono text-[11.5px] text-[var(--text-muted)] transition-colors duration-200 hover:border-[var(--signal-600)] hover:text-[var(--signal-500)] disabled:opacity-40"
+                className="cursor-pointer rounded-md border border-[var(--line-soft)] px-sm py-2xs font-mono text-meta text-[var(--text-muted)] transition-colors duration-200 hover:border-[var(--signal-600)] hover:text-[var(--signal-500)] disabled:opacity-40"
               >
                 {ex.replace("https://github.com/", "")}
               </button>
@@ -277,7 +283,7 @@ export function IndexConsole() {
         )}
 
         {mode === "local" && (
-          <p className="mt-3.5 text-[12.5px] leading-relaxed text-[var(--text-muted)]">
+          <p className="mt-md text-meta leading-relaxed text-[var(--text-muted)]">
             The path must exist on the machine running the app (self-hosted). Nothing is uploaded —
             it&apos;s read in place.
           </p>
@@ -292,8 +298,8 @@ export function IndexConsole() {
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
               className="overflow-hidden"
             >
-              <div className="mt-5">
-                <div className="mb-1.5 flex justify-between text-[12px] text-[var(--text-secondary)]">
+              <div className="mt-md">
+                <div className="mb-xs flex justify-between text-meta text-[var(--text-secondary)]">
                   <span>{job.message}</span>
                   <span className="tnum text-[var(--signal-500)]">{job.progress}%</span>
                 </div>
@@ -310,14 +316,14 @@ export function IndexConsole() {
         </AnimatePresence>
 
         {error && (
-          <p className="mt-4 break-all rounded-xl border border-[rgba(255,107,87,0.24)] bg-[rgba(255,107,87,0.08)] px-3.5 py-2.5 text-[13px] text-[var(--coral-400)]">
+          <p className="mt-md break-all rounded-xl border border-[rgba(255,107,87,0.24)] bg-[rgba(255,107,87,0.08)] px-md py-sm text-meta text-[var(--coral-400)]">
             {error}
           </p>
         )}
       </form>
 
       {repoId && job?.status === "done" && (
-        <p className="mt-4 text-[13px] text-[var(--signal-500)]">Done — opening report…</p>
+        <p className="mt-md text-meta text-[var(--signal-500)]">Done — opening report…</p>
       )}
 
       {browsing && (

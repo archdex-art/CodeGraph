@@ -1,8 +1,9 @@
 import type { TimelineSnapshot } from "./timeline";
 import { loadSnapshotCache } from "./timelineStore";
-import type { ArchitectureSnapshot } from "./historicalAnalysis";
+import type { ArchitectureSnapshot } from "./types";
 import { diffSnapshots, type GraphDiff } from "./graphDiff";
-import { analyzeEvolution, type ArchitectureEvolution } from "./evolutionEngine";
+import { analyzeEvolution } from "./evolutionEngine";
+import type { ArchitectureEvolution } from "./types";
 
 export class TimelineController {
   private currentIndex: number = 0;

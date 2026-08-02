@@ -185,12 +185,12 @@ export function FileExplorer({
   }
 
   if (rootEntries === null) {
-    return <div className="flex items-center gap-2 text-xs text-gray-500 p-3"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading files…</div>;
+    return <div className="flex items-center gap-sm text-meta text-gray-500 p-md"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading files…</div>;
   }
 
   return (
     <div
-      className="text-sm select-none"
+      className="text-meta select-none"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
@@ -198,16 +198,16 @@ export function FileExplorer({
         if (src) handleMove(src, ".");
       }}
     >
-      <div className="flex items-center justify-between px-2 py-1.5 text-[11px] uppercase tracking-wide text-gray-500">
+      <div className="flex items-center justify-between px-sm py-xs text-meta uppercase tracking-wide text-gray-500">
         <span>Explorer</span>
-        <div className="flex items-center gap-1">
-          <button title="New file" onClick={() => setDraft({ parent: ".", type: "file" })} className="p-1 rounded hover:bg-white/10 hover:text-white">
+        <div className="flex items-center gap-2xs">
+          <button title="New file" onClick={() => setDraft({ parent: ".", type: "file" })} className="p-2xs rounded-xs hover:bg-white/10 hover:text-white">
             <Plus className="w-3.5 h-3.5" />
           </button>
-          <button title="New folder" onClick={() => setDraft({ parent: ".", type: "dir" })} className="p-1 rounded hover:bg-white/10 hover:text-white">
+          <button title="New folder" onClick={() => setDraft({ parent: ".", type: "dir" })} className="p-2xs rounded-xs hover:bg-white/10 hover:text-white">
             <FolderPlus className="w-3.5 h-3.5" />
           </button>
-          <button title="Upload file" onClick={() => triggerUpload(".")} className="p-1 rounded hover:bg-white/10 hover:text-white">
+          <button title="Upload file" onClick={() => triggerUpload(".")} className="p-2xs rounded-xs hover:bg-white/10 hover:text-white">
             <Upload className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -302,7 +302,7 @@ function Node({
           onClick={() => (isDir ? onToggleDir(entry.path) : onOpen(entry.path))}
           onContextMenu={(e) => onMenu(e, entry)}
           style={{ paddingLeft: 8 + depth * 14 }}
-          className={`flex items-center gap-1 py-1 pr-2 cursor-pointer rounded-sm hover:bg-white/[0.06] ${
+          className={`flex items-center gap-2xs py-2xs pr-sm cursor-pointer rounded-sm hover:bg-white/[0.06] ${
             activePath === entry.path ? "bg-white/[0.09] text-white" : "text-gray-300"
           }`}
         >
@@ -317,7 +317,7 @@ function Node({
               <FileIcon className="w-3.5 h-3.5 shrink-0 text-gray-500" />
             </>
           )}
-          <span className="truncate text-[13px]">{entry.name}</span>
+          <span className="truncate text-meta">{entry.name}</span>
           {dirtyPaths.has(entry.path) && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 ml-auto shrink-0" />}
         </div>
       )}
@@ -356,7 +356,7 @@ function DraftRow({ depth, type, onSubmit, onCancel }: { depth: number; type: "f
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => { ref.current?.focus(); }, []);
   return (
-    <div style={{ paddingLeft: 8 + depth * 14 }} className="flex items-center gap-1 py-1 pr-2">
+    <div style={{ paddingLeft: 8 + depth * 14 }} className="flex items-center gap-2xs py-2xs pr-sm">
       {type === "dir" ? <Folder className="w-3.5 h-3.5 shrink-0 text-sky-400" /> : <FileIcon className="w-3.5 h-3.5 shrink-0 text-gray-500" />}
       <input
         ref={ref}
@@ -369,7 +369,7 @@ function DraftRow({ depth, type, onSubmit, onCancel }: { depth: number; type: "f
         }}
         onBlur={() => (value.trim() ? onSubmit(value) : onCancel())}
         placeholder={type === "dir" ? "folder name" : "file name"}
-        className="bg-[#0a0a0a] border border-purple-500/40 rounded px-1.5 py-0.5 text-[13px] text-white outline-none w-full"
+        className="bg-[#0a0a0a] border border-purple-500/40 rounded-xs px-xs py-2xs text-meta text-white outline-none w-full"
       />
     </div>
   );
@@ -380,7 +380,7 @@ function RenameRow({ depth, initial, onSubmit, onCancel }: { depth: number; init
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
   return (
-    <div style={{ paddingLeft: 8 + depth * 14 }} className="flex items-center gap-1 py-1 pr-2">
+    <div style={{ paddingLeft: 8 + depth * 14 }} className="flex items-center gap-2xs py-2xs pr-sm">
       <input
         ref={ref}
         value={value}
@@ -390,7 +390,7 @@ function RenameRow({ depth, initial, onSubmit, onCancel }: { depth: number; init
           if (e.key === "Escape") onCancel();
         }}
         onBlur={() => onSubmit(value)}
-        className="bg-[#0a0a0a] border border-purple-500/40 rounded px-1.5 py-0.5 text-[13px] text-white outline-none w-full"
+        className="bg-[#0a0a0a] border border-purple-500/40 rounded-xs px-xs py-2xs text-meta text-white outline-none w-full"
       />
     </div>
   );
@@ -412,7 +412,7 @@ function ContextMenu({
   const item = (label: string, icon: React.ReactNode, fn: () => void) => (
     <button
       onClick={(e) => { e.stopPropagation(); fn(); onClose(); }}
-      className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-gray-300 hover:bg-white/10 hover:text-white text-left"
+      className="flex items-center gap-sm w-full px-md py-xs text-meta text-gray-300 hover:bg-white/10 hover:text-white text-left"
     >
       {icon}{label}
     </button>
@@ -420,7 +420,7 @@ function ContextMenu({
   return (
     <div
       style={{ left: menu.x, top: menu.y }}
-      className="fixed z-50 bg-[#111113] border border-white/10 rounded-lg shadow-2xl py-1 w-44"
+      className="fixed z-50 bg-[#111113] border border-white/10 rounded-lg shadow-2xl py-2xs w-44"
       onClick={(e) => e.stopPropagation()}
     >
       {menu.entry.type === "dir" && item("New File", <Plus className="w-3.5 h-3.5" />, onNewFile)}
@@ -429,7 +429,7 @@ function ContextMenu({
       {onDownload && item("Download", <Download className="w-3.5 h-3.5" />, onDownload)}
       {item("Rename", <Pencil className="w-3.5 h-3.5" />, onRename)}
       {item("Duplicate", <Copy className="w-3.5 h-3.5" />, onDuplicate)}
-      <div className="border-t border-white/10 my-1" />
+      <div className="border-t border-white/10 my-2xs" />
       {item("Delete", <Trash2 className="w-3.5 h-3.5 text-rose-400" />, onDelete)}
     </div>
   );

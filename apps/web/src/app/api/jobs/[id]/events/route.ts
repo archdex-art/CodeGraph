@@ -49,6 +49,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     start(controller) {
       let closed = false;
       let last = "";
+      /**
+       * Declared before `finish`, not by it. `finish()` runs on the already-finished-job
+       * path BELOW — before `setInterval` has been reached — and a `const timer` declared
+       * after it is in its temporal dead zone there, so `clearInterval(timer)` threw
+       * `ReferenceError: Cannot access 'timer' before initialization` inside `start()`.
+       * The stream errored instead of delivering the terminal event, so a client attaching
+       * to a job that had ALREADY completed — the common case for a fast index, or any
+       * reconnect — got a broken stream rather than "done".
+       */
+      let timer: ReturnType<typeof setInterval> | undefined;
 
       const send = (event: string, data: unknown): void => {
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
@@ -57,7 +67,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const finish = (): void => {
         if (closed) return;
         closed = true;
-        clearInterval(timer);
+        if (timer !== undefined) clearInterval(timer);
         try {
           controller.close();
         } catch {
@@ -75,7 +85,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         return;
       }
 
-      const timer = setInterval(() => {
+      timer = setInterval(() => {
         if (closed) return;
 
         if (Date.now() - started > MAX_STREAM_MS) {

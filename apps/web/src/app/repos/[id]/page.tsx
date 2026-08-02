@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, ArrowUpRight, Crosshair, Layers, Target } from "lucide-react";
+import { AlertTriangle, ArrowRight, ArrowUpRight, Crosshair, Layers, SquareArrowOutUpRight, Target } from "lucide-react";
 import type { Dimension } from "@/lib/types";
 import { DIMENSION_META, PILLAR_META, pillarsFrom } from "@/lib/types";
 import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
@@ -110,16 +110,16 @@ export default function RepoOverview() {
           depth it was read at qualify it, and the single highest-impact finding is
           the one thing you can act on without scrolling. Uniform cards would say
           all four matter equally, which is not true. */}
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-md lg:grid-cols-3">
         {/* ---- Reading -------------------------------------------------- */}
         <Reveal className="lg:col-span-2">
-          <section className="panel relative h-full overflow-hidden p-6 sm:p-7">
+          <section className="panel relative h-full overflow-hidden p-lg sm:p-xl">
             <div
               aria-hidden="true"
               className="pointer-events-none absolute -top-16 -left-16 h-64 w-64 rounded-full"
               style={{ background: `radial-gradient(circle, color-mix(in oklab, ${reading.color} 10%, transparent), transparent 70%)` }}
             />
-            <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
+            <div className="relative flex flex-col gap-lg sm:flex-row sm:items-center sm:gap-xl">
               <ScoreDial
                 value={overall}
                 color={reading.color}
@@ -127,8 +127,8 @@ export default function RepoOverview() {
                 sublabel={reading.label}
               />
               <div className="min-w-0">
-                <p className="eyebrow mb-3">Code health</p>
-                <p className="text-[14px] leading-relaxed text-[var(--text-secondary)]">
+                <p className="eyebrow mb-md">Code health</p>
+                <p className="max-w-note text-meta text-[var(--text-secondary)]">
                   <span className="text-[var(--text-primary)]">{repo.name}</span> scores{" "}
                   <span className="tnum text-[var(--text-primary)]">{overall}</span> out of 100 on
                   defect risk, which CodeGraph reads as{" "}
@@ -173,7 +173,7 @@ export default function RepoOverview() {
                 </p>
                 <Link
                   href={sectionHref(repo.id, "agents")}
-                  className="group mt-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-[var(--signal-500)] transition-opacity duration-200 hover:opacity-80"
+                  className="group mt-md inline-flex cursor-pointer items-center gap-xs text-meta text-[var(--signal-500)] transition-opacity duration-200 hover:opacity-80"
                 >
                   Run the swarm on these findings
                   <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -185,8 +185,8 @@ export default function RepoOverview() {
 
         {/* ---- Pillars --------------------------------------------------- */}
         <Reveal delay={0.06}>
-          <section className="panel flex h-full flex-col justify-center gap-5 p-6">
-            <div className="flex items-center gap-2">
+          <section className="panel flex h-full flex-col justify-center gap-lg p-lg">
+            <div className="flex items-center gap-sm">
               <Target className="h-3.5 w-3.5 text-[var(--text-faint)]" />
               <p className="eyebrow">Pillars · never blended</p>
             </div>
@@ -196,11 +196,11 @@ export default function RepoOverview() {
               const tone = score === null ? "var(--text-faint)" : band(score).color;
               return (
                 <div key={p.pillar}>
-                  <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                    <span className="text-[13px] text-[var(--text-primary)]" title={meta.question}>
+                  <div className="mb-xs flex items-baseline justify-between gap-md">
+                    <span className="text-meta text-[var(--text-primary)]" title={meta.question}>
                       {meta.label}
                     </span>
-                    <span className="text-[11.5px] text-[var(--text-muted)]">
+                    <span className="text-meta text-[var(--text-muted)]">
                       {score === null ? (
                         "not measured"
                       ) : (
@@ -225,13 +225,13 @@ export default function RepoOverview() {
         {/* ---- Analysis depth -------------------------------------------- */}
         {tiers.length > 0 && (
           <Reveal delay={0.1} className="lg:col-span-2">
-            <section className="panel h-full p-6">
-              <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
-                <div className="flex items-center gap-2">
+            <section className="panel h-full p-lg">
+              <div className="flex flex-wrap items-center justify-between gap-x-lg gap-y-2xs">
+                <div className="flex items-center gap-sm">
                   <Layers className="h-3.5 w-3.5 text-[var(--text-faint)]" />
                   <p className="eyebrow">Analysis depth</p>
                 </div>
-                <p className="text-[12px] text-[var(--text-muted)]">
+                <p className="text-meta text-[var(--text-muted)]">
                   <span className="tnum text-[var(--text-secondary)]">{fullPct}%</span> read with a type
                   checker
                 </p>
@@ -241,7 +241,7 @@ export default function RepoOverview() {
                   yes/no, and a single "coverage %" hides that half a codebase can be
                   counted while only being pattern-matched. HLD 8.3 records the ladder;
                   nothing rendered it until now. */}
-              <div className="mt-4 flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+              <div className="mt-md flex h-2.5 gap-hair overflow-hidden rounded-full">
                 {tiers.map((t) => (
                   <div
                     key={t.key}
@@ -252,23 +252,23 @@ export default function RepoOverview() {
                 ))}
               </div>
 
-              <dl className="mt-3.5 flex flex-wrap gap-x-7 gap-y-2.5">
+              <dl className="mt-md flex flex-wrap gap-x-lg gap-y-sm">
                 {tiers.map((t) => (
-                  <div key={t.key} className="flex items-baseline gap-2">
+                  <div key={t.key} className="flex items-baseline gap-sm">
                     <span
                       className="h-2 w-2 shrink-0 translate-y-[-1px] rounded-sm"
                       style={{ background: TIER_META[t.key].color }}
                       aria-hidden="true"
                     />
-                    <dt className="text-[12.5px] text-[var(--text-secondary)]">{TIER_META[t.key].label}</dt>
-                    <dd className="tnum text-[12.5px] text-[var(--text-muted)]">
+                    <dt className="text-micro text-[var(--text-secondary)]">{TIER_META[t.key].label}</dt>
+                    <dd className="tnum text-micro text-[var(--text-muted)]">
                       {t.pct.toFixed(0)}% · {t.loc.toLocaleString()} LOC
                     </dd>
                   </div>
                 ))}
               </dl>
 
-              <p className="mt-3 max-w-2xl text-[12px] leading-relaxed text-[var(--text-muted)]">
+              <p className="mt-md max-w-note text-meta text-[var(--text-muted)]">
                 {TIER_META[tiers[0].key].note}
               </p>
             </section>
@@ -280,7 +280,7 @@ export default function RepoOverview() {
           {top ? (
             <Link
               href={sectionHref(repo.id, "agents")}
-              className="panel group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden p-6 transition-colors duration-200 hover:border-line-strong"
+              className="panel group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden p-lg transition-colors duration-200 hover:border-line-strong"
             >
               {/* Raised, not inverted. On an ink surface the way to lift one tile is a
                   brighter face and an edge, not a darker one — a darker card here would
@@ -290,37 +290,37 @@ export default function RepoOverview() {
                 className="pointer-events-none absolute inset-0 bg-white/[0.022] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
               />
               <div className="relative">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-sm">
                   <Crosshair className="h-3.5 w-3.5 text-[var(--coral-400)]" />
                   <p className="eyebrow">Act on this first</p>
                 </div>
-                <p className="mt-3.5 text-[15px] leading-snug text-[var(--text-primary)]">{top.title}</p>
-                <p className="mt-1.5 truncate font-mono text-[11.5px] text-[var(--text-muted)]">
+                <p className="mt-md text-body text-[var(--text-primary)]">{top.title}</p>
+                <p className="mt-xs truncate font-mono text-meta text-[var(--text-muted)]">
                   {top.file}
                   {top.line > 1 ? `:${top.line}` : ""}
                 </p>
               </div>
-              <div className="relative mt-5 flex items-center gap-2.5">
+              <div className="relative mt-lg flex items-center gap-sm">
                 <span
-                  className={`rounded-md border px-2 py-1 text-[10px] font-medium tracking-[0.08em] uppercase ${
+                  className={`rounded-sm border px-sm py-2xs text-micro font-medium tracking-[0.08em] uppercase ${
                     (SEVERITY[top.severity] ?? SEVERITY[1]).chip
                   } ${(SEVERITY[top.severity] ?? SEVERITY[1]).tone}`}
                 >
                   <span className="tnum">S{top.severity}</span> {(SEVERITY[top.severity] ?? SEVERITY[1]).label}
                 </span>
-                <span className="tnum text-[11.5px] text-[var(--text-muted)]">
+                <span className="tnum text-meta text-[var(--text-muted)]">
                   ×{top.blastRadius} blast
                 </span>
                 <ArrowUpRight className="ml-auto h-4 w-4 text-[var(--text-faint)] transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[var(--signal-500)]" />
               </div>
             </Link>
           ) : (
-            <section className="panel flex h-full flex-col items-start justify-center gap-2.5 p-6">
-              <div className="flex items-center gap-2">
+            <section className="panel flex h-full flex-col items-start justify-center gap-sm p-lg">
+              <div className="flex items-center gap-sm">
                 <Crosshair className="h-3.5 w-3.5 text-[var(--signal-500)]" />
                 <p className="eyebrow">Nothing to act on</p>
               </div>
-              <p className="text-[13.5px] leading-relaxed text-[var(--text-secondary)]">
+              <p className="max-w-note text-meta text-[var(--text-secondary)]">
                 No findings were emitted for this index.
               </p>
             </section>
@@ -330,7 +330,7 @@ export default function RepoOverview() {
 
       {/* ----------------------------------------------------------- STAT STRIP */}
       <Reveal>
-        <dl className="mt-10 grid grid-cols-2 border-y border-[var(--line)] sm:grid-cols-3 lg:grid-cols-5">
+        <dl className="mt-2xl grid grid-cols-2 border-y border-[var(--line)] sm:grid-cols-3 lg:grid-cols-5">
           {[
             { k: "Files", v: repo.graphStats?.files ?? 0 },
             { k: "Symbols", v: repo.symbolGraph?.stats.symbols ?? repo.graphStats?.nodes ?? 0 },
@@ -340,12 +340,12 @@ export default function RepoOverview() {
           ].map((s, i) => (
             <div
               key={s.k}
-              className={`px-5 py-6 ${i > 0 ? "sm:border-l sm:border-[var(--line)]" : ""} ${
+              className={`px-lg py-lg ${i > 0 ? "sm:border-l sm:border-[var(--line)]" : ""} ${
                 i % 2 === 1 ? "border-l border-[var(--line)] sm:border-l" : ""
               }`}
             >
               <dt className="eyebrow">{s.k}</dt>
-              <dd className="tnum mt-2 text-[26px] leading-none text-[var(--text-primary)]">
+              <dd className="tnum mt-sm text-h3 leading-none text-[var(--text-primary)]">
                 {s.v.toLocaleString()}
               </dd>
             </div>
@@ -354,9 +354,9 @@ export default function RepoOverview() {
       </Reveal>
 
       {repo.symbolGraph?.truncated && (
-        <div className="mt-6 flex items-start gap-3 rounded-xl border border-[var(--amber-400)]/25 bg-[var(--amber-400)]/[0.05] px-4 py-3.5">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--amber-400)]" />
-          <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+        <div className="mt-lg flex items-start gap-md rounded-lg border border-[var(--amber-400)]/25 bg-[var(--amber-400)]/[0.05] px-md py-md">
+          <AlertTriangle className="mt-2xs h-4 w-4 shrink-0 text-[var(--amber-400)]" />
+          <p className="max-w-note text-meta text-[var(--text-secondary)]">
             Symbol graph truncated — code intelligence covers{" "}
             <span className="tnum">{repo.symbolGraph.stats.symbols.toLocaleString()}</span> symbols
             indexed, not the whole codebase.
@@ -366,62 +366,87 @@ export default function RepoOverview() {
 
       {/* -------------------------------------------------- WHERE RISK CONCENTRATES */}
       <Reveal>
-        <section className="mt-12">
-          <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="font-display text-[1.5rem] tracking-tight text-[var(--text-primary)]">
+        <section className="mt-2xl">
+          <div className="flex flex-wrap items-baseline justify-between gap-md">
+            <h2 className="font-display text-lede tracking-tight text-[var(--text-primary)]">
               Where the risk concentrates
             </h2>
             {repo.issues.length > ranked.length && (
               <Link
                 href={sectionHref(repo.id, "code-intel")}
-                className="cursor-pointer text-[13px] text-[var(--signal-500)] transition-opacity duration-200 hover:opacity-80"
+                className="cursor-pointer text-meta text-[var(--signal-500)] transition-opacity duration-200 hover:opacity-80"
               >
                 All <span className="tnum">{repo.issues.length}</span> findings
               </Link>
             )}
           </div>
-          <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-[var(--text-muted)]">
+          <p className="mt-sm max-w-note text-meta text-[var(--text-muted)]">
             Ranked by severity weighted with blast radius — how many symbols reach this one through
             the graph — rather than by severity alone.
           </p>
 
           {repo.issues.length === 0 ? (
-            <p className="mt-6 flex items-center gap-2.5 text-sm text-[var(--signal-500)]">
+            <p className="mt-lg flex items-center gap-sm text-meta text-[var(--signal-500)]">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--signal-500)]" aria-hidden="true" />
               No findings detected in this index.
             </p>
           ) : (
-            <div className="mt-6 overflow-hidden">
-              <div className="hidden grid-cols-[minmax(0,1fr)_7rem_5rem_5rem] gap-4 border-b border-[var(--line)] pb-2.5 sm:grid">
+            <div className="mt-lg overflow-hidden">
+              <div className="hidden grid-cols-[minmax(0,1fr)_7rem_5rem_5rem_2.5rem] gap-md border-b border-[var(--line)] pb-sm sm:grid">
                 <span className="eyebrow">Finding</span>
                 <span className="eyebrow">Severity</span>
                 <span className="eyebrow text-right">Blast</span>
                 <span className="eyebrow text-right">Churn</span>
+                <span className="sr-only">Open in editor</span>
               </div>
               <Stagger className="divide-y divide-[var(--line-soft)]" step={0.03}>
                 {ranked.map((iss) => {
                   const sev = SEVERITY[iss.severity] ?? SEVERITY[1];
                   return (
                     <StaggerItem key={iss.id}>
-                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3.5 sm:grid-cols-[minmax(0,1fr)_7rem_5rem_5rem]">
+                      <div className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-md py-md sm:grid-cols-[minmax(0,1fr)_7rem_5rem_5rem_2.5rem]">
                         <div className="min-w-0">
-                          <p className="truncate text-[14px] text-[var(--text-primary)]">{iss.title}</p>
-                          <p className="mt-0.5 truncate font-mono text-[11.5px] text-[var(--text-muted)]">
+                          <p className="truncate text-meta text-[var(--text-primary)]">{iss.title}</p>
+                          <p className="mt-2xs truncate font-mono text-micro text-[var(--text-muted)]">
                             {iss.file}
                             {iss.line > 1 ? `:${iss.line}` : ""}
                           </p>
                         </div>
                         <span
-                          className={`justify-self-start rounded-md border px-2 py-1 text-[10px] font-medium tracking-[0.08em] uppercase ${sev.chip} ${sev.tone}`}
+                          className={`justify-self-start rounded-sm border px-sm py-2xs text-micro font-medium tracking-[0.08em] uppercase ${sev.chip} ${sev.tone}`}
                         >
                           <span className="tnum">S{iss.severity}</span> {sev.label}
                         </span>
-                        <span className="tnum hidden text-right text-[13px] text-[var(--text-secondary)] sm:block">
+                        <span className="tnum hidden text-right text-meta text-[var(--text-secondary)] sm:block">
                           ×{iss.blastRadius}
                         </span>
-                        <span className="tnum hidden text-right text-[13px] text-[var(--text-muted)] sm:block">
+                        <span className="tnum hidden text-right text-meta text-[var(--text-muted)] sm:block">
                           {iss.churn ?? "—"}
                         </span>
+                        {/* Straight to the line. A finding names a file and a line and
+                            then makes you go and find them yourself, which is the one
+                            step of this workflow the product can just do.
+
+                            Enabled only with a live workspace: without a clone there is
+                            nothing for the editor to open, and a link that lands on an
+                            empty state is worse than a disabled control that says why. */}
+                        {repo.hasWorkspace ? (
+                          <Link
+                            href={`${sectionHref(repo.id, "editor")}?file=${encodeURIComponent(iss.file)}&line=${iss.line}`}
+                            aria-label={`Open ${iss.file} at line ${iss.line} in the editor`}
+                            title={`Open ${iss.file}:${iss.line} in the editor`}
+                            className="col-start-2 row-start-1 flex h-8 w-8 cursor-pointer items-center justify-center justify-self-end rounded-md text-[var(--text-faint)] opacity-0 transition-colors duration-200 hover:bg-white/[0.04] hover:text-[var(--signal-500)] focus-visible:opacity-100 group-hover:opacity-100 sm:col-start-5 max-sm:opacity-100"
+                          >
+                            <SquareArrowOutUpRight className="h-3.5 w-3.5" />
+                          </Link>
+                        ) : (
+                          <span
+                            title="Re-index this repository to enable the built-in editor"
+                            className="hidden h-8 w-8 items-center justify-center justify-self-end text-[var(--text-faint)] opacity-40 sm:flex"
+                          >
+                            <SquareArrowOutUpRight className="h-3.5 w-3.5" />
+                          </span>
+                        )}
                       </div>
                     </StaggerItem>
                   );
@@ -434,28 +459,28 @@ export default function RepoOverview() {
 
       {/* --------------------------------------------------------- SCORE DETAIL */}
       <Reveal>
-        <section className="mt-12">
-          <h2 className="font-display text-[1.5rem] tracking-tight text-[var(--text-primary)]">
+        <section className="mt-2xl">
+          <h2 className="font-display text-lede tracking-tight text-[var(--text-primary)]">
             How the score was reached
           </h2>
-          <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-[var(--text-muted)]">
+          <p className="mt-sm max-w-note text-meta text-[var(--text-muted)]">
             Five dimensions, each weighted, each traceable to the findings that moved it.
           </p>
-          <Stagger className="mt-6 space-y-4">
+          <Stagger className="mt-lg space-y-md">
             {repo.dimensions.map((d) => {
               const meta = DIMENSION_META[d.dimension as Dimension];
               const dim = band(d.score);
               return (
                 <StaggerItem key={d.dimension}>
-                  <div className="mb-2 flex items-baseline justify-between gap-4">
-                    <span className="text-[13.5px] text-[var(--text-primary)]">
+                  <div className="mb-sm flex items-baseline justify-between gap-md">
+                    <span className="text-meta text-[var(--text-primary)]">
                       {meta.label}{" "}
-                      <span className="text-[12px] text-[var(--text-muted)]">
+                      <span className="text-micro text-[var(--text-muted)]">
                         · <span className="tnum">{d.issueCount}</span> issues · weight{" "}
                         <span className="tnum">{Math.round(meta.weight * 100)}%</span>
                       </span>
                     </span>
-                    <span className="tnum text-[13.5px]" style={{ color: dim.color }}>
+                    <span className="tnum text-meta" style={{ color: dim.color }}>
                       {d.score}
                     </span>
                   </div>
@@ -471,26 +496,26 @@ export default function RepoOverview() {
 
       {/* ------------------------------------------------------- SECTION INDEX */}
       <Reveal>
-        <section className="mt-12">
-          <h2 className="font-display text-[1.5rem] tracking-tight text-[var(--text-primary)]">
+        <section className="mt-2xl">
+          <h2 className="font-display text-lede tracking-tight text-[var(--text-primary)]">
             Read more about {repo.name}
           </h2>
-          <Stagger className="mt-5 grid gap-2.5 sm:grid-cols-2" step={0.05}>
+          <Stagger className="mt-lg grid gap-sm sm:grid-cols-2" step={0.05}>
             {SECTIONS.filter((s) => s.slug).map((s) => (
               <StaggerItem key={s.slug}>
                 <Link
                   href={sectionHref(repo.id, s.slug)}
-                  className="panel group flex h-full cursor-pointer items-start gap-3.5 p-4 transition-colors duration-200 hover:border-line-strong"
+                  className="panel group flex h-full cursor-pointer items-start gap-md p-md transition-colors duration-200 hover:border-line-strong"
                 >
-                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--ink-800)]">
+                  <span className="mt-2xs flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--ink-800)]">
                     <s.icon className="h-4 w-4 text-[var(--text-muted)] transition-colors duration-200 group-hover:text-[var(--signal-500)]" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5 text-[14px] text-[var(--text-primary)]">
+                    <span className="flex items-center gap-xs text-meta text-[var(--text-primary)]">
                       {s.label}
                       <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-faint)] transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[var(--signal-500)]" />
                     </span>
-                    <span className="mt-1 block text-[12.5px] leading-relaxed text-[var(--text-muted)]">
+                    <span className="mt-2xs block text-meta text-[var(--text-muted)]">
                       {s.blurb}
                     </span>
                   </span>

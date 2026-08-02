@@ -17,14 +17,14 @@ import { Loader2, Save, CheckCircle2, Plus, X, RefreshCw, Zap, Trash2, User, Log
  * addition to it, not a replacement.
  */
 const INPUT =
-  "w-full min-h-11 rounded-lg border border-[var(--line)] bg-[var(--ink-800)] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-faint)] transition-colors duration-200 hover:border-[var(--line-strong)] focus:border-[var(--signal-500)]";
-const LABEL = "mb-1.5 block text-[13px] font-medium text-[var(--text-secondary)]";
-const HELP = "mt-1.5 text-xs leading-relaxed text-[var(--text-muted)]";
+  "w-full min-h-11 rounded-lg border border-[var(--line)] bg-[var(--ink-800)] px-sm py-sm text-meta text-[var(--text-primary)] placeholder:text-[var(--text-faint)] transition-colors duration-200 hover:border-[var(--line-strong)] focus:border-[var(--signal-500)]";
+const LABEL = "mb-xs block text-meta font-medium text-[var(--text-secondary)]";
+const HELP = "mt-xs text-meta leading-relaxed text-[var(--text-muted)]";
 const BTN =
-  "flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--ink-800)] px-3 text-sm text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50";
+  "flex min-h-11 cursor-pointer items-center gap-xs rounded-lg border border-[var(--line)] bg-[var(--ink-800)] px-sm text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50";
 /** Coral is risk, and clearing a saved credential is the only risk on this page. */
 const BTN_DANGER =
-  "flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--ink-800)] px-3 text-sm text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--coral-500)]/40 hover:text-[var(--coral-400)] disabled:cursor-not-allowed disabled:opacity-50";
+  "flex min-h-11 cursor-pointer items-center gap-xs rounded-lg border border-[var(--line)] bg-[var(--ink-800)] px-sm text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--coral-500)]/40 hover:text-[var(--coral-400)] disabled:cursor-not-allowed disabled:opacity-50";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AssistantSettingsView | null>(null);
@@ -239,7 +239,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto flex max-w-3xl items-center justify-center gap-2.5 p-8 py-24 text-sm text-[var(--text-muted)]">
+      <div className="shell flex max-w-note items-center justify-center gap-sm py-3xl text-meta text-[var(--text-muted)]">
         <Loader2 className="h-5 w-5 animate-spin text-[var(--signal-500)]" /> Loading settings…
       </div>
     );
@@ -252,28 +252,28 @@ export default function SettingsPage() {
     // is a dead end, and this one has an obvious exit.
     const needsAuth = /unauthor|sign in/i.test(error ?? "");
     return (
-      <div className="mx-auto max-w-3xl px-6 py-24">
-        <div className="panel p-8 sm:p-10">
+      <div className="shell max-w-measure py-3xl">
+        <div className="panel p-lg sm:p-xl">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--coral-500)]/30 bg-[var(--coral-500)]/[0.08]">
             <AlertTriangle className="h-[18px] w-[18px] text-[var(--coral-400)]" />
           </div>
-          <div className="eyebrow mt-5">{needsAuth ? "Sign-in required" : "Settings unavailable"}</div>
-          <h1 className="font-display mt-2.5 text-[1.7rem] leading-snug tracking-tight text-[var(--text-primary)]">
+          <div className="eyebrow mt-md">{needsAuth ? "Sign-in required" : "Settings unavailable"}</div>
+          <h1 className="font-display mt-sm text-h3 leading-snug tracking-tight text-[var(--text-primary)]">
             {needsAuth ? "Settings are per-account." : "Could not load settings."}
           </h1>
-          <p className="mt-3 max-w-md text-[14.5px] leading-relaxed text-[var(--text-secondary)]">{error}</p>
-          <div className="mt-7 flex flex-wrap gap-3">
+          <p className="mt-sm max-w-note text-meta leading-relaxed text-[var(--text-secondary)]">{error}</p>
+          <div className="mt-lg flex flex-wrap gap-sm">
             {needsAuth && (
               <a
                 href={`/api/auth/github?returnTo=${encodeURIComponent("/settings")}`}
-                className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[var(--signal-500)] px-5 text-[13.5px] font-semibold text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
+                className="flex min-h-11 cursor-pointer items-center gap-sm rounded-xl bg-[var(--signal-500)] px-md text-meta font-semibold text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
               >
                 <LogIn className="h-4 w-4" /> Sign in with GitHub
               </a>
             )}
             <Link
               href="/"
-              className="flex min-h-11 cursor-pointer items-center rounded-xl border border-[var(--line)] px-5 text-[13.5px] text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:text-[var(--text-primary)]"
+              className="flex min-h-11 cursor-pointer items-center rounded-xl border border-[var(--line)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:text-[var(--text-primary)]"
             >
               Back to indexing
             </Link>
@@ -284,19 +284,19 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-12 pb-24">
-      <p className="eyebrow mb-2.5">Configuration</p>
-      <h1 className="font-display mb-8 text-4xl tracking-tight text-[var(--text-primary)]">Settings</h1>
+    <div className="shell max-w-measure py-xl pb-3xl">
+      <p className="eyebrow mb-sm">Configuration</p>
+      <h1 className="font-display mb-lg text-h1 tracking-tight text-[var(--text-primary)]">Settings</h1>
 
       {me?.githubAuthEnabled && (
-        <div className={`mb-8 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-xs leading-relaxed text-[var(--text-secondary)] ${
+        <div className={`mb-lg flex items-start gap-sm rounded-xl border px-md py-sm text-meta leading-relaxed text-[var(--text-secondary)] ${
           me.user
             ? "border-[var(--signal-500)]/25 bg-[var(--signal-500)]/[0.05]"
             : "border-[var(--amber-400)]/25 bg-[var(--amber-400)]/[0.05]"
         }`}>
           {me.user
-            ? <User className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--signal-500)]" />
-            : <LogIn className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--amber-400)]" />}
+            ? <User className="mt-hair h-3.5 w-3.5 shrink-0 text-[var(--signal-500)]" />
+            : <LogIn className="mt-hair h-3.5 w-3.5 shrink-0 text-[var(--amber-400)]" />}
           {me.user ? (
             <span>
               Signed in as <strong className="font-medium text-[var(--text-primary)]">{me.user.login}</strong> — everything below is saved to your account only, never
@@ -318,23 +318,23 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-6">
+      <form onSubmit={handleSave} className="space-y-lg">
         
         {/* Claude Section */}
-        <div className="panel p-6">
-          <p className="eyebrow mb-1.5">Channel 01</p>
-          <h2 className="font-display text-2xl tracking-tight text-[var(--text-primary)]">Claude AI Assistant</h2>
-          <p className="mt-2 mb-6 text-sm leading-relaxed text-[var(--text-secondary)]">
+        <div className="panel p-lg">
+          <p className="eyebrow mb-xs">Channel 01</p>
+          <h2 className="font-display text-h3 tracking-tight text-[var(--text-primary)]">Claude AI Assistant</h2>
+          <p className="mt-sm mb-lg text-meta leading-relaxed text-[var(--text-secondary)]">
             Configure Anthropic Claude to power the in-editor AI Assistant. 
             CodeGraph uses the official Claude Agent SDK.
           </p>
           
-          <div className="space-y-5">
+          <div className="space-y-md">
             <div>
               <label htmlFor="anthropic-key" className={LABEL}>
                 Anthropic API Key
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-sm">
                 <input
                   id="anthropic-key"
                   type="password"
@@ -358,41 +358,41 @@ export default function SettingsPage() {
               )}
             </div>
 
-            <div className="border-t border-[var(--line-soft)] pt-5">
-              <label htmlFor="use-subscription" className="flex cursor-pointer items-start gap-2.5">
+            <div className="border-t border-[var(--line-soft)] pt-md">
+              <label htmlFor="use-subscription" className="flex cursor-pointer items-start gap-sm">
                 <input
                   id="use-subscription"
                   type="checkbox"
                   checked={useSubscription}
                   onChange={handleToggleSubscription}
                   disabled={subscriptionBusy}
-                  className="mt-0.5 h-4 w-4 cursor-pointer accent-[var(--signal-500)]"
+                  className="mt-hair h-4 w-4 cursor-pointer accent-[var(--signal-500)]"
                 />
-                <span className="text-[13px] text-[var(--text-primary)]">
+                <span className="text-meta text-[var(--text-primary)]">
                   Use my Claude Pro/Max/Team subscription instead of an API key
-                  {subscriptionBusy && <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin text-[var(--signal-500)]" />}
+                  {subscriptionBusy && <Loader2 className="ml-sm inline h-3.5 w-3.5 animate-spin text-[var(--signal-500)]" />}
                 </span>
               </label>
-              <p className={`${HELP} ml-6.5`}>
+              <p className={`${HELP} ml-lg`}>
                 Uses your subscription&apos;s included usage instead of per-token API billing. An API Key above, if set, always
                 takes priority over this.
               </p>
               {useSubscription && settings && !settings.claudeSubscriptionUsable && (
-                <div className="mt-3 ml-6.5 space-y-2 rounded-lg border border-[var(--amber-400)]/25 bg-[var(--amber-400)]/[0.05] p-3 text-xs leading-relaxed">
-                  <p className="flex items-start gap-2 font-medium text-[var(--amber-400)]">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <div className="mt-sm ml-lg space-y-sm rounded-lg border border-[var(--amber-400)]/25 bg-[var(--amber-400)]/[0.05] p-sm text-meta leading-relaxed">
+                  <p className="flex items-start gap-sm font-medium text-[var(--amber-400)]">
+                    <AlertTriangle className="mt-hair h-3.5 w-3.5 shrink-0" />
                     <span>This server has no usable Claude Code login right now — starting a chat with this toggle on and no API Key set above will fail.</span>
                   </p>
                   <p className="text-[var(--text-secondary)]">
                     To actually use your subscription instead of an API key, on <strong className="font-medium text-[var(--text-primary)]">your own computer</strong>{" "}
                     (not this server) run:
                   </p>
-                  <pre className="overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--ink-900)] px-3 py-2 font-mono text-[var(--text-primary)]">
+                  <pre className="overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--ink-900)] px-sm py-sm font-mono text-[var(--text-primary)]">
                     npx @anthropic-ai/claude-code setup-token
                   </pre>
                   <p className="text-[var(--text-secondary)]">
                     This opens a browser to sign in with your Claude Pro/Max/Team account and prints a long-lived (1 year)
-                    token. Set that as <code className="rounded bg-[var(--ink-700)] px-1 py-0.5 font-mono text-[var(--text-primary)]">CLAUDE_CODE_OAUTH_TOKEN</code> in this deployment&apos;s
+                    token. Set that as <code className="rounded bg-[var(--ink-700)] px-2xs py-hair font-mono text-[var(--text-primary)]">CLAUDE_CODE_OAUTH_TOKEN</code> in this deployment&apos;s
                     environment (e.g. the Render dashboard&apos;s Environment tab) and redeploy — the server itself never needs
                     an interactive login, only that one token.
                   </p>
@@ -403,7 +403,7 @@ export default function SettingsPage() {
               <label htmlFor="claude-model" className={LABEL}>
                 Model
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-sm">
                 <select
                   id="claude-model"
                   value={claudeModel}
@@ -434,28 +434,28 @@ export default function SettingsPage() {
         </div>
 
         {/* Local LLM Section */}
-        <div className="panel p-6">
-          <p className="eyebrow mb-1.5">Channel 02</p>
-          <h2 className="font-display text-2xl tracking-tight text-[var(--text-primary)]">Local Model (OpenAI-Compatible)</h2>
-          <p className="mt-2 mb-6 text-sm leading-relaxed text-[var(--text-secondary)]">
+        <div className="panel p-lg">
+          <p className="eyebrow mb-xs">Channel 02</p>
+          <h2 className="font-display text-h3 tracking-tight text-[var(--text-primary)]">Local Model (OpenAI-Compatible)</h2>
+          <p className="mt-sm mb-lg text-meta leading-relaxed text-[var(--text-secondary)]">
             Point the AI Assistant at your own local model server (Ollama, LM Studio, vLLM, etc).
           </p>
 
           {settings && settings.localProviders.length > 0 && (
-            <div className="mb-6 space-y-2">
-              <p className="eyebrow mb-2.5">Saved providers</p>
+            <div className="mb-lg space-y-sm">
+              <p className="eyebrow mb-sm">Saved providers</p>
               {settings.localProviders.map((p) => (
-                <div key={p.id} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--line)] bg-[var(--ink-800)] px-3 py-2.5">
+                <div key={p.id} className="flex items-center justify-between gap-sm rounded-lg border border-[var(--line)] bg-[var(--ink-800)] px-sm py-sm">
                   <div className="min-w-0">
-                    <div className="truncate text-sm text-[var(--text-primary)]">{p.name}</div>
-                    <div className="truncate font-mono text-xs text-[var(--text-muted)]">{p.baseUrl}{p.hasApiKey ? " · has key" : ""}{p.models.length ? ` · ${p.models.length} model${p.models.length === 1 ? "" : "s"}` : ""}</div>
+                    <div className="truncate text-meta text-[var(--text-primary)]">{p.name}</div>
+                    <div className="truncate font-mono text-meta text-[var(--text-muted)]">{p.baseUrl}{p.hasApiKey ? " · has key" : ""}{p.models.length ? ` · ${p.models.length} model${p.models.length === 1 ? "" : "s"}` : ""}</div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-sm">
                     <button
                       type="button"
                       onClick={() => handleUseProvider(p.id)}
                       disabled={providerBusy === p.id}
-                      className="flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--signal-500)]/35 bg-[var(--signal-500)]/[0.08] px-3 text-xs font-medium text-[var(--signal-500)] transition-colors duration-200 hover:bg-[var(--signal-500)]/[0.16] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex min-h-11 cursor-pointer items-center gap-xs rounded-lg border border-[var(--signal-500)]/35 bg-[var(--signal-500)]/[0.08] px-sm text-meta font-medium text-[var(--signal-500)] transition-colors duration-200 hover:bg-[var(--signal-500)]/[0.16] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {providerBusy === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
                       Use
@@ -475,7 +475,7 @@ export default function SettingsPage() {
             </div>
           )}
           
-          <div className="space-y-5">
+          <div className="space-y-md">
             <div>
               <label htmlFor="local-base-url" className={LABEL}>Base URL</label>
               <input
@@ -504,7 +504,7 @@ export default function SettingsPage() {
 
             <div>
               <label htmlFor="local-api-key" className={LABEL}>API Key (Optional)</label>
-              <div className="flex gap-2">
+              <div className="flex gap-sm">
                 <input
                   id="local-api-key"
                   type="password"
@@ -526,11 +526,11 @@ export default function SettingsPage() {
               <p className={HELP}>Only needed for hosted OpenAI-compatible providers; local servers usually accept none.</p>
             </div>
 
-            <div className="border-t border-[var(--line-soft)] pt-5">
-              <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div className="border-t border-[var(--line-soft)] pt-md">
+              <div className="mb-sm flex flex-wrap items-start justify-between gap-sm">
                 <div>
-                  <p className="text-[13px] font-medium text-[var(--text-secondary)]">Manage Models</p>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">Shown in the chat panel&apos;s dropdown.</p>
+                  <p className="text-meta font-medium text-[var(--text-secondary)]">Manage Models</p>
+                  <p className="mt-2xs text-meta text-[var(--text-muted)]">Shown in the chat panel&apos;s dropdown.</p>
                 </div>
                 <button
                   type="button"
@@ -544,15 +544,15 @@ export default function SettingsPage() {
               </div>
 
               {modelList.length === 0 && (
-                <p className="mb-3 text-xs leading-relaxed text-[var(--text-muted)]">
+                <p className="mb-sm text-meta leading-relaxed text-[var(--text-muted)]">
                   No curated models yet — the chat dropdown will auto-fetch the server&apos;s full live list until you add at least one here.
                 </p>
               )}
 
               {modelList.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2">
+                <div className="mb-sm flex flex-wrap gap-sm">
                   {modelList.map((m) => (
-                    <span key={m} className="flex min-h-11 items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--ink-800)] pl-3.5 pr-1 font-mono text-xs text-[var(--text-secondary)]">
+                    <span key={m} className="flex min-h-11 items-center gap-2xs rounded-full border border-[var(--line)] bg-[var(--ink-800)] pl-md pr-2xs font-mono text-meta text-[var(--text-secondary)]">
                       {m}
                       <button
                         type="button"
@@ -568,7 +568,7 @@ export default function SettingsPage() {
               )}
 
               <label htmlFor="new-model" className={LABEL}>Add a model</label>
-              <div className="flex gap-2">
+              <div className="flex gap-sm">
                 <input
                   id="new-model"
                   type="text"
@@ -588,15 +588,15 @@ export default function SettingsPage() {
               </div>
 
               {discovered.length > 0 && (
-                <div className="mt-4 rounded-lg border border-[var(--line)] bg-[var(--ink-850)] p-3">
-                  <p className="eyebrow mb-2.5">Found on the server — click to add</p>
-                  <div className="flex flex-wrap gap-2">
+                <div className="mt-md rounded-lg border border-[var(--line)] bg-[var(--ink-850)] p-sm">
+                  <p className="eyebrow mb-sm">Found on the server — click to add</p>
+                  <div className="flex flex-wrap gap-sm">
                     {discovered.map((m) => (
                       <button
                         key={m}
                         type="button"
                         onClick={() => { persistModelList([...modelList, m]); setDiscovered((prev) => prev.filter((x) => x !== m)); }}
-                        className="flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--ink-800)] px-3.5 font-mono text-xs text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--signal-500)]/40 hover:text-[var(--signal-500)]"
+                        className="flex min-h-11 cursor-pointer items-center gap-xs rounded-full border border-[var(--line)] bg-[var(--ink-800)] px-md font-mono text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--signal-500)]/40 hover:text-[var(--signal-500)]"
                       >
                         <Plus className="h-3 w-3" /> {m}
                       </button>
@@ -606,18 +606,18 @@ export default function SettingsPage() {
               )}
 
               {modelListError && (
-                <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-[var(--coral-400)]">
-                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {modelListError}
+                <p className="mt-sm flex items-start gap-sm text-meta leading-relaxed text-[var(--coral-400)]">
+                  <AlertTriangle className="mt-hair h-3.5 w-3.5 shrink-0" /> {modelListError}
                 </p>
               )}
             </div>
 
-            <div className="border-t border-[var(--line-soft)] pt-5">
+            <div className="border-t border-[var(--line-soft)] pt-md">
               <label htmlFor="provider-name" className={LABEL}>Save current config as a profile</label>
-              <p className="mb-2.5 text-xs leading-relaxed text-[var(--text-muted)]">
+              <p className="mb-sm text-meta leading-relaxed text-[var(--text-muted)]">
                 Names this Base URL + API key + model list so you can switch back to it with one click, instead of retyping it.
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-sm">
                 <input
                   id="provider-name"
                   type="text"
@@ -638,8 +638,8 @@ export default function SettingsPage() {
                 </button>
               </div>
               {providerError && (
-                <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-[var(--coral-400)]">
-                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {providerError}
+                <p className="mt-sm flex items-start gap-sm text-meta leading-relaxed text-[var(--coral-400)]">
+                  <AlertTriangle className="mt-hair h-3.5 w-3.5 shrink-0" /> {providerError}
                 </p>
               )}
             </div>
@@ -647,23 +647,23 @@ export default function SettingsPage() {
         </div>
 
         {error && (
-          <p className="flex items-start gap-2 text-sm leading-relaxed text-[var(--coral-400)]">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {error}
+          <p className="flex items-start gap-sm text-meta leading-relaxed text-[var(--coral-400)]">
+            <AlertTriangle className="mt-hair h-4 w-4 shrink-0" /> {error}
           </p>
         )}
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-md">
           <button
             type="submit"
             disabled={saving}
-            className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-[var(--signal-500)] px-5 text-sm font-medium text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex min-h-11 cursor-pointer items-center gap-sm rounded-lg bg-[var(--signal-500)] px-md text-meta font-medium text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save Settings
           </button>
           
           {saved && (
-            <span className="flex items-center gap-1.5 text-sm text-[var(--signal-500)]">
+            <span className="flex items-center gap-xs text-meta text-[var(--signal-500)]">
               <CheckCircle2 className="h-4 w-4" /> Saved
             </span>
           )}

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createIndexJob, type CreateIndexJobResult } from "@/lib/store";
-import { localAccessAllowed, LOCAL_ACCESS_DISABLED_MESSAGE } from "@/lib/localAccess";
+import path from "node:path";
+import {
+  localAccessAllowed,
+  withinLocalAccessRoot,
+  LOCAL_ACCESS_DISABLED_MESSAGE,
+  LOCAL_ACCESS_ROOT_MESSAGE,
+} from "@/lib/localAccess";
 import { isPublicHttpUrl } from "@codegraph/vcs";
 import { getSession } from "@/lib/session";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
@@ -53,6 +59,14 @@ export async function POST(req: NextRequest) {
     if (localPath) {
       if (!localAccessAllowed()) {
         return NextResponse.json({ error: LOCAL_ACCESS_DISABLED_MESSAGE }, { status: 403 });
+      }
+      // `/api/browse` refused a path outside CG_LOCAL_ACCESS_ROOT while this route indexed
+      // it — and indexing is the stronger capability: it walks the tree and makes file
+      // CONTENTS readable through the repo's fs/search/editor endpoints, where browse only
+      // ever disclosed directory names. The containment root was therefore enforced on the
+      // weaker of the two entry points.
+      if (!withinLocalAccessRoot(path.resolve(localPath))) {
+        return NextResponse.json({ error: LOCAL_ACCESS_ROOT_MESSAGE }, { status: 403 });
       }
       return enqueued(createIndexJob(localPath, "local", undefined, session?.userId ?? null));
     }
