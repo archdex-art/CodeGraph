@@ -217,10 +217,10 @@ export function AssistantPanel({
   }
 
   return (
-    <div className="flex flex-col h-full text-xs">
-      <div className="flex items-center justify-between px-3 pt-3 pb-2 shrink-0">
-        <div className="text-[11px] uppercase tracking-wide text-gray-500">AI Assistant</div>
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col h-full text-meta">
+      <div className="flex items-center justify-between px-md pt-md pb-sm shrink-0">
+        <div className="text-meta uppercase tracking-wide text-gray-500">AI Assistant</div>
+        <div className="flex items-center gap-sm">
           <button onClick={newChat} title="New chat" className="text-gray-500 hover:text-white">
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
@@ -233,16 +233,16 @@ export function AssistantPanel({
       </div>
 
       {!providers.claude && !providers.local && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center gap-md px-lg text-center">
           <Bot className="w-8 h-8 text-gray-700" />
-          <p className="text-gray-500 leading-relaxed">
+          <p className="text-gray-500 ">
             No AI provider is configured yet. Add a Claude API key or point at your own local model to start chatting.
           </p>
           <a
             href="/settings"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20"
+            className="flex items-center gap-xs px-md py-xs rounded-xs border border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20"
           >
             <Settings className="w-3.5 h-3.5" /> Open Settings
           </a>
@@ -253,12 +253,12 @@ export function AssistantPanel({
         <>
 
       {providers.claude && providers.local && (
-        <div className="flex items-center gap-1 px-3 pb-2 shrink-0">
+        <div className="flex items-center gap-2xs px-md pb-sm shrink-0">
           {(["claude", "local"] as const).map((p) => (
             <button
               key={p}
               onClick={() => switchProvider(p)}
-              className={`px-2 py-0.5 rounded text-[11px] border ${
+              className={`px-sm py-2xs rounded-xs text-meta border ${
                 provider === p ? "border-purple-500/50 text-white bg-white/5" : "border-white/10 text-gray-500 hover:text-gray-300"
               }`}
             >
@@ -268,18 +268,18 @@ export function AssistantPanel({
         </div>
       )}
       
-      <div className="px-3 pb-2 shrink-0">
+      <div className="px-md pb-sm shrink-0">
         {provider === "local" ? (
           localModels.length > 0 ? (
             <select 
               value={currentLocalModel || ""} 
               onChange={(e) => handleModelChange(e.target.value)}
-              className="w-full bg-[#1a1a1a] border border-white/10 rounded px-2 py-1 text-[11px] text-gray-300 focus:outline-none focus:border-purple-500/50"
+              className="w-full bg-[#1a1a1a] border border-white/10 rounded-xs px-sm py-2xs text-meta text-gray-300 focus:outline-none focus:border-purple-500/50"
             >
               {localModels.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           ) : (
-            <div className="w-full bg-[#1a1a1a] border border-white/10 rounded px-2 py-1 text-[11px] text-gray-500 truncate" title={currentLocalModel || "No model configured"}>
+            <div className="w-full bg-[#1a1a1a] border border-white/10 rounded-xs px-sm py-2xs text-meta text-gray-500 truncate" title={currentLocalModel || "No model configured"}>
               {currentLocalModel || "No model configured"}
             </div>
           )
@@ -287,16 +287,16 @@ export function AssistantPanel({
           <select
             value={currentClaudeModel}
             onChange={(e) => handleModelChange(e.target.value)}
-            className="w-full bg-[#1a1a1a] border border-white/10 rounded px-2 py-1 text-[11px] text-gray-300 focus:outline-none focus:border-purple-500/50"
+            className="w-full bg-[#1a1a1a] border border-white/10 rounded-xs px-sm py-2xs text-meta text-gray-300 focus:outline-none focus:border-purple-500/50"
           >
             {CLAUDE_MODELS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
         )}
       </div>
 
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-3 space-y-3">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-md space-y-md">
         {turns.length === 0 && (
-          <p className="text-gray-600 leading-relaxed">
+          <p className="text-gray-600 ">
             Ask it to explain, refactor, or edit files in this repository. It can read, write, search, and (if this
             is a git workspace) check status/diff/commit — nothing else.
           </p>
@@ -304,12 +304,12 @@ export function AssistantPanel({
         {turns.map((turn, i) => (
           <div key={i}>
             {turn.role === "user" ? (
-              <div className="rounded bg-white/5 px-2 py-1.5 text-gray-200 whitespace-pre-wrap break-words">{turn.text}</div>
+              <div className="rounded-xs bg-white/5 px-sm py-xs text-gray-200 whitespace-pre-wrap break-words">{turn.text}</div>
             ) : (
-              <div className="space-y-1.5">
+              <div className="space-y-xs">
                 {turn.blocks.map((block, j) =>
                   block.kind === "text" ? (
-                    <p key={j} className="text-gray-300 whitespace-pre-wrap break-words leading-relaxed">
+                    <p key={j} className="text-gray-300 whitespace-pre-wrap break-words ">
                       {block.text}
                     </p>
                   ) : (
@@ -320,7 +320,7 @@ export function AssistantPanel({
                         onOpenFile(p ?? String(block.input.path ?? ""));
                       }}
                       title={block.summary}
-                      className="w-full text-left flex items-center gap-1.5 rounded border border-white/10 bg-black/20 px-2 py-1 text-gray-400 hover:border-white/20"
+                      className="w-full text-left flex items-center gap-xs rounded-xs border border-white/10 bg-black/20 px-sm py-2xs text-gray-400 hover:border-white/20"
                     >
                       {block.status === "running" && <Loader2 className="w-3 h-3 shrink-0 animate-spin" />}
                       {block.status === "ok" && <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-400" />}
@@ -329,7 +329,7 @@ export function AssistantPanel({
                     </button>
                   ),
                 )}
-                {turn.error && <p className="text-red-400 leading-relaxed">⚠ {turn.error}</p>}
+                {turn.error && <p className="text-red-400 ">⚠ {turn.error}</p>}
               </div>
             )}
           </div>
@@ -337,9 +337,9 @@ export function AssistantPanel({
         {busy && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500" />}
       </div>
 
-      <div className="p-3 shrink-0 border-t border-white/10 mt-2">
-        <div className="flex items-end gap-1.5 bg-[#0a0a0a] border border-white/10 rounded px-2 py-1.5 focus-within:border-purple-500/50">
-          <Bot className="w-3.5 h-3.5 text-gray-600 mb-1 shrink-0" />
+      <div className="p-md shrink-0 border-t border-white/10 mt-sm">
+        <div className="flex items-end gap-xs bg-[#0a0a0a] border border-white/10 rounded-xs px-sm py-xs focus-within:border-purple-500/50">
+          <Bot className="w-3.5 h-3.5 text-gray-600 mb-2xs shrink-0" />
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -373,11 +373,11 @@ export function AssistantPanel({
             className="flex-1 bg-transparent outline-none text-gray-200 placeholder:text-gray-600 resize-none disabled:opacity-50"
           />
           {busy ? (
-            <button onClick={() => abortRef.current?.abort()} className="text-red-400 hover:text-red-300 mb-1 shrink-0 p-0.5 rounded hover:bg-white/5" title="Stop">
+            <button onClick={() => abortRef.current?.abort()} className="text-red-400 hover:text-red-300 mb-2xs shrink-0 p-2xs rounded-xs hover:bg-white/5" title="Stop">
               <Square className="w-3.5 h-3.5 fill-current" />
             </button>
           ) : (
-            <button onClick={send} disabled={!input.trim()} className="text-gray-500 hover:text-white disabled:opacity-30 mb-1 shrink-0 p-0.5" title="Send">
+            <button onClick={send} disabled={!input.trim()} className="text-gray-500 hover:text-white disabled:opacity-30 mb-2xs shrink-0 p-2xs" title="Send">
               <Send className="w-3.5 h-3.5" />
             </button>
           )}

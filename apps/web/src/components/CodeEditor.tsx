@@ -125,7 +125,6 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
       setActivePath(st.activeTab && restoredTabs.some((t) => t.path === st.activeTab) ? st.activeTab : restoredTabs[0]?.path ?? null);
       restoredRef.current = true;
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repoId]);
 
   // Persist lightweight UI state across sessions.
@@ -290,10 +289,10 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
   const lang = activePath ? languageForPath(activePath) : { id: "plaintext", label: "Plain Text" };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0a0a0b] overflow-hidden flex flex-col" style={{ height: "78vh" }}>
+    <div className="rounded-xl border border-white/10 bg-[#0a0a0b] overflow-hidden flex flex-col" style={{ height: "78vh" }}>
       <div className="flex flex-1 min-h-0">
         {/* Activity bar */}
-        <div className="w-12 border-r border-white/10 flex flex-col items-center py-2 gap-1 bg-black/20 shrink-0">
+        <div className="w-12 border-r border-white/10 flex flex-col items-center py-sm gap-2xs bg-black/20 shrink-0">
           <ActivityBtn active={panel === "explorer"} onClick={() => setPanel("explorer")} icon={<FolderTree className="w-4.5 h-4.5" />} title="Explorer" />
           <ActivityBtn active={panel === "search"} onClick={() => setPanel("search")} icon={<SearchIcon className="w-4.5 h-4.5" />} title="Search" />
           {hasGit && (
@@ -346,7 +345,7 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
               <div
                 key={t.path}
                 onClick={() => setActivePath(t.path)}
-                className={`group flex items-center gap-1.5 px-3 py-2 text-xs border-r border-white/5 cursor-pointer whitespace-nowrap ${
+                className={`group flex items-center gap-xs px-md py-sm text-meta border-r border-white/5 cursor-pointer whitespace-nowrap ${
                   activePath === t.path ? "bg-[#0a0a0b] text-white" : "text-gray-400 hover:bg-white/[0.03]"
                 }`}
               >
@@ -366,13 +365,13 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
               </div>
             ))}
             <div className="flex-1" />
-            <div className="flex items-center gap-2 px-3 shrink-0">
-              <label className="flex items-center gap-1 text-[11px] text-gray-500">
+            <div className="flex items-center gap-sm px-md shrink-0">
+              <label className="flex items-center gap-2xs text-meta text-gray-500">
                 <input type="checkbox" checked={autoSave} onChange={(e) => setAutoSave(e.target.checked)} /> Auto-save
               </label>
               <button
                 onClick={() => setDiffView(!diffView)}
-                className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded border ${
+                className={`flex items-center gap-2xs text-meta px-sm py-2xs rounded-xs border ${
                   diffView ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-gray-300"
                 }`}
               >
@@ -381,14 +380,14 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
               <button
                 onClick={() => activePath && saveTab(activePath)}
                 disabled={!activeTab?.dirty}
-                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-white/10 text-gray-300 hover:bg-white/5 disabled:opacity-30"
+                className="flex items-center gap-2xs text-meta px-sm py-2xs rounded-xs border border-white/10 text-gray-300 hover:bg-white/5 disabled:opacity-30"
               >
                 <Save className="w-3 h-3" /> Save
               </button>
             </div>
             <button
               onClick={() => setAssistantOpen(!assistantOpen)}
-              className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded border ${
+              className={`flex items-center gap-2xs text-meta px-sm py-2xs rounded-xs border ${
                 assistantOpen ? "border-purple-500/50 bg-purple-500/10 text-white" : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-gray-300"
               }`}
             >
@@ -400,7 +399,7 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
           <div className="flex-1 min-h-0 relative flex">
             <div className="flex-1 min-w-0 relative">
               {!activeTab && (
-                <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-sm">
+                <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-meta">
                   {loadingPath ? "Opening…" : "Select a file to start editing"}
                 </div>
               )}
@@ -474,13 +473,13 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
       />
 
       {diffModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-8" onClick={() => setDiffModal(null)}>
-          <div className="bg-[#111113] border border-white/10 rounded-xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-              <span className="text-sm text-white font-mono">{diffModal.path}</span>
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-xl" onClick={() => setDiffModal(null)}>
+          <div className="bg-[#111113] border border-white/10 rounded-xl max-w-measure w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-md py-md border-b border-white/10">
+              <span className="text-meta text-white font-mono">{diffModal.path}</span>
               <button onClick={() => setDiffModal(null)} className="text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
             </div>
-            <pre className="text-[11px] leading-relaxed p-4 overflow-auto font-mono flex-1">{colorizeDiff(diffModal.diff)}</pre>
+            <pre className="text-meta p-md overflow-auto font-mono flex-1">{colorizeDiff(diffModal.diff)}</pre>
           </div>
         </div>
       )}
@@ -490,9 +489,9 @@ export function CodeEditor({ repo, visible = true }: { repo: RepoDetail; visible
 
 function ActivityBtn({ active, onClick, icon, title, badge }: { active: boolean; onClick: () => void; icon: React.ReactNode; title: string; badge?: number }) {
   return (
-    <button onClick={onClick} title={title} aria-label={title} className={`relative p-2.5 rounded-lg ${active ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}>
+    <button onClick={onClick} title={title} aria-label={title} className={`relative p-sm rounded-lg ${active ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}>
       {icon}
-      {!!badge && <span className="absolute -top-0.5 -right-0.5 bg-purple-500 text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center">{badge > 9 ? "9+" : badge}</span>}
+      {!!badge && <span className="absolute -top-0.5 -right-0.5 bg-purple-500 text-white text-micro rounded-full w-3.5 h-3.5 flex items-center justify-center">{badge > 9 ? "9+" : badge}</span>}
     </button>
   );
 }

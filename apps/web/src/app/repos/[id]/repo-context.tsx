@@ -38,7 +38,7 @@ export function band(s: number): { color: string; label: string } {
 /** Shared empty state for a section with nothing to draw. */
 export function Empty({ msg }: { msg: string }) {
   return (
-    <p className="rounded-xl border border-dashed border-[var(--line)] p-10 text-center text-sm text-[var(--text-muted)]">
+    <p className="rounded-lg border border-dashed border-[var(--line)] p-xl text-center text-meta text-[var(--text-muted)]">
       {msg}
     </p>
   );
@@ -58,13 +58,13 @@ export function SectionHead({
   blurb?: string;
 }) {
   return (
-    <header className="mb-6">
+    <header className="mb-lg">
       <p className="eyebrow">{eyebrow}</p>
-      <h2 className="font-display mt-2 text-[1.75rem] leading-tight tracking-tight text-[var(--text-primary)]">
+      <h2 className="font-display mt-sm text-h3 tracking-tight text-[var(--text-primary)]">
         {title}
       </h2>
       {blurb && (
-        <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-[var(--text-muted)]">{blurb}</p>
+        <p className="mt-sm max-w-note text-meta text-[var(--text-muted)]">{blurb}</p>
       )}
     </header>
   );

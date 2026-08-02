@@ -234,16 +234,16 @@ export function HeroGraph() {
         initial={reduced ? false : { opacity: 0, y: 10 }}
         animate={scanned ? { opacity: 1, y: 0 } : undefined}
         transition={{ duration: 0.6, ease: EASE }}
-        className="pointer-events-none absolute bottom-1 right-1 flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[rgba(6,8,10,0.82)] px-3.5 py-2.5 backdrop-blur-md sm:bottom-3 sm:right-3"
+        className="pointer-events-none absolute bottom-1 right-1 flex items-center gap-sm rounded-xl border border-[var(--line)] bg-[rgba(6,8,10,0.82)] px-md py-sm backdrop-blur-md sm:bottom-3 sm:right-3"
       >
         <div>
-          <div className="eyebrow mb-0.5">Health</div>
-          <div className="tnum text-[26px] leading-none text-[var(--signal-500)]">89</div>
+          <div className="eyebrow mb-hair">Health</div>
+          <div className="tnum text-h3 leading-none text-[var(--signal-500)]">89</div>
         </div>
         <div className="h-9 w-px bg-[var(--line)]" />
         <div>
-          <div className="eyebrow mb-0.5">Findings</div>
-          <div className="tnum text-[26px] leading-none text-[var(--text-primary)]">62</div>
+          <div className="eyebrow mb-hair">Findings</div>
+          <div className="tnum text-h3 leading-none text-[var(--text-primary)]">62</div>
         </div>
       </motion.div>
     </div>

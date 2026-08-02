@@ -65,14 +65,14 @@ export function NetworkView({ graph }: { graph: VizGraph }) {
   }, [graph]);
 
   if (!nodes.length) {
-    return <p className="text-sm text-gray-600 border border-dashed border-white/10 rounded-xl p-10 text-center">No import network to display.</p>;
+    return <p className="text-meta text-gray-600 border border-dashed border-white/10 rounded-xl p-xl text-center">No import network to display.</p>;
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-sm">
       <GraphSearch nodes={nodes} onFocus={setFocusId} placeholder="Search files…" />
       <NodeGraph nodes={nodes} edges={edges} height={620} focusId={focusId} />
-      <p className="mt-2 text-[11px] text-gray-600">
+      <p className="mt-sm max-w-note text-micro text-gray-600">
         File-level import network. Each box is a file; arrows point from importer → imported. Hover a node to highlight its connections.
         {shown < total ? ` Showing ${shown} most-connected of ${total} files.` : ""}
       </p>

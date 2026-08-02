@@ -20,7 +20,7 @@ export function AuthNav() {
     return (
       <a
         href={`/api/auth/github?returnTo=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/")}`}
-        className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors"
+        className="flex items-center gap-xs text-meta text-gray-400 hover:text-white transition-colors"
       >
         <GithubMark className="w-4 h-4" /> Sign in with GitHub
       </a>
@@ -28,10 +28,10 @@ export function AuthNav() {
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-sm">
       {/* eslint-disable-next-line @next/next/no-img-element -- avatars are arbitrary external GitHub URLs */}
       <img src={me.user.avatarUrl} alt="" className="w-6 h-6 rounded-full border border-white/10" />
-      <span className="text-gray-300">{me.user.login}</span>
+      <span className="text-meta text-gray-300">{me.user.login}</span>
       <button
         onClick={async () => {
           await signOut();

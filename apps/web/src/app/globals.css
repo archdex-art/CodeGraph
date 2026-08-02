@@ -62,6 +62,117 @@
   --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
 }
 
+/* ============================================================================
+   THE PROPORTIONAL SYSTEM — one ratio, φ = 1.61803, governs everything
+
+   Measured before writing any of this: the landing page alone rendered 22
+   distinct font sizes (12.5, 13.5, 14.5, 15.5, 16.5, 20.8, 23.2, 43.68, 49.6…),
+   the codebase used 25 across 40 components, 17 of them arbitrary px and seven
+   at half-pixels. Twenty-five sizes is not a hierarchy; it is noise that happens
+   to be legible. Same for space: 20 ad-hoc steps off Tailwind's linear 4px ramp,
+   which is arithmetic (4, 8, 12, 16) where perception is geometric.
+
+   WHY φ AND NOT A ROUNDER RATIO. This surface is an instrument: a dense field of
+   readings where the DIFFERENCE between two levels has to be legible at a glance
+   and at small sizes. A 1.2 scale is too tight to separate two adjacent levels
+   below 16px; a 2.0 scale skips every size a dense UI needs. φ per octave sits
+   in between, and it is the same constant the eye already reads as "settled" in
+   the golden section of a page.
+
+   HOW IT IS APPLIED. Purely for type, φ (16 → 26 → 42 → 68) is too coarse: it
+   offers nothing between body copy and a section heading. So the ladder steps by
+   √φ (1.272) and every SECOND step is exactly φ apart. Eight sizes replace
+   twenty-five, and any two levels one apart differ by 27% — above the ~20%
+   just-noticeable threshold for type size — while the head/body relationship a
+   reader actually feels stays golden.
+
+   Values are ROUNDED TO WHOLE PIXELS on purpose. φ is irrational; chasing its
+   decimals gives you 25.888px, which the rasteriser rounds anyway — badly, and
+   differently per browser. The ratio survives rounding (26/16 = 1.625, 42/26 =
+   1.615, 68/42 = 1.619); half-pixel type does not survive a hinting engine.
+   ============================================================================ */
+
+:root {
+  --phi: 1.618;
+
+  /* --- Type ladder. √φ per step; every second step is φ. ------------------ */
+  --size-micro: 10px;    /* 16 / φ        — channel labels, eyebrows, badges  */
+  --size-meta: 13px;     /* 16 / √φ       — the dense-UI workhorse            */
+  --size-body: 16px;     /* base          — prose                            */
+  /* 21, not the 20 you get by multiplying the base: rounding compounds. 16×√φ is
+     20.35 and 16/√φ is 12.58, so rounding to 20 and 13 leaves those two rungs
+     1.538 apart — 5% off φ, and the widest error in the ladder. 21 restores it
+     (21/13 = 1.615) at the cost of 21/16 = 1.31 against √φ's 1.272, which is the
+     cheaper error: the pair a reader compares is the STANDFIRST against the LABEL
+     beside it, not the standfirst against body copy three sections away. */
+  --size-lede: 21px;     /* 13 × φ        — standfirst, large readings         */
+  --size-h3: 26px;       /* 16 × φ        — card and panel headings           */
+  /* The top three are fluid, and the fluid range NEVER leaves the ladder: each
+     one interpolates between its own step and the step below, so a narrow
+     viewport reads a smaller rung of the same series rather than an off-scale
+     size invented by a viewport unit. */
+  --size-h2: clamp(26px, 2.6vw, 33px);   /* 16 × φ√φ  — section headings       */
+  --size-h1: clamp(33px, 3.6vw, 42px);   /* 16 × φ²   — page titles            */
+  --size-display: clamp(42px, 6vw, 68px); /* 16 × φ³  — the hero, and only it  */
+
+  /* Leading is derived, not chosen. Body sits at exactly φ (16→26), which is
+     the classical golden line-height; display sizes tighten toward √φ and then
+     to near-solid, because leading that tracks size linearly looks slack at
+     display sizes and cramped at caption sizes. */
+  --lead-micro: 16px;
+  --lead-meta: 20px;
+  --lead-body: 26px;
+  --lead-lede: 33px;
+  --lead-h3: 33px;
+  --lead-h2: 42px;
+  --lead-h1: 48px;
+  --lead-display: 1.04;
+
+  /* --- Space ladder. The same φ progression, and — not by coincidence — the
+     same NUMBERS as the type ladder. A 26px gap beside 26px type is a whole
+     step of one system, not two systems that happen to agree. --------------- */
+  --space-hair: 2px;
+  --space-2xs: 4px;
+  --space-xs: 6px;
+  --space-sm: 10px;
+  --space-md: 16px;
+  --space-lg: 26px;
+  --space-xl: 42px;
+  --space-2xl: 68px;
+  --space-3xl: 110px;
+  --space-4xl: 178px;
+
+  /* --- Measure. One page frame for every route, and it is a TERM OF THE SERIES,
+     not a round number: 272 → 440 → 712 → 1152 → 1864, each φ times the last.
+
+     The frame is the top term. It started at 1152 — the term that makes the prose
+     column exactly frame/φ — and that was too timid: on a 1568-wide display it left
+     ~200px of dead margin down each side while the report's content column was
+     squeezed between them. A page frame narrower than the screen is a choice you
+     make for READING, and reading is already protected here by `--measure`; the
+     dashboard table, the graph canvases and the report grid all want the room.
+
+     So the frame takes 1864 and the ratios survive intact, because every measure
+     below is still a term of the same series: 1864/φ² = 712, 712/φ² = 272.
+     `.shell` fills the viewport up to that cap, so a 1440 screen is FULL-BLEED to
+     its gutter and only a display wider than ~1950 ever sees a margin. ------- */
+  --frame: 1864px;       /* the page — top term of the series                  */
+  --measure: 712px;      /* frame / φ²  — longest comfortable line of prose     */
+  --rail: 272px;         /* frame / φ⁴  — the section navigation rail          */
+  /* Collapsed, the rail is a space rung rather than a measure: it no longer holds
+     a column of text, only a 16px icon inside a 40px hit target. 68 is the rung
+     that clears both and still reads as a rail rather than a strip of gutter. */
+  --rail-collapsed: 68px;
+
+  /* --- Radius. Same ladder, quantised: a 26px pad inside a 10px corner is the
+     relationship the eye checks, so the corners must come off the same series. */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 26px;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -89,6 +200,58 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-instrument);
+
+  /* The ladder, as utilities. `text-meta`, `p-lg`, `gap-xl`, `max-w-frame`,
+     `rounded-md` — every spatial decision in the app names a step of the series
+     instead of inventing a number, which is what stops the twenty-five sizes
+     from growing back. Font-size utilities carry their derived leading, so
+     `text-body` is a complete typographic decision and not half of one. */
+  --text-micro: var(--size-micro);
+  --text-micro--line-height: var(--lead-micro);
+  --text-meta: var(--size-meta);
+  --text-meta--line-height: var(--lead-meta);
+  --text-body: var(--size-body);
+  --text-body--line-height: var(--lead-body);
+  --text-lede: var(--size-lede);
+  --text-lede--line-height: var(--lead-lede);
+  --text-h3: var(--size-h3);
+  --text-h3--line-height: var(--lead-h3);
+  --text-h2: var(--size-h2);
+  --text-h2--line-height: var(--lead-h2);
+  --text-h1: var(--size-h1);
+  --text-h1--line-height: var(--lead-h1);
+  --text-display: var(--size-display);
+  --text-display--line-height: var(--lead-display);
+
+  --spacing-hair: var(--space-hair);
+  --spacing-2xs: var(--space-2xs);
+  --spacing-xs: var(--space-xs);
+  --spacing-sm: var(--space-sm);
+  --spacing-md: var(--space-md);
+  --spacing-lg: var(--space-lg);
+  --spacing-xl: var(--space-xl);
+  --spacing-2xl: var(--space-2xl);
+  --spacing-3xl: var(--space-3xl);
+  --spacing-4xl: var(--space-4xl);
+
+  /* Measures. Named, never t-shirt-sized — and that is not a style preference:
+     the spacing scale above claims `sm`/`md`/`lg`/`xl`, and in Tailwind v4 the
+     spacing namespace wins those names for `max-w-*` too. So `max-w-md` silently
+     resolves to 16px, not 448. Found the hard way: the footer paragraph collapsed
+     to a 16px column and pushed the page 8px wide at the 768 breakpoint. Every
+     width in this app therefore names a term of the φ series instead. */
+  --container-frame: var(--frame);      /* 1864 — the page                      */
+  --container-wide: 1152px;             /* 1152 — frame/φ, a centred wide block */
+  --container-measure: var(--measure);  /*  712 — frame/φ², longest prose line  */
+  --container-note: 440px;              /*  440 — frame/φ³, a helper paragraph  */
+  --container-rail: var(--rail);        /*  272 — frame/φ⁴, the navigation rail */
+
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --radius-2xl: var(--r-xl);
 }
 
 html {
@@ -185,15 +348,75 @@ body {
  * `class="panel hover:border-…"` already assumes they have.
  */
 @layer components {
+  /* --- The frame ----------------------------------------------------------
+     ONE container for every route, filling the viewport up to the top term of the
+     series (1864). The gutter is itself a ladder step and climbs one rung at each
+     breakpoint — 26 → 42 → 68 — so the page margin belongs to the same series as
+     the space inside the page. The relationship a reader sees at the edge of the
+     text block is then the relationship they see between two paragraphs.
+
+     Three steps rather than two because the frame now goes edge-to-edge on a large
+     display: at 1568 a 42px gutter leaves the header logo almost touching the
+     bezel, and the margin stops reading as a margin. 68 restores the breathing
+     room without giving back the ~200px of dead space each side that a hard 1152
+     frame was costing. */
+  .shell {
+    width: 100%;
+    max-width: var(--frame);
+    margin-inline: auto;
+    padding-inline: var(--space-lg);
+  }
+  @media (min-width: 768px) {
+    .shell {
+      padding-inline: var(--space-xl);
+    }
+  }
+  @media (min-width: 1280px) {
+    .shell {
+      padding-inline: var(--space-2xl);
+    }
+  }
+
+  /* --- The golden section -------------------------------------------------
+     A two-column split where the columns stand in φ. `fr` units divide the space
+     REMAINING after the gap, so the proportion holds at every width without
+     arithmetic — which a hard-coded 712px/440px pair does not.
+
+     `.split-phi` gives the major share to the first column (a reading and its
+     supporting apparatus); `.split-phi-rev` to the second (a control panel that
+     drives a larger view). Both collapse to a single column below the
+     breakpoint, because a golden section of 380px is two cramped columns. */
+  .split-phi,
+  .split-phi-rev {
+    display: grid;
+    gap: var(--space-lg);
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 1024px) {
+    .split-phi {
+      grid-template-columns: minmax(0, 1.618fr) minmax(0, 1fr);
+      gap: var(--space-xl);
+    }
+    .split-phi-rev {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.618fr);
+      gap: var(--space-xl);
+    }
+  }
+
   .panel {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0));
     border: 1px solid var(--line);
-    border-radius: 14px;
+    /* Was 14px — an off-ladder value. 16 is the step, and it is also the panel's
+       own inner padding step, so the corner and the gutter agree. */
+    border-radius: var(--r-lg);
   }
 
   .eyebrow {
     font-family: var(--font-geist-mono), ui-monospace, monospace;
-    font-size: 0.6875rem;
+    /* The bottom rung. An eyebrow is the smallest thing that must still be read,
+       and the tracking is what makes 10px legible rather than the size. */
+    font-size: var(--size-micro);
+    line-height: var(--lead-micro);
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--text-muted);

@@ -42,23 +42,22 @@ export function FolderBrowser({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-8" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-lg" onClick={onClose}>
       <div
-        className="bg-[#111113] border border-white/10 rounded-xl max-w-lg w-full max-h-[75vh] overflow-hidden flex flex-col"
+        className="bg-[#111113] border border-white/10 rounded-xl max-w-measure w-full max-h-[75vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-          <span className="text-sm font-semibold text-white">Browse for folder</span>
+        <div className="flex items-center justify-between px-md py-sm border-b border-white/10">
+          <span className="text-meta font-semibold text-white">Browse for folder</span>
           <button onClick={onClose} className="text-gray-500 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/10 bg-white/[0.02]">
+        <div className="flex items-center gap-sm px-md py-sm border-b border-white/10 bg-white/[0.02]">
           <button
             onClick={() => home && setPath(home)}
             disabled={!home || loading}
@@ -75,27 +74,27 @@ export function FolderBrowser({
           >
             <ArrowUp className="w-4 h-4" />
           </button>
-          <span className="flex-1 text-xs font-mono text-gray-300 truncate" title={path || ""}>
+          <span className="flex-1 text-meta font-mono text-gray-300 truncate" title={path || ""}>
             {path || "…"}
           </span>
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-[240px]">
           {loading ? (
-            <div className="flex items-center justify-center py-10 text-gray-500">
+            <div className="flex items-center justify-center py-xl text-gray-500">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           ) : error ? (
-            <p className="text-sm text-rose-400 px-4 py-4 break-all">{error}</p>
+            <p className="text-meta text-rose-400 px-md py-md break-all">{error}</p>
           ) : entries.length === 0 ? (
-            <p className="text-sm text-gray-600 px-4 py-4">No subfolders here.</p>
+            <p className="text-meta text-gray-600 px-md py-md">No subfolders here.</p>
           ) : (
-            <ul className="py-1">
+            <ul className="py-2xs">
               {entries.map((entry) => (
                 <li key={entry.path}>
                   <button
                     onClick={() => setPath(entry.path)}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white text-left"
+                    className="w-full flex items-center gap-sm px-md py-sm text-meta text-gray-300 hover:bg-white/5 hover:text-white text-left"
                   >
                     <Folder className="w-4 h-4 text-purple-400 shrink-0" />
                     <span className="truncate">{entry.name}</span>
@@ -106,14 +105,14 @@ export function FolderBrowser({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-white/10">
-          <button onClick={onClose} className="text-sm text-gray-400 hover:text-white px-3 py-2">
+        <div className="flex items-center justify-end gap-sm px-md py-sm border-t border-white/10">
+          <button onClick={onClose} className="text-meta text-gray-400 hover:text-white px-sm py-sm">
             Cancel
           </button>
           <button
             onClick={() => path && onSelect(path)}
             disabled={!path || loading || !!error}
-            className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-sm bg-white text-black px-md py-sm rounded-lg text-meta font-semibold hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Check className="w-4 h-4" /> Select this folder
           </button>

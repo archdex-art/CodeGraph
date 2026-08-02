@@ -110,18 +110,18 @@ export function VerificationVerdict({
   const { Icon, ring, fg, label, detail } = LEVEL[level];
 
   return (
-    <div className={`rounded-lg border p-3 ${ring}`} data-testid="verification-verdict" data-level={level}>
-      <div className="flex items-center gap-3">
+    <div className={`rounded-lg border p-md ${ring}`} data-testid="verification-verdict" data-level={level}>
+      <div className="flex items-center gap-md">
         <Icon className={`w-5 h-5 shrink-0 ${fg}`} aria-hidden />
         <div className="min-w-0">
-          <div className={`text-sm font-semibold ${fg}`}>
+          <div className={`text-meta font-semibold ${fg}`}>
             {label}
             <span className="font-normal text-gray-400"> — {detail}</span>
           </div>
-          <div className="text-xs text-gray-400 mt-0.5 break-words">{message}</div>
+          <div className="text-meta text-gray-400 mt-2xs break-words">{message}</div>
         </div>
         {showScores && (
-          <div className="ml-auto flex items-center gap-2 text-sm shrink-0">
+          <div className="ml-auto flex items-center gap-sm text-meta shrink-0">
             <span className="text-gray-400">{scoreBefore}</span>
             <span className="text-gray-600">→</span>
             <span className={`font-bold ${fg}`}>{scoreAfter}</span>
@@ -130,7 +130,7 @@ export function VerificationVerdict({
       </div>
 
       {record && record.gates.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-md flex flex-wrap gap-xs">
           {record.gates.map((g) => {
             const s = STATUS[g.status];
             return (
@@ -139,7 +139,7 @@ export function VerificationVerdict({
                 data-testid={`gate-${g.gate}`}
                 data-status={g.status}
                 title={g.reason ?? `${g.status} in ${g.ms}ms`}
-                className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] ${s.border} ${s.fg}`}
+                className={`inline-flex items-center gap-2xs rounded-xs border px-xs py-hair text-micro ${s.border} ${s.fg}`}
               >
                 <s.Icon className="w-3 h-3" aria-hidden />
                 {GATE_LABEL[g.gate]}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trash2, RotateCcw, XCircle, Loader2, File as FileIcon, Folder } from "lucide-react";
 import { trashList, trashRestore, trashPurge, trashEmpty } from "@/lib/api";
 import type { TrashEntry } from "@/lib/types";
@@ -25,11 +25,18 @@ export function TrashPanel({ repoId, onMutated }: { repoId: string; onMutated: (
   const [entries, setEntries] = useState<TrashEntry[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // `load()` runs on mount and again after every restore/purge/empty, and the
+  // per-row buttons stay live while another row is busy — so two listings can
+  // be in flight at once. Newest request wins.
+  const loadSeq = useRef(0);
+
   async function load() {
+    const seq = ++loadSeq.current;
     try {
-      setEntries(await trashList(repoId));
+      const next = await trashList(repoId);
+      if (seq === loadSeq.current) setEntries(next);
     } catch {
-      setEntries([]);
+      if (seq === loadSeq.current) setEntries([]);
     }
   }
 
@@ -79,51 +86,51 @@ export function TrashPanel({ repoId, onMutated }: { repoId: string; onMutated: (
 
   if (entries === null) {
     return (
-      <div className="flex items-center gap-2 text-xs text-gray-500 p-3">
+      <div className="flex items-center gap-sm text-meta text-gray-500 p-md">
         <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading trash…
       </div>
     );
   }
 
   return (
-    <div className="text-sm">
-      <div className="flex items-center justify-between px-2 py-1.5 text-[11px] uppercase tracking-wide text-gray-500">
+    <div className="text-meta">
+      <div className="flex items-center justify-between px-sm py-xs text-meta uppercase tracking-wide text-gray-500">
         <span>Trash</span>
         <button
           onClick={empty}
           disabled={entries.length === 0}
           title="Empty Trash"
-          className="p-1 rounded hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+          className="p-2xs rounded-xs hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {entries.length === 0 ? (
-        <p className="px-3 py-4 text-xs text-gray-600">Trash is empty. Deleted files show up here and can be restored.</p>
+        <p className="px-md py-md text-meta text-gray-600">Trash is empty. Deleted files show up here and can be restored.</p>
       ) : (
         <ul>
           {entries.map((entry) => (
-            <li key={entry.id} className="group flex items-center gap-2 px-2 py-1.5 hover:bg-white/5">
+            <li key={entry.id} className="group flex items-center gap-sm px-sm py-xs hover:bg-white/5">
               {entry.type === "dir" ? (
                 <Folder className="w-3.5 h-3.5 text-gray-500 shrink-0" />
               ) : (
                 <FileIcon className="w-3.5 h-3.5 text-gray-500 shrink-0" />
               )}
               <div className="flex-1 min-w-0">
-                <div className="truncate text-xs text-gray-300" title={entry.path}>{entry.name}</div>
-                <div className="truncate text-[10px] text-gray-600">
+                <div className="truncate text-meta text-gray-300" title={entry.path}>{entry.name}</div>
+                <div className="truncate text-micro text-gray-600">
                   {entry.path} · {formatSize(entry.size)} · {timeAgo(entry.deletedAt)}
                 </div>
               </div>
               {busyId === entry.id ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500 shrink-0" />
               ) : (
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 shrink-0">
-                  <button onClick={() => restore(entry)} title="Restore" className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-emerald-400">
+                <div className="flex items-center gap-2xs opacity-0 group-hover:opacity-100 shrink-0">
+                  <button onClick={() => restore(entry)} title="Restore" className="p-2xs rounded-xs hover:bg-white/10 text-gray-400 hover:text-emerald-400">
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => purge(entry)} title="Delete forever" className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-rose-400">
+                  <button onClick={() => purge(entry)} title="Delete forever" className="p-2xs rounded-xs hover:bg-white/10 text-gray-400 hover:text-rose-400">
                     <XCircle className="w-3.5 h-3.5" />
                   </button>
                 </div>
