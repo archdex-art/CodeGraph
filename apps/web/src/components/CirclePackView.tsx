@@ -194,8 +194,8 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
   return (
     <div className="space-y-sm">
       <div className="relative w-full max-w-rail">
-        <div className="flex items-center gap-xs bg-[#0a0a0a] border border-white/10 rounded-lg px-sm py-xs focus-within:border-purple-500/50">
-          <Search className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+        <div className="flex items-center gap-xs bg-[var(--surface-2)] border border-[var(--line)] rounded-lg px-sm py-xs focus-within:border-[var(--violet-500)]/50">
+          <Search className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
           <input
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSearchOpen(true); }}
@@ -205,23 +205,23 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
               if (e.key === "Escape") { setQuery(""); setSearchOpen(false); }
             }}
             placeholder="Search files/folders…"
-            className="bg-transparent flex-1 text-meta text-gray-200 placeholder-gray-600 focus:outline-none min-w-0"
+            className="bg-transparent flex-1 text-meta text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none min-w-0"
           />
           {query && (
-            <button onClick={() => { setQuery(""); setSearchOpen(false); }} className="text-gray-500 hover:text-white shrink-0">
+            <button onClick={() => { setQuery(""); setSearchOpen(false); }} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
         {searchOpen && query && (
-          <div className="absolute z-20 mt-2xs w-full max-h-72 overflow-auto rounded-lg border border-white/10 bg-[#111113] shadow-2xl">
+          <div className="absolute z-20 mt-2xs w-full max-h-72 overflow-auto rounded-lg border border-[var(--line)] bg-[var(--surface-2)] shadow-2xl">
             {matches.length === 0 ? (
-              <p className="px-sm py-sm text-meta text-gray-600">No matches.</p>
+              <p className="px-sm py-sm text-meta text-[var(--text-muted)]">No matches.</p>
             ) : (
               matches.map((n) => (
-                <button key={n.data.path} onClick={() => pickMatch(n)} className="block w-full text-left px-sm py-xs hover:bg-white/10">
-                  <div className="text-meta text-gray-200 truncate">{n.data.name}</div>
-                  <div className="text-micro text-gray-600 truncate font-mono">{n.data.path}</div>
+                <button key={n.data.path} onClick={() => pickMatch(n)} className="block w-full text-left px-sm py-xs hover:bg-[var(--surface-active)]">
+                  <div className="text-meta text-[var(--text-primary)] truncate">{n.data.name}</div>
+                  <div className="text-micro text-[var(--text-muted)] truncate font-mono">{n.data.path}</div>
                 </button>
               ))
             )}
@@ -229,7 +229,7 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
         )}
       </div>
 
-      <div ref={wrapRef} className="relative w-full h-[600px] rounded-xl border border-white/10 bg-[#0b0b0d] overflow-hidden">
+      <div ref={wrapRef} className="relative w-full h-[600px] rounded-xl border border-[var(--line)] bg-[var(--surface-1)] overflow-hidden">
         <svg
           width={vp.w}
           height={vp.h}
@@ -254,11 +254,13 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
                 cx={x}
                 cy={y}
                 r={r}
-                fill={isLeaf ? extColor(n.data.ext) : "rgba(255,255,255,0.014)"}
-                stroke={isLeaf ? (n.data.issues ? "#fb7185" : "none") : "rgba(255,255,255,0.12)"}
                 strokeWidth={isLeaf ? (n.data.issues ? 1.5 : 0) : 1}
                 opacity={isLeaf ? 0.92 : 1}
-                style={{ cursor: n.children ? "pointer" : "default" }}
+                style={{
+                  fill: isLeaf ? extColor(n.data.ext) : "var(--surface-hover)",
+                  stroke: isLeaf ? (n.data.issues ? "var(--coral-500)" : "none") : "var(--line)",
+                  cursor: n.children ? "pointer" : "default",
+                }}
                 onClick={(e) => { e.stopPropagation(); if (drag.current.moved) return; if (n.children) focusNode(n); }}
                 onMouseEnter={() => setHover({ d: n, x, y })}
                 onMouseLeave={() => setHover(null)}
@@ -279,8 +281,7 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
                 y={y - r + 12}
                 textAnchor="middle"
                 fontSize={10}
-                fill="rgba(229,231,235,0.7)"
-                style={{ pointerEvents: "none" }}
+                style={{ fill: "var(--text-secondary)", pointerEvents: "none" }}
               >
                 {n.data.name}
               </text>
@@ -292,28 +293,28 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
           <button
             onClick={() => zoomButton(1 / 1.3)}
             aria-label="Zoom in"
-            className="text-meta leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs w-7 h-7 flex items-center justify-center"
+            className="text-meta leading-none text-[var(--text-primary)] bg-[var(--surface-active)] hover:bg-[var(--surface-3)] border border-[var(--line)] rounded-xs w-7 h-7 flex items-center justify-center"
           >
             +
           </button>
           <button
             onClick={() => zoomButton(1.3)}
             aria-label="Zoom out"
-            className="text-meta leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs w-7 h-7 flex items-center justify-center"
+            className="text-meta leading-none text-[var(--text-primary)] bg-[var(--surface-active)] hover:bg-[var(--surface-3)] border border-[var(--line)] rounded-xs w-7 h-7 flex items-center justify-center"
           >
             −
           </button>
           <button
             onClick={() => focusNode(root)}
-            className="text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs px-sm py-2xs h-7"
+            className="text-[var(--text-primary)] bg-[var(--surface-active)] hover:bg-[var(--surface-3)] border border-[var(--line)] rounded-xs px-sm py-2xs h-7"
           >
             Reset
           </button>
-          {!atRoot && <span className="text-gray-500 font-mono">{focus.data.path}</span>}
+          {!atRoot && <span className="text-[var(--text-secondary)] font-mono">{focus.data.path}</span>}
         </div>
-        <div className="absolute top-md right-md text-micro text-gray-600">scroll = zoom · drag = pan · click a directory to focus · size = LOC · color = file type</div>
+        <div className="absolute top-md right-md text-micro text-[var(--text-muted)]">scroll = zoom · drag = pan · click a directory to focus · size = LOC · color = file type</div>
 
-        <div className="absolute bottom-md right-md flex flex-col gap-2xs text-micro text-gray-400 flex-wrap max-h-[55%]">
+        <div className="absolute bottom-md right-md flex flex-col gap-2xs text-micro text-[var(--text-secondary)] flex-wrap max-h-[55%]">
           {legend.map((e) => (
             <span key={e} className="flex items-center gap-xs">
               <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: extColor(e) }} />
@@ -324,11 +325,11 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
 
         {hover && (
           <div
-            className="pointer-events-none absolute z-10 rounded-lg border border-white/10 bg-[#0d0d0d] px-md py-sm text-meta shadow-xl"
+            className="pointer-events-none absolute z-10 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-md py-sm text-meta shadow-xl"
             style={{ left: Math.min(hover.x + 12, vp.w - 220), top: hover.y + 12, maxWidth: 240 }}
           >
-            <div className="font-mono text-gray-200 break-all">{hover.d.data.path}</div>
-            <div className="text-gray-500 mt-2xs">
+            <div className="font-mono text-[var(--text-primary)] break-all">{hover.d.data.path}</div>
+            <div className="text-[var(--text-secondary)] mt-2xs">
               {hover.d.children ? `${hover.d.descendants().length - 1} items` : `${hover.d.data.loc || 0} LOC`}
               {hover.d.data.issues ? ` · ${hover.d.data.issues} issue(s)` : ""}
             </div>

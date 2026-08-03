@@ -15,40 +15,49 @@ import { ScoreDial } from "@/components/ScoreDial";
  * The band is always rendered as a WORD as well as a colour. A dashboard that says
  * "which repo needs me first" purely in hue is unusable in greyscale and for the
  * ~8% of men who cannot separate the amber from the coral.
+ *
+ * `text` is the reading as TEXT, `bg`/`rail` are it as a FILL, `color` is the
+ * dial arc and `textColor` the numeral inside it. Two fields per hue rather than
+ * one because chartreuse reads at 15.49:1 on ink and 1.21:1 on paper: as a rail
+ * it is correct in both themes, as a numeral it disappears in one of them.
  */
-type Band = { text: string; bg: string; rail: string; word: string; color: string };
+type Band = { text: string; bg: string; rail: string; word: string; color: string; textColor: string };
 
 function band(s: number | null): Band {
   if (s === null)
     return {
       text: "text-[var(--text-muted)]",
-      bg: "bg-[var(--ink-600)]",
+      bg: "bg-[var(--surface-4)]",
       rail: "bg-[var(--line-strong)]",
       word: "unmeasured",
       color: "var(--text-faint)",
+      textColor: "var(--text-muted)",
     };
   if (s >= 80)
     return {
-      text: "text-[var(--signal-500)]",
+      text: "text-[var(--accent-text)]",
       bg: "bg-[var(--signal-500)]",
       rail: "bg-[var(--signal-500)]",
       word: "healthy",
       color: "var(--signal-500)",
+      textColor: "var(--accent-text)",
     };
   if (s >= 60)
     return {
-      text: "text-[var(--amber-400)]",
+      text: "text-[var(--amber-text)]",
       bg: "bg-[var(--amber-400)]",
       rail: "bg-[var(--amber-400)]",
       word: "watch",
       color: "var(--amber-400)",
+      textColor: "var(--amber-text)",
     };
   return {
-    text: "text-[var(--coral-500)]",
+    text: "text-[var(--coral-text)]",
     bg: "bg-[var(--coral-500)]",
     rail: "bg-[var(--coral-500)]",
     word: "at risk",
     color: "var(--coral-500)",
+    textColor: "var(--coral-text)",
   };
 }
 
@@ -72,9 +81,9 @@ function took(r: RepoSummary): string {
 }
 
 const BTN_PRIMARY =
-  "inline-flex min-h-11 cursor-pointer items-center gap-sm rounded-lg bg-[var(--signal-500)] px-md text-meta font-medium text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]";
+  "inline-flex min-h-11 cursor-pointer items-center gap-sm rounded-lg bg-[var(--accent-fill)] px-md text-meta font-medium text-[var(--accent-on-fill)] transition-colors duration-200 hover:bg-[var(--signal-400)]";
 const BTN_GHOST =
-  "inline-flex min-h-11 cursor-pointer items-center gap-sm rounded-lg border border-[var(--line)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:bg-white/[0.04] hover:text-[var(--text-primary)]";
+  "inline-flex min-h-11 cursor-pointer items-center gap-sm rounded-lg border border-[var(--line)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]";
 
 type Order = "risk" | "recent";
 
@@ -184,6 +193,7 @@ export default function DashboardPage() {
                   <ScoreDial
                     value={mean}
                     color={meanBandColor}
+                    textColor={meanBand.textColor}
                     size={150}
                     label="Mean health"
                     sublabel={meanBand.word}
@@ -214,7 +224,7 @@ export default function DashboardPage() {
                   )}
                   .{" "}
                   {attention > 0 ? (
-                    <span className="text-[var(--coral-400)]">
+                    <span className="text-[var(--coral-text)]">
                       <span className="tnum">{attention}</span>{" "}
                       {attention === 1 ? "repository is" : "repositories are"} below 60 and ranked
                       first below.
@@ -233,7 +243,7 @@ export default function DashboardPage() {
                     {
                       k: "Below 60",
                       v: attention,
-                      tone: attention > 0 ? "text-[var(--coral-500)]" : "text-[var(--text-primary)]",
+                      tone: attention > 0 ? "text-[var(--coral-text)]" : "text-[var(--text-primary)]",
                     },
                   ].map((s) => (
                     <div key={s.k}>
@@ -261,7 +271,7 @@ export default function DashboardPage() {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="h-14 rounded-lg border border-[var(--line-soft)] bg-[var(--ink-800)]"
+                className="h-14 rounded-lg border border-[var(--line-soft)] bg-[var(--surface-2)]"
                 style={{ opacity: 1 - i * 0.28 }}
               />
             ))}
@@ -290,7 +300,7 @@ export default function DashboardPage() {
             <p className="eyebrow">
               {order === "risk" ? "Ranked by where attention is needed" : "Most recently indexed"}
             </p>
-            <div className="flex rounded-lg border border-[var(--line)] bg-[var(--ink-850)] p-2xs">
+            <div className="flex rounded-lg border border-[var(--line)] bg-[var(--surface-1)] p-2xs">
               {(["risk", "recent"] as const).map((o) => (
                 <button
                   key={o}
@@ -299,7 +309,7 @@ export default function DashboardPage() {
                   aria-pressed={order === o}
                   className={`min-h-9 cursor-pointer rounded-sm px-sm text-meta capitalize transition-colors duration-200 ${
                     order === o
-                      ? "bg-[var(--ink-600)] text-[var(--text-primary)]"
+                      ? "bg-[var(--surface-4)] text-[var(--text-primary)]"
                       : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                   }`}
                 >
@@ -340,7 +350,7 @@ export default function DashboardPage() {
                         <>
                           <span
                             aria-hidden="true"
-                            className="pointer-events-none absolute inset-0 z-0 bg-white/[0.028] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                            className="pointer-events-none absolute inset-0 z-0 bg-[var(--surface-hover)] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                           />
                           {/* Stretched link: the whole row is the target, but it must not
                               wrap the delete button or the markup is a button inside an
@@ -364,9 +374,9 @@ export default function DashboardPage() {
                               <span
                                 className="eyebrow shrink-0 rounded-xs border px-xs py-2xs leading-none"
                                 style={{
-                                  color: "var(--coral-400)",
-                                  borderColor: "rgba(255,107,87,0.3)",
-                                  background: "rgba(255,107,87,0.08)",
+                                  color: "var(--coral-text)",
+                                  borderColor: "color-mix(in srgb, var(--coral-500) 30%, transparent)",
+                                  background: "color-mix(in srgb, var(--coral-500) 8%, transparent)",
                                 }}
                               >
                                 lowest
@@ -386,7 +396,7 @@ export default function DashboardPage() {
                           {processing ? (
                             <Loader2 className="h-4 w-4 animate-spin text-[var(--text-secondary)]" />
                           ) : r.status === "error" ? (
-                            <span className="tnum text-lede leading-none text-[var(--coral-500)]">—</span>
+                            <span className="tnum text-lede leading-none text-[var(--coral-text)]">—</span>
                           ) : (
                             <span className={`tnum text-lede leading-none ${b.text}`}>
                               {r.score ?? "—"}
@@ -420,7 +430,7 @@ export default function DashboardPage() {
                               e.stopPropagation();
                               handleDelete(r.id, r.name);
                             }}
-                            className="pointer-events-auto relative z-10 flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-transparent text-[var(--text-faint)] transition-colors duration-200 hover:border-[var(--coral-500)]/25 hover:bg-[var(--coral-500)]/10 hover:text-[var(--coral-500)] disabled:cursor-not-allowed disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                            className="pointer-events-auto relative z-10 flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-transparent text-[var(--text-faint)] transition-colors duration-200 hover:border-[var(--coral-500)]/25 hover:bg-[var(--coral-500)]/10 hover:text-[var(--coral-text)] disabled:cursor-not-allowed disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                           >
                             {deletingId === r.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />

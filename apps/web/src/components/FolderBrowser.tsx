@@ -45,24 +45,24 @@ export function FolderBrowser({
   }, [path]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-lg" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-[var(--overlay)] flex items-center justify-center p-lg" onClick={onClose}>
       <div
-        className="bg-[#111113] border border-white/10 rounded-xl max-w-measure w-full max-h-[75vh] overflow-hidden flex flex-col"
+        className="bg-[var(--surface-1)] border border-[var(--line)] rounded-xl max-w-measure w-full max-h-[75vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-md py-sm border-b border-white/10">
-          <span className="text-meta font-semibold text-white">Browse for folder</span>
-          <button onClick={onClose} className="text-gray-500 hover:text-white">
+        <div className="flex items-center justify-between px-md py-sm border-b border-[var(--line)]">
+          <span className="text-meta font-semibold text-[var(--text-primary)]">Browse for folder</span>
+          <button onClick={onClose} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="flex items-center gap-sm px-md py-sm border-b border-white/10 bg-white/[0.02]">
+        <div className="flex items-center gap-sm px-md py-sm border-b border-[var(--line)] bg-[var(--surface-hover)]">
           <button
             onClick={() => home && setPath(home)}
             disabled={!home || loading}
             title="Home"
-            className="text-gray-400 hover:text-white disabled:opacity-40 shrink-0"
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 shrink-0"
           >
             <Home className="w-4 h-4" />
           </button>
@@ -70,33 +70,33 @@ export function FolderBrowser({
             onClick={() => parent && setPath(parent)}
             disabled={!parent || loading}
             title="Up one level"
-            className="text-gray-400 hover:text-white disabled:opacity-40 shrink-0"
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 shrink-0"
           >
             <ArrowUp className="w-4 h-4" />
           </button>
-          <span className="flex-1 text-meta font-mono text-gray-300 truncate" title={path || ""}>
+          <span className="flex-1 text-meta font-mono text-[var(--text-primary)] truncate" title={path || ""}>
             {path || "…"}
           </span>
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-[240px]">
           {loading ? (
-            <div className="flex items-center justify-center py-xl text-gray-500">
+            <div className="flex items-center justify-center py-xl text-[var(--text-secondary)]">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           ) : error ? (
-            <p className="text-meta text-rose-400 px-md py-md break-all">{error}</p>
+            <p className="text-meta text-[var(--coral-text)] px-md py-md break-all">{error}</p>
           ) : entries.length === 0 ? (
-            <p className="text-meta text-gray-600 px-md py-md">No subfolders here.</p>
+            <p className="text-meta text-[var(--text-muted)] px-md py-md">No subfolders here.</p>
           ) : (
             <ul className="py-2xs">
               {entries.map((entry) => (
                 <li key={entry.path}>
                   <button
                     onClick={() => setPath(entry.path)}
-                    className="w-full flex items-center gap-sm px-md py-sm text-meta text-gray-300 hover:bg-white/5 hover:text-white text-left"
+                    className="w-full flex items-center gap-sm px-md py-sm text-meta text-[var(--text-primary)] hover:bg-[var(--surface-active)] text-left"
                   >
-                    <Folder className="w-4 h-4 text-purple-400 shrink-0" />
+                    <Folder className="w-4 h-4 text-[var(--violet-text)] shrink-0" />
                     <span className="truncate">{entry.name}</span>
                   </button>
                 </li>
@@ -105,14 +105,14 @@ export function FolderBrowser({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-sm px-md py-sm border-t border-white/10">
-          <button onClick={onClose} className="text-meta text-gray-400 hover:text-white px-sm py-sm">
+        <div className="flex items-center justify-end gap-sm px-md py-sm border-t border-[var(--line)]">
+          <button onClick={onClose} className="text-meta text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-sm py-sm">
             Cancel
           </button>
           <button
             onClick={() => path && onSelect(path)}
             disabled={!path || loading || !!error}
-            className="flex items-center gap-sm bg-white text-black px-md py-sm rounded-lg text-meta font-semibold hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-sm bg-[var(--accent-fill)] text-[var(--accent-on-fill)] px-md py-sm rounded-lg text-meta font-semibold hover:bg-[var(--signal-400)] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Check className="w-4 h-4" /> Select this folder
           </button>

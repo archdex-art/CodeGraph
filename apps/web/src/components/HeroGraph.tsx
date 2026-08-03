@@ -156,7 +156,7 @@ export function HeroGraph() {
             )}
             <circle cx={n.x} cy={n.y} r={n.r} fill={FILL[n.kind]} opacity={n.kind === "leaf" ? 0.55 : 1} />
             {n.kind === "core" && (
-              <circle cx={n.x} cy={n.y} r={n.r} fill="none" stroke="var(--ink-900)" strokeWidth="2.5" opacity="0.35" />
+              <circle cx={n.x} cy={n.y} r={n.r} fill="none" stroke="var(--surface-0)" strokeWidth="2.5" opacity="0.35" />
             )}
           </motion.g>
         ))}
@@ -190,15 +190,15 @@ export function HeroGraph() {
                 width="92"
                 height="19"
                 rx="9.5"
-                fill="rgba(255,107,87,0.12)"
-                stroke="rgba(255,107,87,0.34)"
+                fill="color-mix(in srgb, var(--coral-500) 12%, transparent)"
+                stroke="color-mix(in srgb, var(--coral-500) 34%, transparent)"
                 strokeWidth="0.75"
               />
               <text
                 x={BY_ID.hot.x}
                 y={BY_ID.hot.y + 33}
                 textAnchor="middle"
-                fill="var(--coral-400)"
+                fill="var(--coral-text)"
                 fontSize="9"
                 letterSpacing="0.1em"
                 style={{ fontFamily: "var(--font-geist-mono), monospace" }}
@@ -234,11 +234,11 @@ export function HeroGraph() {
         initial={reduced ? false : { opacity: 0, y: 10 }}
         animate={scanned ? { opacity: 1, y: 0 } : undefined}
         transition={{ duration: 0.6, ease: EASE }}
-        className="pointer-events-none absolute bottom-1 right-1 flex items-center gap-sm rounded-xl border border-[var(--line)] bg-[rgba(6,8,10,0.82)] px-md py-sm backdrop-blur-md sm:bottom-3 sm:right-3"
+        className="pointer-events-none absolute bottom-1 right-1 flex items-center gap-sm rounded-xl border border-[var(--line)] bg-[var(--surface-1)]/85 px-md py-sm backdrop-blur-md sm:bottom-3 sm:right-3"
       >
         <div>
           <div className="eyebrow mb-hair">Health</div>
-          <div className="tnum text-h3 leading-none text-[var(--signal-500)]">89</div>
+          <div className="tnum text-h3 leading-none text-[var(--accent-text)]">89</div>
         </div>
         <div className="h-9 w-px bg-[var(--line)]" />
         <div>

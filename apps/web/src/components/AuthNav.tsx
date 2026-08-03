@@ -20,7 +20,7 @@ export function AuthNav() {
     return (
       <a
         href={`/api/auth/github?returnTo=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/")}`}
-        className="flex items-center gap-xs text-meta text-gray-400 hover:text-white transition-colors"
+        className="flex items-center gap-xs text-meta text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
       >
         <GithubMark className="w-4 h-4" /> Sign in with GitHub
       </a>
@@ -30,15 +30,15 @@ export function AuthNav() {
   return (
     <div className="flex items-center gap-sm">
       {/* eslint-disable-next-line @next/next/no-img-element -- avatars are arbitrary external GitHub URLs */}
-      <img src={me.user.avatarUrl} alt="" className="w-6 h-6 rounded-full border border-white/10" />
-      <span className="text-meta text-gray-300">{me.user.login}</span>
+      <img src={me.user.avatarUrl} alt="" className="w-6 h-6 rounded-full border border-[var(--line)]" />
+      <span className="text-meta text-[var(--text-primary)]">{me.user.login}</span>
       <button
         onClick={async () => {
           await signOut();
           setMe({ githubAuthEnabled: true, user: null });
         }}
         title="Sign out"
-        className="text-gray-500 hover:text-white transition-colors"
+        className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
       >
         <LogOut className="w-4 h-4" />
       </button>

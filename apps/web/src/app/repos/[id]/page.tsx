@@ -17,11 +17,11 @@ import { SECTIONS, sectionHref } from "./sections";
  * in twelve men. The colour is the fast scan; the label is the fact.
  */
 const SEVERITY: Record<number, { label: string; tone: string; chip: string }> = {
-  5: { label: "Critical", tone: "text-[var(--coral-400)]", chip: "border-[var(--coral-500)]/40 bg-[var(--coral-500)]/10" },
-  4: { label: "High", tone: "text-[var(--coral-400)]", chip: "border-[var(--coral-500)]/30 bg-[var(--coral-500)]/[0.06]" },
-  3: { label: "Medium", tone: "text-[var(--amber-400)]", chip: "border-[var(--amber-400)]/30 bg-[var(--amber-400)]/[0.06]" },
-  2: { label: "Low", tone: "text-[var(--text-muted)]", chip: "border-[var(--line)] bg-[var(--ink-700)]" },
-  1: { label: "Info", tone: "text-[var(--text-muted)]", chip: "border-[var(--line)] bg-[var(--ink-700)]" },
+  5: { label: "Critical", tone: "text-[var(--coral-text)]", chip: "border-[var(--coral-500)]/40 bg-[var(--coral-500)]/10" },
+  4: { label: "High", tone: "text-[var(--coral-text)]", chip: "border-[var(--coral-500)]/30 bg-[var(--coral-500)]/[0.08]" },
+  3: { label: "Medium", tone: "text-[var(--amber-text)]", chip: "border-[var(--amber-400)]/30 bg-[var(--amber-400)]/[0.08]" },
+  2: { label: "Low", tone: "text-[var(--text-muted)]", chip: "border-[var(--line)] bg-[var(--surface-3)]" },
+  1: { label: "Info", tone: "text-[var(--text-muted)]", chip: "border-[var(--line)] bg-[var(--surface-3)]" },
 };
 
 /** Word for a pillar reading, so a bar is never the only carrier. */
@@ -123,6 +123,7 @@ export default function RepoOverview() {
               <ScoreDial
                 value={overall}
                 color={reading.color}
+                textColor={reading.textColor}
                 label="Defect risk"
                 sublabel={reading.label}
               />
@@ -132,7 +133,7 @@ export default function RepoOverview() {
                   <span className="text-[var(--text-primary)]">{repo.name}</span> scores{" "}
                   <span className="tnum text-[var(--text-primary)]">{overall}</span> out of 100 on
                   defect risk, which CodeGraph reads as{" "}
-                  <span style={{ color: reading.color }}>{reading.label.toLowerCase()}</span>.{" "}
+                  <span style={{ color: reading.textColor }}>{reading.label.toLowerCase()}</span>.{" "}
                   {repo.issues.length > 0 ? (
                     <>
                       <span className="tnum text-[var(--text-primary)]">{repo.issues.length}</span>{" "}
@@ -161,7 +162,7 @@ export default function RepoOverview() {
                         <>, <span className="tnum">{repo.coverage.skippedNoLanguage}</span> unsupported</>
                       )}
                       ){repo.coverage.capHit && (
-                        <span className="text-[var(--amber-400)]"> — the scan hit the file cap</span>
+                        <span className="text-[var(--amber-text)]"> — the scan hit the file cap</span>
                       )}.
                     </span>
                   ) : (
@@ -173,7 +174,7 @@ export default function RepoOverview() {
                 </p>
                 <Link
                   href={sectionHref(repo.id, "agents")}
-                  className="group mt-md inline-flex cursor-pointer items-center gap-xs text-meta text-[var(--signal-500)] transition-opacity duration-200 hover:opacity-80"
+                  className="group mt-md inline-flex cursor-pointer items-center gap-xs text-meta text-[var(--accent-text)] transition-opacity duration-200 hover:opacity-80"
                 >
                   Run the swarm on these findings
                   <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -210,7 +211,7 @@ export default function RepoOverview() {
                       )}
                     </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--ink-700)]">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-3)]">
                     <div
                       className="h-full rounded-full transition-[width] duration-700"
                       style={{ width: `${score ?? 0}%`, background: tone }}
@@ -287,11 +288,11 @@ export default function RepoOverview() {
                   recede, which is the opposite of featuring it. */}
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 bg-white/[0.022] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                className="pointer-events-none absolute inset-0 bg-[var(--surface-hover)] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
               />
               <div className="relative">
                 <div className="flex items-center gap-sm">
-                  <Crosshair className="h-3.5 w-3.5 text-[var(--coral-400)]" />
+                  <Crosshair className="h-3.5 w-3.5 text-[var(--coral-text)]" />
                   <p className="eyebrow">Act on this first</p>
                 </div>
                 <p className="mt-md text-body text-[var(--text-primary)]">{top.title}</p>
@@ -311,13 +312,13 @@ export default function RepoOverview() {
                 <span className="tnum text-meta text-[var(--text-muted)]">
                   ×{top.blastRadius} blast
                 </span>
-                <ArrowUpRight className="ml-auto h-4 w-4 text-[var(--text-faint)] transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[var(--signal-500)]" />
+                <ArrowUpRight className="ml-auto h-4 w-4 text-[var(--text-faint)] transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[var(--accent-text)]" />
               </div>
             </Link>
           ) : (
             <section className="panel flex h-full flex-col items-start justify-center gap-sm p-lg">
               <div className="flex items-center gap-sm">
-                <Crosshair className="h-3.5 w-3.5 text-[var(--signal-500)]" />
+                <Crosshair className="h-3.5 w-3.5 text-[var(--accent-text)]" />
                 <p className="eyebrow">Nothing to act on</p>
               </div>
               <p className="max-w-note text-meta text-[var(--text-secondary)]">
@@ -355,7 +356,7 @@ export default function RepoOverview() {
 
       {repo.symbolGraph?.truncated && (
         <div className="mt-lg flex items-start gap-md rounded-lg border border-[var(--amber-400)]/25 bg-[var(--amber-400)]/[0.05] px-md py-md">
-          <AlertTriangle className="mt-2xs h-4 w-4 shrink-0 text-[var(--amber-400)]" />
+          <AlertTriangle className="mt-2xs h-4 w-4 shrink-0 text-[var(--amber-text)]" />
           <p className="max-w-note text-meta text-[var(--text-secondary)]">
             Symbol graph truncated — code intelligence covers{" "}
             <span className="tnum">{repo.symbolGraph.stats.symbols.toLocaleString()}</span> symbols
@@ -374,7 +375,7 @@ export default function RepoOverview() {
             {repo.issues.length > ranked.length && (
               <Link
                 href={sectionHref(repo.id, "code-intel")}
-                className="cursor-pointer text-meta text-[var(--signal-500)] transition-opacity duration-200 hover:opacity-80"
+                className="cursor-pointer text-meta text-[var(--accent-text)] transition-opacity duration-200 hover:opacity-80"
               >
                 All <span className="tnum">{repo.issues.length}</span> findings
               </Link>
@@ -386,8 +387,8 @@ export default function RepoOverview() {
           </p>
 
           {repo.issues.length === 0 ? (
-            <p className="mt-lg flex items-center gap-sm text-meta text-[var(--signal-500)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--signal-500)]" aria-hidden="true" />
+            <p className="mt-lg flex items-center gap-sm text-meta text-[var(--accent-text)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-fill)]" aria-hidden="true" />
               No findings detected in this index.
             </p>
           ) : (
@@ -435,7 +436,7 @@ export default function RepoOverview() {
                             href={`${sectionHref(repo.id, "editor")}?file=${encodeURIComponent(iss.file)}&line=${iss.line}`}
                             aria-label={`Open ${iss.file} at line ${iss.line} in the editor`}
                             title={`Open ${iss.file}:${iss.line} in the editor`}
-                            className="col-start-2 row-start-1 flex h-8 w-8 cursor-pointer items-center justify-center justify-self-end rounded-md text-[var(--text-faint)] opacity-0 transition-colors duration-200 hover:bg-white/[0.04] hover:text-[var(--signal-500)] focus-visible:opacity-100 group-hover:opacity-100 sm:col-start-5 max-sm:opacity-100"
+                            className="col-start-2 row-start-1 flex h-8 w-8 cursor-pointer items-center justify-center justify-self-end rounded-md text-[var(--text-faint)] opacity-0 transition-colors duration-200 hover:bg-[var(--surface-hover)] hover:text-[var(--accent-text)] focus-visible:opacity-100 group-hover:opacity-100 sm:col-start-5 max-sm:opacity-100"
                           >
                             <SquareArrowOutUpRight className="h-3.5 w-3.5" />
                           </Link>
@@ -480,11 +481,11 @@ export default function RepoOverview() {
                         <span className="tnum">{Math.round(meta.weight * 100)}%</span>
                       </span>
                     </span>
-                    <span className="tnum text-meta" style={{ color: dim.color }}>
+                    <span className="tnum text-meta" style={{ color: dim.textColor }}>
                       {d.score}
                     </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--ink-700)]">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-3)]">
                     <div className="h-full rounded-full" style={{ width: `${d.score}%`, background: dim.color }} />
                   </div>
                 </StaggerItem>
@@ -507,13 +508,13 @@ export default function RepoOverview() {
                   href={sectionHref(repo.id, s.slug)}
                   className="panel group flex h-full cursor-pointer items-start gap-md p-md transition-colors duration-200 hover:border-line-strong"
                 >
-                  <span className="mt-2xs flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--ink-800)]">
-                    <s.icon className="h-4 w-4 text-[var(--text-muted)] transition-colors duration-200 group-hover:text-[var(--signal-500)]" />
+                  <span className="mt-2xs flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface-2)]">
+                    <s.icon className="h-4 w-4 text-[var(--text-muted)] transition-colors duration-200 group-hover:text-[var(--accent-text)]" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-xs text-meta text-[var(--text-primary)]">
                       {s.label}
-                      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-faint)] transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[var(--signal-500)]" />
+                      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-faint)] transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[var(--accent-text)]" />
                     </span>
                     <span className="mt-2xs block text-meta text-[var(--text-muted)]">
                       {s.blurb}

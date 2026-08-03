@@ -17,9 +17,9 @@ import type { Issue } from "@/lib/types";
  * attention is still at the top without the individual rows losing their grouping.
  */
 const SEVERITY: Record<number, { label: string; tone: string; dot: string }> = {
-  5: { label: "Critical", tone: "text-[var(--coral-400)]", dot: "bg-[var(--coral-500)]" },
-  4: { label: "High", tone: "text-[var(--coral-400)]", dot: "bg-[var(--coral-500)]" },
-  3: { label: "Medium", tone: "text-[var(--amber-400)]", dot: "bg-[var(--amber-400)]" },
+  5: { label: "Critical", tone: "text-[var(--coral-text)]", dot: "bg-[var(--coral-500)]" },
+  4: { label: "High", tone: "text-[var(--coral-text)]", dot: "bg-[var(--coral-500)]" },
+  3: { label: "Medium", tone: "text-[var(--amber-text)]", dot: "bg-[var(--amber-400)]" },
   2: { label: "Low", tone: "text-[var(--text-secondary)]", dot: "bg-[var(--text-muted)]" },
   1: { label: "Info", tone: "text-[var(--text-muted)]", dot: "bg-[var(--text-faint)]" },
 };
@@ -64,8 +64,8 @@ export function IssuesPanel({
   if (issues.length === 0) {
     return (
       <div className="p-md text-meta">
-        <div className="mb-md text-meta uppercase tracking-wide text-gray-500">Issues</div>
-        <p className="flex items-center gap-sm text-meta text-[var(--signal-500)]">
+        <div className="mb-md text-meta uppercase tracking-wide text-[var(--text-secondary)]">Issues</div>
+        <p className="flex items-center gap-sm text-meta text-[var(--accent-text)]">
           <ShieldCheck className="h-4 w-4 shrink-0" />
           No findings in this index.
         </p>
@@ -76,8 +76,8 @@ export function IssuesPanel({
   return (
     <div className="p-md text-meta">
       <div className="mb-md flex items-center justify-between">
-        <span className="text-meta uppercase tracking-wide text-gray-500">Issues</span>
-        <span className="tnum text-micro text-gray-600">
+        <span className="text-meta uppercase tracking-wide text-[var(--text-secondary)]">Issues</span>
+        <span className="tnum text-micro text-[var(--text-muted)]">
           {issues.length} in {groups.length} {groups.length === 1 ? "file" : "files"}
         </span>
       </div>
@@ -93,7 +93,7 @@ export function IssuesPanel({
                 onClick={() => toggle(file)}
                 aria-expanded={!isCollapsed}
                 title={file}
-                className={`flex w-full min-w-0 cursor-pointer items-center gap-2xs rounded-sm px-2xs py-2xs text-left transition-colors duration-200 hover:bg-white/[0.04] ${
+                className={`flex w-full min-w-0 cursor-pointer items-center gap-2xs rounded-sm px-2xs py-2xs text-left transition-colors duration-200 hover:bg-[var(--surface-hover)] ${
                   inThisFile ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
                 }`}
               >
@@ -107,7 +107,7 @@ export function IssuesPanel({
                 <span className="min-w-0 flex-1 truncate font-mono text-micro" dir="rtl">
                   {file}
                 </span>
-                <span className="tnum shrink-0 rounded-xs bg-white/[0.04] px-2xs text-micro text-[var(--text-muted)]">
+                <span className="tnum shrink-0 rounded-xs bg-[var(--surface-4)] px-2xs text-micro text-[var(--text-muted)]">
                   {list.length}
                 </span>
               </button>
@@ -122,7 +122,7 @@ export function IssuesPanel({
                           type="button"
                           onClick={() => onOpenIssue(issue.file, issue.line)}
                           title={`${sev.label} · ${issue.title} — open ${issue.file}:${issue.line}`}
-                          className="flex w-full min-w-0 cursor-pointer items-start gap-2xs rounded-sm px-2xs py-2xs text-left transition-colors duration-200 hover:bg-white/[0.04]"
+                          className="flex w-full min-w-0 cursor-pointer items-start gap-2xs rounded-sm px-2xs py-2xs text-left transition-colors duration-200 hover:bg-[var(--surface-hover)]"
                         >
                           <span
                             className={`mt-2xs h-1.5 w-1.5 shrink-0 rounded-full ${sev.dot}`}

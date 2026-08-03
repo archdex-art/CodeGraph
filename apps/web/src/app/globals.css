@@ -53,13 +53,164 @@
   --line: rgba(232, 237, 242, 0.10);
   --line-strong: rgba(232, 237, 242, 0.18);
 
-  --background: var(--ink-900);
+
+  /* --- Semantic surfaces ---------------------------------------------------
+     Components name a ROLE, never a shade. `--ink-800` is a fact about the dark
+     theme; `--surface-2` is a fact about the interface, and it is the only kind
+     of fact that can have two values. Everything below flips wholesale under
+     `[data-theme="light"]`; nothing above it needs to know. */
+  --surface-0: var(--ink-900);   /* the page                                   */
+  --surface-1: var(--ink-850);   /* a card or panel sitting on the page        */
+  --surface-2: var(--ink-800);   /* an input, a well, a raised control         */
+  --surface-3: var(--ink-700);   /* hover / pressed                            */
+  --surface-4: var(--ink-600);   /* chips and the topmost inline surface       */
+  --surface-inset: rgba(0, 0, 0, 0.24);        /* code wells, sunk below the card */
+  --surface-hover: rgba(232, 237, 242, 0.04);  /* the lightest possible feedback  */
+  --surface-active: rgba(232, 237, 242, 0.07);
+  --overlay: rgba(6, 8, 10, 0.72);             /* modal scrim                     */
+  --panel-sheen: rgba(255, 255, 255, 0.022);   /* the lift on a panel; inverts    */
+
+  /* --- Accent, split by ROLE rather than by shade --------------------------
+     The one place a theme flip is not a recolour but a redesign. Chartreuse is
+     15.49:1 against ink and **1.21:1 against paper** — measured, not guessed —
+     so on a light field the brand colour cannot carry text at any size.
+
+     The resolution is that the accent has two jobs and they separate cleanly:
+     as a FILL it stays the brand chartreuse in both themes (ink on it is
+     15.49:1 either way, so a button is identical); as TEXT or an ICON it takes
+     `--accent-text`, which is the same hue driven dark enough to read (5.76:1 on
+     paper). One accent, one meaning, two renderings. */
+  --accent-fill: var(--signal-500);
+  --accent-on-fill: var(--ink-900);
+  --accent-text: var(--signal-500);
+  --violet-text: var(--violet-400);
+  --coral-text: var(--coral-400);
+  --amber-text: var(--amber-400);
+  --background: var(--surface-0);
   --foreground: var(--text-primary);
+  color-scheme: dark;
 
   /* One easing for everything that moves. Expo-out: leaves fast, arrives slow,
      which is what makes motion feel like physics instead of a timer. */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+}
+
+/* ============================================================================
+   LIGHT — the same instrument under daylight, not a different product
+
+   Paper, not white. #f7f7f4 carries the same trace of green the ink does, so the
+   chartreuse still reads as a trace on a surface rather than ink printed on a
+   sheet. Pure #fff would make every panel edge disappear and force heavier
+   borders to compensate, which is how a light theme ends up looking like a
+   different application.
+
+   Every value below was measured against the paper, not chosen by eye — the
+   ratios are in the comments and none of them is below AA for the size it is
+   used at. The dark theme's own numbers are in the block above; they did not
+   change, because this is additive.
+
+   Applied by `[data-theme]` on <html>, set before first paint by the inline
+   script in `layout.tsx`. `prefers-color-scheme` is honoured only when the user
+   has expressed no preference of their own — a stored choice outranks the OS,
+   which is the behaviour people expect from a control they were given.
+   ============================================================================ */
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Paper. The ladder runs the other way: 0 is the page, and each step up is
+     *darker*, because on light a raised surface is one that has caught a shadow,
+     not one that has caught more light. */
+  /* NOTE: the --ink-* scale is deliberately NOT remapped. It names a shade of the
+     dark palette, and it has a second job: `--accent-on-fill` is ink, because the
+     label on a chartreuse button is dark in BOTH themes. Remapping it turned every
+     one of those labels into paper-on-paper. Surfaces name a role instead. */
+  --surface-0: #f7f7f4;
+  --surface-1: #ffffff;
+  --surface-2: #f1f2ee;
+  --surface-3: #e8eae4;
+  --surface-4: #dcdfd7;
+  --surface-inset: rgba(20, 24, 28, 0.04);
+  --surface-hover: rgba(20, 24, 28, 0.05);
+  --surface-active: rgba(20, 24, 28, 0.08);
+  --overlay: rgba(20, 24, 28, 0.40);
+  /* On paper the lift comes from the surface being whiter than the page, so the
+     sheen inverts to a faint shadow rather than a faint highlight. */
+  --panel-sheen: rgba(20, 24, 28, 0.012);
+
+  /* Text. 16.62 / 7.78 / 5.44 against the paper — the muted rung clears AA at
+     the 10–13px sizes it is actually used at, which is the whole reason the dark
+     theme's own muted value was raised. */
+  --text-primary: #14181c;
+  --text-secondary: #454f59;
+  --text-muted: #5c6672;
+  /* Decorative only, exactly as in dark: hairlines and graph leaf nodes. */
+  --text-faint: #a3aab3;
+
+  --line-soft: rgba(20, 24, 28, 0.07);
+  --line: rgba(20, 24, 28, 0.12);
+  --line-strong: rgba(20, 24, 28, 0.20);
+
+  /* The accent keeps its FILL and changes its TEXT — see the note above.
+     5.76:1 for `--accent-text`; the fill is untouched so a chartreuse button is
+     pixel-identical in both themes. */
+  --accent-text: #4a6b07;
+  --violet-text: #5b46d9;
+  --coral-text: #b3341f;
+  --amber-text: #8a5a00;
+  --signal-glow: rgba(122, 163, 20, 0.13);
+
+  /* The chart/graph hues need to survive a white background too: the dark
+     theme's pastels are chosen to glow on ink and turn to mist on paper. */
+  --violet-400: #6b57e0;
+  --violet-500: #5b46d9;
+  --coral-400: #d1452c;
+  --coral-500: #b3341f;
+  --amber-400: #a86c00;
+}
+
+/* One palette, two ways in.
+
+   `[data-theme="light"]` above is written by the pre-paint script, which resolves
+   "system" to a concrete value — so the attribute is always present and always
+   correct, and the OS is consulted once rather than fought with in CSS.
+
+   This block is the NO-JAVASCRIPT path, and it is a real path: the script is the
+   only thing that sets the attribute, so without it a light-mode user would get
+   the ink theme. `:not([data-theme])` means it applies only when the script has
+   not run — a stored choice, once written, always outranks the OS. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --surface-0: #f7f7f4;
+    --surface-1: #ffffff;
+    --surface-2: #f1f2ee;
+    --surface-3: #e8eae4;
+    --surface-4: #dcdfd7;
+    --surface-inset: rgba(20, 24, 28, 0.04);
+    --surface-hover: rgba(20, 24, 28, 0.05);
+    --surface-active: rgba(20, 24, 28, 0.08);
+    --overlay: rgba(20, 24, 28, 0.40);
+    --panel-sheen: rgba(20, 24, 28, 0.012);
+    --text-primary: #14181c;
+    --text-secondary: #454f59;
+    --text-muted: #5c6672;
+    --text-faint: #a3aab3;
+    --line-soft: rgba(20, 24, 28, 0.07);
+    --line: rgba(20, 24, 28, 0.12);
+    --line-strong: rgba(20, 24, 28, 0.20);
+    --accent-text: #4a6b07;
+    --violet-text: #5b46d9;
+    --coral-text: #b3341f;
+    --amber-text: #8a5a00;
+    --signal-glow: rgba(122, 163, 20, 0.13);
+    --violet-400: #6b57e0;
+    --violet-500: #5b46d9;
+    --coral-400: #d1452c;
+    --coral-500: #b3341f;
+    --amber-400: #a86c00;
+  }
 }
 
 /* ============================================================================
@@ -261,22 +412,30 @@ html {
 }
 
 body {
-  background: var(--ink-900);
+  /* `--surface-0`, not `--ink-900`. The ink scale is deliberately never remapped
+     (it is also the label colour on the chartreuse fill), and an element rule
+     outranks the `bg-[var(--surface-0)]` utility on <body> — so naming the shade
+     here pinned the whole page to the dark value in light mode. */
+  background: var(--surface-0);
   color: var(--text-primary);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
+/* Selection stays the brand fill in both themes: this is ink ON chartreuse,
+   which is 15.49:1 either way. */
 ::selection {
-  background: var(--signal-500);
-  color: var(--ink-900);
+  background: var(--accent-fill);
+  color: var(--accent-on-fill);
 }
 
 /* Focus is never removed, only restyled. Keyboard users are the ones who most
-   need to know where they are. */
+   need to know where they are — so the ring uses `--accent-text`, not the fill:
+   a 1.21:1 chartreuse outline on paper is a ring you cannot see, which is worse
+   than no restyling at all. */
 :focus-visible {
-  outline: 2px solid var(--signal-500);
+  outline: 2px solid var(--accent-text);
   outline-offset: 2px;
   border-radius: 2px;
 }
@@ -293,7 +452,9 @@ body {
 .font-display em,
 .font-display .em {
   font-style: italic;
-  color: var(--signal-500);
+  /* The emphasis device, at display size, on whatever the field is. `--accent-text`
+     rather than the fill for the same reason as the focus ring. */
+  color: var(--accent-text);
   /* The italic is a different cut, not a slant, so it needs its own tracking. */
   letter-spacing: -0.01em;
 }
@@ -403,8 +564,14 @@ body {
     }
   }
 
+  /* A panel is a surface first and a sheen second. On ink the sheen alone was
+     enough to lift it off the page; on paper a transparent panel is paper on
+     paper, so the surface token does the lifting and the sheen becomes a
+     highlight on top of it. `--panel-sheen` is the part that has to invert. */
   .panel {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0));
+    background:
+      linear-gradient(180deg, var(--panel-sheen), transparent),
+      var(--surface-1);
     border: 1px solid var(--line);
     /* Was 14px — an off-ladder value. 16 is the step, and it is also the panel's
        own inner padding step, so the corner and the gutter agree. */

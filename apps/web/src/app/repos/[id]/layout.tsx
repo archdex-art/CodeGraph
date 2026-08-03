@@ -97,7 +97,7 @@ export default function RepoLayout({
           Repository not found.{" "}
           <Link
             href="/dashboard"
-            className="cursor-pointer text-[var(--signal-500)] underline decoration-[var(--signal-500)]/30 underline-offset-4 transition-colors duration-200 hover:decoration-[var(--signal-500)]"
+            className="cursor-pointer text-[var(--accent-text)] underline decoration-[var(--accent-text)]/30 underline-offset-4 transition-colors duration-200 hover:decoration-[var(--accent-text)]"
           >
             Back to dashboard
           </Link>
@@ -109,7 +109,7 @@ export default function RepoLayout({
   if (!repo) {
     return (
       <div className="flex items-center justify-center gap-sm py-3xl text-meta text-[var(--text-muted)]">
-        <Loader2 className="h-4 w-4 animate-spin text-[var(--signal-500)]" /> Loading report…
+        <Loader2 className="h-4 w-4 animate-spin text-[var(--accent-text)]" /> Loading report…
       </div>
     );
   }
@@ -181,18 +181,18 @@ export default function RepoLayout({
           railCollapsed ? "w-10 justify-center px-0" : "gap-sm px-sm"
         } ${
           active
-            ? "text-[var(--text-primary)] lg:bg-white/[0.04]"
-            : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] lg:hover:bg-white/[0.02]"
+            ? "text-[var(--text-primary)] lg:bg-[var(--surface-active)]"
+            : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] lg:hover:bg-[var(--surface-hover)]"
         }`}
       >
-        <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[var(--signal-500)]" : "text-[var(--text-faint)]"}`} />
+        <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[var(--accent-text)]" : "text-[var(--text-faint)]"}`} />
         {!railCollapsed && label}
         {!railCollapsed && count !== null && (
           <span
             className={`tnum ml-auto hidden rounded-xs px-xs py-2xs text-micro leading-none transition-colors duration-200 lg:block ${
               active
-                ? "bg-white/[0.06] text-[var(--text-secondary)]"
-                : "bg-white/[0.03] text-[var(--text-faint)]"
+                ? "bg-[var(--surface-active)] text-[var(--text-secondary)]"
+                : "bg-[var(--surface-hover)] text-[var(--text-muted)]"
             }`}
             title={`${count.toLocaleString()} in this section`}
           >
@@ -205,14 +205,14 @@ export default function RepoLayout({
           <span
             aria-hidden="true"
             className={`absolute right-1 top-1.5 h-1 w-1 rounded-full transition-colors duration-200 ${
-              active ? "bg-[var(--signal-500)]" : "bg-[var(--text-faint)]"
+              active ? "bg-[var(--accent-text)]" : "bg-[var(--text-faint)]"
             }`}
           />
         )}
         {active && (
           <motion.span
             layoutId="section-marker"
-            className="absolute bg-[var(--signal-500)] max-lg:inset-x-2 max-lg:-bottom-px max-lg:h-[2px] lg:inset-y-1.5 lg:-left-px lg:w-[2px]"
+            className="absolute bg-[var(--accent-text)] max-lg:inset-x-2 max-lg:-bottom-px max-lg:h-[2px] lg:inset-y-1.5 lg:-left-px lg:w-[2px]"
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
           />
         )}
@@ -251,7 +251,7 @@ export default function RepoLayout({
                 aria-controls="report-rail"
                 aria-label={collapsed ? "Expand section navigation" : "Collapse section navigation"}
                 title={collapsed ? "Expand navigation" : "Collapse navigation"}
-                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-[var(--text-faint)] transition-colors duration-200 hover:bg-white/[0.03] hover:text-[var(--text-secondary)]"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-[var(--text-faint)] transition-colors duration-200 hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)]"
               >
                 {collapsed ? (
                   <PanelLeftOpen className="h-4 w-4" />
@@ -270,18 +270,18 @@ export default function RepoLayout({
                 <Link
                   href="/dashboard"
                   aria-label="Back to dashboard"
-                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-[var(--line)] bg-[var(--ink-850)] transition-colors duration-200 hover:border-[var(--line-strong)]"
+                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface-1)] transition-colors duration-200 hover:border-[var(--line-strong)]"
                 >
                   <span
-                    className={`h-1.5 w-1.5 rounded-full ${live ? "bg-[var(--signal-500)]" : "bg-[var(--amber-400)]"}`}
+                    className={`h-1.5 w-1.5 rounded-full ${live ? "bg-[var(--accent-text)]" : "bg-[var(--amber-text)]"}`}
                     aria-hidden="true"
                   />
                 </Link>
               </div>
             ) : (
-              <div className="mb-lg flex items-center gap-sm rounded-md border border-[var(--line)] bg-[var(--ink-850)] px-sm py-sm">
+              <div className="mb-lg flex items-center gap-sm rounded-md border border-[var(--line)] bg-[var(--surface-1)] px-sm py-sm">
                 <span
-                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${live ? "bg-[var(--signal-500)]" : "bg-[var(--amber-400)]"}`}
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${live ? "bg-[var(--accent-text)]" : "bg-[var(--amber-text)]"}`}
                   aria-hidden="true"
                 />
                 <span className="truncate text-meta text-[var(--text-secondary)]" title={repo.name}>
@@ -356,7 +356,7 @@ export default function RepoLayout({
           <header className="pt-0 lg:pt-xl">
             <div className="flex flex-wrap items-start justify-between gap-x-xl gap-y-md">
               <div className="flex min-w-0 items-start gap-md">
-                <span className="mt-2xs flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--ink-800)]">
+                <span className="mt-2xs flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)]">
                   {repo.sourceType === "git" ? (
                     <GithubMark className="h-[18px] w-[18px] text-[var(--text-secondary)]" />
                   ) : (
@@ -394,7 +394,7 @@ export default function RepoLayout({
                     )}
                   </div>
 
-                  <p className="mt-xs text-micro text-[var(--text-faint)]">
+                  <p className="mt-xs text-micro text-[var(--text-muted)]">
                     Indexed {relative(repo.finishedAt ?? repo.createdAt)}
                     {repo.coverage && (
                       <>
@@ -423,7 +423,7 @@ export default function RepoLayout({
                 </Link>
                 <Link
                   href={sectionHref(id, "agents")}
-                  className="flex min-h-10 cursor-pointer items-center justify-center gap-sm rounded-md bg-[var(--signal-500)] px-md text-meta font-medium text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
+                  className="flex min-h-10 cursor-pointer items-center justify-center gap-sm rounded-md bg-[var(--accent-fill)] px-md text-meta font-medium text-[var(--accent-on-fill)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
                 >
                   Run the swarm
                 </Link>

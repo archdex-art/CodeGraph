@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useScroll } from "framer-motion";
 import { useCallback, useState, useSyncExternalStore } from "react";
 import { Menu, X } from "lucide-react";
 import { AuthNav } from "@/components/AuthNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useScrollSpring } from "@/components/motion/primitives";
 
 const NAV = [
@@ -99,7 +100,7 @@ export function SiteHeader() {
                 {active && (
                   <motion.span
                     layoutId="nav-active"
-                    className="absolute inset-0 rounded-lg bg-white/[0.05] ring-1 ring-[var(--line)]"
+                    className="absolute inset-0 rounded-lg bg-[var(--surface-active)] ring-1 ring-[var(--line)]"
                     transition={{ type: "spring", stiffness: 380, damping: 32 }}
                   />
                 )}
@@ -107,7 +108,8 @@ export function SiteHeader() {
               </Link>
             );
           })}
-          <div className="ml-sm border-l border-[var(--line)] pl-sm">
+          <div className="ml-sm flex items-center gap-sm border-l border-[var(--line)] pl-sm">
+            <ThemeToggle />
             <AuthNav />
           </div>
         </nav>
@@ -137,20 +139,21 @@ export function SiteHeader() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.36, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden border-t border-[var(--line)] bg-[rgba(6,8,10,0.96)] backdrop-blur-xl md:hidden"
+            className="overflow-hidden border-t border-[var(--line)] bg-[var(--surface-0)]/95 backdrop-blur-xl md:hidden"
           >
             <div className="flex flex-col gap-2xs px-lg py-md">
               {NAV.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex min-h-11 items-center rounded-lg px-sm text-body text-[var(--text-secondary)] transition-colors hover:bg-white/[0.04] hover:text-[var(--text-primary)]"
+                  className="flex min-h-11 items-center rounded-lg px-sm text-body text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
                 >
                   {item.label}
                 </Link>
               ))}
-              <div className="mt-sm border-t border-[var(--line)] pt-sm">
+              <div className="mt-sm flex items-center justify-between gap-sm border-t border-[var(--line)] pt-sm">
                 <AuthNav />
+                <ThemeToggle />
               </div>
             </div>
           </motion.div>

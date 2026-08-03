@@ -45,28 +45,28 @@ export function GithubReposPicker({ onSelect, disabled }: { onSelect: (htmlUrl: 
   }, [repos, query]);
 
   return (
-    <div className="rounded-lg border border-white/10 bg-[#0a0a0a] overflow-hidden">
-      <div className="p-sm border-b border-white/10">
+    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] overflow-hidden">
+      <div className="p-sm border-b border-[var(--line)]">
         <div className="relative">
-          <Search className="w-4 h-4 text-gray-600 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search your repositories…"
-            className="w-full bg-transparent pl-xl pr-sm py-sm text-meta text-white placeholder-gray-600 focus:outline-none"
+            className="w-full bg-transparent pl-xl pr-sm py-sm text-meta text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none"
           />
         </div>
       </div>
       <div className="max-h-72 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center gap-sm text-meta text-gray-500 p-md">
+          <div className="flex items-center gap-sm text-meta text-[var(--text-secondary)] p-md">
             <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading your repositories…
           </div>
         ) : error ? (
-          <p className="text-meta text-rose-400 px-md py-md">{error}</p>
+          <p className="text-meta text-[var(--coral-text)] px-md py-md">{error}</p>
         ) : filtered.length === 0 ? (
-          <p className="px-md py-lg text-meta text-gray-600 text-center">{query ? "No repositories match." : "No repositories found."}</p>
+          <p className="px-md py-lg text-meta text-[var(--text-muted)] text-center">{query ? "No repositories match." : "No repositories found."}</p>
         ) : (
           <ul>
             {filtered.map((r) => (
@@ -75,16 +75,16 @@ export function GithubReposPicker({ onSelect, disabled }: { onSelect: (htmlUrl: 
                   type="button"
                   disabled={disabled}
                   onClick={() => onSelect(r.htmlUrl)}
-                  className="w-full text-left flex items-center gap-sm px-sm py-sm hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full text-left flex items-center gap-sm px-sm py-sm hover:bg-[var(--surface-active)] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-xs">
-                      <span className="text-meta text-white truncate">{r.fullName}</span>
-                      {r.private && <Lock className="w-3 h-3 text-amber-400 shrink-0" />}
+                      <span className="text-meta text-[var(--text-primary)] truncate">{r.fullName}</span>
+                      {r.private && <Lock className="w-3 h-3 text-[var(--amber-text)] shrink-0" />}
                     </div>
-                    {r.description && <p className="text-meta text-gray-500 truncate mt-hair">{r.description}</p>}
+                    {r.description && <p className="text-meta text-[var(--text-secondary)] truncate mt-hair">{r.description}</p>}
                   </div>
-                  <div className="flex items-center gap-sm shrink-0 text-meta text-gray-600">
+                  <div className="flex items-center gap-sm shrink-0 text-meta text-[var(--text-muted)]">
                     {r.language && <span>{r.language}</span>}
                     {r.stargazersCount > 0 && (
                       <span className="flex items-center gap-hair">
@@ -92,7 +92,7 @@ export function GithubReposPicker({ onSelect, disabled }: { onSelect: (htmlUrl: 
                         {r.stargazersCount}
                       </span>
                     )}
-                    <ArrowUpRight className="w-3.5 h-3.5 text-gray-700" />
+                    <ArrowUpRight className="w-3.5 h-3.5 text-[var(--text-faint)]" />
                   </div>
                 </button>
               </li>
@@ -104,7 +104,7 @@ export function GithubReposPicker({ onSelect, disabled }: { onSelect: (htmlUrl: 
             type="button"
             onClick={loadMore}
             disabled={loadingMore}
-            className="w-full text-center text-meta text-gray-500 hover:text-white py-sm border-t border-white/5 disabled:opacity-50"
+            className="w-full text-center text-meta text-[var(--text-secondary)] hover:text-[var(--text-primary)] py-sm border-t border-[var(--line-soft)] disabled:opacity-50"
           >
             {loadingMore ? "Loading…" : "Load more"}
           </button>
