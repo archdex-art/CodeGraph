@@ -50,55 +50,55 @@ export function SearchPanel({
 
   return (
     <div className="p-md text-meta space-y-sm">
-      <div className="text-meta uppercase tracking-wide text-gray-500">Search</div>
-      <div className="flex items-center gap-xs bg-[#0a0a0a] border border-white/10 rounded-xs px-sm py-xs focus-within:border-purple-500/50">
-        <Search className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+      <div className="text-meta uppercase tracking-wide text-[var(--text-secondary)]">Search</div>
+      <div className="flex items-center gap-xs bg-[var(--surface-2)] border border-[var(--line)] rounded-xs px-sm py-xs focus-within:border-[var(--violet-500)]/50">
+        <Search className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && runSearch()}
           placeholder="Find in files"
-          className="bg-transparent flex-1 text-gray-200 placeholder-gray-600 focus:outline-none"
+          className="bg-transparent flex-1 text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none"
         />
-        {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500" />}
+        {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--text-secondary)]" />}
       </div>
 
-      <button onClick={() => setShowReplace((v) => !v)} className="flex items-center gap-2xs text-gray-500 hover:text-white">
+      <button onClick={() => setShowReplace((v) => !v)} className="flex items-center gap-2xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
         <Replace className="w-3 h-3" /> {showReplace ? "Hide replace" : "Replace in files"}
       </button>
 
       {showReplace && (
-        <div className="flex items-center gap-xs bg-[#0a0a0a] border border-white/10 rounded-xs px-sm py-xs">
+        <div className="flex items-center gap-xs bg-[var(--surface-2)] border border-[var(--line)] rounded-xs px-sm py-xs">
           <input
             value={replacement}
             onChange={(e) => setReplacement(e.target.value)}
             placeholder="Replace with"
-            className="bg-transparent flex-1 text-gray-200 placeholder-gray-600 focus:outline-none"
+            className="bg-transparent flex-1 text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none"
           />
-          <button onClick={replaceAll} disabled={replacing || !results.length} className="text-amber-400 hover:text-amber-300 disabled:opacity-30 shrink-0">
+          <button onClick={replaceAll} disabled={replacing || !results.length} className="text-[var(--amber-text)] hover:text-[var(--amber-text)] disabled:opacity-30 shrink-0">
             {replacing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Replace All"}
           </button>
         </div>
       )}
 
-      <button onClick={runSearch} className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs px-sm py-xs text-gray-300">
+      <button onClick={runSearch} className="w-full bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border border-[var(--line)] rounded-xs px-sm py-xs text-[var(--text-primary)]">
         Search
       </button>
 
       <div className="space-y-2xs max-h-[60vh] overflow-auto">
-        {searched && results.length === 0 && !loading && <p className="text-gray-600 pt-sm">No matches.</p>}
+        {searched && results.length === 0 && !loading && <p className="text-[var(--text-muted)] pt-sm">No matches.</p>}
         {results.map((r, i) => (
           <button
             key={`${r.file}:${r.line}:${i}`}
             onClick={() => onOpenResult(r.file, r.line)}
-            className="block w-full text-left px-sm py-xs rounded-xs hover:bg-white/5"
+            className="block w-full text-left px-sm py-xs rounded-xs hover:bg-[var(--surface-active)]"
           >
-            <div className="flex items-center gap-xs text-gray-400">
+            <div className="flex items-center gap-xs text-[var(--text-secondary)]">
               <FileText className="w-3 h-3 shrink-0" />
               <span className="truncate">{r.file}</span>
-              <span className="text-gray-600 shrink-0">:{r.line}</span>
+              <span className="text-[var(--text-muted)] shrink-0">:{r.line}</span>
             </div>
-            <div className="text-gray-500 truncate pl-md font-mono">{r.text}</div>
+            <div className="text-[var(--text-secondary)] truncate pl-md font-mono">{r.text}</div>
           </button>
         ))}
       </div>

@@ -24,7 +24,11 @@ const PROOF = [
 const LENSES = [
   {
     icon: Waypoints,
+    // `tone` paints (wash, chip, hairline) and keeps the hue token, which already
+    // flips. `glyph` is the same hue as a MARK, and the signal lens is why the two
+    // are separate fields: chartreuse is a fine wash on paper and an invisible icon.
     tone: "var(--violet-500)",
+    glyph: "var(--violet-text)",
     kicker: "Lens 01",
     title: "The graph is the product",
     body: "A symbol-level program graph — definitions, calls, imports, inheritance — resolved with a real type checker, not a regex. Three interactive views over one index.",
@@ -33,6 +37,7 @@ const LENSES = [
   {
     icon: GitBranch,
     tone: "var(--signal-500)",
+    glyph: "var(--accent-text)",
     kicker: "Lens 02",
     title: "A score that shows its working",
     body: "One explainable Health Score, weighted by blast radius through the graph. Every point traces back to a finding, and every finding to a file and a line.",
@@ -41,6 +46,7 @@ const LENSES = [
   {
     icon: ShieldCheck,
     tone: "var(--coral-500)",
+    glyph: "var(--coral-text)",
     kicker: "Lens 03",
     title: "Fixes proved, not suggested",
     body: "A deterministic swarm argues findings out among themselves, then generates a patch and runs your own test suite against it before you ever see a diff.",
@@ -78,7 +84,7 @@ export default function LandingPage() {
           <div className="split-phi items-center [&>*]:min-w-0">
             <div className="min-w-0">
               <Entrance>
-                <div className="mb-lg inline-flex items-center gap-sm rounded-full border border-[var(--line)] bg-[var(--ink-850)]/70 py-xs pl-sm pr-md backdrop-blur">
+                <div className="mb-lg inline-flex items-center gap-sm rounded-full border border-[var(--line)] bg-[var(--surface-1)]/70 py-xs pl-sm pr-md backdrop-blur">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--signal-500)] opacity-60" />
                     <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--signal-500)]" />
@@ -142,7 +148,7 @@ export default function LandingPage() {
           {PROOF.map((p, i) => (
             <StaggerItem
               key={p.label}
-              className={`group relative px-md py-xl transition-colors duration-300 hover:bg-white/[0.015] sm:px-lg ${
+              className={`group relative px-md py-xl transition-colors duration-300 hover:bg-[var(--surface-hover)] sm:px-lg ${
                 // Hairlines between cells, not around them: the outer edges are already
                 // closed by the two rules above and below the strip.
                 i % 2 === 1 ? "border-l border-[var(--line-soft)]" : ""
@@ -195,7 +201,7 @@ export default function LandingPage() {
                     className="mb-lg flex h-10 w-10 items-center justify-center rounded-md border"
                     style={{ borderColor: `color-mix(in srgb, ${l.tone} 30%, transparent)`, background: `color-mix(in srgb, ${l.tone} 9%, transparent)` }}
                   >
-                    <l.icon className="h-[18px] w-[18px]" style={{ color: l.tone }} />
+                    <l.icon className="h-[18px] w-[18px]" style={{ color: l.glyph }} />
                   </div>
                   <span className="eyebrow">{l.kicker}</span>
                   <h3 className="mt-sm font-display text-h3 text-[var(--text-primary)]">
@@ -237,7 +243,7 @@ export default function LandingPage() {
                     <div className="w-3xl shrink-0 text-right font-mono text-meta text-[var(--text-secondary)]">
                       {s.name}
                     </div>
-                    <div className="relative h-8 flex-1 overflow-hidden rounded-sm bg-[var(--ink-850)]">
+                    <div className="relative h-8 flex-1 overflow-hidden rounded-sm bg-[var(--surface-2)]">
                       <div
                         className="h-full rounded-sm transition-all duration-700"
                         style={{
@@ -316,7 +322,7 @@ export default function LandingPage() {
                 <Magnetic>
                   <Link
                     href="#top"
-                    className="group flex min-h-11 cursor-pointer items-center gap-sm rounded-md bg-[var(--signal-500)] px-lg py-md text-meta font-semibold text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
+                    className="group flex min-h-11 cursor-pointer items-center gap-sm rounded-md bg-[var(--accent-fill)] px-lg py-md text-meta font-semibold text-[var(--accent-on-fill)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
                   >
                     Index a repository
                     <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />

@@ -19,6 +19,7 @@ export function ScoreDial({
   value,
   max = 100,
   color,
+  textColor,
   size = 168,
   thickness = 10,
   label,
@@ -26,7 +27,15 @@ export function ScoreDial({
 }: {
   value: number;
   max?: number;
+  /** The arc. A FILL, so it keeps the brand hue in both themes. */
   color: string;
+  /**
+   * The numeral and the band word. A fill and a glyph are not the same colour
+   * problem: chartreuse is 15.49:1 on ink and 1.21:1 on paper, so the reading
+   * printed inside the arc has to take the text-safe rendering of the same hue
+   * or it vanishes on a light field while the arc around it stays perfect.
+   */
+  textColor: string;
   size?: number;
   thickness?: number;
   label?: string;
@@ -61,7 +70,7 @@ export function ScoreDial({
         <path
           d={arc(1)}
           fill="none"
-          stroke="var(--ink-700)"
+          stroke="var(--surface-3)"
           strokeWidth={thickness}
           strokeLinecap="round"
           strokeDasharray={`${circumference * SWEEP} ${circumference}`}
@@ -81,12 +90,12 @@ export function ScoreDial({
       </svg>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="tnum text-h1 leading-none" style={{ color }}>
+        <span className="tnum text-h1 leading-none" style={{ color: textColor }}>
           {Math.round(value)}
         </span>
         {label && <span className="eyebrow mt-sm">{label}</span>}
         {sublabel && (
-          <span className="mt-2xs text-meta text-[var(--text-muted)]">{sublabel}</span>
+          <span className="mt-2xs text-meta" style={{ color: textColor }}>{sublabel}</span>
         )}
       </div>
     </div>

@@ -30,8 +30,8 @@ import type { GateResult, VerificationRecord } from "@codegraph/verify";
 const LEVEL = {
   full: {
     Icon: ShieldCheck,
-    ring: "border-emerald-500/20 bg-emerald-500/[0.06]",
-    fg: "text-emerald-400",
+    ring: "border-[var(--accent-text)]/20 bg-[var(--accent-text)]/[0.06]",
+    fg: "text-[var(--accent-text)]",
     label: "Verified",
     // Named for what actually happened, not for a grade. "Verified" alone is what let a
     // partial run pass as a full one.
@@ -40,14 +40,14 @@ const LEVEL = {
   partial: {
     Icon: ShieldQuestion,
     ring: "border-sky-500/25 bg-sky-500/[0.06]",
-    fg: "text-sky-300",
+    fg: "text-sky-400",
     label: "Partially verified",
     detail: "checks passed, but your test suite did not run here",
   },
   none: {
     Icon: AlertTriangle,
-    ring: "border-amber-500/20 bg-amber-500/[0.06]",
-    fg: "text-amber-400",
+    ring: "border-[var(--amber-text)]/20 bg-[var(--amber-text)]/[0.06]",
+    fg: "text-[var(--amber-text)]",
     label: "Not verified",
     detail: "no verification gate completed",
   },
@@ -57,8 +57,8 @@ const LEVEL = {
   // failed" is the precise imprecision this component exists to remove.
   failed: {
     Icon: AlertTriangle,
-    ring: "border-rose-500/25 bg-rose-500/[0.06]",
-    fg: "text-rose-400",
+    ring: "border-[var(--coral-text)]/25 bg-[var(--coral-text)]/[0.06]",
+    fg: "text-[var(--coral-text)]",
     label: "Verification failed",
     detail: "a gate rejected this patch",
   },
@@ -72,9 +72,9 @@ const GATE_LABEL: Record<GateResult["gate"], string> = {
 };
 
 const STATUS = {
-  passed: { Icon: Check, fg: "text-emerald-400", border: "border-emerald-500/25" },
-  failed: { Icon: X, fg: "text-rose-400", border: "border-rose-500/30" },
-  skipped: { Icon: Minus, fg: "text-gray-500", border: "border-white/10" },
+  passed: { Icon: Check, fg: "text-[var(--accent-text)]", border: "border-[var(--accent-text)]/25" },
+  failed: { Icon: X, fg: "text-[var(--coral-text)]", border: "border-[var(--coral-text)]/30" },
+  skipped: { Icon: Minus, fg: "text-[var(--text-muted)]", border: "border-[var(--line)]" },
 } as const;
 
 /**
@@ -116,14 +116,14 @@ export function VerificationVerdict({
         <div className="min-w-0">
           <div className={`text-meta font-semibold ${fg}`}>
             {label}
-            <span className="font-normal text-gray-400"> — {detail}</span>
+            <span className="font-normal text-[var(--text-secondary)]"> — {detail}</span>
           </div>
-          <div className="text-meta text-gray-400 mt-2xs break-words">{message}</div>
+          <div className="text-meta text-[var(--text-secondary)] mt-2xs break-words">{message}</div>
         </div>
         {showScores && (
           <div className="ml-auto flex items-center gap-sm text-meta shrink-0">
-            <span className="text-gray-400">{scoreBefore}</span>
-            <span className="text-gray-600">→</span>
+            <span className="text-[var(--text-secondary)]">{scoreBefore}</span>
+            <span className="text-[var(--text-muted)]">→</span>
             <span className={`font-bold ${fg}`}>{scoreAfter}</span>
           </div>
         )}
@@ -146,7 +146,7 @@ export function VerificationVerdict({
                 {/* The reason is the actionable half of a skip — surface it, don't hide it in
                     a tooltip only. */}
                 {g.status === "skipped" && g.reason && (
-                  <span className="text-gray-600">· {g.reason}</span>
+                  <span className="text-[var(--text-muted)]">· {g.reason}</span>
                 )}
               </span>
             );

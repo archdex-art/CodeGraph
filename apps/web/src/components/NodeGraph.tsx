@@ -233,7 +233,7 @@ export function NodeGraph({
   return (
     <div
       ref={wrapRef}
-      className="relative w-full rounded-xl border border-white/10 bg-[#0a0a0c] overflow-hidden"
+      className="relative w-full rounded-xl border border-[var(--line)] bg-[var(--surface-1)] overflow-hidden"
       style={{ height }}
     >
       <svg
@@ -250,10 +250,10 @@ export function NodeGraph({
       >
         <defs>
           <marker id="ng-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="rgba(148,163,184,0.8)" />
+            <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--text-muted)" }} />
           </marker>
           <marker id="ng-arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee" />
+            <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--accent-text)" }} />
           </marker>
         </defs>
 
@@ -271,7 +271,7 @@ export function NodeGraph({
                 key={i}
                 d={d}
                 fill="none"
-                stroke={act ? "#22d3ee" : "rgba(148,163,184,0.30)"}
+                style={{ stroke: act ? "var(--accent-text)" : "var(--text-faint)" }}
                 strokeWidth={(act ? 2.2 : 1.2 + Math.min(2.5, (e.weight ?? 1) / 4)) / 1}
                 markerEnd={act ? "url(#ng-arrow-active)" : "url(#ng-arrow)"}
                 opacity={dim ? 0.08 : 1}
@@ -286,7 +286,7 @@ export function NodeGraph({
             if (!s || !t || !(e.weight && e.weight > 1)) return null;
             if (active != null && !edgeActive(e)) return null;
             return (
-              <text key={"w" + i} x={(s.x + t.x) / 2} y={(s.y + t.y) / 2 - 3} textAnchor="middle" fontSize={10} fill="rgba(148,163,184,0.85)">
+              <text key={"w" + i} x={(s.x + t.x) / 2} y={(s.y + t.y) / 2 - 3} textAnchor="middle" fontSize={10} style={{ fill: "var(--text-muted)" }}>
                 {e.weight}
               </text>
             );
@@ -310,29 +310,27 @@ export function NodeGraph({
                   width={n.w}
                   height={n.h}
                   rx={9}
-                  fill="#15151a"
-                  stroke={isActive ? "#22d3ee" : n.color}
                   strokeWidth={isActive ? 2.2 : 1.4}
-                  style={{ transition: "stroke 0.15s" }}
+                  style={{ fill: "var(--surface-2)", stroke: isActive ? "var(--accent-text)" : n.color, transition: "stroke 0.15s" }}
                 />
                 <rect width={5} height={n.h} rx={2.5} fill={n.color} />
                 {/* header strip color tint */}
                 <rect x={5} width={n.w - 5} height={22} rx={0} fill={n.color} opacity={0.10} />
-                <text x={14} y={16} fontSize={13} fontWeight={600} fill="#e5e7eb">
+                <text x={14} y={16} fontSize={13} fontWeight={600} style={{ fill: "var(--text-primary)" }}>
                   {n.label.length > 20 ? n.label.slice(0, 19) + "…" : n.label}
                 </text>
                 {n.subtitle && (
-                  <text x={14} y={36} fontSize={10.5} fill="#9ca3af">
+                  <text x={14} y={36} fontSize={10.5} style={{ fill: "var(--text-secondary)" }}>
                     {n.subtitle.length > 26 ? n.subtitle.slice(0, 25) + "…" : n.subtitle}
                   </text>
                 )}
                 {n.meta && (
-                  <text x={14} y={n.h - 9} fontSize={10} fill="#6b7280">
+                  <text x={14} y={n.h - 9} fontSize={10} style={{ fill: "var(--text-muted)" }}>
                     {n.meta}
                   </text>
                 )}
                 {!!n.issues && (
-                  <circle cx={n.w - 12} cy={12} r={4.5} fill={n.issues > 5 ? "#fb7185" : "#fbbf24"} />
+                  <circle cx={n.w - 12} cy={12} r={4.5} style={{ fill: n.issues > 5 ? "var(--coral-500)" : "var(--amber-400)" }} />
                 )}
               </g>
             );
@@ -342,17 +340,17 @@ export function NodeGraph({
 
       {/* Controls */}
       <div className="absolute top-md right-md flex items-center gap-xs">
-        <button onClick={() => zoomBy(1 / 1.25)} aria-label="Zoom out" className="text-meta leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs w-7 h-7 flex items-center justify-center">
+        <button onClick={() => zoomBy(1 / 1.25)} aria-label="Zoom out" className="text-meta leading-none text-[var(--text-primary)] bg-[var(--surface-active)] hover:bg-[var(--surface-3)] border border-[var(--line)] rounded-xs w-7 h-7 flex items-center justify-center">
           −
         </button>
-        <button onClick={() => zoomBy(1.25)} aria-label="Zoom in" className="text-meta leading-none text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs w-7 h-7 flex items-center justify-center">
+        <button onClick={() => zoomBy(1.25)} aria-label="Zoom in" className="text-meta leading-none text-[var(--text-primary)] bg-[var(--surface-active)] hover:bg-[var(--surface-3)] border border-[var(--line)] rounded-xs w-7 h-7 flex items-center justify-center">
           +
         </button>
-        <button onClick={fit} className="text-micro text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xs px-sm py-2xs h-7">
+        <button onClick={fit} className="text-micro text-[var(--text-primary)] bg-[var(--surface-active)] hover:bg-[var(--surface-3)] border border-[var(--line)] rounded-xs px-sm py-2xs h-7">
           Fit view
         </button>
       </div>
-      <div className="absolute bottom-md left-md text-micro text-gray-600">
+      <div className="absolute bottom-md left-md text-micro text-[var(--text-muted)]">
         scroll = zoom · drag = pan · hover a node to highlight its connections
       </div>
     </div>

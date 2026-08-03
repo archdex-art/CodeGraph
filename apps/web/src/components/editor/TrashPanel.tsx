@@ -86,7 +86,7 @@ export function TrashPanel({ repoId, onMutated }: { repoId: string; onMutated: (
 
   if (entries === null) {
     return (
-      <div className="flex items-center gap-sm text-meta text-gray-500 p-md">
+      <div className="flex items-center gap-sm text-meta text-[var(--text-secondary)] p-md">
         <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading trash…
       </div>
     );
@@ -94,43 +94,43 @@ export function TrashPanel({ repoId, onMutated }: { repoId: string; onMutated: (
 
   return (
     <div className="text-meta">
-      <div className="flex items-center justify-between px-sm py-xs text-meta uppercase tracking-wide text-gray-500">
+      <div className="flex items-center justify-between px-sm py-xs text-meta uppercase tracking-wide text-[var(--text-secondary)]">
         <span>Trash</span>
         <button
           onClick={empty}
           disabled={entries.length === 0}
           title="Empty Trash"
-          className="p-2xs rounded-xs hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+          className="p-2xs rounded-xs hover:bg-[var(--surface-active)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {entries.length === 0 ? (
-        <p className="px-md py-md text-meta text-gray-600">Trash is empty. Deleted files show up here and can be restored.</p>
+        <p className="px-md py-md text-meta text-[var(--text-muted)]">Trash is empty. Deleted files show up here and can be restored.</p>
       ) : (
         <ul>
           {entries.map((entry) => (
-            <li key={entry.id} className="group flex items-center gap-sm px-sm py-xs hover:bg-white/5">
+            <li key={entry.id} className="group flex items-center gap-sm px-sm py-xs hover:bg-[var(--surface-active)]">
               {entry.type === "dir" ? (
-                <Folder className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                <Folder className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
               ) : (
-                <FileIcon className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                <FileIcon className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
               )}
               <div className="flex-1 min-w-0">
-                <div className="truncate text-meta text-gray-300" title={entry.path}>{entry.name}</div>
-                <div className="truncate text-micro text-gray-600">
+                <div className="truncate text-meta text-[var(--text-primary)]" title={entry.path}>{entry.name}</div>
+                <div className="truncate text-micro text-[var(--text-muted)]">
                   {entry.path} · {formatSize(entry.size)} · {timeAgo(entry.deletedAt)}
                 </div>
               </div>
               {busyId === entry.id ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500 shrink-0" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--text-secondary)] shrink-0" />
               ) : (
                 <div className="flex items-center gap-2xs opacity-0 group-hover:opacity-100 shrink-0">
-                  <button onClick={() => restore(entry)} title="Restore" className="p-2xs rounded-xs hover:bg-white/10 text-gray-400 hover:text-emerald-400">
+                  <button onClick={() => restore(entry)} title="Restore" className="p-2xs rounded-xs hover:bg-[var(--surface-active)] text-[var(--text-secondary)] hover:text-[var(--accent-text)]">
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => purge(entry)} title="Delete forever" className="p-2xs rounded-xs hover:bg-white/10 text-gray-400 hover:text-rose-400">
+                  <button onClick={() => purge(entry)} title="Delete forever" className="p-2xs rounded-xs hover:bg-[var(--surface-active)] text-[var(--text-secondary)] hover:text-[var(--coral-text)]">
                     <XCircle className="w-3.5 h-3.5" />
                   </button>
                 </div>

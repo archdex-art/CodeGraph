@@ -1,6 +1,6 @@
 "use client";
 
-import { GitBranch, Check, Cloud, HardDrive, Loader2, Sun, Moon } from "lucide-react";
+import { GitBranch, Check, Cloud, HardDrive, Loader2 } from "lucide-react";
 import type { GitStatus, SaveMode } from "@/lib/types";
 
 export type SaveState = "idle" | "saving" | "saved" | "error";
@@ -11,8 +11,6 @@ export function StatusBar({
   saveState,
   language,
   cursor,
-  theme,
-  onToggleTheme,
   hasGit,
 }: {
   gitStatus: GitStatus | null;
@@ -20,8 +18,6 @@ export function StatusBar({
   saveState: SaveState;
   language: string;
   cursor: { line: number; col: number } | null;
-  theme: "vs-dark" | "light";
-  onToggleTheme: () => void;
   hasGit: boolean;
 }) {
   const syncLabel = !hasGit
@@ -33,29 +29,26 @@ export function StatusBar({
     : `${gitStatus.ahead > 0 ? `↑${gitStatus.ahead} ` : ""}${gitStatus.behind > 0 ? `↓${gitStatus.behind}` : ""}`.trim();
 
   return (
-    <div className="flex items-center justify-between px-md h-6 bg-[#8b5cf6]/10 border-t border-white/10 text-meta text-gray-300 select-none">
+    <div className="flex items-center justify-between px-md h-6 bg-[var(--violet-500)]/10 border-t border-[var(--line)] text-meta text-[var(--text-primary)] select-none">
       <div className="flex items-center gap-md">
         {hasGit && (
           <span className="flex items-center gap-2xs">
             <GitBranch className="w-3 h-3" /> {gitStatus?.branch || "…"}
           </span>
         )}
-        <span className="flex items-center gap-2xs text-gray-400">
+        <span className="flex items-center gap-2xs text-[var(--text-secondary)]">
           {hasGit ? <Cloud className="w-3 h-3" /> : <HardDrive className="w-3 h-3" />} {syncLabel}
         </span>
-        <span className="text-gray-500">{saveMode === "local" ? "Local save" : saveMode === "git-auto" ? "Git auto-commit" : "Git manual"}</span>
+        <span className="text-[var(--text-secondary)]">{saveMode === "local" ? "Local save" : saveMode === "git-auto" ? "Git auto-commit" : "Git manual"}</span>
       </div>
       <div className="flex items-center gap-md">
         {cursor && <span>Ln {cursor.line}, Col {cursor.col}</span>}
         <span>UTF-8</span>
         <span>{language}</span>
-        <button onClick={onToggleTheme} className="flex items-center gap-2xs hover:text-white" title="Toggle editor theme">
-          {theme === "vs-dark" ? <Moon className="w-3 h-3" /> : <Sun className="w-3 h-3" />}
-        </button>
         <span className="flex items-center gap-2xs w-16 justify-end">
           {saveState === "saving" && <><Loader2 className="w-3 h-3 animate-spin" /> Saving</>}
-          {saveState === "saved" && <><Check className="w-3 h-3 text-emerald-400" /> Saved</>}
-          {saveState === "error" && <span className="text-rose-400">Save failed</span>}
+          {saveState === "saved" && <><Check className="w-3 h-3 text-[var(--accent-text)]" /> Saved</>}
+          {saveState === "error" && <span className="text-[var(--coral-text)]">Save failed</span>}
         </span>
       </div>
     </div>

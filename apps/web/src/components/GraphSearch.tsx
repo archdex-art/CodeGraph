@@ -42,8 +42,8 @@ export function GraphSearch({
 
   return (
     <div className="relative w-full max-w-rail">
-      <div className="flex items-center gap-xs bg-[#0a0a0a] border border-white/10 rounded-lg px-sm py-xs focus-within:border-purple-500/50">
-        <Search className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+      <div className="flex items-center gap-xs bg-[var(--surface-2)] border border-[var(--line)] rounded-lg px-sm py-xs focus-within:border-[var(--violet-500)]/50">
+        <Search className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
         <input
           value={q}
           onChange={(e) => { setQ(e.target.value); setOpen(true); }}
@@ -53,28 +53,28 @@ export function GraphSearch({
             if (e.key === "Escape") { setQ(""); setOpen(false); }
           }}
           placeholder={placeholder}
-          className="bg-transparent flex-1 text-meta text-gray-200 placeholder-gray-600 focus:outline-none min-w-0"
+          className="bg-transparent flex-1 text-meta text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none min-w-0"
         />
         {q && (
-          <button onClick={() => { setQ(""); setOpen(false); }} className="text-gray-500 hover:text-white shrink-0">
+          <button onClick={() => { setQ(""); setOpen(false); }} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0">
             <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
 
       {open && q && (
-        <div className="absolute z-20 mt-2xs w-full max-h-72 overflow-auto rounded-lg border border-white/10 bg-[#111113] shadow-2xl">
+        <div className="absolute z-20 mt-2xs w-full max-h-72 overflow-auto rounded-lg border border-[var(--line)] bg-[var(--surface-2)] shadow-2xl">
           {matches.length === 0 ? (
-            <p className="px-sm py-sm text-meta text-gray-600">No matches.</p>
+            <p className="px-sm py-sm text-meta text-[var(--text-muted)]">No matches.</p>
           ) : (
             matches.map((n) => (
               <button
                 key={n.id}
                 onClick={() => pick(n.id)}
-                className="block w-full text-left px-sm py-xs hover:bg-white/10"
+                className="block w-full text-left px-sm py-xs hover:bg-[var(--surface-active)]"
               >
-                <div className="text-meta text-gray-200 truncate">{n.label}</div>
-                {n.subtitle && <div className="text-micro text-gray-600 truncate">{n.subtitle}</div>}
+                <div className="text-meta text-[var(--text-primary)] truncate">{n.label}</div>
+                {n.subtitle && <div className="text-micro text-[var(--text-muted)] truncate">{n.subtitle}</div>}
               </button>
             ))
           )}

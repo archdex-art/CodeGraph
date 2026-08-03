@@ -5,6 +5,12 @@ services:
   - type: web
     name: codegraph
     runtime: docker
+    # Explicit repo root. Render's dashboard has a "Root Directory" field that
+    # overrides the blueprint default (empty = repo root). If someone types
+    # "app" there — an easy typo for "apps" — the clone fails with
+    #   Root directory "app" does not exist.
+    # Pinning it here means a blueprint sync always wins.
+    rootDir: .
     # Context MUST be the repo root, not apps/web: the image installs from the
     # root lockfile and traces imports into packages/*, both of which sit
     # outside apps/web. Pinning the context to the app directory builds an

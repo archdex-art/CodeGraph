@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import type { OnMount } from "@monaco-editor/react";
 import {
@@ -19,6 +19,7 @@ import { IssuesPanel } from "./editor/IssuesPanel";
 import { StatusBar, type SaveState } from "./editor/StatusBar";
 import { fsRead, fsWrite, gitStatus as fetchGitStatus, gitCommit, gitPush, getSaveMode, setSaveMode as persistSaveMode, trashList } from "@/lib/api";
 import { languageForPath } from "@/lib/editorLang";
+import { readThemeChoice, resolveTheme, subscribeTheme } from "@/lib/theme";
 import type { GitStatus, RepoDetail, SaveMode } from "@/lib/types";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react").then((m) => m.Editor), { ssr: false });
@@ -36,7 +37,6 @@ interface Tab {
 interface PersistedState {
   openTabs: string[];
   activeTab: string | null;
-  theme: "vs-dark" | "light";
   autoSave: boolean;
   autoPush: boolean;
   commitTemplate: string;
@@ -50,7 +50,7 @@ function storageKey(repoId: string) {
 
 function loadPersisted(repoId: string): PersistedState {
   const fallback: PersistedState = {
-    openTabs: [], activeTab: null, theme: "vs-dark", autoSave: false, autoPush: false, commitTemplate: DEFAULT_TEMPLATE,
+    openTabs: [], activeTab: null, autoSave: false, autoPush: false, commitTemplate: DEFAULT_TEMPLATE,
   };
   if (typeof window === "undefined") return fallback;
   try {
@@ -97,7 +97,22 @@ export function CodeEditor({
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activePath, setActivePath] = useState<string | null>(null);
   const [loadingPath, setLoadingPath] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"vs-dark" | "light">(persisted.theme);
+  /**
+   * Monaco follows the SITE theme — it is not a preference of its own.
+   *
+   * Read straight off the theme store with `useSyncExternalStore`, exactly as the
+   * header toggle does, rather than mirrored into state by an effect: the store
+   * already outlives this component and is shared with the other tabs, and an
+   * effect would paint one frame of the wrong editor on every load. The server
+   * snapshot is "dark" so SSR and the first client paint agree; the pre-paint
+   * script has already settled <html>, and Monaco only mounts client-side anyway.
+   */
+  const resolvedTheme = useSyncExternalStore(
+    subscribeTheme,
+    () => resolveTheme(readThemeChoice()),
+    () => "dark" as const,
+  );
+  const monacoTheme = resolvedTheme === "light" ? "light" : "vs-dark";
   const [autoSave, setAutoSave] = useState(persisted.autoSave);
   const [autoPush, setAutoPush] = useState(persisted.autoPush);
   const [commitTemplate, setCommitTemplate] = useState(persisted.commitTemplate);
@@ -173,10 +188,10 @@ export function CodeEditor({
   useEffect(() => {
     if (!restoredRef.current) return;
     const state: PersistedState = {
-      openTabs: tabs.map((t) => t.path), activeTab: activePath, theme, autoSave, autoPush, commitTemplate,
+      openTabs: tabs.map((t) => t.path), activeTab: activePath, autoSave, autoPush, commitTemplate,
     };
     window.localStorage.setItem(storageKey(repoId), JSON.stringify(state));
-  }, [repoId, tabs, activePath, theme, autoSave, autoPush, commitTemplate]);
+  }, [repoId, tabs, activePath, autoSave, autoPush, commitTemplate]);
 
   const refreshGitStatus = useCallback(() => {
     if (!hasGit) return;
@@ -408,10 +423,10 @@ export function CodeEditor({
   const lang = activePath ? languageForPath(activePath) : { id: "plaintext", label: "Plain Text" };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0a0a0b] overflow-hidden flex flex-col" style={{ height: "78vh" }}>
+    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-1)] overflow-hidden flex flex-col" style={{ height: "78vh" }}>
       <div className="flex flex-1 min-h-0">
         {/* Activity bar */}
-        <div className="w-12 border-r border-white/10 flex flex-col items-center py-sm gap-2xs bg-black/20 shrink-0">
+        <div className="w-12 border-r border-[var(--line)] flex flex-col items-center py-sm gap-2xs bg-[var(--surface-2)] shrink-0">
           <ActivityBtn active={panel === "explorer"} onClick={() => setPanel("explorer")} icon={<FolderTree className="w-4.5 h-4.5" />} title="Explorer" />
           <ActivityBtn active={panel === "search"} onClick={() => setPanel("search")} icon={<SearchIcon className="w-4.5 h-4.5" />} title="Search" />
           <ActivityBtn
@@ -428,7 +443,7 @@ export function CodeEditor({
         </div>
 
         {/* Side panel */}
-        <div className="w-64 border-r border-white/10 overflow-y-auto shrink-0 bg-black/10">
+        <div className="w-64 border-r border-[var(--line)] overflow-y-auto shrink-0 bg-[var(--surface-1)]">
           <div className={panel === "explorer" ? "block h-full" : "hidden"}>
             <FileExplorer
               repoId={repoId}
@@ -469,25 +484,25 @@ export function CodeEditor({
         {/* Main editing area */}
         <div className="flex-1 min-w-0 flex flex-col">
           {/* Tab bar */}
-          <div className="flex items-center border-b border-white/10 bg-black/20 overflow-x-auto shrink-0">
+          <div className="flex items-center border-b border-[var(--line)] bg-[var(--surface-2)] overflow-x-auto shrink-0">
             {tabs.map((t) => (
               <div
                 key={t.path}
                 onClick={() => setActivePath(t.path)}
-                className={`group flex items-center gap-xs px-md py-sm text-meta border-r border-white/5 cursor-pointer whitespace-nowrap ${
-                  activePath === t.path ? "bg-[#0a0a0b] text-white" : "text-gray-400 hover:bg-white/[0.03]"
+                className={`group flex items-center gap-xs px-md py-sm text-meta border-r border-[var(--line-soft)] cursor-pointer whitespace-nowrap ${
+                  activePath === t.path ? "bg-[var(--surface-1)] text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
                 }`}
               >
                 <span>{t.path.split("/").pop()}</span>
                 {t.dirty ? (
-                  <Circle className="w-2 h-2 fill-amber-400 text-amber-400" />
+                  <Circle className="w-2 h-2 fill-[var(--amber-400)] text-[var(--amber-text)]" />
                 ) : (
-                  <button onClick={(e) => { e.stopPropagation(); closeTab(t.path); }} className="opacity-0 group-hover:opacity-100 hover:text-white">
+                  <button onClick={(e) => { e.stopPropagation(); closeTab(t.path); }} className="opacity-0 group-hover:opacity-100 hover:text-[var(--text-primary)]">
                     <X className="w-3 h-3" />
                   </button>
                 )}
                 {t.dirty && (
-                  <button onClick={(e) => { e.stopPropagation(); closeTab(t.path); }} className="hover:text-white">
+                  <button onClick={(e) => { e.stopPropagation(); closeTab(t.path); }} className="hover:text-[var(--text-primary)]">
                     <X className="w-3 h-3" />
                   </button>
                 )}
@@ -495,13 +510,13 @@ export function CodeEditor({
             ))}
             <div className="flex-1" />
             <div className="flex items-center gap-sm px-md shrink-0">
-              <label className="flex items-center gap-2xs text-meta text-gray-500">
+              <label className="flex items-center gap-2xs text-meta text-[var(--text-secondary)]">
                 <input type="checkbox" checked={autoSave} onChange={(e) => setAutoSave(e.target.checked)} /> Auto-save
               </label>
               <button
                 onClick={() => setDiffView(!diffView)}
                 className={`flex items-center gap-2xs text-meta px-sm py-2xs rounded-xs border ${
-                  diffView ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-gray-300"
+                  diffView ? "border-[var(--signal-500)]/50 bg-[var(--signal-500)]/10 text-[var(--accent-text)]" : "border-[var(--line)] text-[var(--text-secondary)] hover:bg-[var(--surface-active)] hover:text-[var(--text-primary)]"
                 }`}
               >
                 <GitCompare className="w-3.5 h-3.5" /> Diff
@@ -509,7 +524,7 @@ export function CodeEditor({
               <button
                 onClick={() => activePath && saveTab(activePath)}
                 disabled={!activeTab?.dirty}
-                className="flex items-center gap-2xs text-meta px-sm py-2xs rounded-xs border border-white/10 text-gray-300 hover:bg-white/5 disabled:opacity-30"
+                className="flex items-center gap-2xs text-meta px-sm py-2xs rounded-xs border border-[var(--line)] text-[var(--text-primary)] hover:bg-[var(--surface-active)] disabled:opacity-30"
               >
                 <Save className="w-3 h-3" /> Save
               </button>
@@ -517,7 +532,7 @@ export function CodeEditor({
             <button
               onClick={() => setAssistantOpen(!assistantOpen)}
               className={`flex items-center gap-2xs text-meta px-sm py-2xs rounded-xs border ${
-                assistantOpen ? "border-purple-500/50 bg-purple-500/10 text-white" : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-gray-300"
+                assistantOpen ? "border-[var(--violet-500)]/50 bg-[var(--violet-500)]/10 text-[var(--text-primary)]" : "border-[var(--line)] text-[var(--text-secondary)] hover:bg-[var(--surface-active)] hover:text-[var(--text-primary)]"
               }`}
             >
               <Bot className="w-3.5 h-3.5" /> AI Assistant
@@ -528,7 +543,7 @@ export function CodeEditor({
           <div className="flex-1 min-h-0 relative flex">
             <div className="flex-1 min-w-0 relative">
               {!activeTab && (
-                <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-meta">
+                <div className="absolute inset-0 flex items-center justify-center text-[var(--text-muted)] text-meta">
                   {loadingPath ? "Opening…" : "Select a file to start editing"}
                 </div>
               )}
@@ -539,7 +554,7 @@ export function CodeEditor({
                     original={activeTab.original}
                     modified={activeTab.content}
                     language={lang.id}
-                    theme={theme}
+                    theme={monacoTheme}
                     options={{
                       renderSideBySide: false,
                       minimap: { enabled: false },
@@ -556,7 +571,7 @@ export function CodeEditor({
                     defaultLanguage={lang.id}
                     language={lang.id}
                     value={activeTab.content}
-                    theme={theme}
+                    theme={monacoTheme}
                     onChange={(v) => updateContent(activeTab.path, v ?? "")}
                     onMount={handleEditorMount}
                     options={{
@@ -576,7 +591,7 @@ export function CodeEditor({
               )}
             </div>
             {/* Assistant Panel (Right) */}
-            <div className={`w-80 border-l border-white/10 flex flex-col bg-[#050505] shrink-0 ${assistantOpen ? "block" : "hidden"}`}>
+            <div className={`w-80 border-l border-[var(--line)] flex flex-col bg-[var(--surface-1)] shrink-0 ${assistantOpen ? "block" : "hidden"}`}>
               <AssistantPanel
                 repoId={repoId}
                 providers={assistantProviders}
@@ -596,17 +611,15 @@ export function CodeEditor({
         saveState={saveState}
         language={lang.label}
         cursor={activeTab ? cursor : null}
-        theme={theme}
-        onToggleTheme={() => setTheme((t) => (t === "vs-dark" ? "light" : "vs-dark"))}
         hasGit={hasGit}
       />
 
       {diffModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-xl" onClick={() => setDiffModal(null)}>
-          <div className="bg-[#111113] border border-white/10 rounded-xl max-w-measure w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-md py-md border-b border-white/10">
-              <span className="text-meta text-white font-mono">{diffModal.path}</span>
-              <button onClick={() => setDiffModal(null)} className="text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
+        <div className="fixed inset-0 z-50 bg-[var(--overlay)] flex items-center justify-center p-xl" onClick={() => setDiffModal(null)}>
+          <div className="bg-[var(--surface-1)] border border-[var(--line)] rounded-xl max-w-measure w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-md py-md border-b border-[var(--line)]">
+              <span className="text-meta text-[var(--text-primary)] font-mono">{diffModal.path}</span>
+              <button onClick={() => setDiffModal(null)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"><X className="w-4 h-4" /></button>
             </div>
             <pre className="text-meta p-md overflow-auto font-mono flex-1">{colorizeDiff(diffModal.diff)}</pre>
           </div>
@@ -618,20 +631,20 @@ export function CodeEditor({
 
 function ActivityBtn({ active, onClick, icon, title, badge }: { active: boolean; onClick: () => void; icon: React.ReactNode; title: string; badge?: number }) {
   return (
-    <button onClick={onClick} title={title} aria-label={title} className={`relative p-sm rounded-lg ${active ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}>
+    <button onClick={onClick} title={title} aria-label={title} className={`relative p-sm rounded-lg ${active ? "bg-[var(--surface-active)] text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}>
       {icon}
-      {!!badge && <span className="absolute -top-0.5 -right-0.5 bg-purple-500 text-white text-micro rounded-full w-3.5 h-3.5 flex items-center justify-center">{badge > 9 ? "9+" : badge}</span>}
+      {!!badge && <span className="absolute -top-0.5 -right-0.5 bg-[var(--violet-500)] text-[var(--surface-0)] text-micro rounded-full w-3.5 h-3.5 flex items-center justify-center">{badge > 9 ? "9+" : badge}</span>}
     </button>
   );
 }
 
 function colorizeDiff(diff: string): React.ReactNode {
   return diff.split("\n").map((line, i) => {
-    let cls = "text-gray-400";
-    if (line.startsWith("+") && !line.startsWith("+++")) cls = "text-emerald-400";
-    else if (line.startsWith("-") && !line.startsWith("---")) cls = "text-rose-400";
-    else if (line.startsWith("@@")) cls = "text-cyan-400";
-    else if (line.startsWith("diff ") || line.startsWith("+++") || line.startsWith("---")) cls = "text-gray-500";
+    let cls = "text-[var(--text-secondary)]";
+    if (line.startsWith("+") && !line.startsWith("+++")) cls = "text-[var(--accent-text)]";
+    else if (line.startsWith("-") && !line.startsWith("---")) cls = "text-[var(--coral-text)]";
+    else if (line.startsWith("@@")) cls = "text-[var(--violet-text)]";
+    else if (line.startsWith("diff ") || line.startsWith("+++") || line.startsWith("---")) cls = "text-[var(--text-secondary)]";
     return <div key={i} className={cls}>{line || " "}</div>;
   });
 }

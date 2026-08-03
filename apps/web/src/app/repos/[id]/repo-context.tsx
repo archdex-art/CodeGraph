@@ -28,11 +28,18 @@ export function useRepo(): RepoDetail {
   return repo;
 }
 
-/** A reading and the word for it — colour is never the only carrier. */
-export function band(s: number): { color: string; label: string } {
-  if (s >= 80) return { color: "var(--signal-500)", label: "Healthy" };
-  if (s >= 60) return { color: "var(--amber-400)", label: "Watch" };
-  return { color: "var(--coral-500)", label: "At risk" };
+/**
+ * A reading and the word for it — colour is never the only carrier.
+ *
+ * `color` is the FILL (the dial arc, a bar) and is identical in both themes;
+ * `textColor` is the same reading rendered as TEXT, driven dark enough to hold
+ * against paper. They are separate fields because chartreuse at 1.21:1 on the
+ * light surface is a perfectly good bar and an invisible numeral.
+ */
+export function band(s: number): { color: string; textColor: string; label: string } {
+  if (s >= 80) return { color: "var(--signal-500)", textColor: "var(--accent-text)", label: "Healthy" };
+  if (s >= 60) return { color: "var(--amber-400)", textColor: "var(--amber-text)", label: "Watch" };
+  return { color: "var(--coral-500)", textColor: "var(--coral-text)", label: "At risk" };
 }
 
 /** Shared empty state for a section with nothing to draw. */

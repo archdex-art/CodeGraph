@@ -9,22 +9,28 @@ import { forceLayout } from "@/lib/layout";
 import { Reveal } from "@/components/motion/primitives";
 
 /**
- * Health bands. SVG presentation attributes cannot resolve `var()`, so the node
- * strokes carry the literal values of --signal-500 / --amber-400 / --coral-500.
+ * Health bands for the graph nodes.
+ *
+ * Tokens, not literals. `fill`/`stroke` presentation attributes are parsed as CSS
+ * values, so `var()` resolves in them exactly as it does in `style` — which is
+ * what `NodeGraph` already relies on for its own surfaces. Literals mattered here
+ * because amber and coral are the two hues that actually move between themes: a
+ * frozen #ff6b57 is a pastel smear on paper.
  */
-const BAND = { good: "#c6f24e", mid: "#ffc95c", poor: "#ff6b57" } as const;
+const BAND = { good: "var(--signal-500)", mid: "var(--amber-400)", poor: "var(--coral-500)" } as const;
 
-function bandHex(score: number | null): string {
+function bandColor(score: number | null): string {
   if (score !== null && score >= 80) return BAND.good;
   if (score !== null && score >= 60) return BAND.mid;
   return BAND.poor;
 }
 
+/** The same reading as TEXT — the fill hues above cannot carry a numeral on paper. */
 function scoreColor(s: number | null): string {
   if (s === null) return "text-[var(--text-muted)]";
-  if (s >= 80) return "text-[var(--signal-500)]";
-  if (s >= 60) return "text-[var(--amber-400)]";
-  return "text-[var(--coral-500)]";
+  if (s >= 80) return "text-[var(--accent-text)]";
+  if (s >= 60) return "text-[var(--amber-text)]";
+  return "text-[var(--coral-text)]";
 }
 
 /** One grid track definition shared by the header row and every data row. */
@@ -32,9 +38,9 @@ const ROW =
   "grid grid-cols-[minmax(0,1fr)_5rem_4rem] items-center gap-md sm:grid-cols-[minmax(0,1fr)_4.5rem_7rem_5rem_4rem]";
 
 const BTN_PRIMARY =
-  "inline-flex min-h-11 cursor-pointer items-center gap-sm rounded-lg bg-[var(--signal-500)] px-md text-meta font-medium text-[var(--ink-900)] transition-colors duration-200 hover:bg-[var(--signal-400)]";
+  "inline-flex min-h-11 cursor-pointer items-center gap-sm rounded-lg bg-[var(--accent-fill)] px-md text-meta font-medium text-[var(--accent-on-fill)] transition-colors duration-200 hover:bg-[var(--signal-400)]";
 const BTN_GHOST =
-  "inline-flex min-h-11 cursor-pointer items-center gap-sm rounded-lg border border-[var(--line)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]";
+  "inline-flex min-h-11 cursor-pointer items-center gap-sm rounded-lg border border-[var(--line)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]";
 
 export default function FleetPage() {
   const [graph, setGraph] = useState<FleetGraph | null>(null);
@@ -62,7 +68,7 @@ export default function FleetPage() {
             cross-repository graph.
           </p>
           <div
-            className="grid-field mt-lg h-64 rounded-xl border border-[var(--line-soft)] bg-[var(--ink-800)]"
+            className="grid-field mt-lg h-64 rounded-xl border border-[var(--line-soft)] bg-[var(--surface-2)]"
             aria-hidden="true"
           />
           <Link href="/dashboard" className={`${BTN_GHOST} mt-lg`}>
@@ -113,7 +119,7 @@ export default function FleetPage() {
       label: n.name,
       subtitle: n.sourceType === "git" ? "git repo" : "local folder",
       meta: `${n.loc.toLocaleString()} LOC · Score: ${n.score || 0}`,
-      color: bandHex(n.score),
+      color: bandColor(n.score),
     });
   }
 
@@ -184,11 +190,11 @@ export default function FleetPage() {
             <Link
               key={n.id}
               href={`/repos/${n.id}`}
-              className={`${ROW} min-h-[3.25rem] cursor-pointer px-md py-sm transition-colors duration-200 hover:bg-white/[0.035]`}
+              className={`${ROW} min-h-[3.25rem] cursor-pointer px-md py-sm transition-colors duration-200 hover:bg-[var(--surface-hover)]`}
             >
               <span className="min-w-0">
                 <span className="block truncate text-meta text-[var(--text-primary)]">{n.name}</span>
-                <span className="block truncate font-mono text-meta text-[var(--text-faint)]">{n.url}</span>
+                <span className="block truncate font-mono text-meta text-[var(--text-muted)]">{n.url}</span>
               </span>
               <span className="eyebrow hidden sm:block">{n.sourceType === "git" ? "git" : "local"}</span>
               <span className="tnum hidden text-right text-meta text-[var(--text-secondary)] sm:block">
