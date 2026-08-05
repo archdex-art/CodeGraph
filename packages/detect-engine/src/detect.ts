@@ -1,6 +1,7 @@
 import ts from "typescript";
 import {
   callAt,
+  contentCache,
   classifyTaint,
   contextAt,
   spansFor,
@@ -318,6 +319,137 @@ export function mkIssue(dim: Dimension, sev: number, title: string, file: string
   return { id: `iss_${_issueSeq++}`, dimension: dim, severity: sev, confidence: conf, title, file, line, blastRadius: br, churn: churn ?? 1 };
 }
 
+/**
+ * Everything a file's own bytes determine about its findings.
+ *
+ * Split out of `analyzeFiles` so it can be memoised. The two things the loop below adds -
+ * `blastRadius` from the import graph's fan-in and `churn` from git - are properties of the
+ * REPOSITORY, not of the file, and they change when OTHER files change. Baking them into the
+ * cached value would serve a stale blast radius the first time a new importer appears, which
+ * is the exact class of silently-wrong answer a cache must not produce. So the cache holds the
+ * pure half and the caller multiplies in the impure half on every run.
+ *
+ * `id` is also assigned by the caller: ids are a per-run sequence (`resetIssueIds`), so a
+ * cached id would repeat across runs and break the comparison `agents/executor.ts` makes
+ * between two indexes of the same tree.
+ */
+interface IssueSeed {
+  dimension: Dimension;
+  severity: number;
+  title: string;
+  line: number;
+  confidence?: number;
+  occurrences?: number;
+}
+
+/**
+ * Bump on ANY change to `RULES`, the context gate, the taint policy, the tier penalty, or the
+ * god-file thresholds. Entries are keyed by it, so forgetting serves findings computed by the
+ * previous version of this file - a rule you just fixed would keep reporting the old answer,
+ * and nothing would look broken.
+ */
+const SEEDS_VERSION = "detect-seeds-v1";
+
+function computeSeeds(text: string, ext: string, loc: number): IssueSeed[] {
+  const seeds: IssueSeed[] = [];
+  /**
+   * HLD §8.3: a `lexical`-tier file was matched by regex alone - no parse, so no idea
+   * whether a hit sits in a comment, a string, or running code. The design always said those
+   * findings are "marked low-confidence"; nothing did it until now.
+   *
+   * This is the same boundary as `syntacticSpans`, and deliberately so: the files that get
+   * no context gating are exactly the files whose findings cannot be trusted as far.
+   */
+  const tier = tierForExt(ext);
+  const tierPenalty = tier === "lexical" ? LEXICAL_CONFIDENCE_FACTOR : 1;
+  const lines = text.split("\n");
+  /**
+   * Comment/string ranges for this file, computed ONCE and shared by all 12 rules. Empty for
+   * languages the TS scanner does not cover (Python), which makes every position `code` and
+   * leaves those files scored exactly as before - see `syntacticSpans`.
+   */
+  const spans = spansFor(text, ext);
+  // Absolute offset of each line start, so a per-line regex index becomes a file offset.
+  const lineStart: number[] = new Array(lines.length);
+  for (let i = 0, at = 0; i < lines.length; i++) {
+    lineStart[i] = at;
+    at += lines[i].length + 1; // +1 for the "\n" removed by split
+  }
+  for (const rule of RULES) {
+    if (rule.exts && !rule.exts[ext]) continue;
+    const validContexts = rule.context ?? DEFAULT_CONTEXT;
+    let emitted = 0;
+    let occurrences = 0;
+    let firstSeedIndex = -1;
+    for (const [lineIndex, line] of lines.entries()) {
+      const m = rule.re.exec(line);
+      if (!m || (rule.validate && !rule.validate(line, m))) continue;
+      // Structural gate. `spans` empty => "code" => unchanged behaviour.
+      if (spans.length && !validContexts.includes(contextAt(spans, lineStart[lineIndex] + m.index)))
+        continue;
+      occurrences++;
+      // Keep emitting only up to the cap: the issue list is rendered and
+      // stored, so it stays bounded. Counting continues past it so the score
+      // can tell 500 matches from 5 (review B3) — scanning the remaining lines
+      // is the same regex pass either way, so this costs nothing extra.
+      if (emitted < HITS_PER_RULE_PER_FILE) {
+        if (firstSeedIndex === -1) firstSeedIndex = seeds.length;
+        seeds.push({
+          dimension: rule.dimension,
+          severity: rule.severity,
+          title: rule.title,
+          line: lineIndex + 1,
+          confidence: scaleConfidence(rule.confidence, tierPenalty * (rule.adjust?.(m) ?? 1)),
+        });
+        emitted++;
+      }
+    }
+    // Volume is recorded once per (rule, file) group, on the first emitted
+    // issue. Setting it on all of them would multiply the same excess by the
+    // number of emitted markers.
+    if (occurrences > HITS_PER_RULE_PER_FILE && firstSeedIndex >= 0) {
+      const first = seeds[firstSeedIndex];
+      if (first) first.occurrences = occurrences;
+    }
+  }
+  // AST-based security detector layer (eslint-plugin-security), catches
+  // vulnerability classes the line-regex RULES above are structurally blind
+  // to (ReDoS regex literals, dynamic fs/require paths, weak randomness, ...).
+  const secFindings = lintForSecurity(text, ext);
+  // Parse once, and only if a sink finding actually needs provenance checking.
+  let taintSf: ts.SourceFile | null = null;
+  for (const f2 of secFindings) {
+    let confidence = f2.confidence;
+    if (f2.taintable && TS_FAMILY_EXT[ext]) {
+      // The filename is a label on the AST, never an input to the verdict, so a synthetic
+      // one keeps this function pure in (text, ext) - which is what makes it cacheable.
+      taintSf ??= ts.createSourceFile(`file${ext}`, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      const call = callAt(taintSf, f2.line, f2.column);
+      const arg = call?.arguments[0];
+      if (arg) confidence = adjustForTaint(confidence, classifyTaint(arg, TAINT_QUERY));
+    }
+    seeds.push({
+      dimension: "security",
+      severity: f2.severity,
+      title: f2.title,
+      line: f2.line,
+      confidence: scaleConfidence(confidence, tierPenalty),
+    });
+  }
+
+  // God-file: very large source file → maintainability penalty scaled by fan-in.
+  if (loc > 600) {
+    seeds.push({
+      dimension: "maintainability",
+      severity: loc > 1200 ? 4 : 2,
+      title: `Large file (${loc} LOC)`,
+      line: 1,
+      confidence: 0.9,
+    });
+  }
+  return seeds;
+}
+
 export async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, number>, churnByFile: Map<string, number>, ctx?: PipelineContext): Promise<Issue[]> {
   const issues: Issue[] = [];
   for (let idx = 0; idx < files.length; idx++) {
@@ -329,87 +461,17 @@ export async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, numb
     if (!f.text) continue;
     const br = 1 + (fanIn.get(f.rel) || 0); // blast radius from graph fan-in
     const ch = churnByFile.get(f.rel) || 1;
-    /**
-     * HLD §8.3: a `lexical`-tier file was matched by regex alone - no parse, so no idea
-     * whether a hit sits in a comment, a string, or running code. The design always said those
-     * findings are "marked low-confidence"; nothing did it until now.
-     *
-     * This is the same boundary as `syntacticSpans`, and deliberately so: the files that get
-     * no context gating are exactly the files whose findings cannot be trusted as far.
-     */
-    const tier = tierForExt(f.ext);
-    const tierPenalty = tier === "lexical" ? LEXICAL_CONFIDENCE_FACTOR : 1;
-    const lines = f.text.split("\n");
-    /**
-     * Comment/string ranges for this file, computed ONCE and shared by all 12 rules. Empty for
-     * languages the TS scanner does not cover (Python), which makes every position `code` and
-     * leaves those files scored exactly as before - see `syntacticSpans`.
-     */
-    const spans = spansFor(f.text, f.ext);
-    // Absolute offset of each line start, so a per-line regex index becomes a file offset.
-    const lineStart: number[] = new Array(lines.length);
-    for (let i = 0, at = 0; i < lines.length; i++) {
-      lineStart[i] = at;
-      at += lines[i].length + 1; // +1 for the "\n" removed by split
-    }
-    for (const rule of RULES) {
-      if (rule.exts && !rule.exts[f.ext]) continue;
-      const validContexts = rule.context ?? DEFAULT_CONTEXT;
-      let emitted = 0;
-      let occurrences = 0;
-      let firstIssueIndex = -1;
-      for (const [lineIndex, line] of lines.entries()) {
-        const m = rule.re.exec(line);
-        if (!m || (rule.validate && !rule.validate(line, m))) continue;
-        // Structural gate. `spans` empty => "code" => unchanged behaviour.
-        if (spans.length && !validContexts.includes(contextAt(spans, lineStart[lineIndex] + m.index)))
-          continue;
-        occurrences++;
-        // Keep emitting only up to the cap: the issue list is rendered and
-        // stored, so it stays bounded. Counting continues past it so the score
-        // can tell 500 matches from 5 (review B3) — scanning the remaining lines
-        // is the same regex pass either way, so this costs nothing extra.
-        if (emitted < HITS_PER_RULE_PER_FILE) {
-          if (firstIssueIndex === -1) firstIssueIndex = issues.length;
-          issues.push(
-            mkIssue(
-              rule.dimension, rule.severity, rule.title, f.rel, lineIndex + 1, br,
-              scaleConfidence(rule.confidence, tierPenalty * (rule.adjust?.(m) ?? 1)), ch,
-            ),
-          );
-          emitted++;
-        }
-      }
-      // Volume is recorded once per (rule, file) group, on the first emitted
-      // issue. Setting it on all of them would multiply the same excess by the
-      // number of emitted markers.
-      if (occurrences > HITS_PER_RULE_PER_FILE && firstIssueIndex >= 0) {
-        const first = issues[firstIssueIndex];
-        if (first) first.occurrences = occurrences;
-      }
-    }
-    // AST-based security detector layer (eslint-plugin-security), catches
-    // vulnerability classes the line-regex RULES above are structurally blind
-    // to (ReDoS regex literals, dynamic fs/require paths, weak randomness, ...).
-    const secFindings = lintForSecurity(f.text, f.ext);
-    // Parse once, and only if a sink finding actually needs provenance checking.
-    let taintSf: ts.SourceFile | null = null;
-    for (const f2 of secFindings) {
-      let confidence = f2.confidence;
-      if (f2.taintable && TS_FAMILY_EXT[f.ext]) {
-        taintSf ??= ts.createSourceFile(f.rel, f.text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-        const call = callAt(taintSf, f2.line, f2.column);
-        const arg = call?.arguments[0];
-        if (arg) confidence = adjustForTaint(confidence, classifyTaint(arg, TAINT_QUERY));
-      }
-      issues.push(mkIssue("security", f2.severity, f2.title, f.rel, f2.line, br, scaleConfidence(confidence, tierPenalty), ch));
-    }
-
-    // God-file: very large source file → maintainability penalty scaled by fan-in.
-    if (f.loc > 600) {
-      issues.push(
-        mkIssue("maintainability", f.loc > 1200 ? 4 : 2, `Large file (${f.loc} LOC)`, f.rel, 1, br, 0.9, ch)
-      );
+    // Re-running the twelve regexes, the eslint pass and the taint parse over a file whose
+    // bytes did not change is the bulk of a re-index. `loc` is part of the key because the
+    // god-file rule reads it, and it is derived from the same text on every path that builds
+    // a `ScannedFile` - so keying on it costs nothing and cannot disagree with the text.
+    const seeds = contentCache.get(f.text, `${f.ext}\u0000${f.loc}`, SEEDS_VERSION, () =>
+      computeSeeds(f.text, f.ext, f.loc),
+    );
+    for (const s of seeds) {
+      const issue = mkIssue(s.dimension, s.severity, s.title, f.rel, s.line, br, s.confidence, ch);
+      if (s.occurrences !== undefined) issue.occurrences = s.occurrences;
+      issues.push(issue);
     }
   }
   return issues;
