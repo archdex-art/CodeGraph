@@ -40,7 +40,7 @@ describe("architecture claims match the code", () => {
 
   it("claims the shipped image enables the worker, and the Dockerfile does", () => {
     expect(README).toMatch(/CG_USE_WORKER=true/);
-    expect(read("apps/web/Dockerfile")).toMatch(/ENV CG_USE_WORKER=true/);
+    expect(read("Dockerfile")).toMatch(/ENV CG_USE_WORKER=true/);
   });
 });
 

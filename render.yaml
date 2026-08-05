@@ -6,7 +6,7 @@
 # blueprint" without naming the field, and a typo'd key is simply ignored.
 #
 # THE IMAGE IS NOT THE PROBLEM, AND WAS VERIFIED BEFORE THIS FILE WAS REWRITTEN.
-# `apps/web/Dockerfile` was built and run locally against Render's exact constraints:
+# The image (root `Dockerfile`) was built and run locally against Render's exact constraints:
 #   · builds clean for BOTH linux/arm64 and linux/amd64 (Render runs amd64; the lockfile
 #     carries every linux-x64 optional binary — lightningcss, @next/swc, esbuild, oxide —
 #     which is the failure recorded in docs/REVIEW_2026-07-29.md and it is genuinely fixed);
@@ -24,25 +24,39 @@ services:
     runtime: docker
 
     # ── Build ────────────────────────────────────────────────────────────────────────────
-    # The context MUST be the repo root. The image installs from the ROOT lockfile and Next's
-    # file tracer follows imports into packages/*, both of which sit outside apps/web; a
-    # context pinned to the app directory builds an image that cannot resolve the workspace
-    # (docs/design/SPIKES.md §1).
-    dockerfilePath: ./apps/web/Dockerfile
+    # Both values are the repo root, and that is the point. The context MUST be the root —
+    # `npm ci` installs from the ROOT lockfile and Next's file tracer follows imports into
+    # packages/*, both outside apps/web, so a context pinned to the app directory builds an
+    # image that cannot resolve the workspace (docs/design/SPIKES.md §1). The Dockerfile
+    # therefore lives at the root too, next to the lockfile it installs from.
+    #
+    # It used to live at apps/web/Dockerfile, and the split is what broke the deploy: these
+    # two settings also exist as dashboard fields, each relative to something the UI does not
+    # state, and the service was configured with the pair (`./Dockerfile`, `.`) while the file
+    # was elsewhere. BuildKit answered
+    #   failed to solve: failed to read dockerfile: open Dockerfile: no such file or directory
+    # reproduced locally as `docker build -f Dockerfile .`, byte-identical to the deploy log.
+    # With one directory for both, the settings cannot disagree — and the platform's own
+    # default for `Dockerfile Path` is now the correct value.
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     #
-    # `rootDir` is deliberately ABSENT. Omitted means "the repo root", which is exactly what
-    # the two paths above are relative to, so setting it to `.` changed nothing — and it did
-    # not do the job it was added for.
+    # `rootDir` is deliberately ABSENT: omitted means the repo root, which is what both paths
+    # above are relative to. Setting it to `.` (a previous attempt) changed nothing.
     #
-    # READ THIS IF THE DEPLOY IS FAILING WITH `Root directory "app" does not exist`:
-    # that string comes from the service's **Root Directory** field in the Render dashboard
-    # (Settings → Build & Deploy), and for a service that already exists a Blueprint sync does
-    # NOT clear a value someone typed there. No edit to this file can. Fix it one of two ways:
-    #   1. Dashboard → the service → Settings → Build & Deploy → Root Directory → clear it
-    #      (leave it EMPTY, not "."), save, then Manual Deploy → Clear build cache & deploy.
-    #   2. Or delete the service and let this Blueprint recreate it. The disk below is
-    #      recreated empty, so back up /app/data first if the indexed repos matter.
+    # AND THIS FILE MAY NOT BE READ AT ALL. Evidence from the failing deploy: it reported
+    # `Root directory "app" does not exist` while this file declared `rootDir: .`, and the log
+    # also said `It looks like we don't have access to your repo`. A Blueprint sync cannot be
+    # happening under those conditions, so the dashboard is the source of truth for this
+    # service and these values must match it by hand:
+    #   Root Directory                  → EMPTY (not ".")
+    #   Dockerfile Path                 → ./Dockerfile
+    #   Docker Build Context Directory  → .
+    #   Docker Command                  → EMPTY (the image's CMD starts the worker, then execs
+    #                                     the web server; anything here silently disables the
+    #                                     worker and jobs queue forever)
+    # To make this file authoritative again, reconnect the GitHub App and create the Blueprint
+    # from it, or recreate the service from the Blueprint — a fresh service has no stale field.
 
     # ── Runtime shape ────────────────────────────────────────────────────────────────────
     plan: starter          # Starter is the minimum that supports a persistent disk.

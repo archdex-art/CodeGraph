@@ -1,9 +1,23 @@
 # syntax=docker/dockerfile:1
 #
-# BUILD CONTEXT IS THE MONOREPO ROOT, not this directory.
-#   docker build -f apps/web/Dockerfile .
-# render.yaml sets `dockerContext: .` to match. Building with `apps/web` as the
-# context cannot work: the root lockfile and packages/* would be outside it.
+# THE IMAGE FOR apps/web, BUILT FROM THE MONOREPO ROOT.
+#   docker build -t codegraph .
+#
+# It lives HERE, beside the lockfile, rather than in apps/web, because the repo root is the
+# only context it can be built from: `npm ci` installs from the root lockfile and Next's file
+# tracer follows imports into packages/*, both of which are outside apps/web. A build
+# definition whose context must be the root belongs at the root.
+#
+# MOVED FROM apps/web/Dockerfile, and not for tidiness. Every platform that builds this image
+# has two separate path settings — a dockerfile path and a context — and each is relative to
+# something the UI does not state. Render deployed with the pair (`./Dockerfile`, `.`) against
+# a repo whose dockerfile was at `apps/web/Dockerfile`, and BuildKit failed with
+#
+#   failed to solve: failed to read dockerfile: open Dockerfile: no such file or directory
+#
+# reproduced locally as `docker build -f Dockerfile .`, byte-identical to the deploy log. With
+# the file here, the dockerfile path and the context are the SAME directory, so the two
+# settings can no longer disagree and the platform default is already correct.
 
 # ---------- Stage 1: builder ----------
 FROM node:24-slim AS builder
