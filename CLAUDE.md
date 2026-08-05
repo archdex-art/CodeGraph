@@ -53,7 +53,8 @@ npm-workspaces monorepo (LLD §1). `app/` became `apps/web/` in P1.
 - `apps/web/tests/` — vitest, colocated by concern
 - `packages/*` — extracted, independently testable modules. `src/index.ts` is a package's
   only public surface; deep imports fail the layering gate.
-- `desktop/` — Electron shell. **Not in CI.** Treat as experimental until it is.
+- `apps/cli/`, `apps/worker/` — the CLI and the analysis worker. `apps/desktop/` (an Electron
+  shell) was removed: it doubled the CI surface for a surface the deployment does not ship.
 - `docs/postmortems/` — real incidents. Read before touching Docker, memory, or the data dir.
 
 Layering is enforced, not aspirational: `.dependency-cruiser.cjs` encodes HLD §6.1 and runs in
