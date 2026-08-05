@@ -93,7 +93,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Context is the repo root; the Dockerfile lives in the app it builds.
+      # EVERY path a platform might resolve the build definition through, checked before the
+      # slow build. Four consecutive production deploys failed here and not one was a code
+      # defect — they were `Root directory "app" does not exist`, then two variants of
+      # `failed to read dockerfile: open Dockerfile`. All were reproducible in seconds, and
+      # none was reproducible by the `docker build .` below, which is the only invocation
+      # anyone runs by hand. `--check` resolves, parses and lints the Dockerfile without
+      # executing an instruction, so the half that kept breaking is now the cheap half.
+      - name: Verify every dockerfile path resolves
+        run: ./scripts/verify-docker.sh --paths
+
+      # Context is the repo root, which is the only context this image can build from: `npm
+      # ci` installs from the root lockfile and Next's tracer follows imports into packages/*.
+      # No `-f`: the build definition is at the top of its own context, which is the invariant
+      # the original deploy had and the monorepo move broke.
       - name: Build production image
         run: docker build -t codegraph-ci:${{ github.sha }} .
 
