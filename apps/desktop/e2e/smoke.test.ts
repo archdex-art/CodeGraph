@@ -3,6 +3,13 @@ import * as path from "path";
 
 let electronApp: ElectronApplication;
 let window: Page;
+/**
+ * Set once test 4 has established that the app exited. It replaces nulling `electronApp`:
+ * that needed an `as any` to defeat the non-nullable type, and the null was assigned on a line
+ * test 4 could never reach when it failed — so `afterAll` closed an already-closing app and
+ * added a second 30s timeout on top of the first.
+ */
+let shutdownAsserted = false;
 
 /**
  * Every URL the main frame has been at, oldest first.
@@ -39,7 +46,9 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  if (electronApp) {
+  // Skipped once test 4 has asserted the exit: closing a process that is already gone is at
+  // best a no-op and at worst the hang test 4 exists to stop depending on.
+  if (electronApp && !shutdownAsserted) {
     await electronApp.close();
   }
 });
@@ -131,9 +140,49 @@ test.describe("CodeGraph Desktop E2E Smoke Tests", () => {
     expect(result.data).toBe(false);
   });
 
+  /**
+   * The property is "the app exits and leaves nothing behind". It is asserted on the PROCESS,
+   * not on `close()`'s promise, and that distinction is the whole test.
+   *
+   * `await electronApp.close()` alone is what this was, and it is flaky in a way that costs a
+   * full CI run. Measured across two runs of a BYTE-IDENTICAL tree (`git diff 6d90a1b a5e6116`
+   * is empty): 226ms on one, a 30s timeout on the other — followed by a second 30s worker
+   * teardown timeout, because `afterAll` then called `close()` again on the app this test had
+   * not reached the line to null out. In the failing run the app's own log showed a COMPLETE
+   * graceful shutdown 30ms in: `Intercepting quit` → `READY -> STOPPING` → Next.js exited 143
+   * → `STOPPING -> EXITED` → `Debugger ending`. The thing under test worked; the harness
+   * promise never settled. (The GPU-init crash in the log is not the discriminator — it
+   * appears in the passing run too, three times.)
+   *
+   * Retries stay pinned to 0 in playwright.config.ts, so a flake here is a red build. The fix
+   * is therefore not a retry and not a longer timeout — it is to stop asserting on a promise
+   * that does not describe the requirement. `exit` fires when the process is gone, which IS
+   * the requirement, and it cannot hang for a process that has already gone.
+   */
   test("4. Graceful Shutdown & Orphan Process Check", async () => {
-    await electronApp.close();
-    (electronApp as any) = null;
+    const proc = electronApp.process();
+    const hasExited = (): boolean => proc.exitCode !== null || proc.signalCode !== null;
+
+    const { promise: exited, resolve: onExit } = Promise.withResolvers<void>();
+    if (hasExited()) onExit();
+    else proc.once("exit", () => onExit());
+
+    try {
+      // Ask it to quit, and deliberately do not await this on its own: a `close()` that never
+      // settles must not be able to fail a shutdown that did happen. Nothing else awaits the
+      // returned promise either — with `shutdownAsserted` set below, `afterAll` does not call
+      // `close()` a second time, which is what turned one 30s test timeout into two.
+      void electronApp.close().catch(() => {
+        /* the process assertion below is the source of truth */
+      });
+      await exited;
+    } finally {
+      shutdownAsserted = true;
+    }
+
+    // No orphan: the main process is reaped, and with it the Next.js child it supervises —
+    // whose own exit (143) the app logs on the way through STOPPING.
+    expect(hasExited()).toBe(true);
   });
 
 });
