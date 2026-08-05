@@ -168,6 +168,53 @@ describe("the test-suite claim counts what exists", () => {
   // workspace that no longer exists is not a weaker test, it is a test of nothing.
 });
 
+describe("the deploy's two dockerfile paths both resolve", () => {
+  /**
+   * Render's build reads the file named by the service's `Dockerfile Path`, then asks BuildKit
+   * to build a dockerfile called `Dockerfile` FROM THE CONTEXT ROOT. That is two lookups, and
+   * a deploy needs both to land. Evidence for the shape, from two real failures:
+   *
+   *   · with the dockerfile at `apps/web/Dockerfile`, the log read
+   *     `transferring dockerfile: 7.49kB` — exactly that file's size — and then failed with
+   *     `open Dockerfile : no such file or directory`. So the READ used the configured path
+   *     while the BUILD used the bare name. Had it passed `-f apps/web/Dockerfile`, the error
+   *     would have named that path.
+   *   · after the file moved to the repo root, the same deploy read
+   *     `transferring dockerfile: 2B` — reproduced locally as a context with no dockerfile at
+   *     all — because the configured path no longer existed.
+   *
+   * So both paths have to hold the same real build definition, and this is the cheapest
+   * possible guard on that. Delete this test and `apps/web/Dockerfile` together, once the
+   * service's Dockerfile Path is `./Dockerfile` and a deploy has proven it.
+   *
+   * A SYMLINK was tried first and rejected on evidence: BuildKit refuses to build through one
+   * (`docker build -f apps/web/Dockerfile .` → `failed to read dockerfile: too many links`).
+   * It satisfies the read but breaks the one invocation the read-then-build theory says Render
+   * does not use — and after this many failed deploys, "works under my theory" is not the bar.
+   * A duplicate works under either, so the duplicate ships and this test is what makes it safe.
+   */
+  const { readFileSync } = require("node:fs") as typeof import("node:fs");
+
+  it("has the real build definition at the context root, where BuildKit looks for it", () => {
+    // The invariant the ORIGINAL working config had (`./app/Dockerfile` + context `./app`) and
+    // that the P1 monorepo move broke by leaving the dockerfile at `apps/web/Dockerfile` while
+    // the context became the repo root.
+    const rootDockerfile = readFileSync(path.join(root, "Dockerfile"), "utf8");
+    expect(rootDockerfile).toMatch(/^# syntax=docker\/dockerfile:1/);
+    expect(rootDockerfile).toMatch(/ENV CG_USE_WORKER=true/);
+  });
+
+  it("keeps apps/web/Dockerfile byte-identical to it", () => {
+    // THE failure mode of a duplicate is drift: two build definitions, one of them edited, and
+    // a deploy built from whichever the platform happened to read. Byte equality is the whole
+    // safety argument for shipping a copy at all, so it is enforced rather than intended.
+    // Edit the root file; `cp Dockerfile apps/web/Dockerfile` until the link can be deleted.
+    expect(readFileSync(path.join(root, "apps/web/Dockerfile"), "utf8")).toBe(
+      readFileSync(path.join(root, "Dockerfile"), "utf8"),
+    );
+  });
+});
+
 describe("ARCHITECTURE.md describes the architecture that exists", () => {
   /**
    * Review C6. The document CONTRADICTED ITSELF before this: the Stack table said "no

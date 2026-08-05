@@ -41,6 +41,11 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     #
+    # `apps/web/Dockerfile` is a byte-identical COPY of that file, kept in step by a test, so
+    # a service whose dashboard still carries the old Dockerfile Path reads real content
+    # instead of the two bytes an absent file produces. Remove the copy once the dashboard
+    # reads `./Dockerfile`.
+    #
     # `rootDir` is deliberately ABSENT: omitted means the repo root, which is what both paths
     # above are relative to. Setting it to `.` (a previous attempt) changed nothing.
     #
