@@ -39,6 +39,29 @@ function appliedVersions(db: SqliteDatabase): Set<number> {
  */
 export function runMigrations(db: SqliteDatabase): void {
   const applied = appliedVersions(db);
+
+  // REFUSE A DOWNGRADE. `pending` below is "every migration I know about that is not
+  // recorded", which has no way to notice the opposite case: a version recorded by an image
+  // NEWER than this one. A Render rollback does exactly that — the disk is persistent and
+  // keeps the migrated schema while the container reverts to an older build — and the old
+  // image would boot happily against a schema it was never written for.
+  //
+  // Harmless today only by accident: 001-005 are purely additive, so an old image ignores
+  // the columns it does not know. It stops being harmless at the first migration that drops
+  // or rewrites anything, and 003's own header already announces one is planned. By then the
+  // failure would be silent data loss on a rollback, which is the single worst outcome this
+  // file can produce. Failing the boot is correct: the operator wanted the old image, and the
+  // only safe way to get it is to restore a matching database.
+  const known = Math.max(...MIGRATIONS.map((m) => m.version));
+  const ahead = [...applied].filter((v) => v > known).sort((a, b) => a - b);
+  if (ahead.length > 0) {
+    throw new Error(
+      `Database schema is newer than this build: migration(s) ${ahead.join(", ")} are applied ` +
+        `but the highest this image knows is ${known}. Refusing to start — deploy a build that ` +
+        `includes them, or restore a database matching this one.`,
+    );
+  }
+
   const pending = [...MIGRATIONS].sort((a, b) => a.version - b.version).filter((m) => !applied.has(m.version));
   if (pending.length === 0) return;
 

@@ -26,7 +26,8 @@ import {
   type PillarScore,
 } from "@codegraph/analysis-model";
 import { buildSymbolGraph, callAt, classifyTaint, contextAt, extractorFor, syntacticSpans, tierForExt } from "@codegraph/core-graph";
-import type { AnalysisTier, TaintQuery, TaintVerdict } from "@codegraph/core-graph";
+import type { AnalysisTier, ExtractionRecord, TaintQuery, TaintVerdict } from "@codegraph/core-graph";
+import { hashText, planReuse, saveManifest } from "./incremental";
 import type { ScanCoverage, ScannedFile } from "@codegraph/analysis-model";
 import {
   CODE_EXTS,
@@ -223,6 +224,10 @@ async function scan(
       rel: path.relative(root, full),
       ext,
       loc,
+      // Hashed BEFORE the `CODE_EXTS` gate below discards the text for non-code files, so
+      // every scanned file has an identity the incremental planner can compare — including
+      // the manifests and lockfiles whose changes force a full rebuild.
+      hash: hashText(text),
       text: CODE_EXTS[ext] ? text : "",
       imports: extractImports(text, ext),
     });
@@ -444,7 +449,16 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
   const tree = buildTree(files, issuesByFile);
   const modules = buildModuleGraph(files, importEdges, issuesByFile);
 
-  // Symbol-level knowledge graph (code intelligence layer).
+  /**
+   * Symbol-level knowledge graph (code intelligence layer), and the one stage that reuses
+   * work from the previous run.
+   *
+   * The plan is computed here rather than at the top of the pipeline because it needs the
+   * scanned file set (hashes, texts, coverage) — and because everything above it is cheap
+   * enough that reusing it would be optimising the wrong stage.
+   */
+  const plan = planReuse({ root: path.resolve(root), files, capHit: coverage.capHit, cache: ctx?.cache });
+  const extraction = new Map<string, ExtractionRecord>();
   const symbolGraph = await timeStage(stageTimings, "symbol-graph", () =>
     buildSymbolGraph(
     files
@@ -460,7 +474,26 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
     // `node_modules` and `@types` in scope. Without it resolution falls back to a synthetic
     // base that only knows the files handed in.
     root,
+    // A full plan passes an empty reuse map, which `buildSymbolGraph` reads as "extract
+    // everything" — so the incremental path collapses onto the original one rather than
+    // branching around it. There is one code path here, not two.
+    { reuse: plan.reuse, invalidated: plan.full ? undefined : plan.invalidated, out: extraction },
     ),
+  );
+
+  /**
+   * Written AFTER the graph, so a run that threw (cancelled, out of memory, a parser crash)
+   * leaves the previous manifest in place rather than a half-built one describing files it
+   * never finished analysing.
+   */
+  const cacheWritten = await timeStage(stageTimings, "cache-write", () =>
+    saveManifest({
+      root: path.resolve(root),
+      files,
+      extraction,
+      capHit: coverage.capHit,
+      cache: ctx?.cache,
+    }),
   );
 
   return {
@@ -486,6 +519,20 @@ export async function indexRepo(root: string, ctx?: PipelineContext): Promise<In
     tree,
     modules,
     symbolGraph,
+    incremental: {
+      mode: plan.full ? "full" : "incremental",
+      reason: plan.reason,
+      filesTotal: files.length,
+      filesChanged: plan.changed,
+      // Counted over the files that actually HAVE an extraction, not as
+      // `extraction.size - invalidated.size`: the invalidated set also contains files no
+      // extractor handles (a changed .json, say), so the subtraction understates reuse and
+      // can even go negative. A reuse metric that lies is worse than no metric.
+      filesReused: plan.full
+        ? 0
+        : [...extraction.keys()].filter((rel) => !plan.invalidated.has(rel)).length,
+      cacheWritten,
+    },
   };
 }
 

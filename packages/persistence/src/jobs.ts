@@ -157,10 +157,25 @@ export function enqueueJob(job: NewJob): { id: string; deduplicated: boolean } {
 /**
  * Claim one job for `workerId`, holding it until `leaseUntil` (LLD §8.3).
  *
- * The `status='leased' AND lease_until < now` arm is the whole crash-recovery
- * story: a worker that dies mid-job leaves its row leased, and the next poll
- * reclaims it once the lease expires. That is why there is no reaper process —
- * expiry and claiming are the same statement, so they cannot disagree.
+ * The `status IN ('leased','running') AND lease_until < now` arm is the whole
+ * crash-recovery story: a worker that dies mid-job leaves its row held, and the
+ * next poll reclaims it once the lease expires. That is why there is no reaper
+ * process — expiry and claiming are the same statement, so they cannot disagree.
+ *
+ * `running` IS PART OF THAT ARM, and leaving it out was a total loss of crash
+ * recovery rather than a corner case. Both this subquery and the retirement
+ * UPDATE above it once matched `status='leased'` only, but `heartbeatJob` and
+ * `updateJobProgress` promote the row to `running`: the heartbeat fires at
+ * leaseMs/3 and the executor's first progress line lands about a second in, so
+ * every job that got as far as doing work was `running` within seconds and
+ * invisible to both arms from then on. A supervisor that died without a terminal
+ * write — Render redeploy, SIGKILL past the drain window (`apps/worker/src/main.ts`
+ * deliberately finishes the job in hand and can outlive the grace period), OOM
+ * kill — left the row `running` with an expired lease FOREVER: never retried,
+ * never failed. And because `findLiveJobForRepo` treats every non-terminal status
+ * as live, `JobQueue.enqueue` then answered `repo-busy` for that repo forever, so
+ * the repo could never be indexed again. The old tests missed it by never
+ * heartbeating between the claim and the reclaim.
  *
  * `attempts` increments on claim, not on failure. A worker killed by the OOM
  * reaper never gets to report anything, so counting attempts at completion would
@@ -191,7 +206,7 @@ export function claimJob(
     .prepare(
       `UPDATE jobs
           SET status='failed', error=?, lease_until=NULL, worker_id=NULL, updated_at=?
-        WHERE status='leased' AND lease_until < ? AND attempts >= max_attempts`
+        WHERE status IN ('leased','running') AND lease_until < ? AND attempts >= max_attempts`
     )
     .run("Abandoned: worker lease expired with no attempts remaining", now, now);
 
@@ -202,7 +217,7 @@ export function claimJob(
         WHERE id = (
           SELECT id FROM jobs
            WHERE (status='queued')
-              OR (status='leased' AND lease_until < ? AND attempts < max_attempts)
+              OR (status IN ('leased','running') AND lease_until < ? AND attempts < max_attempts)
            ORDER BY priority DESC, created_at ASC
            LIMIT 1
         )

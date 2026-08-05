@@ -29,6 +29,22 @@ import { db } from "./db";
 const ENGINE_VERSION = "v1";
 /** Bumped when the scoring model changes. Separate, because they move independently. */
 const SCORE_MODEL_VERSION = "v1-b2b3";
+/**
+ * Runs kept per repository. Everything older is deleted on the next `recordRun`.
+ *
+ * Nothing used to delete a run or a finding, ever, and the arithmetic stopped being
+ * academic the day auto-re-index landed: an index used to be a once-per-repo write, and is
+ * now up to 360 per hour for an actively edited repo. MEASURED against this exact schema
+ * and its three `findings` indexes (100 runs x 200 findings, then WAL checkpointed
+ * TRUNCATE): 10,043,392 bytes, i.e. ~100 KB per run. The deployed disk is 1 GB with no
+ * backup, so ~10,700 runs fills it and one editing hour costs ~36 MB per user. A full disk
+ * is not a degraded mode here — SQLITE_FULL fails every write path, including the migration
+ * runner on the next boot.
+ *
+ * 20 is chosen to keep the diff views useful (`newFindingsSince` compares two runs, and the
+ * UI never offers more than a handful back) while capping a repo at ~2 MB.
+ */
+const RUNS_RETAINED = 20;
 
 /** The shape the analyser produces. Deliberately loose — it is v1's `Issue`, not §2's model. */
 export interface AnalysedIssue {
@@ -86,6 +102,29 @@ function basename(file: string): string {
 }
 
 /**
+ * Delete every run for `repoId` beyond the newest `keep`, and their findings with them.
+ *
+ * Findings go via the `ON DELETE CASCADE` migration 002 put on `findings.run_id`, so this
+ * is one statement rather than two — but only while `PRAGMA foreign_keys = ON`, which
+ * `open()` sets on every connection. Without it SQLite silently ignores the FK and this
+ * would orphan 200 rows per pruned run, which is the larger half of the footprint.
+ *
+ * Bounded in SQL rather than by reading ids and slicing in JS, for the same reason
+ * `pruneTrash` does: a cap on unbounded growth should not itself grow with the thing it
+ * bounds. The subquery rides `idx_runs_repo (repo_id, started_at DESC)`, so it is a
+ * LIMIT-terminated index scan, not a sort of the repo's history.
+ */
+export function pruneRunsForRepo(repoId: string, keep: number = RUNS_RETAINED): void {
+  db()
+    .prepare(
+      `DELETE FROM runs
+        WHERE repo_id = ?
+          AND id NOT IN (SELECT id FROM runs WHERE repo_id = ? ORDER BY started_at DESC LIMIT ?)`
+    )
+    .run(repoId, repoId, keep);
+}
+
+/**
  * Record a completed run and its findings, in one transaction.
  *
  * Atomic on purpose: a run row with no findings is indistinguishable from a repository that
@@ -94,7 +133,19 @@ function basename(file: string): string {
  */
 export function recordRun(run: NewRun, issues: readonly AnalysedIssue[]): void {
   const database = db();
-  database.exec("BEGIN");
+  // BEGIN IMMEDIATE, and OUTSIDE the try. Both halves matter.
+  //
+  // Outside: an unconditional `ROLLBACK` in the catch below is only correct if the BEGIN
+  // succeeded. It can fail — web and worker share one SQLite file and `busy_timeout = 5000`
+  // is exhaustible by the other process's index-time write — and then the ROLLBACK throws
+  // "cannot rollback - no transaction is active", which REPLACES the real SQLITE_BUSY and
+  // hands the caller an error describing the wrong fault entirely.
+  //
+  // IMMEDIATE: the first statement is an INSERT, so the write lock is taken either way.
+  // Taking it up front is what lets busy_timeout do its job — a deferred transaction that
+  // reads first and then upgrades gets SQLITE_BUSY with no busy-handler retry, which is
+  // unrecoverable rather than merely slow. migrate.ts:49 does this for exactly this reason.
+  database.exec("BEGIN IMMEDIATE");
   try {
     database
       .prepare(
@@ -158,6 +209,9 @@ export function recordRun(run: NewRun, issues: readonly AnalysedIssue[]): void {
         Math.max(1, Math.trunc(issue.churn ?? 1))
       );
     }
+    // Inside the transaction, so a run is never visible without its retention already
+    // applied and a failed insert cannot delete history it did not replace.
+    pruneRunsForRepo(run.repoId);
     database.exec("COMMIT");
   } catch (e) {
     database.exec("ROLLBACK");
@@ -221,7 +275,7 @@ export function latestRunCoverage(repoId: string): Record<string, unknown> | nul
     .prepare(
       `SELECT coverage_json AS c FROM runs
         WHERE repo_id = ? AND status = 'done'
-        ORDER BY finished_at DESC LIMIT 1`
+        ORDER BY started_at DESC LIMIT 1`
     )
     .get(repoId) as { c?: string } | undefined;
   if (!row?.c) return null;

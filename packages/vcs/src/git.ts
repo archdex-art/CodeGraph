@@ -1,7 +1,11 @@
 // Server-side git operations over a repo's persistent workspace directory.
-// All commands run via execFile (argv array — never a shell string), so
-// there is no command-injection surface even with attacker-controlled
-// branch names, commit messages, or file paths.
+//
+// All commands run via execFile (argv array — never a shell string), so there is no
+// COMMAND-injection surface even with attacker-controlled branch names, commit messages,
+// or file paths. That sentence used to end the comment, and it was true and insufficient:
+// the absence of a shell says nothing about ARGUMENT injection, where a value that reaches
+// argv unvalidated is read by git itself as an OPTION rather than as data. See
+// `assertRefArg` below for the two live vulnerabilities that produced.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { childEnv } from "@codegraph/config";
@@ -51,6 +55,39 @@ async function git(cwd: string, args: string[]): Promise<string> {
     return stdout;
   } catch (e) {
     throw redactError(e);
+  }
+}
+
+/**
+ * Refuse a caller-supplied value that git would read as an option.
+ *
+ * TWO CONFIRMED VULNERABILITIES, both anonymous against a public-bucket repo, both fixed by
+ * this one check. Neither needed a shell:
+ *
+ *   · ARBITRARY FILE READ. `POST /api/repos/:id/git {"op":"checkout","name":"--pathspec-from-file=/etc/passwd"}`
+ *     reached `git checkout <name>`. git read the file as a list of pathspecs and printed one
+ *     `error: pathspec '<line>' did not match ...` per LINE OF THAT FILE, and the route
+ *     forwards git's stderr to the client. Reproduced against a scratch repo: the file's
+ *     contents came back in the 409 body, line by line.
+ *
+ *   · ARBITRARY FILE WRITE. `?op=diffFiles&base=--output=/app/data/x&head=HEAD` produced the
+ *     single argv token `--output=/app/data/x..HEAD`, and `git diff` created that file.
+ *     Reproduced: the file appeared on disk. Both diff call sites swallow errors, so the
+ *     write was completely silent.
+ *
+ * A leading `-` is the whole test, and it is sufficient rather than merely convenient: git
+ * treats a token as an option if and only if it begins with `-`, and no legal branch name or
+ * revision may start with one (`git check-ref-format` rejects it, and `-` is reserved for
+ * `git switch -`). So this rejects exactly the inputs that were never valid data.
+ *
+ * Checked at the argv boundary rather than in the route, for the same reason redaction is:
+ * there are four call sites today and the next one must not have to remember. The
+ * alternative — passing `--end-of-options` — would work on git ≥ 2.24 but leaves the
+ * confusing git error in place where this produces a clear refusal.
+ */
+function assertRefArg(kind: "branch" | "revision", value: string): void {
+  if (value.startsWith("-")) {
+    throw new Error(`Invalid ${kind}: must not start with "-"`);
   }
 }
 
@@ -145,11 +182,18 @@ export async function listBranches(dir: string): Promise<GitBranch[]> {
 }
 
 export async function createBranch(dir: string, name: string, from?: string): Promise<void> {
+  // git happens to reject an option in either slot here on its own, so this pair is
+  // defence in depth rather than a fix. It is still checked: the guarantee should hold
+  // because this function enforces it, not because a git version's argument parser does.
+  assertRefArg("branch", name);
+  if (from !== undefined) assertRefArg("revision", from);
   const args = from ? ["checkout", "-b", name, from] : ["checkout", "-b", name];
   await git(dir, args);
 }
 
 export async function checkoutBranch(dir: string, name: string): Promise<void> {
+  // The arbitrary-file-read primitive. See assertRefArg.
+  assertRefArg("branch", name);
   await git(dir, ["checkout", name]);
 }
 
@@ -179,6 +223,12 @@ export async function diffFile(dir: string, relPath: string): Promise<string> {
 }
 
 export async function diffCommitsFile(dir: string, base: string, head: string, relPath: string): Promise<string> {
+  // The arbitrary-file-write primitive: `base` and `head` are concatenated into ONE argv
+  // token, so a leading `-` on either makes the whole token an option. Checked BEFORE the
+  // try, so a rejected revision surfaces as an error rather than as an empty diff — the
+  // catch below exists to swallow "no such commit", not to hide a refusal.
+  assertRefArg("revision", base);
+  assertRefArg("revision", head);
   try {
     return await git(dir, ["diff", `${base}..${head}`, "--", relPath]);
   } catch {
@@ -187,6 +237,8 @@ export async function diffCommitsFile(dir: string, base: string, head: string, r
 }
 
 export async function getCommitDiffFiles(dir: string, base: string, head: string): Promise<Array<{ status: string, path: string }>> {
+  assertRefArg("revision", base);
+  assertRefArg("revision", head);
   try {
     const out = await git(dir, ["diff", "--name-status", `${base}..${head}`]);
     if (!out.trim()) return [];
