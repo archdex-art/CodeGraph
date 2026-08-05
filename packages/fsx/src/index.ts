@@ -13,6 +13,9 @@
 export type { WorkspaceHandle } from "./handle";
 export { openWorkspace } from "./handle";
 
+export type { IndexCacheStore } from "./indexCache";
+export { MAX_CACHE_BYTES, createIndexCacheStore, dropIndexCacheStore } from "./indexCache";
+
 export type { FsEntry } from "@codegraph/core-domain";
 export type { ReadBytesResult, ReadFileResult, SearchMatch } from "./workspace";
 export {

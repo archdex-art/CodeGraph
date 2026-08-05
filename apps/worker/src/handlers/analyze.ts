@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { indexRepo } from "@codegraph/analysis";
 import { initTreeSitter } from "@codegraph/core-graph";
+import { createIndexCacheStore } from "@codegraph/fsx";
+import { logger } from "@codegraph/observability";
 import {
   completeRepoIndex,
   incrementCounter,
@@ -37,6 +39,14 @@ export interface AnalyzePayload {
   readonly sourceType: "git" | "local";
   /** Session-scoped, never persisted. Only ever sent to github.com — see below. */
   readonly githubToken?: string;
+  /**
+   * RE-INDEX of a repo that already has a materialised workspace: skip the clone.
+   *
+   * Not an optimisation. The workspace is the tree the built-in editor and the git route
+   * have been mutating, so cloning over it would discard uncommitted work — and the repo
+   * row already points at that directory, so a re-clone elsewhere would strand it.
+   */
+  readonly workspaceReady?: boolean;
 }
 
 /** Not exported: the executor passes a lambda, so the name has one use, here. */
@@ -56,11 +66,15 @@ export function parseAnalyzePayload(value: unknown): AnalyzePayload {
     throw new Error(`payload.sourceType must be "git" or "local", got ${String(sourceType)}`);
   }
   const token = p["githubToken"];
+  const workspaceReady = p["workspaceReady"];
   return {
     repoId,
     source,
     sourceType,
     ...(typeof token === "string" && token !== "" ? { githubToken: token } : {}),
+    // Absent or non-boolean means "first index", which is the safe reading: an unexpected
+    // payload gets the clone it would have got before this flag existed.
+    ...(workspaceReady === true ? { workspaceReady: true } : {}),
   };
 }
 
@@ -74,22 +88,31 @@ export async function analyze(
   report: Report,
   signal: AbortSignal
 ): Promise<void> {
-  const { repoId, source, sourceType, githubToken } = payload;
+  const { repoId, source, sourceType, githubToken, workspaceReady } = payload;
   const startedAt = Date.now();
 
   try {
     let root: string;
-    if (sourceType === "git") {
+    // Derived, never passed in: `<dataDir>/workspaces/<repoId>` is where the first clone
+    // put the tree and what the repo row records, so a re-index and a first index cannot
+    // end up looking at two different directories for one repo.
+    const gitWorkspaceDir = path.join(dataDir(), "workspaces", repoId);
+    if (workspaceReady) {
+      // A RE-INDEX. The tree is already on disk and the editor may hold uncommitted work
+      // in it, so cloning here would destroy exactly what we were asked to index.
+      report(15, "cloning", "Reusing existing workspace…");
+      setRepoStatus(repoId, "cloning");
+      root = sourceType === "git" ? gitWorkspaceDir : resolveLocalDir(source);
+    } else if (sourceType === "git") {
       report(15, "cloning", "Cloning repository…");
       setRepoStatus(repoId, "cloning");
       // Clone straight into the persistent data dir (not os.tmpdir()) so the
       // editor's workspace survives process restarts / container redeploys.
-      const workspaceDir = path.join(dataDir(), "workspaces", repoId);
       // Only ever hand the signed-in user's token to github.com itself — never to
       // whatever host is in `source`, so a signed-in session cannot be tricked into
       // leaking its GitHub token to a third-party remote.
       const cloneUrl = githubToken && isGithubHost(source) ? withToken(source, githubToken) : source;
-      root = await cloneRepo(cloneUrl, workspaceDir);
+      root = await cloneRepo(cloneUrl, gitWorkspaceDir);
     } else {
       report(15, "cloning", "Reading local folder…");
       setRepoStatus(repoId, "cloning");
@@ -106,7 +129,28 @@ export async function analyze(
     // The signal goes INTO the pipeline, not just around it: without this a cancel
     // during indexing waits for every remaining file, and on a large repo that is the
     // whole run. indexRepo checks it at its existing per-15-file yield points.
-    const result = await indexRepo(root, { signal });
+    //
+    // The cache slot is keyed by the ROOT rather than the repo id: what makes an entry
+    // valid is the CONTENT HASH of each file (never its mtime or size — a same-second
+    // rewrite preserves both), so a workspace re-cloned to a new path gets a fresh slot
+    // instead of a stale hit, and this process and the web process — which computes the
+    // same path — share one slot for one tree. A missing, corrupt or unwritable slot
+    // degrades to a full index and never to a failed run: neither store method throws.
+    const result = await indexRepo(root, {
+      signal,
+      cache: createIndexCacheStore(path.join(dataDir(), "index-cache"), root),
+    });
+    // Reuse is invisible in the output by construction — an incremental run and a full run
+    // of the same tree produce the same result — so the only way to notice that the cache
+    // has stopped working is to say what it did.
+    logger.info("index complete", {
+      repoId,
+      mode: result.incremental?.mode,
+      reason: result.incremental?.reason,
+      reused: result.incremental?.filesReused,
+      changed: result.incremental?.filesChanged,
+      cacheWritten: result.incremental?.cacheWritten,
+    });
     checkpoint(signal);
 
     report(85, "scoring", "Computing Health Score…");

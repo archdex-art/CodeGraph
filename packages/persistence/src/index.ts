@@ -72,6 +72,7 @@ export {
   findingById,
   latestRunCoverage,
   legacyRuleId,
+  pruneRunsForRepo,
   recordRun,
   repoIdForFinding,
 } from "./runs";

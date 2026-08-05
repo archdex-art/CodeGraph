@@ -32,7 +32,7 @@ export type {
   SymbolKind,
 } from "./symbol";
 
-export type { FileInput } from "./graph";
+export type { ExtractionRecord, FileInput, SymbolGraphOptions } from "./graph";
 export { buildSymbolGraph } from "./graph";
 
 export { QueryEngine } from "./query";

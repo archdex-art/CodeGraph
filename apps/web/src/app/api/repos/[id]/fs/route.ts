@@ -14,6 +14,8 @@ import {
   MAX_WRITE_BYTES,
 } from "@codegraph/fsx";
 import { moveToTrash } from "@/lib/trash";
+import { scheduleReindex } from "@/lib/store";
+import { rateLimit, clientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,6 +75,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 // { op: "write"|"create"|"rename"|"duplicate"|"upload", path, to?, type?, content?, contentBase64? }
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // MAX_WRITE_BYTES caps ONE write at 8 MB; nothing capped how MANY. An anonymous
+  // `op=upload` loop against a public-bucket repo fills the 1 GB Render volume that also
+  // holds codegraph.sqlite, at which point the whole app loses the ability to write —
+  // not just this repo. 60/min is well above the editor's real burst (autosave is
+  // coalesced and ~1/s only while typing) and bounds the worst case to ~480 MB/min.
+  // Above `requireWorkspace` deliberately: the tenant check passes for anyone on a
+  // public-bucket repo, so it is not the thing standing between an attacker and the disk.
+  //
+  // GET is deliberately NOT limited — the editor reads on every file-tree click and
+  // every tab switch, and a read allocates nothing durable.
+  const limited = rateLimit(`fs-write:${clientIp(req)}`, { capacity: 60, windowMs: 60_000 });
+  if (!limited.ok) {
+    return NextResponse.json({ error: "Too many write requests. Try again shortly." }, { status: 429, headers: { "Retry-After": String(limited.retryAfter) } });
+  }
   const { denied, ws } = requireWorkspace(req, id);
   if (denied) return denied;
   const body = await req.json().catch(() => ({}));
@@ -80,8 +96,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     op: string; path: string; to?: string; type?: "file" | "dir"; content?: string; contentBase64?: string;
   };
   try {
+    // Every branch below schedules a re-index AFTER the mutation returned and never in
+    // the `catch`: a write that threw changed nothing, and re-indexing on failure would
+    // burn a full pass to rediscover the tree we already have. The scheduler coalesces —
+    // the editor autosaves about once a second and one index per save is a CPU storm on
+    // a 0.5 vCPU container.
     if (op === "write") {
       writeWorkspaceFile(ws.dir, relPath, content ?? "");
+      scheduleReindex(id);
       return NextResponse.json({ ok: true });
     }
     if (op === "upload") {
@@ -97,20 +119,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         return NextResponse.json({ error: `File exceeds the ${MAX_WRITE_BYTES.toLocaleString()}-byte write limit` }, { status: 400 });
       }
       writeWorkspaceBytes(ws.dir, relPath, bytes);
+      scheduleReindex(id);
       return NextResponse.json({ ok: true });
     }
     if (op === "create") {
       createEntry(ws.dir, relPath, type === "dir" ? "dir" : "file");
+      scheduleReindex(id);
       return NextResponse.json({ ok: true });
     }
     if (op === "rename" || op === "move") {
       if (!to) return NextResponse.json({ error: "Missing 'to'" }, { status: 400 });
       renameEntry(ws.dir, relPath, to);
+      scheduleReindex(id);
       return NextResponse.json({ ok: true });
     }
     if (op === "duplicate") {
       if (!to) return NextResponse.json({ error: "Missing 'to'" }, { status: 400 });
       duplicateEntry(ws.dir, relPath, to);
+      scheduleReindex(id);
       return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: "Unknown op" }, { status: 400 });
@@ -123,6 +149,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 // trash (restorable via /api/repos/:id/trash) instead of erasing it.
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // Same bucket as POST, and deliberately so. A delete here is a MOVE into the repo's
+  // trash on the same volume: it frees no bytes, it allocates a trash entry and a DB
+  // row, and each one schedules a re-index. It is a write by every measure that matters
+  // to the disk-exhaustion failure above, so it spends from the same budget.
+  const limited = rateLimit(`fs-write:${clientIp(req)}`, { capacity: 60, windowMs: 60_000 });
+  if (!limited.ok) {
+    return NextResponse.json({ error: "Too many write requests. Try again shortly." }, { status: 429, headers: { "Retry-After": String(limited.retryAfter) } });
+  }
   const { denied, ws } = requireWorkspace(req, id);
   if (denied) return denied;
   const { searchParams } = new URL(req.url);
@@ -130,6 +164,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (!relPath) return NextResponse.json({ error: "Missing path" }, { status: 400 });
   try {
     const trash = moveToTrash(id, ws.dir, relPath);
+    // A delete changes the graph as much as a write does — the symbol graph would keep
+    // serving callers/callees for a file that is no longer there.
+    scheduleReindex(id);
     return NextResponse.json({ ok: true, trash });
   } catch (e) {
     return err(e, 400);

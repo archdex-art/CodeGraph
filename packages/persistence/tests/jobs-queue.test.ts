@@ -116,6 +116,59 @@ describe("claimJob", () => {
     expect(reclaimed?.attempts).toBe(2);
   });
 
+  it("reclaims a job stranded in `running`, not just one stranded in `leased`", () => {
+    // The reclaim test above passes against a `status='leased'` predicate because it
+    // never heartbeats — and NOTHING IN PRODUCTION LOOKS LIKE THAT. `heartbeatJob`
+    // fires at leaseMs/3 and the executor's first progress line lands about a second
+    // in, both of which write `status='running'`, so every job that got as far as
+    // doing work left the `leased`-only arm within seconds and could never be seen
+    // again. A supervisor killed without a terminal write (redeploy, SIGKILL past the
+    // drain window, OOM) left the row `running` with a dead lease forever: never
+    // retried, never failed, and — via `findLiveJobForRepo` — its repo answered
+    // `repo-busy` for the rest of time. The heartbeat here is the entire test.
+    enqueue("job-1");
+    const expired = Date.now() - 1_000;
+    claimJob("worker-that-dies", expired);
+    expect(findQueuedJob("job-1")?.status).toBe("leased");
+
+    // One beat, still with an expired deadline: the supervisor was alive long enough
+    // to promote the row, then died. This is the state the old predicate could not see.
+    expect(heartbeatJob("job-1", "worker-that-dies", expired)).toBe(true);
+    expect(findQueuedJob("job-1")?.status).toBe("running");
+    expect(findLiveJobForRepo("repo-1")?.id).toBe("job-1");
+
+    const reclaimed = claimJob("worker-b", Date.now() + 30_000);
+    expect(reclaimed?.id).toBe("job-1");
+    expect(reclaimed?.worker_id).toBe("worker-b");
+    expect(reclaimed?.attempts).toBe(2);
+  });
+
+  it("retires a stranded `running` job out of budget, unwedging its repo", () => {
+    // The other half: the retirement UPDATE was `leased`-only too, so a `running` row
+    // with a spent budget went neither back to `queued` nor to `failed`. It stayed
+    // non-terminal, which is what `findLiveJobForRepo` keys on, so `JobQueue.enqueue`
+    // reported `repo-busy` for that repository permanently and it could never be
+    // indexed again. The final `findLiveJobForRepo` assertion is that consequence.
+    enqueue("poison", "repo-1", { maxAttempts: 2 });
+
+    const expired = () => Date.now() - 1_000;
+    for (const worker of ["w1", "w2"]) {
+      expect(claimJob(worker, expired())?.worker_id).toBe(worker);
+      // Promote to `running` exactly as the runner's heartbeat does, then "die".
+      expect(heartbeatJob("poison", worker, expired())).toBe(true);
+      expect(findQueuedJob("poison")?.status).toBe("running");
+    }
+
+    expect(claimJob("w3", Date.now() + 30_000)).toBeNull();
+    const retired = findQueuedJob("poison");
+    expect(retired?.status).toBe("failed");
+    expect(retired?.attempts).toBe(2);
+    expect(retired?.lease_until).toBeNull();
+    expect(retired?.worker_id).toBeNull();
+    // The repo is free again — the mutex read half no longer sees a live job.
+    expect(findLiveJobForRepo("repo-1")).toBeNull();
+  });
+
   it("stops reclaiming an abandoned job once its attempt budget is spent", () => {
     // The crash path had no budget. A payload that kills its worker every time was
     // re-leased forever — `attempts` climbing past `max_attempts` without ever being

@@ -21,7 +21,8 @@ process.env["CG_DATA_DIR"] = dataDir;
 process.env["CG_WORKER_POLL_INTERVAL_MS"] = "50";
 process.env["CG_WORKER_LEASE_MS"] = "5000";
 
-const { db, enqueueJob, findQueuedJob } = await import("@codegraph/persistence");
+const { db, enqueueJob, findQueuedJob, findRepoUnscoped, insertRepo, setRepoStatus } =
+  await import("@codegraph/persistence");
 const { createJobQueue } = await import("@codegraph/jobs");
 const { runWorker } = await import("../src/main");
 
@@ -38,6 +39,7 @@ function stubExecutor(body: string): string {
 
 beforeEach(() => {
   db().exec("DELETE FROM jobs");
+  db().exec("DELETE FROM repos");
 });
 
 afterAll(() => {
@@ -220,5 +222,78 @@ describe("runWorker", () => {
     const job = findQueuedJob("job-oom1")!;
     expect(job.attempts).toBe(1);
     expect(job.status).toBe("queued");
+  });
+
+  it("releases the repo row when a job fails for good", async () => {
+    // `handlers/analyze.ts` sets `repos.status='indexing'` and only its OWN catch
+    // clears it — and the failure this whole app is designed around, a SIGKILLed
+    // executor, runs no catch anywhere. The supervisor turned that into a queue
+    // failure and then never touched the repo row, and there is no startup sweep, so
+    // the repo stayed at `indexing` with a NULL error forever. The web app's
+    // BUSY_STATUSES check reads exactly that column, so every later re-index of the
+    // repo was refused as busy — permanently, with nothing in the UI explaining why.
+    insertRepo({
+      id: "repo-stuck",
+      url: "x",
+      name: "stuck",
+      sourceType: "local",
+      ownerId: null,
+      createdAt: Date.now(),
+    });
+    setRepoStatus("repo-stuck", "indexing");
+    enqueueJob({
+      id: "job-stuck",
+      repoId: "repo-stuck",
+      kind: "analyze",
+      payload: { repoId: "repo-stuck", source: "x", sourceType: "local" },
+      maxAttempts: 1,
+    });
+
+    await runWorker({
+      queue: createJobQueue(),
+      logger,
+      maxJobs: 1,
+      executorPath: stubExecutor(`process.exit(1);`),
+    });
+
+    expect(findQueuedJob("job-stuck")!.status).toBe("failed");
+    const repo = findRepoUnscoped("repo-stuck")!;
+    expect(repo.status).toBe("error");
+    // The reason is carried across, not left NULL: a repo in `error` with no message
+    // is indistinguishable from a bug in this write.
+    expect(repo.error).toMatch(/executor exited 1/);
+  });
+
+  it("leaves the repo `indexing` while the job still has attempts left", async () => {
+    // The other side of the same condition. A job going back to `queued` is still
+    // going to be indexed, so flipping the repo to `error` between attempts would show
+    // the user a failure the very next poll contradicts — and would hand the repo back
+    // to the enqueue path while a retry is pending.
+    insertRepo({
+      id: "repo-retry",
+      url: "x",
+      name: "retry",
+      sourceType: "local",
+      ownerId: null,
+      createdAt: Date.now(),
+    });
+    setRepoStatus("repo-retry", "indexing");
+    enqueueJob({
+      id: "job-retry",
+      repoId: "repo-retry",
+      kind: "analyze",
+      payload: { repoId: "repo-retry", source: "x", sourceType: "local" },
+      maxAttempts: 3,
+    });
+
+    await runWorker({
+      queue: createJobQueue(),
+      logger,
+      maxJobs: 1,
+      executorPath: stubExecutor(`process.exit(1);`),
+    });
+
+    expect(findQueuedJob("job-retry")!.status).toBe("queued");
+    expect(findRepoUnscoped("repo-retry")!.status).toBe("indexing");
   });
 });

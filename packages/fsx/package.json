@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@codegraph/core-domain": "*"
+    "@codegraph/core-domain": "*",
+    "@codegraph/observability": "*"
   }
 }
