@@ -48,26 +48,15 @@ BANS = (
     Ban(
         name="process.env",
         pattern=re.compile(r"\bprocess\.env\b"),
-        owner_prefixes=(
-            "packages/config/src/",
-            # The Electron main process is a second runtime that cannot use
-            # @codegraph/config: that schema validates the web server's
-            # variables (CG_*) and fails fast at boot on anything invalid, so
-            # routing the desktop shell through it would make the app refuse to
-            # start over variables it does not use. It has its own typed,
-            # fail-fast equivalent — a zod schema parsed once in the
-            # ConfigManager constructor — so the rule that matters (every env
-            # read in ONE declared place, LLD §10.3) is enforced here one level
-            # down rather than abandoned. `childEnv()` lives in this same file
-            # for exactly the reason the reason-text below gives.
-            "apps/desktop/src/main/core/config.ts",
-        ),
+        # One owner, and it stays that way. The Electron shell used to hold the only
+        # other exemption here; apps/desktop has since been removed from the repo, so
+        # the ban is now absolute outside config's own source.
+        owner_prefixes=("packages/config/src/",),
         reason=(
             "Read configuration from @codegraph/config instead. It validates at boot and "
             "reports every invalid variable at once; scattered inline fallbacks make the "
             "effective configuration unknowable without grepping (LLD §10.3). For a child "
-            "process that needs the whole inherited environment, use config's childEnv() "
-            "— or, in apps/desktop, ConfigManager.childEnv()."
+            "process that needs the whole inherited environment, use config's childEnv()."
         ),
     ),
     Ban(
@@ -75,21 +64,7 @@ BANS = (
         pattern=re.compile(r"\bconsole\.(log|warn|error|info|debug|trace)\s*\("),
         owner_prefixes=(
             "packages/observability/src/",
-            # apps/desktop logs through electron-log (src/main/core/logger.ts),
-            # which writes to a file the user can send us; a console.error in a
-            # packaged Electron main process goes nowhere, as there is no
-            # attached terminal. index.ts keeps ONE last-resort console.error,
-            # reachable only when the Logger itself failed to construct and
-            # there is therefore no channel to route through.
-            "apps/desktop/src/main/core/logger.ts",
-            "apps/desktop/src/main/index.ts",
-            # The build orchestrator is developer-facing tooling whose entire
-            # output contract is the terminal it is run from. It never ships:
-            # electron-builder's `files` list packs dist/, build/ and
-            # package.json only. Routing it through electron-log would hide the
-            # build log in a userData directory.
-            "apps/desktop/scripts/build/",
-            # Same category, same reason: developer-facing build tooling whose entire
+            # Developer-facing build tooling whose entire
             # output contract is the terminal it is run from. It never ships — the
             # Dockerfile invokes it in the builder stage and copies only `dist/`. Routing
             # it through the structured logger would put the build log somewhere nobody
@@ -136,13 +111,13 @@ def is_runtime_state(rel_posix: str) -> bool:
     return any(rel_posix.startswith(marker) for marker in RUNTIME_STATE_MARKERS)
 
 
-#: Test-runner configuration is not a production source. `playwright.config.ts`
-#: reads `process.env.CI` to decide retries and `forbidOnly`, which is how the
-#: runner is meant to be configured; it is never packaged (electron-builder's
-#: `files` list covers dist/, build/ and package.json only). The docstring's
-#: scope is "production sources", so these are outside it — stated here rather
-#: than left to fail and be worked around.
-TOOLING_CONFIG_NAMES = ("playwright.config.ts", "vitest.config.ts", "vitest.workspace.ts")
+#: Test-runner configuration is not a production source: a vitest config reads
+#: the environment to decide how the RUNNER behaves, which is how a runner is
+#: meant to be configured. The docstring's scope is "production sources", so
+#: these are outside it — stated here rather than left to fail and be worked
+#: around. (`playwright.config.ts` was in this list for the Electron e2e suite,
+#: removed with apps/desktop.)
+TOOLING_CONFIG_NAMES = ("vitest.config.ts", "vitest.workspace.ts")
 
 
 def is_tooling_config(rel_posix: str) -> bool:

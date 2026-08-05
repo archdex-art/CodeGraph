@@ -104,10 +104,13 @@ describe("benchmark numbers are reproducible, not asserted", () => {
 
 describe("feature status is stated", () => {
   it("labels every area the plan requires a label for", () => {
-    // PLAN.md P7: status labels on Fleet, Timeline, CLI, desktop.
-    for (const area of ["CLI", "Desktop", "Fleet", "Timeline"]) {
+    // PLAN.md P7: status labels on Fleet, Timeline, CLI. `Desktop` was in this list until
+    // apps/desktop was removed — the README must not carry a status for a shipped surface
+    // that is gone, so the label is asserted absent instead.
+    for (const area of ["CLI", "Fleet", "Timeline"]) {
       expect(README).toContain(area);
     }
+    expect(README).not.toMatch(/Desktop \(Electron\)/);
     expect(README).toMatch(/\*\*stable\*\*/);
     expect(README).toMatch(/\*\*beta\*\*/);
     expect(README).toMatch(/\*\*experimental\*\*/);
@@ -161,13 +164,8 @@ describe("the test-suite claim counts what exists", () => {
     expect(claimed).toBe(actual);
   });
 
-  it("claims the number of Electron test files vitest actually runs", () => {
-    // 9 `.test.ts` files exist under apps/desktop; vitest runs 8. The ninth is a Playwright
-    // e2e spec excluded from the vitest config — verified, not assumed.
-    const claimed = Number(README.match(/and \*\*(\d+)\*\* for the Electron app/)?.[1]);
-    const all = countTestFiles(["apps/desktop"]);
-    expect(claimed).toBe(all - 1);
-  });
+  // The Electron file-count assertion lived here. It went with apps/desktop: a claim about a
+  // workspace that no longer exists is not a weaker test, it is a test of nothing.
 });
 
 describe("ARCHITECTURE.md describes the architecture that exists", () => {

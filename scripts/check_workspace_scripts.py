@@ -75,10 +75,6 @@ def main() -> int:
         group = f"{ws.split('/')[0]}/*"
         if ws in projects_line or group in projects_line:
             continue
-        # apps/desktop is deliberately excluded from the root runner and runs in its own CI
-        # job; the reasoning is recorded in vitest.config.ts.
-        if ws == "apps/desktop":
-            continue
         problems.append(
             f"{ws}: has a vitest.config.ts but is absent from `test.projects` in "
             f"vitest.config.ts — its tests never run from the repository root"

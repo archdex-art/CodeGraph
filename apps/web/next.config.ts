@@ -50,12 +50,11 @@ const nextConfig: NextConfig = {
   // operator has analysed. Both are gitignored, so a fresh checkout and CI
   // never see them and the problem is invisible there.
   //
-  // Enforcement therefore lives at the two points that actually build a
-  // distributable, not here:
-  //   · container image  → `.dockerignore` (`apps/web/data`, `**/data/workspaces`)
-  //   · Electron bundle  → `apps/desktop/scripts/build/asset-copy.ts` (EXCLUDED_PATHS)
-  // If a third packaging path is ever added, it needs its own exclusion; this
-  // config will not provide one.
+  // Enforcement therefore lives at the point that actually builds a distributable, not
+  // here: the container image, via `.dockerignore` (`apps/web/data`, `**/data/workspaces`).
+  // A second path used to exist — the Electron bundle's asset-copy EXCLUDED_PATHS — and went
+  // with apps/desktop. If another packaging path is ever added it needs its own exclusion;
+  // this config will not provide one.
   // node:sqlite + child_process git run only in Node route handlers.
   serverExternalPackages: ["web-tree-sitter"],
   // Baseline security headers. script/style/worker-src stay permissive on

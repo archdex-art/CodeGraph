@@ -349,13 +349,6 @@ module.exports = {
         "\\.test\\.ts$",
         "/node_modules/",
         "^apps/web/terminal/",
-        // Was "^desktop/" until the LLD §13 move; after it, that pattern
-        // matched nothing and the Electron app silently entered the cruise
-        // with its own tsconfig unresolvable, producing 40+ phantom
-        // no-unresolvable errors. apps/desktop is a separate runtime with its
-        // own tsconfig and build (tsc + esbuild), not part of the web import
-        // graph this config's aliases describe.
-        "^apps/desktop/",
         // Runtime state, not source: apps/web/data/workspaces/ holds full git
         // clones of analysed repositories, so cruising it reports violations
         // against other projects' code. Gitignored, so CI never saw it and

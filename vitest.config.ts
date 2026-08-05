@@ -15,11 +15,10 @@ import { defineConfig } from "vitest/config";
  */
 export default defineConfig({
   test: {
-    // `apps/worker` is listed explicitly rather than widening to `apps/*`, because
-    // `apps/desktop` must NOT be picked up here: it runs its own Vitest with a
-    // separate config (electron mocks, its own `include`) and a Playwright e2e suite
-    // that a root glob would try to collect. Its tests run from the desktop job in
-    // CI. See `apps/desktop/vitest.config.ts`.
+    // Listed explicitly rather than widened to `apps/*`. The reason was `apps/desktop`,
+    // which ran its own Vitest and a Playwright suite a root glob would have tried to
+    // collect; that app has been removed. Kept explicit anyway — an app that wants its
+    // tests run from the root should have to say so.
     projects: ["apps/cli", "apps/web", "apps/worker", "packages/*"],
   },
 });
