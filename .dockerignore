@@ -28,6 +28,11 @@ desktop
 docs
 benchmarks
 
+# `app/` is a placeholder that exists only so Render's stale `Root Directory = app`
+# setting can be `cd`-ed into (see app/README.md). It holds no code, and the image has no
+# reason to carry the explanation.
+app
+
 Dockerfile
 **/Dockerfile
 .dockerignore
