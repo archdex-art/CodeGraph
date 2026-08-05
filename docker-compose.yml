@@ -1,10 +1,10 @@
 # Lives at the monorepo root because the image build needs the root lockfile
-# and packages/* in its context (apps/web/Dockerfile explains why).
+# and packages/* in its context (the root Dockerfile explains why).
 services:
   codegraph:
     build:
       context: .
-      dockerfile: apps/web/Dockerfile
+      dockerfile: Dockerfile
     image: codegraph-app:latest
     ports:
       - "4000:4000"

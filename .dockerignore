@@ -1,7 +1,6 @@
-# Docker reads .dockerignore from the BUILD CONTEXT root, which is now the
-# monorepo root (apps/web/Dockerfile explains why). The previous
-# apps/web/.dockerignore is therefore dead and has been removed — leaving it
-# would look like it were in force while Docker ignored it.
+# Docker reads .dockerignore from the BUILD CONTEXT root, which is the monorepo root (the
+# root `Dockerfile` explains why). The previous apps/web/.dockerignore is therefore dead and
+# has been removed — leaving it would look like it were in force while Docker ignored it.
 
 # Dependencies — reinstalled from the lockfile inside the image.
 node_modules
@@ -28,13 +27,17 @@ desktop
 docs
 benchmarks
 
-# `app/` is a placeholder that exists only so Render's stale `Root Directory = app`
-# setting can be `cd`-ed into (see app/README.md). It holds no code, and the image has no
-# reason to carry the explanation.
-app
-
-Dockerfile
-**/Dockerfile
+# `Dockerfile` IS NOT EXCLUDED, deliberately, and this is not an oversight to tidy up.
+#
+# With `# syntax=docker/dockerfile:1` the build is handled by an external BuildKit frontend,
+# and a frontend resolves the dockerfile BY NAME — which, depending on how the platform
+# invokes the build, can mean reading it back out of the context. A dockerignored dockerfile
+# then produces exactly the error Render deployed with:
+#
+#   failed to solve: failed to read dockerfile: open Dockerfile: no such file or directory
+#
+# It is one 7.5 kB text file. Excluding it saves nothing and can cost the whole deploy.
+# `**/docker-compose.yml` stays excluded because nothing ever reads it during a build.
 .dockerignore
 docker-compose.yml
 **/docker-compose.yml

@@ -95,7 +95,7 @@ jobs:
 
       # Context is the repo root; the Dockerfile lives in the app it builds.
       - name: Build production image
-        run: docker build -f apps/web/Dockerfile -t codegraph-ci:${{ github.sha }} .
+        run: docker build -t codegraph-ci:${{ github.sha }} .
 
       - name: Run under Render-equivalent constraints (512MB, 0.5 CPU, root-owned disk mount)
         run: |
