@@ -5,8 +5,11 @@
  * cache handle, and a `budget` (time + memory). Only `signal` exists today, and the
  * omissions are phase boundaries rather than oversights:
  *
- *   · `cache`  → P6 (content-addressed per-file cache). There is nothing to hand a
- *                stage until that store exists.
+ *   · `cache`  → SHIPPED. `IndexCacheStore` below is the seam; `@codegraph/analysis`
+ *                owns the payload schema and every invalidation rule, and the store
+ *                only moves opaque JSON. Injected rather than constructed because
+ *                `analysis` sits above no I/O package (LLD §1.1) and must not learn
+ *                where the bytes live.
  *   · `budget` → needs the degradation ladder (HLD §8.3) to have somewhere to record
  *                a partial result. Adding the field before stages can degrade would
  *                invite a stage to throw on budget instead, which HLD §8 explicitly
@@ -26,6 +29,34 @@ export interface PipelineContext {
    * escalation is what bounds the latency when even that is too slow.
    */
   readonly signal?: AbortSignal;
+  /**
+   * Where a run reads the previous run's per-file work and writes its own.
+   *
+   * Absent means "index from scratch", which is always CORRECT and never wrong — every
+   * reuse decision downstream is an optimisation guarded by a content hash. A store that
+   * fails, is corrupt, or holds a payload from another engine version must behave exactly
+   * like an absent one; that equivalence is what keeps a cache bug from becoming a wrong
+   * answer.
+   */
+  readonly cache?: IndexCacheStore;
+}
+
+/**
+ * Opaque persistence for the incremental index cache.
+ *
+ * Deliberately `unknown` in both directions. The store is implemented in `fsx` (the only
+ * layer allowed raw `fs`, LLD §1.1) and would otherwise have to import the analysis types
+ * it is forbidden to depend on. Validation of the payload belongs to the producer, which
+ * is the only side that can tell a stale schema from a current one.
+ *
+ * Neither method may throw: a cache is an optimisation, and an optimisation that can fail a
+ * run is a liability. Implementations swallow and log.
+ */
+export interface IndexCacheStore {
+  /** Previous payload, or null when absent/unreadable/corrupt. */
+  load(): unknown | null;
+  /** Best-effort persist. Silent no-op on failure. */
+  save(payload: unknown): void;
 }
 
 /** Throws if cancellation was requested. Called at stage yield points. */

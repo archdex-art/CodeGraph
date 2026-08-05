@@ -25,6 +25,14 @@ import { createHash } from "node:crypto";
  * returns a stale edge. Caching it needs a dependency key, not a content key, and shipping the
  * unsound version would trade visible slowness for invisible wrong answers.
  *
+ * **That dependency key now exists, and it is not here.** `@codegraph/analysis`'s
+ * `incremental.ts` computes content PLUS the transitive import closure and hands the result to
+ * `buildSymbolGraph` as an explicit reuse plan, which is also what lets the TypeScript program
+ * be built over the invalidated files alone. It lives there rather than in this cache for the
+ * reason this paragraph started with: the key is not a property of the file, so a per-file memo
+ * is structurally the wrong place for it. This module keeps exactly the work whose key IS the
+ * file - and `detect-engine`'s per-file findings joined it, on the same test.
+ *
  * **`version` is not decoration.** Every entry is keyed by it, so changing a rule table or an
  * extractor and forgetting to bump it serves results from the old logic. It is threaded from
  * the caller rather than defaulted here, so the choice is visible at each call site.

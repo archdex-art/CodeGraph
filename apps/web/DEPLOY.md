@@ -132,7 +132,15 @@ An "AI Assistant" icon appears in the Editor tab's activity bar automatically on
 ## Scaling path (documented, not yet implemented)
 1. Move indexing to a worker queue (Redis/BullMQ) — API stays; `store.createIndexJob` enqueues.
 2. Swap SQLite → Postgres (`pgvector`) via the same `store` interface for multi-tenant scale + real embeddings.
-3. Incremental re-index on webhooks (only changed files re-parsed).
+3. ~~Incremental re-index (only changed files re-parsed).~~ **Shipped.** A run reuses the
+   previous run's per-file symbol extraction, keyed by content hash plus the transitive
+   import closure, and rebuilds the TypeScript program over the invalidated files alone; the
+   cache is a gzipped manifest per workspace root under `<CG_DATA_DIR>/index-cache/`.
+   Measured on this repository: 2,255ms cold → 368ms after a one-file edit, 125ms with no
+   change, byte-identical results (`packages/analysis/tests/incremental.test.ts`). Editor
+   writes and git commit/pull/checkout schedule one automatically after a 10s quiet period;
+   `POST /api/repos/:id/reindex` is the explicit trigger. Webhook-driven re-index is still
+   open — nothing listens to GitHub events yet.
 
 ## CI checklist
 Run from the repo root, not `apps/web` — this is an npm workspace.

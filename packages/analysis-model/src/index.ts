@@ -40,6 +40,7 @@ export type {
   GraphNode,
   GraphNodeKind,
   GraphStats,
+  IncrementalReport,
   IndexResult,
   Issue,
   LanguageStat,
@@ -60,4 +61,4 @@ export { toSarif, sarifRuleId } from "./sarif";
 export type { SarifLog, SarifOptions } from "./sarif";
 export { LANG_BY_EXT, CODE_EXTS } from "./models";
 export { throwIfAborted, yieldToEventLoop, timeStage, YIELD_EVERY } from "./pipeline";
-export type { PipelineContext, StageTimings } from "./pipeline";
+export type { IndexCacheStore, PipelineContext, StageTimings } from "./pipeline";

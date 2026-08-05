@@ -205,4 +205,29 @@ describe("runner behaviour", () => {
     expect(tables.has("half_applied")).toBe(false);
     expect(schemaVersions(db)).not.toContain(999);
   });
+
+  it("refuses to run against a database migrated by a NEWER build", () => {
+    // The rollback case. `pending` is computed as "known and not recorded", which cannot see
+    // the opposite: a version this image has never heard of, already applied. Render keeps the
+    // persistent disk across a rollback, so an old container boots onto a new schema.
+    //
+    // Benign only because 001-005 are additive. The first destructive migration — 003's header
+    // already says one is planned — turns this into an old image writing against a schema whose
+    // shape it has wrong, which is silent corruption rather than a crash. Refusing the boot is
+    // the only outcome that cannot lose data.
+    const db = new DatabaseSync(freshDbPath());
+    runMigrations(db);
+
+    const known = Math.max(...MIGRATIONS.map((m) => m.version));
+    const future = known + 1;
+    db.prepare("INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(future, Date.now());
+
+    // Names the offending version, because the operator's next question is which build to
+    // redeploy.
+    expect(() => runMigrations(db)).toThrow(new RegExp(`newer than this build.*${future}`));
+
+    // Still refuses on the next attempt: this is a state of the database, not a one-shot latch
+    // that a restart loop would clear.
+    expect(() => runMigrations(db)).toThrow(/newer than this build/);
+  });
 });

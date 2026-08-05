@@ -69,5 +69,8 @@ Deterministic, IDE-grade answers over the symbol graph:
 ## Roadmap (interfaces already in place)
 - **M1 (done):** symbol extraction (TS/JS/Py), call graph, query engine, Graph-RAG, UI.
 - **M2:** Tree-sitter extractors implementing `LanguageExtractor` for precise ranges/refs; more languages.
-- **M3:** real embeddings for `search` (swap the lexical ranker) via a vector column; incremental per-file symbol updates.
+- **M3:** real embeddings for `search` (swap the lexical ranker) via a vector column.
+  ~~Incremental per-file symbol updates~~ shipped ahead of it: `packages/analysis/src/incremental.ts`
+  invalidates on content hash plus the transitive import closure, so a re-index re-extracts
+  only the files a change can actually have affected.
 - **M4:** feed Graph-RAG context into an autonomous agent that opens fix PRs for `deadcode`/`cycles`/top issues.

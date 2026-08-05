@@ -88,6 +88,16 @@ export interface ScannedFile {
   ext: string;
   loc: number;
   text: string;
+  /**
+   * SHA-1 of the file's exact bytes as read.
+   *
+   * The ONLY identity the incremental index trusts. `mtime`/`size` were considered and
+   * rejected: a same-second rewrite, a checkout that restores an old file, and a
+   * `git stash` round-trip all preserve both while changing the content, and every one of
+   * those produces a silently stale analysis — the failure mode a cache must not have.
+   * Hashing costs one pass over bytes already in memory.
+   */
+  hash: string;
   /** Resolved-ish relative import targets. */
   imports: string[];
 }
@@ -226,6 +236,27 @@ export interface ModuleGraph {
   edges: ModuleEdge[];
 }
 
+/**
+ * What the incremental path actually did (ADR-008's disclosure rule, applied to reuse).
+ *
+ * A run that reused 900 of 903 files and a run that re-analysed everything produce the same
+ * score, and the operator cannot tell them apart from the score. When a cache is wrong, the
+ * only cheap way to find out is to see that it was USED — so every run says so, including
+ * the ones that refused to use it and why.
+ */
+export interface IncrementalReport {
+  mode: "full" | "incremental";
+  /** Why the mode is what it is: "no cache", "engine version changed", "reused 900/903", … */
+  reason: string;
+  filesTotal: number;
+  /** Added or modified since the cached manifest. */
+  filesChanged: number;
+  /** Files whose symbol extraction was reused rather than recomputed. */
+  filesReused: number;
+  /** Whether this run left a usable cache behind for the next one. */
+  cacheWritten: boolean;
+}
+
 export interface IndexResult {
   score: number;
   loc: number;
@@ -256,6 +287,10 @@ export interface IndexResult {
   viz: VizGraph;
   modules: ModuleGraph;
   symbolGraph: SymbolGraph;
+  /**
+   * Reuse accounting for this run. Absent means the run predates incremental indexing.
+   */
+  incremental?: IncrementalReport;
 }
 
 export const DIMENSION_META: Record<
