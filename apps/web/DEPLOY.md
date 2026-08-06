@@ -30,13 +30,104 @@ the path (REVIEW_2026-07-29 P1-5 explains the runtime failure that causes).
 
 ### Docker (recommended)
 ```bash
-cd CodeGraph            # build context must be the repo root
+cd CodeGraph                       # the build context IS the repo root
+docker build -t codegraph .        # no -f: the Dockerfile is at the top of its context
 docker compose up --build          # http://localhost:4000
+npm run docker:verify              # build it the way a PLATFORM will, and boot it
 ```
 - Multi-stage build on `node:24-slim`; runtime image includes `git`.
 - Runs as **root** — deliberately; see `docs/postmortems/2026-07-10-render-crash-loop.md`. A platform-mounted persistent disk (Render) doesn't inherit the image's baked-in ownership and can reset to root on every restart; dropping privileges after fixing ownership (`setpriv`) crash-looped because Render doesn't grant `CAP_SETUID`. Running as root sidesteps the whole class of problem.
 - SQLite persists to the named volume `codegraph-data` (`/app/data`).
 - `HEALTHCHECK` polls `/api/health`.
+
+#### Where the Dockerfile lives, and why that is not cosmetic
+
+**`./Dockerfile` — the repo root. Not `apps/web/`.** The image can only be built from one
+context, the repo root, because `npm ci` installs from the **root** lockfile and Next's file
+tracer follows imports into `packages/*`. A build definition whose context must be the root
+belongs at the root, so that a platform's *dockerfile path* and *build context* name the same
+directory and cannot disagree.
+
+That invariant — **the Dockerfile sits at the top of its own context** — is what the original
+deploy had (`dockerfilePath: ./app/Dockerfile` with `dockerContext: ./app`) and what the
+monorepo move silently broke by keeping the path at `apps/web/Dockerfile` while widening the
+context to the root. Four consecutive production deploys failed on it, none for a code reason:
+
+| symptom in the deploy log | cause |
+|---|---|
+| `Root directory "app" does not exist` | a service setting still naming the pre-monorepo layout |
+| `transferring dockerfile: 7.49kB` then `open Dockerfile: no such file` | the definition was read from `apps/web/`, then resolved by bare name at the context root |
+| `transferring dockerfile: 2B` then the same error | the configured path no longer existed — `2B` is what BuildKit sends when it finds no dockerfile at all |
+
+`apps/web/Dockerfile` is a **byte-identical copy**, and a temporary one: it exists only so a
+service still configured with the pre-move path reads real content. Its drift hazard is
+enforced away by `scripts/verify-docker.sh` and by `apps/web/tests/readme-claims.test.ts`, both
+of which fail if the two files differ. **Edit `./Dockerfile`, then `cp Dockerfile apps/web/Dockerfile`.**
+Delete the copy, that test, and this paragraph once the service's *Dockerfile Path* reads
+`./Dockerfile` and a deploy has proven it.
+
+#### Render service settings (the fields, exactly)
+
+Two rules from Render's own documentation ([monorepo support](https://render.com/docs/monorepo-support))
+decide all of these:
+
+> *"Files outside your service's root directory are not available to the service at build time or at runtime."*
+> *"Root-relative settings … Dockerfile path, Docker build context directory."*
+
+So the **Root Directory must be empty**: set it to `apps/web` and the root lockfile and
+`packages/*` stop existing as far as the build is concerned. And because the other two fields
+are relative to it, an empty root directory makes them repo-root-relative:
+
+| Dashboard field (Settings → Build & Deploy) | Required value | Live service, 2026-08-05 |
+|---|---|---|
+| Root Directory | *empty* — not `.`, not `apps/web` | *empty* ✅ |
+| Dockerfile Path | `./Dockerfile` | `./apps/web/Dockerfile` ⚠️ works only because of the byte-identical copy above |
+| Docker Build Context Directory | `.` | `.` ✅ |
+| Docker Command | *empty* — the image's `CMD` starts the worker and then `exec`s the web server; anything here replaces it and jobs queue forever | *empty* ✅ |
+| Auto-Deploy | your call | **Off** — merging to `main` deploys nothing until you click **Manual Deploy** |
+
+Set *Dockerfile Path* to `./Dockerfile` and the copy at `apps/web/Dockerfile` can be deleted
+along with its test; until then it is the only thing making that setting survivable.
+
+`render.yaml` declares the same values. It is only authoritative for a **Blueprint-managed**
+service: the deploy log says `It looks like we don't have access to your repo`, so for this
+service the dashboard is the source of truth and the table above must be entered by hand. A
+Blueprint sync does **not** clear a value typed into the dashboard of an existing service.
+
+#### ⚠️ The live service is on Free, and Free has no disk
+
+Instance type is **Free · 0.1 CPU · 512 MB**, and Free instances cannot have a persistent
+disk. `CG_DATA_DIR=/app/data` is therefore a directory *inside the container*, and everything
+the product persists lives there:
+
+- `codegraph.sqlite` + WAL — every indexed repository's score, issues, graph and run history
+- `data/workspaces/<repoId>` — a full git clone per indexed repo, and the editor's working tree
+- `data/trash`, `data/index-cache` — restorable deletions and the incremental-index manifests
+
+All of it is destroyed on **every deploy, every restart, and every idle spin-down** — a Free
+instance stops after roughly 15 minutes without traffic. Sign-in sessions go with it. The app
+does not fail, it forgets, which is the harder failure to notice.
+
+Upgrading the instance type to **Starter** is what fixes it; `render.yaml`'s runtime section
+carries the exact `plan`/`numInstances`/`disk` block to add, and `mountPath` must equal the
+Dockerfile's `ENV CG_DATA_DIR` or the writes miss the volume and the symptom is identical to
+having no disk at all.
+
+The other Free-tier consequence is speed: 0.1 CPU against the 0.5 the smoke tests use. The
+512 MB ceiling — the one that governs OOM — is the same, so the memory verification still
+holds; indexing simply takes proportionally longer, and the worker's shutdown drain is why
+`maxShutdownDelaySeconds` is raised.
+
+#### Before you push a Docker change
+
+```bash
+npm run docker:paths     # ~5s: every path a platform might resolve, via `docker build --check`
+npm run docker:verify    # ~20s: the above, plus a real build and a boot under 512MB/0.5cpu
+```
+
+CI runs `docker:paths` ahead of the image build for the same reason: every one of those four
+failures was reproducible locally in seconds, and none of them was reproducible by
+`docker build .`, which is the only invocation anyone runs by hand.
 
 ## Configuration (env)
 | Var | Where | Default | Purpose |

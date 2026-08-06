@@ -64,22 +64,47 @@ services:
     # from it, or recreate the service from the Blueprint — a fresh service has no stale field.
 
     # ── Runtime shape ────────────────────────────────────────────────────────────────────
-    plan: starter          # Starter is the minimum that supports a persistent disk.
-    region: oregon         # Do NOT change: a disk cannot move region, so this orphans the data.
+    # These MATCH THE LIVE SERVICE, verified against its dashboard on 2026-08-05. They used to
+    # say `starter`/`oregon` with a 5 GB disk, which described a service that does not exist:
+    # applying it would have been rejected (Free instances cannot have a disk) or would have
+    # tried to create a second service, because a region cannot be changed in place.
+    plan: free             # Free · 0.1 CPU · 512 MB. See the DATA LOSS note below.
+    region: singapore      # Cannot be changed in place. Moving region means a new service.
     healthCheckPath: /api/health
-    autoDeploy: true
 
-    # SQLite on a local disk cannot be shared between instances, so this service is
-    # single-instance BY CONSTRUCTION, not by default. Pinned here so that turning on
-    # autoscaling later is a visible edit to this line rather than a silent second writer
-    # against one database file (IDENTITY.md §1: "one container, one SQLite file").
-    numInstances: 1
+    # OFF on the live service, and this file follows it rather than fighting it. With
+    # auto-deploy off, merging to `main` does nothing until someone clicks Manual Deploy —
+    # worth stating, because it is why a merged fix can look like it did not work.
+    autoDeploy: false
 
-    # Render's default SIGTERM grace is 30s. The worker's shutdown policy is to FINISH the
-    # job it is holding (apps/worker/src/main.ts), and a first index of a large repository
-    # takes longer than that — so the default guarantees a periodic hard kill mid-index on
-    # every redeploy, which is precisely how a job row gets stranded. 120s is above the
-    # 90s clone timeout plus a typical index, and well under the 300s ceiling.
+    # THERE IS NO PERSISTENT DISK, BECAUSE FREE INSTANCES CANNOT HAVE ONE.
+    #
+    # `CG_DATA_DIR=/app/data` is therefore a directory INSIDE THE CONTAINER, and everything
+    # this product persists lives there: codegraph.sqlite and its WAL, data/workspaces/<repoId>
+    # (a full git clone per indexed repository), data/trash, and data/index-cache. All of it is
+    # destroyed on every deploy, every restart, and every idle spin-down — a Free instance
+    # stops after ~15 minutes without traffic. Indexed repositories, saved settings, editor
+    # workspaces and sign-in sessions do not survive any of those.
+    #
+    # The app does not fail; it forgets. That is the worse failure mode, so it is recorded in
+    # the file that describes the deployment rather than left to be discovered.
+    #
+    # TO FIX IT: upgrade the instance type to Starter, then add exactly this:
+    #
+    #     plan: starter
+    #     numInstances: 1         # SQLite has one writer; never scale this service out
+    #     disk:
+    #       name: codegraph-data
+    #       mountPath: /app/data  # MUST equal the Dockerfile's ENV CG_DATA_DIR, or the writes
+    #       sizeGB: 5             # miss the volume and the symptom is identical to no disk
+    #
+    # Clones dominate the space, and a disk can grow but never shrink.
+
+    # Render's default SIGTERM grace is 30s. The worker's shutdown policy is to FINISH the job
+    # it is holding (apps/worker/src/main.ts), and a first index of a large repository takes
+    # longer than that — on 0.1 CPU, far longer — so the default guarantees a hard kill
+    # mid-index on every redeploy, which is how a job row gets stranded. 120s is above the 90s
+    # clone timeout plus a typical index, and well under the 300s ceiling.
     maxShutdownDelaySeconds: 120
 
     # Skip a rebuild for changes that cannot reach the image. Each of these is already
@@ -117,12 +142,15 @@ services:
         # YAML `false` is a boolean and the Blueprint validator rejects the whole file.
         value: "false"
 
-      # Encrypts the GitHub session cookie (AES-256-GCM). Render generates a strong random
-      # value on first sync; previously this was `sync: false`, so an operator who skipped the
-      # prompt got a deployment where sign-in silently stayed disabled with no error anywhere.
-      # Rotating it signs everyone out, which is the intended emergency action.
+      # Encrypts the GitHub session cookie (AES-256-GCM).
+      #
+      # `sync: false`, NOT `generateValue: true`, and the difference is destructive: the live
+      # service already has a value set, and generating a new one on sync would silently
+      # re-key every session cookie and sign every user out. `sync: false` leaves whatever the
+      # dashboard holds untouched. For a NEW service, set it to any long random string — with
+      # it unset, GitHub sign-in stays disabled with no error anywhere.
       - key: CG_SESSION_SECRET
-        generateValue: true
+        sync: false
 
       # ── Optional, prompted at Blueprint sync; leave blank to keep the feature off ──
       #
@@ -144,23 +172,3 @@ services:
       # HTTP Basic Auth over everything, as a blunter alternative to the owner lock.
       - key: CG_BASIC_AUTH_PASSWORD
         sync: false
-
-    # ── Persistent state ─────────────────────────────────────────────────────────────────
-    # `name` and `mountPath` MUST NOT change: mountPath is matched by CG_DATA_DIR in the
-    # Dockerfile, and renaming the disk destroys the existing one.
-    #
-    # This directory holds everything that is not in the image and cannot be regenerated
-    # cheaply: codegraph.sqlite plus its WAL, data/workspaces/<repoId> (a FULL git clone per
-    # indexed repository — the dominant consumer, with no per-repo quota), data/trash, and
-    # data/index-cache (one gzipped manifest per workspace, ~0.15–1 MB).
-    #
-    # Sized 5 GB rather than 1 GB on the arithmetic: run rows were measured at ~100 KB each
-    # and, with edit-triggered re-indexing, an actively edited repo can produce hundreds per
-    # hour — retention now bounds that, but the clones do not shrink and three or four
-    # mid-size repositories were already enough to fill 1 GB. The failure mode being bought
-    # off is ENOSPC mid-index, which lands on the same volume as the database. A disk can be
-    # grown later but NEVER shrunk, so this is the one number worth over-provisioning.
-    disk:
-      name: codegraph-data
-      mountPath: /app/data
-      sizeGB: 5
