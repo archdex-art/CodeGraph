@@ -78,18 +78,45 @@ So the **Root Directory must be empty**: set it to `apps/web` and the root lockf
 `packages/*` stop existing as far as the build is concerned. And because the other two fields
 are relative to it, an empty root directory makes them repo-root-relative:
 
-| Dashboard field (Settings → Build & Deploy) | Value |
-|---|---|
-| Root Directory | *empty* — not `.`, not `apps/web` |
-| Dockerfile Path | `./Dockerfile` |
-| Docker Build Context Directory | `.` |
-| Docker Command | *empty* — the image's `CMD` starts the worker and then `exec`s the web server; anything here replaces it and jobs queue forever |
+| Dashboard field (Settings → Build & Deploy) | Required value | Live service, 2026-08-05 |
+|---|---|---|
+| Root Directory | *empty* — not `.`, not `apps/web` | *empty* ✅ |
+| Dockerfile Path | `./Dockerfile` | `./apps/web/Dockerfile` ⚠️ works only because of the byte-identical copy above |
+| Docker Build Context Directory | `.` | `.` ✅ |
+| Docker Command | *empty* — the image's `CMD` starts the worker and then `exec`s the web server; anything here replaces it and jobs queue forever | *empty* ✅ |
+| Auto-Deploy | your call | **Off** — merging to `main` deploys nothing until you click **Manual Deploy** |
+
+Set *Dockerfile Path* to `./Dockerfile` and the copy at `apps/web/Dockerfile` can be deleted
+along with its test; until then it is the only thing making that setting survivable.
 
 `render.yaml` declares the same values. It is only authoritative for a **Blueprint-managed**
-service: if the deploy log says `It looks like we don't have access to your repo`, or the
-service page has no Blueprint link, the dashboard is the source of truth and the table above
-must be entered by hand. A Blueprint sync does **not** clear a value typed into the dashboard
-of an existing service.
+service: the deploy log says `It looks like we don't have access to your repo`, so for this
+service the dashboard is the source of truth and the table above must be entered by hand. A
+Blueprint sync does **not** clear a value typed into the dashboard of an existing service.
+
+#### ⚠️ The live service is on Free, and Free has no disk
+
+Instance type is **Free · 0.1 CPU · 512 MB**, and Free instances cannot have a persistent
+disk. `CG_DATA_DIR=/app/data` is therefore a directory *inside the container*, and everything
+the product persists lives there:
+
+- `codegraph.sqlite` + WAL — every indexed repository's score, issues, graph and run history
+- `data/workspaces/<repoId>` — a full git clone per indexed repo, and the editor's working tree
+- `data/trash`, `data/index-cache` — restorable deletions and the incremental-index manifests
+
+All of it is destroyed on **every deploy, every restart, and every idle spin-down** — a Free
+instance stops after roughly 15 minutes without traffic. Sign-in sessions go with it. The app
+does not fail, it forgets, which is the harder failure to notice.
+
+Upgrading the instance type to **Starter** is what fixes it; `render.yaml`'s runtime section
+carries the exact `plan`/`numInstances`/`disk` block to add, and `mountPath` must equal the
+Dockerfile's `ENV CG_DATA_DIR` or the writes miss the volume and the symptom is identical to
+having no disk at all.
+
+The other Free-tier consequence is speed: 0.1 CPU against the 0.5 the smoke tests use. The
+512 MB ceiling — the one that governs OOM — is the same, so the memory verification still
+holds; indexing simply takes proportionally longer, and the worker's shutdown drain is why
+`maxShutdownDelaySeconds` is raised.
 
 #### Before you push a Docker change
 
