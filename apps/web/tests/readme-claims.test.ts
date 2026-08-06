@@ -200,8 +200,34 @@ describe("the deploy's two dockerfile paths both resolve", () => {
     // that the P1 monorepo move broke by leaving the dockerfile at `apps/web/Dockerfile` while
     // the context became the repo root.
     const rootDockerfile = readFileSync(path.join(root, "Dockerfile"), "utf8");
-    expect(rootDockerfile).toMatch(/^# syntax=docker\/dockerfile:1/);
     expect(rootDockerfile).toMatch(/ENV CG_USE_WORKER=true/);
+  });
+
+  it("carries no `# syntax=` directive, so no external frontend re-reads the dockerfile", () => {
+    // This assertion was written the other way round — requiring the directive — and this
+    // suite failed the moment it was removed. Kept, inverted, because the removal is the fix
+    // for the fifth failed deploy and nothing in the file's content would reveal that:
+    //
+    //   #1 [internal] load build definition from Dockerfile
+    //   #1 transferring dockerfile: 9.55kB done      <- read correctly, right size
+    //   #1 DONE 0.0s
+    //   error: failed to solve: failed to read dockerfile: open Dockerfile : no such file
+    //
+    // `# syntax=` hands the build to an EXTERNAL frontend image which resolves the dockerfile
+    // itself instead of using the definition BuildKit already loaded, and on Render that
+    // second resolution failed. The directive bought this file nothing: no `RUN --mount`, no
+    // heredocs, no `COPY --link`, no `COPY --chmod`. Adding it back means re-introducing the
+    // failure, so it fails here first.
+    const rootDockerfile = readFileSync(path.join(root, "Dockerfile"), "utf8");
+    expect(rootDockerfile).not.toMatch(/^#\s*syntax\s*=/m);
+    // ...and the features that would justify bringing it back are absent, so the removal
+    // stays safe. Comment lines are stripped first: the header above NAMES those features in
+    // prose, and the first version of this assertion matched its own explanation.
+    const instructions = rootDockerfile
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("#"))
+      .join("\n");
+    expect(instructions).not.toMatch(/RUN\s+--mount|COPY\s+--link|COPY\s+--chmod|<<[A-Z]/);
   });
 
   it("keeps apps/web/Dockerfile byte-identical to it", () => {

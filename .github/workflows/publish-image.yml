@@ -1,0 +1,80 @@
+name: Publish image
+
+# Build the production image ONCE, in the place that already proves it works, and publish it.
+#
+# WHY THIS EXISTS. Every deploy failure this project has had was a build-input problem on the
+# platform, not a code problem: a stale Root Directory, a Dockerfile Path pointing at a moved
+# file, and an external BuildKit frontend that could not re-resolve the Dockerfile. None of
+# them was reproducible by `docker build .`, and none of them could happen at all if the
+# platform were not building.
+#
+# A service that PULLS this image has no Dockerfile path, no build context, no root directory
+# and no frontend — the entire class of failure is gone, and the image running in production
+# is bit-for-bit the one CI built, indexed two real repositories with, and gated at 85% of the
+# 512MB budget. See apps/web/DEPLOY.md, "Deploying the prebuilt image".
+#
+# linux/amd64 only: that is what Render runs. Building the arm64 variant as well would double
+# the job time to publish an image nothing pulls.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # A newer commit's image supersedes an older one; there is no value in publishing both.
+  group: publish-image
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Build and push to GHCR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Path resolution first, exactly as the smoke-test job does. It costs five seconds and
+      # it is the check that four failed deploys were missing.
+      - name: Verify every dockerfile path resolves
+        run: ./scripts/verify-docker.sh --paths
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # Plain buildx rather than a third-party action: this workflow can push to the org's
+      # package registry, so the fewer external actions in its supply chain the better.
+      #
+      # Two tags, and both matter. `:latest` is what a service pulls; the commit SHA is what
+      # makes a rollback possible and what tells you which image is actually running — Render
+      # caches mutable tags, so a SHA tag is also the only way to force a specific image.
+      - name: Build and push
+        run: |
+          set -euo pipefail
+          REPO="ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag "$REPO:latest" \
+            --tag "$REPO:${{ github.sha }}" \
+            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --push \
+            .
+          echo "published $REPO:latest and $REPO:${{ github.sha }}"
+
+      - name: Summary
+        run: |
+          REPO="ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+          {
+            echo "### Image published"
+            echo
+            echo '```'
+            echo "$REPO:latest"
+            echo "$REPO:${{ github.sha }}"
+            echo '```'
+            echo
+            echo "A Render service using **Existing Image** with the URL above has no Dockerfile"
+            echo "path, no build context and no root directory to get wrong."
+          } >> "$GITHUB_STEP_SUMMARY"

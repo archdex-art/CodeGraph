@@ -118,6 +118,47 @@ The other Free-tier consequence is speed: 0.1 CPU against the 0.5 the smoke test
 holds; indexing simply takes proportionally longer, and the worker's shutdown drain is why
 `maxShutdownDelaySeconds` is raised.
 
+#### Deploying the prebuilt image (the way that cannot break on paths)
+
+Every deploy failure this project has had was a **build-input** problem on the platform, not a
+code problem: a stale Root Directory, a Dockerfile Path pointing at a moved file, and an
+external BuildKit frontend that could not re-resolve the Dockerfile. None of them was
+reproducible by `docker build .`, and **none of them can happen if the platform is not
+building.**
+
+`.github/workflows/publish-image.yml` builds the image on every push to `main` — in the same
+CI that already indexes two real repositories with it and gates peak memory at 85% of the
+512 MB budget — and pushes it to GHCR:
+
+```
+ghcr.io/archdex-art/codegraph:latest
+ghcr.io/archdex-art/codegraph:<commit-sha>
+```
+
+A service that PULLS that image has no Dockerfile path, no build context, no root directory
+and no frontend. The image running in production is bit-for-bit the one CI verified, which is
+not true today — Render currently rebuilds from source and can produce a different image from
+the one that passed.
+
+**One-time setup:**
+
+1. Push to `main` once so the workflow publishes the first image.
+2. GitHub → the repo → *Packages* → `codegraph` → *Package settings* → **change visibility to
+   Public**. Packages pushed with `GITHUB_TOKEN` are private by default even in a public repo,
+   and a private image needs a Render *Registry Credential* instead.
+3. Render → *New* → *Web Service* → **Existing Image** → image URL
+   `ghcr.io/archdex-art/codegraph:latest`.
+4. Set the environment variables from the table below, the health check path `/api/health`,
+   and — if you want persistence — a Starter instance with a disk at `/app/data`.
+5. Delete the old repo-backed service once the new one serves traffic.
+
+Deploy by clicking *Manual Deploy* (or hitting the Deploy Hook from CI) after a publish. Pin
+the SHA tag rather than `latest` when you need certainty about which image is running: Render
+caches mutable tags, so `latest` can serve a stale image.
+
+The Dockerfile-based path stays fully supported and is what `docker compose` and CI use; this
+is about which of the two the *production service* depends on.
+
 #### Before you push a Docker change
 
 ```bash

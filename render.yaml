@@ -41,6 +41,18 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     #
+    # THE WAY THAT CANNOT BREAK ON PATHS. Every failed deploy here was a build-input problem,
+    # and none of them is reachable by a service that does not build. CI publishes the exact
+    # image it smoke-tests to ghcr.io on every push to main
+    # (.github/workflows/publish-image.yml), so this whole block can be replaced by:
+    #
+    #     runtime: image
+    #     image:
+    #       url: ghcr.io/archdex-art/codegraph:latest
+    #
+    # and then there is no dockerfilePath, no dockerContext and no rootDir to get wrong.
+    # Setup steps are in apps/web/DEPLOY.md, "Deploying the prebuilt image".
+    #
     # `apps/web/Dockerfile` is a byte-identical COPY of that file, kept in step by a test, so
     # a service whose dashboard still carries the old Dockerfile Path reads real content
     # instead of the two bytes an absent file produces. Remove the copy once the dashboard
