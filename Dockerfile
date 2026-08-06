@@ -1,6 +1,25 @@
-# syntax=docker/dockerfile:1
-#
 # THE IMAGE FOR apps/web, BUILT FROM THE MONOREPO ROOT.
+#
+# NO `# syntax=` DIRECTIVE, DELIBERATELY, AND IT MUST NOT COME BACK WITHOUT READING THIS.
+#
+# That directive tells BuildKit to fetch an EXTERNAL frontend image and hand the build to it,
+# and that frontend resolves the Dockerfile ITSELF rather than using the definition BuildKit
+# already loaded. On Render that second resolution is what failed, every time, for five
+# deploys — the logs show step #1 succeeding and then the solve dying:
+#
+#   #1 [internal] load build definition from Dockerfile
+#   #1 transferring dockerfile: 9.55kB done          <- this file, read correctly
+#   #1 DONE 0.0s
+#   error: failed to solve: failed to read dockerfile: open Dockerfile : no such file or directory
+#
+# The same invocation locally (`docker build -f apps/web/Dockerfile .`) prints the identical
+# step name and the identical 9.55kB and then BUILDS, because the local builder resolves the
+# frontend differently. That divergence is the whole bug, and it is not reachable from the
+# Dockerfile's own content — only from whether an external frontend is involved at all.
+#
+# The directive bought this file NOTHING: it uses no BuildKit-frontend feature — no
+# `RUN --mount`, no heredocs, no `COPY --link`, no `COPY --chmod`. Checked before removing it,
+# and `scripts/verify-docker.sh` re-checks every path that can invoke this build.
 #   docker build -t codegraph .
 #
 # It lives HERE, beside the lockfile, rather than in apps/web, because the repo root is the

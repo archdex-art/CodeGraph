@@ -113,19 +113,56 @@ pass "image builds"
 docker run -d --name "$NAME" --memory=512m --memory-swap=512m --cpus=0.5 -p 4599:4000 "$TAG" >/dev/null \
   || fail "container did not start"
 
+# NO `... | grep -q` ANYWHERE BELOW, and that is not style. Under `set -o pipefail` — set at
+# the top of this file, correctly — `grep -q` exits the instant it matches, the writer upstream
+# gets SIGPIPE, and the PIPELINE reports 141. So the check fails exactly when the string is
+# found EARLY with output still to come, and passes when the output is short enough to finish
+# writing first. Measured here: three consecutive runs of the same green image went pass,
+# fail, fail, each failure dumping logs that visibly contained the string it had just failed
+# to find. Capturing first and matching in the shell has no pipe and no race.
+logs_of() { docker logs "$1" 2>&1 || true; }
+
 for _ in $(seq 1 40); do
   if curl -fsS -m 3 http://127.0.0.1:4599/api/health >/dev/null 2>&1; then break; fi
   sleep 1
 done
-curl -fsS -m 5 http://127.0.0.1:4599/api/health | grep -q '"status":"ok"' \
-  || { docker logs "$NAME" 2>&1 | tail -20 >&2; fail "/api/health did not report ok under 512MB/0.5cpu"; }
-pass "/api/health reports ok under --memory=512m --cpus=0.5"
+health=$(curl -fsS -m 5 http://127.0.0.1:4599/api/health 2>/dev/null || true)
+case "$health" in
+  *'"status":"ok"'*) pass "/api/health reports ok under --memory=512m --cpus=0.5" ;;
+  *) logs_of "$NAME" | tail -20 >&2; fail "/api/health did not report ok under 512MB/0.5cpu (got: ${health:-no response})" ;;
+esac
 
 # The worker is what claims queued jobs. With CG_USE_WORKER=true baked into the image and no
 # worker running, every index would sit in the queue forever while the app looked healthy —
 # the failure mode the entrypoint refuses to boot into, asserted here too.
-docker logs "$NAME" 2>&1 | grep -q "worker started" \
-  || { docker logs "$NAME" 2>&1 | tail -20 >&2; fail "the analysis worker did not start"; }
-pass "analysis worker started"
+#
+# TWO SIGNALS, because they fail differently and a gate that cannot tell them apart is a gate
+# people re-run instead of read:
+#
+#   · `entrypoint: starting analysis worker` is printed synchronously by the entrypoint before
+#     the web server is launched at all. Absent => the worker was never launched, which is a
+#     real defect in the image.
+#   · `worker started` is the worker's own line, emitted only after it opens SQLite and runs
+#     migrations — which can land well AFTER /api/health is already answering. Absent while
+#     the first line is present => slow start, not a broken image.
+worker_wait=0
+while :; do
+  container_logs=$(logs_of "$NAME")
+  case "$container_logs" in *"worker started"*) break ;; esac
+  [ "$worker_wait" -ge 60 ] && break
+  worker_wait=$((worker_wait + 1))
+  sleep 1
+done
+
+case "$container_logs" in
+  *"entrypoint: starting analysis worker"*) : ;;
+  *) printf '%s\n' "$container_logs" | tail -20 >&2
+     fail "the entrypoint never launched the worker (is CG_USE_WORKER=true in the image?)" ;;
+esac
+case "$container_logs" in
+  *"worker started"*) pass "analysis worker started (after ${worker_wait}s)" ;;
+  *) printf '%s\n' "$container_logs" | tail -20 >&2
+     fail "the worker was launched but never reported ready (waited ${worker_wait}s)" ;;
+esac
 
 printf '\n%sall docker paths resolve and the image serves%s\n' "$GREEN" "$OFF"
