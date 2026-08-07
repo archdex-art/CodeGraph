@@ -191,12 +191,24 @@ function packComponents(
 /**
  * Layered (Sugiyama-lite) layout for the architecture flowchart.
  * tierOf maps id -> tier (0 = bottom). Returns centered positions + bounds.
+ *
+ * `sizeOf` lets one node claim a larger footprint than the rest — which is what an
+ * expanded module needs, since it stops being a box and becomes a container holding
+ * its files. It is a per-node OVERRIDE rather than a replacement for `box`: `box`
+ * still sets the default and, importantly, still sets the GAPS, so an expansion
+ * changes spacing without changing the grammar of the diagram.
+ *
+ * Row membership and row ORDER are computed before sizes are consulted, so growing
+ * a node re-spaces the diagram but never re-sorts it. That is the property that
+ * makes the transition animatable: every node keeps its identity and its
+ * neighbours, and only its coordinates move.
  */
 export function layeredLayout(
   ids: string[],
   edges: SimEdge[],
   tierOf: Map<string, number>,
-  box: { w: number; h: number; hGap: number; vGap: number }
+  box: { w: number; h: number; hGap: number; vGap: number },
+  sizeOf?: (id: string) => { w: number; h: number } | undefined
 ): { pos: Map<string, XY>; width: number; height: number } {
   const tiers = new Map<number, string[]>();
   for (const id of ids) {
@@ -230,26 +242,37 @@ export function layeredLayout(
 
   // Wrap very wide tiers into multiple sub-rows so boxes stay readable.
   const MAX_COLS = 8;
-  const maxCols = Math.max(1, ...tierKeys.map((t) => Math.min(MAX_COLS, tiers.get(t)!.length)));
-  const width = 60 * 2 + maxCols * box.w + (maxCols - 1) * box.hGap;
+  const size = (id: string) => sizeOf?.(id) ?? box;
+
+  // The frame has to admit the widest row it will actually draw, so it is measured
+  // from real sizes rather than assumed to be `maxCols` default boxes — an expanded
+  // container is wider than a box and would otherwise hang off the right edge.
+  const rowsOf = (row: string[]): string[][] => {
+    const cols = Math.min(MAX_COLS, Math.max(1, row.length));
+    const out: string[][] = [];
+    for (let i = 0; i < row.length; i += cols) out.push(row.slice(i, i + cols));
+    return out;
+  };
+  const spanOf = (slice: string[]) =>
+    slice.reduce((sum, id) => sum + size(id).w, 0) + (slice.length - 1) * box.hGap;
+
+  const allRows = tierKeys.flatMap((t) => rowsOf(tiers.get(t)!));
+  const width = 60 * 2 + Math.max(box.w, ...allRows.map(spanOf));
 
   const pos = new Map<string, XY>();
   let cursorY = 50;
   for (const t of tierKeys) {
-    const row = tiers.get(t)!;
-    const cols = Math.min(MAX_COLS, Math.max(1, row.length));
-    const subRows = Math.ceil(row.length / cols);
-    for (let sr = 0; sr < subRows; sr++) {
-      const slice = row.slice(sr * cols, sr * cols + cols);
-      const rowW = slice.length * box.w + (slice.length - 1) * box.hGap;
-      const startX = (width - rowW) / 2;
-      slice.forEach((id, i) => {
-        pos.set(id, {
-          x: startX + i * (box.w + box.hGap) + box.w / 2,
-          y: cursorY + box.h / 2,
-        });
-      });
-      cursorY += box.h + box.vGap;
+    for (const slice of rowsOf(tiers.get(t)!)) {
+      // A row is as tall as its tallest member, so an expanded container pushes the
+      // rows below it down instead of overlapping them.
+      const rowH = Math.max(...slice.map((id) => size(id).h));
+      let x = (width - spanOf(slice)) / 2;
+      for (const id of slice) {
+        const s = size(id);
+        pos.set(id, { x: x + s.w / 2, y: cursorY + rowH / 2 });
+        x += s.w + box.hGap;
+      }
+      cursorY += rowH + box.vGap;
     }
   }
   const height = cursorY - box.vGap + 50;

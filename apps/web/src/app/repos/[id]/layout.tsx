@@ -139,8 +139,6 @@ export default function RepoLayout({
         return repo.graphStats?.files || null;
       case "network":
         return repo.viz?.nodes.length || null;
-      case "code-intel":
-        return repo.symbolGraph?.stats.symbols || null;
       case "agents":
         return repo.issues.length || null;
       default:
@@ -220,9 +218,20 @@ export default function RepoLayout({
     );
   };
 
+  const immersive = current?.immersive === true;
+
   return (
     <RepoProvider value={repo}>
+      {/* No `overflow-hidden` here, deliberately. It looks harmless — the canvas is
+          already clipped and the page already cannot scroll — but `overflow` on this
+          element makes it a SCROLL CONTAINER, and a `position:sticky` child resolves
+          its offset against the nearest scrollport rather than the viewport. The rail
+          then stuck 80px below the shell's top edge instead of the window's, sitting
+          70px lower than on every non-immersive route: measured `innerTop` 150 vs 80.
+          Page scroll is already suppressed by `body:has([data-immersive])`, so this
+          clamp bought nothing and cost the one thing it touched. */}
       <div
+        data-immersive={immersive ? "" : undefined}
         className={`shell lg:grid lg:gap-lg lg:transition-[grid-template-columns] lg:duration-300 lg:[transition-timing-function:var(--ease-out-expo)] ${
           collapsed
             ? "lg:grid-cols-[var(--rail-collapsed)_minmax(0,1fr)]"
@@ -231,7 +240,10 @@ export default function RepoLayout({
       >
         {/* ------------------------------------------------------------ SIDEBAR */}
         <aside className="hidden lg:block" id="report-rail">
-          <div className="sticky top-[4.5rem] py-xl">
+          {/* Offset by the chrome, not by a copy of its height: `--header-h` drops to
+              0 when the header retracts, so the rail rides up with it instead of
+              leaving a 72px gap against nothing. */}
+          <div className="sticky top-[calc(var(--header-h)+0.5rem)] pt-md pb-xl">
             {/* Collapse control. Sits above everything the rail contains, because it
                 governs all of it — and stays in the same place in both states so the
                 pointer does not have to hunt for the way back. */}
@@ -322,118 +334,101 @@ export default function RepoLayout({
         </aside>
 
         {/* --------------------------------------------------------------- MAIN */}
-        <div className="min-w-0 pb-xl lg:border-l lg:border-[var(--line)] lg:pl-lg">
+        <div className={`min-w-0 lg:border-l lg:border-[var(--line)] lg:pl-lg ${immersive ? "" : "pb-xl"}`}>
           {/* Mobile: the sidebar collapses to a scrollable rail rather than a
               hamburger — section switching is the primary action on this page and
               hiding it behind a menu costs a tap on every move. */}
-          <div className="-mx-lg mb-lg border-b border-[var(--line)] px-lg pt-lg lg:hidden">
-            <Link
-              href="/dashboard"
-              className="mb-md inline-flex min-h-9 cursor-pointer items-center gap-sm text-meta text-[var(--text-muted)]"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
-            </Link>
-            {/* `min-w-0` is load-bearing: without it this flex child sizes to its
-                content (every section pill laid end to end), so the rail scrolled AND
-                the page grew — 232px of horizontal overflow on a 390px viewport. */}
-            <div className="flex min-w-0 gap-2xs overflow-x-auto pb-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {SECTIONS.map((s) => navLink(s.slug, s.label, s.icon))}
+          {!immersive && (
+            <div className="-mx-lg mb-lg border-b border-[var(--line)] px-lg pt-lg lg:hidden">
+              <Link
+                href="/dashboard"
+                className="mb-md inline-flex min-h-9 cursor-pointer items-center gap-sm text-meta text-[var(--text-muted)]"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
+              </Link>
+              <div className="flex min-w-0 gap-2xs overflow-x-auto pb-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {SECTIONS.map((s) => navLink(s.slug, s.label, s.icon))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ------------------------------------------------------------ HEADER */}
-          {/* Scale note. Measured before changing anything: the title rendered at 38px
-              against a 56px health numeral, a 24px section heading and 13–15px chrome.
-              That put the repository's NAME within touching distance of the reading the
-              page exists to deliver, and more than half again the size of the headings
-              that organise it.
-
-              On a report the score is the hero and the name is identification, so the
-              title now sits on `text-h3` (26) — one rung above the in-page section
-              headings at `text-lede` (20), and well below the numeral. The icon tile
-              came down with it: a 48px tile beside 26px type reads as a logo rather
-              than a source marker. */}
-          <header className="pt-0 lg:pt-xl">
-            <div className="flex flex-wrap items-start justify-between gap-x-xl gap-y-md">
-              <div className="flex min-w-0 items-start gap-md">
-                <span className="mt-2xs flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)]">
-                  {repo.sourceType === "git" ? (
-                    <GithubMark className="h-[18px] w-[18px] text-[var(--text-secondary)]" />
-                  ) : (
-                    <FolderGit2 className="h-[18px] w-[18px] text-[var(--text-secondary)]" />
-                  )}
-                </span>
-                <div className="min-w-0">
-                  <h1 className="font-display truncate text-h3 tracking-tight">
-                    {hasOwner && <span className="text-[var(--text-muted)]">{owner} / </span>}
-                    <span className="text-[var(--text-primary)]">{shortName}</span>
-                  </h1>
-
-                  {/* Meta row. Every item is something the index actually recorded —
-                      there is no description field on a repo, so none is invented. */}
-                  <div className="mt-sm flex flex-wrap items-center gap-x-md gap-y-xs text-meta text-[var(--text-muted)]">
-                    {repo.languages?.[0] && (
-                      <span className="flex items-center gap-xs">
-                        <span className="h-2 w-2 rounded-full bg-[var(--violet-500)]" aria-hidden="true" />
-                        {repo.languages[0].language}
-                      </span>
-                    )}
-                    <span className="tnum">{repo.loc.toLocaleString()} LOC</span>
+          {!immersive && (
+            <header className="pt-0 lg:pt-md">
+              <div className="flex flex-wrap items-start justify-between gap-x-xl gap-y-md">
+                <div className="flex min-w-0 items-start gap-md">
+                  <span className="mt-2xs flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)]">
                     {repo.sourceType === "git" ? (
-                      <a
-                        href={repo.url}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="flex cursor-pointer items-center gap-xs truncate font-mono transition-colors duration-200 hover:text-[var(--text-secondary)]"
-                      >
-                        {repo.url.replace(/^https?:\/\//, "")}
-                        <ExternalLink className="h-3 w-3 shrink-0" />
-                      </a>
+                      <GithubMark className="h-[18px] w-[18px] text-[var(--text-secondary)]" />
                     ) : (
-                      <span className="truncate font-mono">{repo.url}</span>
+                      <FolderGit2 className="h-[18px] w-[18px] text-[var(--text-secondary)]" />
                     )}
-                  </div>
+                  </span>
+                  <div className="min-w-0">
+                    <h1 className="font-display truncate text-h3 tracking-tight">
+                      {hasOwner && <span className="text-[var(--text-muted)]">{owner} / </span>}
+                      <span className="text-[var(--text-primary)]">{shortName}</span>
+                    </h1>
 
-                  <p className="mt-xs text-micro text-[var(--text-muted)]">
-                    Indexed {relative(repo.finishedAt ?? repo.createdAt)}
-                    {repo.coverage && (
-                      <>
-                        {" · "}
-                        <span className="tnum">
-                          {repo.coverage.filesAnalysed.toLocaleString()}
-                        </span>{" "}
-                        of <span className="tnum">{repo.coverage.filesSeen.toLocaleString()}</span> files scanned
-                      </>
-                    )}
-                  </p>
+                    <div className="mt-sm flex flex-wrap items-center gap-x-md gap-y-xs text-meta text-[var(--text-muted)]">
+                      {repo.languages?.[0] && (
+                        <span className="flex items-center gap-xs">
+                          <span className="h-2 w-2 rounded-full bg-[var(--violet-500)]" aria-hidden="true" />
+                          {repo.languages[0].language}
+                        </span>
+                      )}
+                      <span className="tnum">{repo.loc.toLocaleString()} LOC</span>
+                      {repo.sourceType === "git" ? (
+                        <a
+                          href={repo.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="flex cursor-pointer items-center gap-xs truncate font-mono transition-colors duration-200 hover:text-[var(--text-secondary)]"
+                        >
+                          {repo.url.replace(/^https?:\/\//, "")}
+                          <ExternalLink className="h-3 w-3 shrink-0" />
+                        </a>
+                      ) : (
+                        <span className="truncate font-mono">{repo.url}</span>
+                      )}
+                    </div>
+
+                    <p className="mt-xs text-micro text-[var(--text-muted)]">
+                      Indexed {relative(repo.finishedAt ?? repo.createdAt)}
+                      {repo.coverage && (
+                        <>
+                          {" · "}
+                          <span className="tnum">
+                            {repo.coverage.filesAnalysed.toLocaleString()}
+                          </span>{" "}
+                          of <span className="tnum">{repo.coverage.filesSeen.toLocaleString()}</span> files scanned
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-sm">
+                  <Link
+                    href={sectionHref(id, "network")}
+                    className="flex min-h-10 cursor-pointer items-center justify-center gap-sm rounded-md border border-[var(--line)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:text-[var(--text-primary)]"
+                  >
+                    Query the graph
+                  </Link>
+                  <Link
+                    href={sectionHref(id, "agents")}
+                    className="flex min-h-10 cursor-pointer items-center justify-center gap-sm rounded-md bg-[var(--accent-fill)] px-md text-meta font-medium text-[var(--accent-on-fill)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
+                  >
+                    Run the swarm
+                  </Link>
                 </div>
               </div>
 
-              {/* Side by side, not stacked. Two 44px buttons in a column stood 98px tall
-                  against a header block that is now ~70px — the actions were physically
-                  larger than the thing they act on. Row layout also puts the primary
-                  action on the same optical line as the title. `min-h-10` keeps a
-                  comfortable target while no longer setting the header's height. */}
-              <div className="flex shrink-0 items-center gap-sm">
-                <Link
-                  href={sectionHref(id, "code-intel")}
-                  className="flex min-h-10 cursor-pointer items-center justify-center gap-sm rounded-md border border-[var(--line)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:text-[var(--text-primary)]"
-                >
-                  Query the graph
-                </Link>
-                <Link
-                  href={sectionHref(id, "agents")}
-                  className="flex min-h-10 cursor-pointer items-center justify-center gap-sm rounded-md bg-[var(--accent-fill)] px-md text-meta font-medium text-[var(--accent-on-fill)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
-                >
-                  Run the swarm
-                </Link>
-              </div>
-            </div>
+              <div className="mt-lg h-px bg-[var(--line)]" />
+            </header>
+          )}
 
-            <div className="mt-lg h-px bg-[var(--line)]" />
-          </header>
-
-          <div className="pt-xl">{children}</div>
+          <div className={immersive ? "h-[calc(100dvh-var(--header-h)-1.5rem)] min-h-0" : "pt-md"}>{children}</div>
         </div>
       </div>
     </RepoProvider>

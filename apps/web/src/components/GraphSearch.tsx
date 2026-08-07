@@ -42,7 +42,17 @@ export function GraphSearch({
 
   return (
     <div className="relative w-full max-w-rail">
-      <div className="flex items-center gap-xs bg-[var(--surface-2)] border border-[var(--line)] rounded-lg px-sm py-xs focus-within:border-[var(--violet-500)]/50">
+      {/* The WRAPPER carries the focus affordance, not the input.
+
+          `:focus-visible` in `globals.css` is unlayered, so its 2px lime outline
+          outranks Tailwind's `focus:outline-none` (which lives in `@layer utilities`)
+          and drew a second, brighter ring inside this one — two rings on one control,
+          in two different accent hues. `focus-visible:outline-none` here is at the
+          same unlayered specificity via the arbitrary variant, so it actually lands.
+          The affordance is not removed, only de-duplicated: the border goes to full
+          violet and gains a soft ring, which is a clearer focus state than the outline
+          it replaces and keeps the control keyboard-legible. */}
+      <div className="flex items-center gap-xs rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-sm py-xs transition-[border-color,box-shadow] duration-200 focus-within:border-[var(--violet-500)] focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--violet-500)_18%,transparent)]">
         <Search className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
         <input
           value={q}
@@ -53,7 +63,8 @@ export function GraphSearch({
             if (e.key === "Escape") { setQ(""); setOpen(false); }
           }}
           placeholder={placeholder}
-          className="bg-transparent flex-1 text-meta text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none min-w-0"
+          data-focus-ring="none"
+          className="min-w-0 flex-1 bg-transparent text-meta text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none"
         />
         {q && (
           <button onClick={() => { setQ(""); setOpen(false); }} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0">

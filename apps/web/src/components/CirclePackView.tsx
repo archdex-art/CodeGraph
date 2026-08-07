@@ -6,6 +6,20 @@ import type { TreeNode } from "@/lib/types";
 import { extColor } from "@/lib/colors";
 import { Search, X } from "lucide-react";
 
+import {
+  createWheelZoom,
+  ZOOM_BUTTON_DURATION_MS,
+  ZOOM_DURATION_MS,
+  ZOOM_STEP_RATIO,
+} from "@/lib/zoom";
+
+/** Deepest zoom, as a multiple of the pack's own diameter. */
+const MAX_ZOOM = 60;
+/** Furthest out, same units. */
+const MAX_OUT = 4;
+/** Focusing a circle travels further than a notch, so it is given longer. */
+const FOCUS_DURATION_MS = 480;
+
 interface PackDatum {
   name: string;
   path: string;
@@ -17,7 +31,7 @@ interface PackDatum {
 
 type View = [number, number, number]; // [cx, cy, diameter] in pack coords
 
-export function CirclePackView({ tree }: { tree: TreeNode }) {
+export function CirclePackView({ tree, onSelect }: { tree: TreeNode; onSelect?: (id: string | null) => void }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [vp, setVp] = useState({ w: 900, h: 600 });
   const [hover, setHover] = useState<{ d: HierarchyCircularNode<PackDatum>; x: number; y: number } | null>(null);
@@ -58,6 +72,7 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
   const viewRef = useRef<View>([dim / 2, dim / 2, dim]);
   const focusRef = useRef<HierarchyCircularNode<PackDatum>>(root);
   const raf = useRef(0);
+  const wheelZoom = useRef(createWheelZoom());
   const drag = useRef<{ on: boolean; lx: number; ly: number; moved: boolean }>({ on: false, lx: 0, ly: 0, moved: false });
 
   const [view, setView] = useState<View>([dim / 2, dim / 2, dim]);
@@ -96,11 +111,19 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
     return () => ro.disconnect();
   }, []);
 
-  function zoomTo(target: View) {
+  /**
+   * Ease the view to `target`, retargeting from wherever it currently is.
+   *
+   * Reading `viewRef.current` as the start — rather than the previous animation's
+   * origin — is what lets overlapping wheel ticks compose: each new tick continues
+   * from the frame on screen instead of restarting from a stale position.
+   */
+  function zoomTo(target: View, dur = FOCUS_DURATION_MS) {
     const from: View = [...viewRef.current];
     const t0 = performance.now();
-    const dur = 480;
-    const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    // Decays to rest. An in-out curve makes a single zoom notch start slowly, which
+    // reads as the surface being reluctant.
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3);
     const step = (now: number) => {
       const p = Math.min(1, (now - t0) / dur);
       const e = ease(p);
@@ -120,11 +143,23 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
     zoomTo([n.x, n.y, n.r * 2]);
   }
 
-  // Free zoom toward the cursor by shrinking/growing the viewed diameter while
-  // keeping the world point under the pointer fixed.
-  function onWheel(e: React.WheelEvent) {
+  /**
+   * Zoom toward the cursor, keeping the world point under the pointer fixed.
+   *
+   * Throttled and animated by the shared policy — see `lib/zoom.ts`. The previous
+   * version applied a fixed 1.15x on every wheel event with no rate limit, which on
+   * a trackpad (about sixty events per second) compounded past the clamp almost
+   * immediately: one flick of two fingers went from the whole tree to a single file.
+   *
+   * Bound natively and NON-PASSIVELY below. React registers `wheel` at the root as
+   * passive, so `preventDefault()` in a synthetic handler is discarded and the
+   * browser scrolls — or, for a trackpad pinch, zooms the whole document — right
+   * through the graph you were aiming at.
+   */
+  function onWheel(e: WheelEvent) {
     e.preventDefault();
-    cancelAnimationFrame(raf.current);
+    const f = wheelZoom.current(e);
+    if (f === null) return;
     const rect = wrapRef.current!.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
@@ -132,17 +167,33 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
     const s = dim / cd;
     const wx = (sx - vp.w / 2) / s + cx;
     const wy = (sy - vp.h / 2) / s + cy;
-    const f = e.deltaY < 0 ? 1 / 1.15 : 1.15;
-    const nd = Math.max(dim / 60, Math.min(dim * 4, cd * f));
+    // The view is a DIAMETER, so it moves opposite to scale: zooming in shrinks it.
+    const nd = Math.max(dim / MAX_ZOOM, Math.min(dim * MAX_OUT, cd / f));
     const ns = dim / nd;
-    applyView([wx - (sx - vp.w / 2) / ns, wy - (sy - vp.h / 2) / ns, nd]);
+    zoomTo([wx - (sx - vp.w / 2) / ns, wy - (sy - vp.h / 2) / ns, nd], ZOOM_DURATION_MS);
   }
 
+  /**
+   * The handler closes over `dim` and `vp`, which change with the container, so it
+   * is reached through a ref: re-subscribing a native listener on every layout
+   * change would drop wheel events during the swap.
+   */
+  const wheelRef = useRef(onWheel);
+  useEffect(() => {
+    wheelRef.current = onWheel;
+  });
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const handler = (e: WheelEvent) => wheelRef.current(e);
+    wrap.addEventListener("wheel", handler, { passive: false });
+    return () => wrap.removeEventListener("wheel", handler);
+  }, []);
+
   function zoomButton(factor: number) {
-    cancelAnimationFrame(raf.current);
     const [cx, cy, cd] = viewRef.current;
-    const nd = Math.max(dim / 60, Math.min(dim * 4, cd * factor));
-    applyView([cx, cy, nd]);
+    const nd = Math.max(dim / MAX_ZOOM, Math.min(dim * MAX_OUT, cd / factor));
+    zoomTo([cx, cy, nd], ZOOM_BUTTON_DURATION_MS);
   }
 
   function onDown(e: React.MouseEvent) {
@@ -235,7 +286,6 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
           height={vp.h}
           className="block select-none"
           style={{ cursor: grabbing ? "grabbing" : "grab" }}
-          onWheel={onWheel}
           onMouseDown={onDown}
           onMouseMove={onMove}
           onMouseUp={onUp}
@@ -259,9 +309,17 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
                 style={{
                   fill: isLeaf ? extColor(n.data.ext) : "var(--surface-hover)",
                   stroke: isLeaf ? (n.data.issues ? "var(--coral-500)" : "none") : "var(--line)",
-                  cursor: n.children ? "pointer" : "default",
+                  cursor: "pointer",
                 }}
-                onClick={(e) => { e.stopPropagation(); if (drag.current.moved) return; if (n.children) focusNode(n); }}
+                /* A directory click zooms — that interaction predates the inspector and
+                   is the point of a circle pack. A LEAF click did nothing at all, so the
+                   inspector gets it: the file you clicked becomes the scope. */
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (drag.current.moved) return;
+                  if (n.children) focusNode(n);
+                  else onSelect?.(n.data.path);
+                }}
                 onMouseEnter={() => setHover({ d: n, x, y })}
                 onMouseLeave={() => setHover(null)}
               />
@@ -291,14 +349,14 @@ export function CirclePackView({ tree }: { tree: TreeNode }) {
 
         <div className="absolute top-md left-md flex items-center gap-sm text-meta">
           <button
-            onClick={() => zoomButton(1 / 1.3)}
+            onClick={() => zoomButton(ZOOM_STEP_RATIO)}
             aria-label="Zoom in"
             className="text-meta leading-none text-[var(--text-primary)] bg-[var(--surface-active)] hover:bg-[var(--surface-3)] border border-[var(--line)] rounded-xs w-7 h-7 flex items-center justify-center"
           >
             +
           </button>
           <button
-            onClick={() => zoomButton(1.3)}
+            onClick={() => zoomButton(1 / ZOOM_STEP_RATIO)}
             aria-label="Zoom out"
             className="text-meta leading-none text-[var(--text-primary)] bg-[var(--surface-active)] hover:bg-[var(--surface-3)] border border-[var(--line)] rounded-xs w-7 h-7 flex items-center justify-center"
           >

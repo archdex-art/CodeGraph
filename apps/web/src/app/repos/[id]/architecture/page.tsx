@@ -1,22 +1,30 @@
 "use client";
 
 import { ArchitectureView } from "@/components/ArchitectureView";
-import { Empty, SectionHead, useRepo } from "../repo-context";
+import { GraphWorkbench } from "@/components/GraphWorkbench";
+import { Empty, useRepo } from "../repo-context";
 
 export default function ArchitecturePage() {
   const repo = useRepo();
-  return (
-    <>
-      <SectionHead
-        eyebrow="Structure"
-        title="Architecture"
-        blurb="Top-level modules layered by dependency direction, entry points on top. Arrow thickness is the import count; colour is the dominant language; a dot marks issues."
-      />
-      {repo.modules && repo.modules.nodes.length > 0 ? (
-        <ArchitectureView modules={repo.modules} />
-      ) : (
+
+  if (!repo.modules || repo.modules.nodes.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center">
         <Empty msg="No module structure detected." />
+      </div>
+    );
+  }
+
+  return (
+    <GraphWorkbench repoId={repo.id} graph={repo.symbolGraph} immersive>
+      {(onSelect) => (
+        <ArchitectureView
+          modules={repo.modules!}
+          viz={repo.viz}
+          onSelect={onSelect}
+          immersive
+        />
       )}
-    </>
+    </GraphWorkbench>
   );
 }

@@ -74,7 +74,9 @@ export default function LandingPage() {
           style={{ background: "radial-gradient(ellipse at center, var(--signal-glow), transparent 68%)" }}
         />
 
-        <div className="shell relative pb-3xl pt-2xl sm:pt-3xl">
+        {/* Top padding is deliberately small: the console is the point of the hero and
+            it has to clear the fold on a laptop. The old 2xl/3xl pushed it off-screen. */}
+        <div className="shell relative pb-3xl pt-md sm:pt-lg">
           {/* `[&>*]:min-w-0` — grid items default to `min-width:auto` and so refuse to
               shrink below their content's min-content width. The console's tab strip and
               the SVG both push that above the mobile viewport, which made the whole hero
@@ -125,7 +127,7 @@ export default function LandingPage() {
                       the hero does not reflow when it swaps in. */}
                   <Suspense
                     fallback={
-                      <div className="panel h-[232px] animate-pulse sm:h-[238px]" aria-hidden />
+                      <div className="panel h-[248px] animate-pulse sm:h-[254px]" aria-hidden />
                     }
                   >
                     <IndexConsole />
