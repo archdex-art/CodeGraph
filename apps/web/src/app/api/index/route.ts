@@ -9,6 +9,7 @@ import {
 } from "@/lib/localAccess";
 import { isPublicHttpUrl } from "@codegraph/vcs";
 import { getSession } from "@/lib/session";
+import { anonymousIndexingAllowed, ANONYMOUS_INDEXING_MESSAGE } from "@/lib/authz";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
 import { logger } from "@codegraph/observability";
 
@@ -54,6 +55,13 @@ export async function POST(req: NextRequest) {
   const repoUrl = (body.repoUrl || "").trim();
   const localPath = (body.localPath || "").trim();
   const session = getSession(req);
+
+  // Before any work: a signed-out index would land in the shared public bucket.
+  // 401 rather than 403 — the request is not forbidden, it is unauthenticated, and
+  // signing in is exactly what fixes it.
+  if (!session && !anonymousIndexingAllowed()) {
+    return NextResponse.json({ error: ANONYMOUS_INDEXING_MESSAGE }, { status: 401 });
+  }
 
   try {
     if (localPath) {

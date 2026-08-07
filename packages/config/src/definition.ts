@@ -80,6 +80,7 @@ export interface Config {
   readonly localAccessRoot: string | undefined;
 
   // ---------- auth ----------
+  readonly allowAnonymousIndexing: boolean;
   readonly basicAuthPassword: string | undefined;
   readonly basicAuthUser: string;
   readonly githubOauthClientId: string | undefined;
@@ -189,6 +190,19 @@ export function buildSchema(options: LoadOptions = {}): Schema {
     allowLocalAccess: boolVar("CG_ALLOW_LOCAL_ACCESS", (env) => env["NODE_ENV"] !== "production"),
     localAccessRoot: optionalStringVar("CG_LOCAL_ACCESS_ROOT"),
 
+    /**
+     * Indexing while signed out writes `owner_id IS NULL`, which `authz.ts` treats
+     * as a shared public bucket: readable AND mutable by every visitor, and — since
+     * indexing makes file CONTENTS readable through the repo's fs/search/editor
+     * endpoints — a disclosure of the indexed source to anyone with the URL.
+     *
+     * That is the right default for a self-hosted single-operator box, where signing
+     * in to look at your own disk is pure friction, and the wrong one for a shared
+     * deployment, where one visitor's repository becomes everyone's. Same threat and
+     * therefore the same tri-state shape as `allowLocalAccess` directly above: off in
+     * production unless a trusted host opts in.
+     */
+    allowAnonymousIndexing: boolVar("CG_ALLOW_ANONYMOUS_INDEXING", (env) => env["NODE_ENV"] !== "production"),
     /** Unset = the Basic Auth gate is off entirely. */
     basicAuthPassword: optionalStringVar("CG_BASIC_AUTH_PASSWORD"),
     basicAuthUser: stringVar("CG_BASIC_AUTH_USER", "codegraph"),

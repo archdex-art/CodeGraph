@@ -1,4 +1,5 @@
 import { localAccessAllowed } from "@/lib/localAccess";
+import { anonymousIndexingAllowed } from "@/lib/authz";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,5 +15,11 @@ export const dynamic = "force-dynamic";
 // dropped: pure unauthenticated reconnaissance with zero legitimate client
 // consumer.
 export function GET() {
-  return Response.json({ status: "ok", localAccessAllowed: localAccessAllowed() }, { status: 200 });
+  return Response.json(
+    // `anonymousIndexingAllowed` earns its place for the same reason as
+    // `localAccessAllowed`: the console reads it to prompt sign-in up front rather
+    // than letting the button look live and fail with a 401 on submit.
+    { status: "ok", localAccessAllowed: localAccessAllowed(), anonymousIndexingAllowed: anonymousIndexingAllowed() },
+    { status: 200 }
+  );
 }

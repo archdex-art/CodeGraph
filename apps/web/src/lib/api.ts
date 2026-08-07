@@ -6,6 +6,7 @@ import type { FixResult } from "./agents/executor-types";
 export interface HealthStatus {
   status: string;
   localAccessAllowed: boolean;
+  anonymousIndexingAllowed: boolean;
 }
 
 export async function fetchHealth(): Promise<HealthStatus> {

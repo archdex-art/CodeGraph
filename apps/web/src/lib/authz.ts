@@ -9,9 +9,33 @@
 //     signed-in accounts and anonymous visitors — gets a 404, not a 403, so
 //     a private repo's mere existence isn't leaked to anyone but its owner.
 import { NextRequest, NextResponse } from "next/server";
+import { config } from "@codegraph/config";
 import { viewerId as brandViewerId, type ViewerId } from "@codegraph/core-domain";
 import { getSession } from "./session";
 import { getRepoOwnerId, getWorkspaceDir } from "./store";
+
+/**
+ * May this request create a repo in the shared public bucket?
+ *
+ * Reads scope correctly already — a signed-in owner's repos are private and every
+ * other viewer gets a 404. The hole was never enforcement, it was the DEFAULT
+ * IDENTITY: indexing signed out writes `owner_id IS NULL`, and that bucket is
+ * world-readable and world-mutable by design. On a shared deployment one visitor's
+ * repository therefore becomes everyone's, source contents included.
+ *
+ * Deliberately NOT solved with anonymous guest identities. That would mean a new
+ * identity concept, a cookie to mint and sign, and a second notion of "owner"
+ * threaded through queries that are currently exhaustive and type-checked — a large
+ * surface to secure in order to keep a convenience that only matters on a host where
+ * you are the sole user anyway. Gating the capability instead is a few lines and
+ * leaves the isolation model untouched.
+ */
+export function anonymousIndexingAllowed(): boolean {
+  return config.allowAnonymousIndexing;
+}
+
+export const ANONYMOUS_INDEXING_MESSAGE =
+  "Sign in with GitHub to index a repository on this deployment. Indexing while signed out would place it in a shared bucket that every visitor can read, edit and delete — including its source. Self-hosting on a trusted single-operator host? Set CG_ALLOW_ANONYMOUS_INDEXING=true.";
 
 /**
  * Current viewer for scoping persistence reads, or `null` when signed out.

@@ -65,13 +65,19 @@ export function IndexConsole() {
   };
   // Optimistic; corrected once the health check resolves.
   const [localAccessAllowed, setLocalAccessAllowed] = useState(true);
+  const [anonIndexingAllowed, setAnonIndexingAllowed] = useState(true);
   const [me, setMe] = useState<AuthMe | null>(null);
   const busy = job !== null && job.status !== "error";
+  /* Signing in is a PRECONDITION here, not an error to discover on submit: without
+     it the server refuses with a 401, so the console offers the sign-in instead of a
+     button that looks live. Optimistic until the probe resolves, like local access. */
+  const needsAuth = !anonIndexingAllowed && !me?.user;
 
   useEffect(() => {
     fetchHealth()
       .then((h) => {
         setLocalAccessAllowed(h.localAccessAllowed);
+        setAnonIndexingAllowed(h.anonymousIndexingAllowed);
         if (!h.localAccessAllowed) setMode((m) => (m === "local" ? "git" : m));
       })
       .catch(() => {}); // the probe failing is not this page's problem; keep the optimistic default
@@ -266,6 +272,14 @@ export function IndexConsole() {
               {/* Not disabled on an empty field: `required` already blocks submit
                   natively, and a permanently dimmed primary CTA is what made the
                   whole console read as inactive on first paint. */}
+              {needsAuth ? (
+                <a
+                  href={`/api/auth/github?returnTo=${encodeURIComponent("/")}`}
+                  className="group flex min-h-14 cursor-pointer items-center justify-center gap-sm rounded-xl bg-[var(--accent-fill)] px-lg py-md text-body font-semibold text-[var(--accent-on-fill)] transition-all duration-200 hover:bg-[var(--signal-400)] sm:px-lg"
+                >
+                  <GithubMark className="h-4 w-4" /> Sign in to index
+                </a>
+              ) : (
               <button
                 type="submit"
                 disabled={busy}
@@ -278,6 +292,7 @@ export function IndexConsole() {
                 )}
                 {busy ? "Indexing…" : "Index"}
               </button>
+              )}
             </div>
           </>
         )}
