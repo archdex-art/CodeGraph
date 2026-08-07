@@ -102,6 +102,9 @@ export default function RepoOverview() {
   // highest-impact finding — no re-sorting here that could disagree with the table.
   const top = repo.issues[0] ?? null;
 
+  // No depth tile means the finding tile is alone on the bento's second row.
+  const wide = tiers.length === 0;
+
   return (
     <>
       {/* --------------------------------------------------------------- BENTO
@@ -276,12 +279,26 @@ export default function RepoOverview() {
           </Reveal>
         )}
 
-        {/* ---- Highest-impact finding ------------------------------------ */}
-        <Reveal delay={0.14}>
+        {/* ---- Highest-impact finding ------------------------------------
+            The depth tile is conditional (a Markdown-only repository has no LOC
+            tiers to draw), and this tile is one column of three — so when depth
+            is absent the second row was a third of a card followed by two empty
+            columns.
+
+            Widening it to the full row is only half the fix: a column layout
+            stretched to 1100px is the same hole with a border round it. When it
+            spans the row it lays out as an action BAR — the finding on the left,
+            the severity and the affordance on the right — so the width is
+            occupied rather than padded. */}
+        <Reveal delay={0.14} className={wide ? "lg:col-span-3" : undefined}>
           {top ? (
             <Link
               href={sectionHref(repo.id, "agents")}
-              className="panel group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden p-lg transition-colors duration-200 hover:border-line-strong"
+              className={`panel group relative flex h-full cursor-pointer overflow-hidden p-lg transition-colors duration-200 hover:border-line-strong ${
+                wide
+                  ? "flex-col gap-md sm:flex-row sm:items-center sm:justify-between sm:gap-xl"
+                  : "flex-col justify-between"
+              }`}
             >
               {/* Raised, not inverted. On an ink surface the way to lift one tile is a
                   brighter face and an edge, not a darker one — a darker card here would
@@ -290,7 +307,7 @@ export default function RepoOverview() {
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 bg-[var(--surface-hover)] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
               />
-              <div className="relative">
+              <div className="relative min-w-0">
                 <div className="flex items-center gap-sm">
                   <Crosshair className="h-3.5 w-3.5 text-[var(--coral-text)]" />
                   <p className="eyebrow">Act on this first</p>
@@ -301,7 +318,7 @@ export default function RepoOverview() {
                   {top.line > 1 ? `:${top.line}` : ""}
                 </p>
               </div>
-              <div className="relative mt-lg flex items-center gap-sm">
+              <div className={`relative flex items-center gap-sm ${wide ? "shrink-0" : "mt-lg"}`}>
                 <span
                   className={`rounded-sm border px-sm py-2xs text-micro font-medium tracking-[0.08em] uppercase ${
                     (SEVERITY[top.severity] ?? SEVERITY[1]).chip
@@ -374,7 +391,7 @@ export default function RepoOverview() {
             </h2>
             {repo.issues.length > ranked.length && (
               <Link
-                href={sectionHref(repo.id, "code-intel")}
+                href={sectionHref(repo.id, "agents")}
                 className="cursor-pointer text-meta text-[var(--accent-text)] transition-opacity duration-200 hover:opacity-80"
               >
                 All <span className="tnum">{repo.issues.length}</span> findings

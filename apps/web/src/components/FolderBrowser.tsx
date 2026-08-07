@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Folder, Home, Loader2, X, ArrowUp, Check } from "lucide-react";
 import { browseDir, type BrowseEntry } from "@/lib/api";
+import { Overlay } from "@/components/Overlay";
 
 export function FolderBrowser({
   initialPath,
@@ -45,11 +46,7 @@ export function FolderBrowser({
   }, [path]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[var(--overlay)] flex items-center justify-center p-lg" onClick={onClose}>
-      <div
-        className="bg-[var(--surface-1)] border border-[var(--line)] rounded-xl max-w-measure w-full max-h-[75vh] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Overlay onClose={onClose} label="Browse for folder" className="max-w-measure">
         <div className="flex items-center justify-between px-md py-sm border-b border-[var(--line)]">
           <span className="text-meta font-semibold text-[var(--text-primary)]">Browse for folder</span>
           <button onClick={onClose} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
@@ -117,7 +114,6 @@ export function FolderBrowser({
             <Check className="w-4 h-4" /> Select this folder
           </button>
         </div>
-      </div>
-    </div>
+    </Overlay>
   );
 }

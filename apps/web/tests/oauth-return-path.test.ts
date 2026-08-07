@@ -13,7 +13,7 @@ import { isSafeReturnPath } from "@codegraph/vcs";
 describe("isSafeReturnPath", () => {
   it("accepts an ordinary in-app path", () => {
     expect(isSafeReturnPath("/")).toBe(true);
-    expect(isSafeReturnPath("/repos/abc/code-intel")).toBe(true);
+    expect(isSafeReturnPath("/repos/abc/network")).toBe(true);
   });
 
   it("rejects anything that can leave the origin", () => {

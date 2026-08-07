@@ -1,6 +1,5 @@
 import {
   Bot,
-  BrainCircuit,
   CircleDot,
   Code2,
   Gauge,
@@ -31,6 +30,8 @@ export type Section = {
   blurb: string;
   /** Editor needs the full window; everything else reads better in a column. */
   wide?: boolean;
+  /** Full-bleed canvas: hides site chrome and repo header, fills the viewport. */
+  immersive?: boolean;
 };
 
 export const SECTIONS: readonly Section[] = [
@@ -47,6 +48,7 @@ export const SECTIONS: readonly Section[] = [
     label: "Architecture",
     icon: LayoutGrid,
     blurb: "Top-level modules layered by dependency direction — entry points on top.",
+    immersive: true,
   },
   {
     group: "Structure",
@@ -60,14 +62,8 @@ export const SECTIONS: readonly Section[] = [
     slug: "network",
     label: "Network",
     icon: Network,
-    blurb: "Force-directed import graph. Clusters are the parts that actually cohere.",
-  },
-  {
-    group: "Intelligence",
-    slug: "code-intel",
-    label: "Code intel",
-    icon: BrainCircuit,
-    blurb: "Symbol search, callers and callees, impact analysis, dead code.",
+    blurb: "Force-directed import graph. Click a file to inspect its symbols and callers.",
+    immersive: true,
   },
   {
     group: "Intelligence",

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bot, Loader2, Play, ShieldAlert, Gauge, Wrench, Skull, Package, Network, FlaskConical, ChevronRight, TrendingUp, GitPullRequest, Copy, Check } from "lucide-react";
 import { runAgents, runFix } from "@/lib/api";
+import { once, useSharedState, writeState } from "@/lib/ui-state";
 import type { AgentId, Finding, Priority, RemediationPlan } from "@/lib/agents/types";
 import type { FixResult } from "@/lib/agents/executor-types";
 import { VerificationVerdict } from "./VerificationVerdict";
@@ -24,24 +25,39 @@ const PRIO_STYLE: Record<Priority, string> = {
   P3: "text-[var(--text-secondary)] bg-[var(--surface-active)] border-[var(--line)]",
 };
 
-export function AgentSwarm({ repoId }: { repoId: string }) {
-  const [plan, setPlan] = useState<RemediationPlan | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<Priority | "all">("all");
-  const [expanded, setExpanded] = useState<string | null>(null);
+/**
+ * Swarm state is keyed by repository and lives outside the component.
+ *
+ * Sections are routes now, so this component unmounts the moment you open the
+ * editor — with local `useState` that discarded a finished plan and orphaned a
+ * run that was still executing. The run therefore writes to the shared store and
+ * `once` makes it idempotent, so navigating away mid-run and back re-attaches to
+ * the same request and still shows its result.
+ */
+const key = (repoId: string, part: string) => `swarm:${repoId}:${part}`;
 
-  async function run() {
-    setLoading(true);
-    setError(null);
+function startSwarm(repoId: string): void {
+  void once(key(repoId, "run"), async () => {
+    writeState(key(repoId, "loading"), true);
+    writeState<string | null>(key(repoId, "error"), null);
     try {
-      setPlan(await runAgents(repoId));
+      writeState<RemediationPlan | null>(key(repoId, "plan"), await runAgents(repoId));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed");
+      writeState<string | null>(key(repoId, "error"), e instanceof Error ? e.message : "Failed");
     } finally {
-      setLoading(false);
+      writeState(key(repoId, "loading"), false);
     }
-  }
+  });
+}
+
+export function AgentSwarm({ repoId }: { repoId: string }) {
+  const [plan] = useSharedState<RemediationPlan | null>(key(repoId, "plan"), null);
+  const [loading] = useSharedState(key(repoId, "loading"), false);
+  const [error] = useSharedState<string | null>(key(repoId, "error"), null);
+  const [filter, setFilter] = useSharedState<Priority | "all">(key(repoId, "filter"), "all");
+  const [expanded, setExpanded] = useSharedState<string | null>(key(repoId, "expanded"), null);
+
+  const run = () => startSwarm(repoId);
 
   const findings = plan
     ? filter === "all"
@@ -167,29 +183,44 @@ function FindingRow({ f, open, onToggle }: { f: Finding; open: boolean; onToggle
   );
 }
 
+/**
+ * The fix run outlives the section too — it clones, patches, re-indexes and
+ * verifies, which is minutes of work that used to be thrown away by a single
+ * click on another section. The PAT is the one piece deliberately NOT stored:
+ * it is a credential, and it should not sit in a module map after you leave.
+ */
 function RemediationExecutor({ repoId }: { repoId: string }) {
-  const [res, setRes] = useState<FixResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [res] = useSharedState<FixResult | null>(key(repoId, "fix"), null);
+  const [loading] = useSharedState(key(repoId, "fixLoading"), false);
+  const [error] = useSharedState<string | null>(key(repoId, "fixError"), null);
   const [copied, setCopied] = useState<"diff" | "body" | null>(null);
   const [token, setToken] = useState("");
+  const copyTimer = useRef<NodeJS.Timeout | undefined>(undefined);
 
-  async function run() {
-    setLoading(true);
-    setError(null);
-    try {
-      setRes(await runFix(repoId, token.trim() || undefined));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setLoading(false);
-    }
+  // The 1.5s "copied" reset would otherwise fire into an unmounted component
+  // when you copy a diff and immediately navigate.
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
+
+  function run() {
+    const pat = token.trim() || undefined;
+    void once(key(repoId, "fixRun"), async () => {
+      writeState(key(repoId, "fixLoading"), true);
+      writeState<string | null>(key(repoId, "fixError"), null);
+      try {
+        writeState<FixResult | null>(key(repoId, "fix"), await runFix(repoId, pat));
+      } catch (e) {
+        writeState<string | null>(key(repoId, "fixError"), e instanceof Error ? e.message : "Failed");
+      } finally {
+        writeState(key(repoId, "fixLoading"), false);
+      }
+    });
   }
 
   const copy = (what: "diff" | "body", text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(what);
-    setTimeout(() => setCopied(null), 1500);
+    clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopied(null), 1500);
   };
 
   return (

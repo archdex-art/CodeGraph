@@ -293,6 +293,25 @@
   --space-3xl: 110px;
   --space-4xl: 178px;
 
+  /* --- Layering. One scale, declared once, because z-index only compares inside a
+     stacking context and "50" in two different contexts is not a comparison at all.
+
+     `main` carries `z-2` purely to clear the grain — and in doing so it becomes a
+     stacking context, so a `z-50` modal nested in a page was clamped BELOW the
+     `z-50` header living in the root context. The header covered every dialog in
+     the app. The rule that follows from it: anything that must cover the chrome is
+     PORTALLED to `<body>` (see `components/Overlay.tsx`) and takes `--z-overlay`;
+     nothing inside `main` may claim a number above `--z-main`. ----------------- */
+  --z-grain: 1;
+  --z-main: 2;
+  --z-header: 40;
+  --z-overlay: 100;
+
+  /* The chrome's height, published so nested sticky elements can offset by it
+     instead of hardcoding a guess. Driven to 0 while the header is retracted, by
+     the rule beside `.grain` below. */
+  --header-h: 4.5rem;
+
   /* --- Measure. One page frame for every route, and it is a TERM OF THE SERIES,
      not a round number: 272 → 440 → 712 → 1152 → 1864, each φ times the last.
 
@@ -311,9 +330,16 @@
   --measure: 712px;      /* frame / φ²  — longest comfortable line of prose     */
   --rail: 272px;         /* frame / φ⁴  — the section navigation rail          */
   /* Collapsed, the rail is a space rung rather than a measure: it no longer holds
-     a column of text, only a 16px icon inside a 40px hit target. 68 is the rung
-     that clears both and still reads as a rail rather than a strip of gutter. */
-  --rail-collapsed: 68px;
+     a column of text, only a 16px icon inside a 36px hit target.
+
+     It was 68 — the rung above — and 68 was measured as if the rail owned its own
+     left edge. It does not: `.shell` already lays 68px of gutter to its left, so a
+     68px track put 122px of nothing between the window and the first icon and left
+     the icons floating mid-band. 44 is the rung that clears the hit target and
+     nothing more, which lands the icon column on the page's left edge — the same
+     edge the wordmark sits on — so the gutter reads as the gutter and the rail
+     reads as the rail. */
+  --rail-collapsed: 44px;
 
   /* --- Radius. Same ladder, quantised: a 26px pad inside a 10px corner is the
      relationship the eye checks, so the corners must come off the same series. */
@@ -433,8 +459,17 @@ body {
 /* Focus is never removed, only restyled. Keyboard users are the ones who most
    need to know where they are — so the ring uses `--accent-text`, not the fill:
    a 1.21:1 chartreuse outline on paper is a ring you cannot see, which is worse
-   than no restyling at all. */
-:focus-visible {
+   than no restyling at all.
+
+   The opt-out exists because this rule is UNLAYERED and therefore outranks every
+   Tailwind utility, including `focus-visible:outline-none`. A control that already
+   draws its own focus state — the graph search, whose whole wrapper turns violet and
+   gains a ring — was getting this outline stacked inside its own, giving two
+   concentric rings in two different accent hues. Opting out is therefore an
+   attribute the element sets on itself and this rule honours, not a utility fighting
+   the cascade and losing. It is an opt-out from THIS ring, never from having one:
+   anything using it must draw a focus state of its own. */
+:focus-visible:not([data-focus-ring="none"]) {
   outline: 2px solid var(--accent-text);
   outline-offset: 2px;
   border-radius: 2px;
@@ -491,9 +526,30 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 1;
+  z-index: var(--z-grain);
   opacity: 0.022;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* While the header is retracted, it occupies no space — so anything that offsets
+   itself by the chrome must stop reserving it, or a sticky rail hangs 72px below
+   a viewport edge with nothing above it.
+
+   Expressed in CSS rather than pushed from the scroll handler on purpose: the
+   header already owns `data-retracted`, and having React also write a custom
+   property onto `<html>` would be a second source of truth for one fact. */
+body:has(> header[data-retracted="true"]) {
+  --header-h: 0rem;
+}
+
+/* Immersive sections (e.g. Architecture) fill the viewport edge-to-edge. The
+   site footer lives in the root layout and cannot receive React props,
+   so a `data-immersive` attribute on a descendant drives this rule. */
+body:has([data-immersive]) > footer {
+  display: none !important;
+}
+body:has([data-immersive]) {
+  overflow: hidden;
 }
 
 /**
@@ -546,19 +602,43 @@ body {
      `.split-phi` gives the major share to the first column (a reading and its
      supporting apparatus); `.split-phi-rev` to the second (a control panel that
      drives a larger view). Both collapse to a single column below the
-     breakpoint, because a golden section of 380px is two cramped columns. */
+     breakpoint, because a golden section of 380px is two cramped columns.
+
+     Driven by a CONTAINER query, not a viewport one. These splits are used inside
+     resizable panels (the floating Symbol Inspector), where the viewport stays
+     1568px wide while the panel is dragged down to 320px — a viewport query keeps
+     two columns in a track that can no longer hold one, and the content spills out
+     of the card. The container is declared by `.split-host`, which any resizable
+     shell puts on the scroll wrapper. Without a host the query never matches and
+     the layout stays single-column, which is the safe direction to fail. */
   .split-phi,
   .split-phi-rev {
     display: grid;
     gap: var(--space-lg);
     grid-template-columns: minmax(0, 1fr);
   }
-  @media (min-width: 1024px) {
+  .split-host {
+    container-type: inline-size;
+  }
+  @container (min-width: 900px) {
     .split-phi {
       grid-template-columns: minmax(0, 1.618fr) minmax(0, 1fr);
       gap: var(--space-xl);
     }
     .split-phi-rev {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.618fr);
+      gap: var(--space-xl);
+    }
+  }
+  /* Pages that are not inside a resizable shell still get the split at the old
+     viewport breakpoint. Scoped to `:not(.split-host *)` so a panel that HAS
+     declared a container is never overridden by the window's width. */
+  @media (min-width: 1024px) {
+    .split-phi:not(.split-host *) {
+      grid-template-columns: minmax(0, 1.618fr) minmax(0, 1fr);
+      gap: var(--space-xl);
+    }
+    .split-phi-rev:not(.split-host *) {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.618fr);
       gap: var(--space-xl);
     }
@@ -634,6 +714,27 @@ body {
 }
 @keyframes ng-dash {
   to { stroke-dashoffset: -13; }
+}
+
+/* Search landing halo — a ring that expands off the node and fades, three times.
+
+   Finite, not infinite: this answers "where did the camera just put me", and once
+   that is answered a still-pulsing ring is noise competing with the selection
+   border underneath it. It ends on `opacity: 0` so the element leaves no trace
+   when the animation stops, which means nothing has to unmount it on a timer.
+
+   `transform-box: fill-box` is required — an SVG element's default transform box
+   is the whole view box, so `transform-origin: center` would scale the ring about
+   the centre of the DIAGRAM and send it flying across the canvas. */
+.ng-focus-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ng-focus-halo 1.15s var(--ease-out-expo) 3 both;
+}
+@keyframes ng-focus-halo {
+  0%   { opacity: 0;    transform: scale(0.92); }
+  35%  { opacity: 0.85; }
+  100% { opacity: 0;    transform: scale(1.08); }
 }
 
 /* One global honour of the OS setting. Motion here is decorative on top of a

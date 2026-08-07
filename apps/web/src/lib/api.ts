@@ -111,10 +111,17 @@ export async function deleteRepo(id: string): Promise<void> {
   }
 }
 
+/**
+ * The four intel calls read the body without checking the status.
+ *
+ * A 404 or a 500 answers `{ error }`, and `d.results || []` turned that into
+ * "no matches" — the panel reported a clean empty graph for a failed request.
+ * `asJson` is the same status check the editor calls already use.
+ */
 export async function intelSearch(repoId: string, q: string): Promise<CodeSymbol[]> {
   const res = await fetch(`/api/repos/${repoId}/intel?op=search&q=${encodeURIComponent(q)}`, { cache: "no-store" });
-  const d = await res.json();
-  return (d.results as CodeSymbol[]) || [];
+  const d = await asJson<{ results?: CodeSymbol[] }>(res);
+  return d.results ?? [];
 }
 
 export async function intelRelation(
@@ -123,13 +130,13 @@ export async function intelRelation(
   symbolId: string
 ): Promise<CodeSymbol[]> {
   const res = await fetch(`/api/repos/${repoId}/intel?op=${op}&symbol=${encodeURIComponent(symbolId)}`, { cache: "no-store" });
-  const d = await res.json();
-  return (d.results as CodeSymbol[]) || [];
+  const d = await asJson<{ results?: CodeSymbol[] }>(res);
+  return d.results ?? [];
 }
 
 export async function intelContext(repoId: string, q: string): Promise<AIContext> {
   const res = await fetch(`/api/repos/${repoId}/intel?op=context&q=${encodeURIComponent(q)}`, { cache: "no-store" });
-  return res.json();
+  return asJson<AIContext>(res);
 }
 
 export async function intelAudit(
@@ -137,7 +144,7 @@ export async function intelAudit(
   op: "cycles" | "deadcode" | "hubs"
 ): Promise<{ results?: CodeSymbol[]; cycles?: string[][] }> {
   const res = await fetch(`/api/repos/${repoId}/intel?op=${op}`, { cache: "no-store" });
-  return res.json();
+  return asJson(res);
 }
 
 export async function runAgents(repoId: string): Promise<RemediationPlan> {

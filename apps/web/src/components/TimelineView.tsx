@@ -6,12 +6,24 @@ import { logger } from "@codegraph/observability";
 import { timelineMetadata, timelineSnapshot, timelineBuild, timelineCompare, gitDiffFiles, gitDiffCommits } from "@/lib/api";
 import type { TimelineSnapshot, ArchitectureSnapshot, ArchitectureEvolution } from "@/lib/gitops/timelineApi";
 import { CirclePackView } from "@/components/CirclePackView";
+import { Overlay } from "@/components/Overlay";
+import { once, useSharedState, writeState } from "@/lib/ui-state";
+
+/**
+ * The scrub position and the ad-hoc diff outlive the mount.
+ *
+ * Sections are routes: opening the editor to read a changed file and coming back
+ * used to drop you at the newest commit with the comparison cleared. `-1` means
+ * "never scrubbed" so the first load can still default to the latest snapshot.
+ */
+const NO_FILES: Array<{ status: string; path: string }> = [];
+const key = (repoId: string, part: string) => `timeline:${repoId}:${part}`;
 
 export function TimelineView({ repoId }: { repoId: string }) {
   const [snapshots, setSnapshots] = useState<TimelineSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [building, setBuilding] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [building] = useSharedState(key(repoId, "building"), false);
+  const [currentIndex, setCurrentIndex] = useSharedState(key(repoId, "index"), -1);
   const [currentGraph, setCurrentGraph] = useState<ArchitectureSnapshot | null>(null);
   // The hash whose load has settled (resolved or failed). Deriving the snapshot
   // spinner from this rather than a boolean means it can't be left on by a
@@ -21,11 +33,12 @@ export function TimelineView({ repoId }: { repoId: string }) {
   const [reloadToken, setReloadToken] = useState(0);
   
   // Comparison State
-  const [compareBase, setCompareBase] = useState<string>("");
-  const [compareHead, setCompareHead] = useState<string>("");
-  const [comparisonEvolution, setComparisonEvolution] = useState<ArchitectureEvolution | null>(null);
+  const [compareBase, setCompareBase] = useSharedState(key(repoId, "base"), "");
+  const [compareHead, setCompareHead] = useSharedState(key(repoId, "head"), "");
+  const [comparisonEvolution, setComparisonEvolution] = useSharedState<ArchitectureEvolution | null>(key(repoId, "evolution"), null);
+  const [compareError, setCompareError] = useSharedState<string | null>(key(repoId, "compareError"), null);
   const [comparing, setComparing] = useState(false);
-  const [changedFiles, setChangedFiles] = useState<Array<{ status: string, path: string }>>([]);
+  const [changedFiles, setChangedFiles] = useSharedState<Array<{ status: string, path: string }>>(key(repoId, "changedFiles"), NO_FILES);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileDiffText, setFileDiffText] = useState<string | null>(null);
   const [loadingDiff, setLoadingDiff] = useState(false);
@@ -47,20 +60,21 @@ export function TimelineView({ repoId }: { repoId: string }) {
       .then((data) => {
         if (!active) return;
         setSnapshots(data);
-        if (data.length > 0) {
-          setCurrentIndex(data.length - 1); // default to latest
-        }
+        // Default to the latest, but do not overwrite a position the user
+        // scrubbed to before leaving the section — and never leave an index
+        // pointing past the end of a timeline that was rebuilt shorter.
+        setCurrentIndex((prev) => (prev >= 0 && prev < data.length ? prev : data.length - 1));
       })
       .catch((e) => logger.error("Failed to load timeline metadata", { err: e, repoId }))
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; pause(); };
-  }, [repoId, reloadToken, pause]);
+  }, [repoId, reloadToken, pause, setCurrentIndex]);
 
   // Playback advances every 3s and the scrubber can jump faster than a
   // snapshot request returns, so a superseded response must not paint over
   // the frame the user is actually looking at.
   useEffect(() => {
-    if (snapshots.length === 0) return;
+    if (currentIndex < 0 || currentIndex >= snapshots.length) return;
     let active = true;
     const { hash } = snapshots[currentIndex];
     timelineSnapshot(repoId, hash)
@@ -70,19 +84,23 @@ export function TimelineView({ repoId }: { repoId: string }) {
     return () => { active = false; };
   }, [repoId, currentIndex, snapshots]);
 
-  async function handleBuild() {
-    setBuilding(true);
-    try {
-      await timelineBuild(repoId, "everyCommit");
-      // Hold the full-page loading state until the reload lands, so the
-      // "not built" empty state doesn't flash between the two.
-      setLoading(true);
-      setReloadToken((n) => n + 1);
-    } catch (e) {
-      logger.error("Failed to build timeline", { err: e, repoId });
-    } finally {
-      setBuilding(false);
-    }
+  function handleBuild() {
+    // A timeline build is minutes of git work. `once` keeps a second click — or a
+    // click after navigating away and back — from starting a parallel build.
+    void once(key(repoId, "build"), async () => {
+      writeState(key(repoId, "building"), true);
+      try {
+        await timelineBuild(repoId, "everyCommit");
+        // Hold the full-page loading state until the reload lands, so the
+        // "not built" empty state doesn't flash between the two.
+        setLoading(true);
+        setReloadToken((n) => n + 1);
+      } catch (e) {
+        logger.error("Failed to build timeline", { err: e, repoId });
+      } finally {
+        writeState(key(repoId, "building"), false);
+      }
+    });
   }
 
   function togglePlay() {
@@ -126,7 +144,9 @@ export function TimelineView({ repoId }: { repoId: string }) {
     );
   }
 
-  const currentMeta = snapshots[currentIndex];
+  // `??` rather than a bare index: the persisted position is clamped when the
+  // metadata lands, and this covers the render between the two.
+  const currentMeta = snapshots[currentIndex] ?? snapshots[snapshots.length - 1];
   const graphLoading = loadedHash !== currentMeta.hash;
   
   return (
@@ -282,21 +302,27 @@ export function TimelineView({ repoId }: { repoId: string }) {
           </div>
           
           <button 
-            onClick={async () => {
+            onClick={() => {
               if (!compareBase || !compareHead) return;
               setComparing(true);
-              try {
-                const [evo, files] = await Promise.all([
-                  timelineCompare(repoId, compareBase, compareHead),
-                  gitDiffFiles(repoId, compareBase, compareHead)
-                ]);
-                setComparisonEvolution(evo);
-                setChangedFiles(files);
-              } catch (err) {
-                logger.error("Failed to compare timeline snapshots", { err, repoId, base: compareBase, head: compareHead });
-              } finally {
-                setComparing(false);
-              }
+              setCompareError(null);
+              void Promise.all([
+                timelineCompare(repoId, compareBase, compareHead),
+                gitDiffFiles(repoId, compareBase, compareHead)
+              ])
+                .then(([evo, files]) => {
+                  setComparisonEvolution(evo);
+                  setChangedFiles(files);
+                })
+                .catch((err) => {
+                  // Logging alone left the button springing back with the previous
+                  // comparison still on screen and no word that this one failed.
+                  logger.error("Failed to compare timeline snapshots", { err, repoId, base: compareBase, head: compareHead });
+                  setComparisonEvolution(null);
+                  setChangedFiles(NO_FILES);
+                  setCompareError(err instanceof Error ? err.message : "Comparison failed");
+                })
+                .finally(() => setComparing(false));
             }}
             disabled={comparing || !compareBase || !compareHead}
             className="bg-[var(--accent-fill)] hover:bg-[var(--signal-400)] disabled:opacity-50 text-[var(--accent-on-fill)] px-lg py-sm rounded-lg text-meta font-medium transition-colors"
@@ -304,7 +330,8 @@ export function TimelineView({ repoId }: { repoId: string }) {
             {comparing ? <Loader2 className="w-4 h-4 animate-spin"/> : "Compare"}
           </button>
         </div>
-        
+
+        {compareError && <p className="text-meta text-[var(--coral-text)] mb-lg">{compareError}</p>}
         {comparisonEvolution && (
           <div className="flex flex-col gap-lg mt-lg">
             <div className="grid grid-cols-3 gap-lg bg-[var(--surface-2)] border border-[var(--line-soft)] rounded-xl p-md">
@@ -427,8 +454,11 @@ export function TimelineView({ repoId }: { repoId: string }) {
 
       {/* File Diff Modal */}
       {selectedFile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)] backdrop-blur-sm p-lg">
-          <div className="bg-[var(--surface-1)] border border-[var(--line)] rounded-xl w-full max-w-frame max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+        <Overlay
+          onClose={() => { setSelectedFile(null); setFileDiffText(null); }}
+          label={`Changes in ${selectedFile}`}
+          className="max-w-frame"
+        >
             <div className="flex items-center justify-between p-md border-b border-[var(--line-soft)] bg-[var(--surface-2)]">
               <div className="flex items-center gap-sm">
                 <FileText className="w-4 h-4 text-[var(--violet-text)]" />
@@ -474,8 +504,7 @@ export function TimelineView({ repoId }: { repoId: string }) {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+        </Overlay>
       )}
     </>
   );

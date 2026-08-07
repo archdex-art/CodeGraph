@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion, useScroll } from "framer-motion";
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { AnimatePresence, motion, useReducedMotion, useScroll } from "framer-motion";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { Menu, X } from "lucide-react";
 import { AuthNav } from "@/components/AuthNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -32,6 +32,67 @@ function Mark({ className = "" }: { className?: string }) {
   );
 }
 
+/**
+ * How far you must be down the page before the header will retract at all. Below
+ * this the header is transparent anyway, so retracting it would animate something
+ * nobody can see and then animate it back.
+ */
+const RETRACT_AFTER = 160;
+
+/**
+ * Movement smaller than this is not a decision. Trackpad inertia and the 1–2px
+ * jitter a sticky sub-header produces when it settles would otherwise flip the
+ * direction every frame and strobe the chrome.
+ */
+const DIRECTION_NOISE = 6;
+
+/**
+ * Scroll DIRECTION, as an external store.
+ *
+ * Direction is not a function of the current scroll position, so unlike `scrolled`
+ * it cannot be derived in `getSnapshot` — it needs the previous position, which
+ * lives in this closure rather than in React state. The store still satisfies
+ * `useSyncExternalStore`'s contract: `get()` returns a cached boolean that only
+ * changes when subscribers are notified, never a fresh object per call.
+ */
+function createRetractStore() {
+  let retracted = false;
+  let lastY = 0;
+  const listeners = new Set<() => void>();
+
+  const set = (v: boolean) => {
+    if (v === retracted) return;
+    retracted = v;
+    for (const l of listeners) l();
+  };
+
+  const onScroll = () => {
+    const y = window.scrollY;
+    const dy = y - lastY;
+    if (Math.abs(dy) < DIRECTION_NOISE) return;
+    lastY = y;
+    // Scrolling UP always returns the chrome, at any depth — the whole point is
+    // that reaching for navigation is one flick, not a trip to the top of the page.
+    set(dy > 0 && y > RETRACT_AFTER);
+  };
+
+  return {
+    subscribe(cb: () => void) {
+      if (listeners.size === 0) {
+        lastY = window.scrollY;
+        window.addEventListener("scroll", onScroll, { passive: true });
+      }
+      listeners.add(cb);
+      return () => {
+        listeners.delete(cb);
+        if (listeners.size === 0) window.removeEventListener("scroll", onScroll);
+      };
+    },
+    get: () => retracted,
+    reveal: () => set(false),
+  };
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -58,6 +119,29 @@ export function SiteHeader() {
   );
 
   /**
+   * The chrome yields to the content.
+   *
+   * A 70px bar across a 863px laptop viewport is 8% of the reading area, held
+   * permanently for four links you use a handful of times per session. So it
+   * retracts as you read down and returns the instant you scroll up — the cost of
+   * reaching navigation drops from "scroll to the top" to "one flick", and the
+   * cost of reading drops to nothing.
+   *
+   * Three cases keep it pinned, because in each of them retracting would be a
+   * malfunction rather than a courtesy:
+   *  · the mobile sheet is open — the header IS the open menu;
+   *  · focus is inside it — a keyboard user tabbing the nav must not be shown a
+   *    bar sliding away under their own caret;
+   *  · `prefers-reduced-motion` — for anyone who asked for less movement, chrome
+   *    that comes and goes on every scroll is the exact thing they turned off.
+   */
+  const retractStore = useMemo(() => createRetractStore(), []);
+  const scrollRetracted = useSyncExternalStore(retractStore.subscribe, retractStore.get, () => false);
+  const [focusWithin, setFocusWithin] = useState(false);
+  const reducedMotion = useReducedMotion();
+  const retracted = scrollRetracted && !open && !focusWithin && !reducedMotion;
+
+  /**
    * A route change with the sheet still open leaves it covering the new page.
    *
    * Adjusted DURING RENDER rather than in an effect — React's documented pattern for
@@ -72,12 +156,20 @@ export function SiteHeader() {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-[background-color,border-color,backdrop-filter] duration-500 ${
+      data-retracted={retracted}
+      onFocusCapture={() => setFocusWithin(true)}
+      onBlurCapture={() => setFocusWithin(false)}
+      className={`sticky top-0 transition-[background-color,border-color,backdrop-filter,transform] duration-500 ${
+        retracted ? "-translate-y-full" : "translate-y-0"
+      } ${
         scrolled
-          ? "border-b border-[var(--line)] bg-[rgba(6,8,10,0.72)] backdrop-blur-xl"
+          ? /* `--surface-0`, not a literal ink: the old `rgba(6,8,10,0.72)` was the dark
+               page colour hardcoded, so on paper the header turned into a charcoal slab
+               over white content the moment you scrolled. Matches the mobile sheet below. */
+            "border-b border-[var(--line)] bg-[var(--surface-0)]/80 backdrop-blur-xl"
           : "border-b border-transparent bg-transparent"
       }`}
-      style={{ transitionTimingFunction: "var(--ease-out-expo)" }}
+      style={{ zIndex: "var(--z-header)", transitionTimingFunction: "var(--ease-out-expo)" }}
     >
       <div className="shell flex h-2xl items-center justify-between">
         <Link

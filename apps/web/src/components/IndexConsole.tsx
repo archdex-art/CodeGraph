@@ -3,8 +3,20 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, FolderOpen, FolderSearch, GitBranch, Loader2 } from "lucide-react";
-import { fetchHealth, fetchJob, fetchMe, startIndex, type AuthMe } from "@/lib/api";
+import {
+  ArrowRight,
+  FolderOpen,
+  FolderSearch,
+  GitBranch,
+  Loader2,
+} from "lucide-react";
+import {
+  fetchHealth,
+  fetchJob,
+  fetchMe,
+  startIndex,
+  type AuthMe,
+} from "@/lib/api";
 import { FolderBrowser } from "@/components/FolderBrowser";
 import { GithubReposPicker } from "@/components/GithubReposPicker";
 import { GithubMark } from "@/components/GithubMark";
@@ -55,7 +67,6 @@ export function IndexConsole() {
   const [localAccessAllowed, setLocalAccessAllowed] = useState(true);
   const [me, setMe] = useState<AuthMe | null>(null);
   const busy = job !== null && job.status !== "error";
-  const value = mode === "git" ? url : pathVal;
 
   useEffect(() => {
     fetchHealth()
@@ -79,7 +90,10 @@ export function IndexConsole() {
     }
   }, []);
 
-  async function startWithInput(input: { repoUrl?: string; localPath?: string }) {
+  async function startWithInput(input: {
+    repoUrl?: string;
+    localPath?: string;
+  }) {
     setError(null);
     setJob(null);
     try {
@@ -93,7 +107,9 @@ export function IndexConsole() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await startWithInput(mode === "git" ? { repoUrl: url.trim() } : { localPath: pathVal.trim() });
+    await startWithInput(
+      mode === "git" ? { repoUrl: url.trim() } : { localPath: pathVal.trim() },
+    );
   }
 
   function poll(jobId: string, rid: string) {
@@ -119,10 +135,12 @@ export function IndexConsole() {
 
   const tab = (active: boolean) =>
     `relative flex min-h-11 shrink-0 cursor-pointer items-center gap-sm whitespace-nowrap rounded-lg px-md text-meta font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
-      active ? "text-[var(--accent-on-fill)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+      active
+        ? "text-[var(--accent-on-fill)]"
+        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
     }`;
   const field =
-    "w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-md py-md font-mono text-meta text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors duration-200 focus:border-[var(--signal-600)] focus:outline-none disabled:opacity-50";
+    "min-h-14 w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-md py-md font-mono text-body text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors duration-200 focus:border-[var(--signal-600)] focus:outline-none disabled:opacity-50";
 
   return (
     /* `min-w-0`: a grid/flex child defaults to `min-width:auto`, so it refuses to shrink
@@ -145,7 +163,12 @@ export function IndexConsole() {
           icon-only would fit, but an icon-only control with no label is exactly the
           affordance people cannot read. */}
       <div className="mb-md flex w-fit min-w-0 max-w-full overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2xs [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <button type="button" disabled={busy} onClick={() => setMode("git")} className={tab(mode === "git")}>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setMode("git")}
+          className={tab(mode === "git")}
+        >
           {mode === "git" && (
             <motion.span
               layoutId="console-tab"
@@ -178,7 +201,12 @@ export function IndexConsole() {
           <span className="relative">Local folder</span>
         </button>
         {me?.githubAuthEnabled && (
-          <button type="button" disabled={busy} onClick={() => setMode("github")} className={tab(mode === "github")}>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setMode("github")}
+            className={tab(mode === "github")}
+          >
             {mode === "github" && (
               <motion.span
                 layoutId="console-tab"
@@ -196,7 +224,9 @@ export function IndexConsole() {
         {mode !== "github" && (
           <>
             <label htmlFor="cg-target" className="eyebrow mb-sm block">
-              {mode === "git" ? "Repository URL" : "Absolute folder path (on the server)"}
+              {mode === "git"
+                ? "Repository URL"
+                : "Absolute folder path (on the server)"}
             </label>
             <div className="flex flex-col gap-sm sm:flex-row">
               {mode === "git" ? (
@@ -227,16 +257,19 @@ export function IndexConsole() {
                     disabled={busy}
                     onClick={() => setBrowsing(true)}
                     title="Browse for a folder"
-                    className="flex min-h-11 shrink-0 cursor-pointer items-center gap-sm rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:text-[var(--text-primary)] disabled:opacity-50"
+                    className="flex min-h-14 shrink-0 cursor-pointer items-center gap-sm rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:text-[var(--text-primary)] disabled:opacity-50"
                   >
                     <FolderSearch className="h-4 w-4" /> Browse
                   </button>
                 </div>
               )}
+              {/* Not disabled on an empty field: `required` already blocks submit
+                  natively, and a permanently dimmed primary CTA is what made the
+                  whole console read as inactive on first paint. */}
               <button
                 type="submit"
-                disabled={busy || !value.trim()}
-                className="group flex min-h-11 cursor-pointer items-center justify-center gap-sm rounded-xl bg-[var(--accent-fill)] px-lg py-md text-meta font-semibold text-[var(--accent-on-fill)] transition-all duration-200 hover:bg-[var(--signal-400)] disabled:cursor-not-allowed disabled:opacity-40 sm:px-lg"
+                disabled={busy}
+                className="group flex min-h-14 cursor-pointer items-center justify-center gap-sm rounded-xl bg-[var(--accent-fill)] px-lg py-md text-body font-semibold text-[var(--accent-on-fill)] transition-all duration-200 hover:bg-[var(--signal-400)] disabled:cursor-not-allowed disabled:opacity-40 sm:px-lg"
               >
                 {busy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -257,10 +290,14 @@ export function IndexConsole() {
                 href={`/api/auth/github?returnTo=${encodeURIComponent("/")}`}
                 className="flex min-h-11 cursor-pointer items-center justify-center gap-sm rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-md py-sm text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:text-[var(--text-primary)]"
               >
-                <GithubMark className="h-4 w-4" /> Sign in with GitHub to browse your repositories
+                <GithubMark className="h-4 w-4" /> Sign in with GitHub to browse
+                your repositories
               </a>
             ) : (
-              <GithubReposPicker disabled={busy} onSelect={(htmlUrl) => startWithInput({ repoUrl: htmlUrl })} />
+              <GithubReposPicker
+                disabled={busy}
+                onSelect={(htmlUrl) => startWithInput({ repoUrl: htmlUrl })}
+              />
             )}
           </div>
         )}
@@ -284,8 +321,8 @@ export function IndexConsole() {
 
         {mode === "local" && (
           <p className="mt-md text-meta leading-relaxed text-[var(--text-muted)]">
-            The path must exist on the machine running the app (self-hosted). Nothing is uploaded —
-            it&apos;s read in place.
+            The path must exist on the machine running the app (self-hosted).
+            Nothing is uploaded — it&apos;s read in place.
           </p>
         )}
 
@@ -301,7 +338,9 @@ export function IndexConsole() {
               <div className="mt-md">
                 <div className="mb-xs flex justify-between text-meta text-[var(--text-secondary)]">
                   <span>{job.message}</span>
-                  <span className="tnum text-[var(--accent-text)]">{job.progress}%</span>
+                  <span className="tnum text-[var(--accent-text)]">
+                    {job.progress}%
+                  </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-4)]">
                   <motion.div
@@ -323,7 +362,9 @@ export function IndexConsole() {
       </form>
 
       {repoId && job?.status === "done" && (
-        <p className="mt-md text-meta text-[var(--accent-text)]">Done — opening report…</p>
+        <p className="mt-md text-meta text-[var(--accent-text)]">
+          Done — opening report…
+        </p>
       )}
 
       {browsing && (

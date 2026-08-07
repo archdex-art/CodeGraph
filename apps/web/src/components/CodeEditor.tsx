@@ -17,6 +17,7 @@ import { logger } from "@codegraph/observability";
 import { TrashPanel } from "./editor/TrashPanel";
 import { IssuesPanel } from "./editor/IssuesPanel";
 import { StatusBar, type SaveState } from "./editor/StatusBar";
+import { Overlay } from "./Overlay";
 import { fsRead, fsWrite, gitStatus as fetchGitStatus, gitCommit, gitPush, getSaveMode, setSaveMode as persistSaveMode, trashList } from "@/lib/api";
 import { languageForPath } from "@/lib/editorLang";
 import { readThemeChoice, resolveTheme, subscribeTheme } from "@/lib/theme";
@@ -615,15 +616,19 @@ export function CodeEditor({
       />
 
       {diffModal && (
-        <div className="fixed inset-0 z-50 bg-[var(--overlay)] flex items-center justify-center p-xl" onClick={() => setDiffModal(null)}>
-          <div className="bg-[var(--surface-1)] border border-[var(--line)] rounded-xl max-w-measure w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-md py-md border-b border-[var(--line)]">
-              <span className="text-meta text-[var(--text-primary)] font-mono">{diffModal.path}</span>
-              <button onClick={() => setDiffModal(null)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"><X className="w-4 h-4" /></button>
-            </div>
-            <pre className="text-meta p-md overflow-auto font-mono flex-1">{colorizeDiff(diffModal.diff)}</pre>
+        <Overlay onClose={() => setDiffModal(null)} label={`Diff for ${diffModal.path}`} className="max-w-measure">
+          <div className="flex items-center justify-between border-b border-[var(--line)] px-md py-md">
+            <span className="font-mono text-meta text-[var(--text-primary)]">{diffModal.path}</span>
+            <button
+              onClick={() => setDiffModal(null)}
+              aria-label="Close diff"
+              className="cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-        </div>
+          <pre className="flex-1 overflow-auto p-md font-mono text-meta">{colorizeDiff(diffModal.diff)}</pre>
+        </Overlay>
       )}
     </div>
   );
