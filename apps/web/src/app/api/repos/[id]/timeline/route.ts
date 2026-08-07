@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireWorkspace } from "@/lib/authz";
 import { TimelineEngine, Strategies } from "@/lib/gitops/timelineApi";
-import { loadSnapshotCache } from "@/lib/gitops/timelineStore";
+import { isCommitHash, loadSnapshotCache } from "@/lib/gitops/timelineStore";
 import { isGitRepo } from "@codegraph/vcs";
+import { logger } from "@codegraph/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Never echo the raw exception (CLAUDE.md standing rule, F023): this route drives `git
+// archive`/`git log` inside the workspace, so a failure message carries git's stderr and the
+// server's absolute workspace path (/app/data/workspaces/<uuid>/…). The fs, trash and git
+// routes beside it already narrow; this one forwarded everything.
 function err(e: unknown, status = 500) {
-  const msg = e instanceof Error ? e.message : String(e);
-  return NextResponse.json({ error: msg }, { status });
+  logger.warn("timeline route error", { error: e instanceof Error ? e.message : String(e) });
+  return NextResponse.json({ error: "Timeline operation failed" }, { status });
+}
+
+/** 400, not a 500, for a hash that is not a git object name. */
+function badHash(): NextResponse {
+  return NextResponse.json({ error: "Invalid commit hash" }, { status: 400 });
 }
 
 // GET /api/repos/:id/timeline?op=metadata|trends|snapshot|compare
@@ -39,6 +49,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (op === "snapshot") {
       const hash = searchParams.get("hash");
       if (!hash) return NextResponse.json({ error: "Missing hash" }, { status: 400 });
+      if (!isCommitHash(hash)) return badHash();
       
       // ensureSnapshot generates and caches the graph if it doesn't exist
       await engine.ensureSnapshot(hash);
@@ -50,6 +61,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const base = searchParams.get("base");
       const head = searchParams.get("head");
       if (!base || !head) return NextResponse.json({ error: "Missing base or head hash" }, { status: 400 });
+      if (!isCommitHash(base) || !isCommitHash(head)) return badHash();
 
       await engine.ensureSnapshot(base);
       await engine.ensureSnapshot(head);

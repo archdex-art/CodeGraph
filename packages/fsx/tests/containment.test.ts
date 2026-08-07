@@ -204,3 +204,53 @@ describe("size caps", () => {
     expect(() => ws.writeBytes("at-cap.bin", new Uint8Array(8_000_000))).not.toThrow();
   });
 });
+
+describe(".git is not workspace content", () => {
+  /**
+   * A cloned workspace's `.git` is EXECUTABLE metadata reachable through the same
+   * editor API as source: git runs `.git/hooks/pre-commit` on the next commit the
+   * editor makes, and the samples git's own template ships are already mode 0755 —
+   * so `rename(".git/hooks/pre-commit.sample" -> ".git/hooks/pre-commit")` followed
+   * by a `write` produced an executable attacker-authored hook, i.e. code execution
+   * on the host, anonymously against a shared public-bucket repo. Reads matter too:
+   * `.git/config` holds remote URLs.
+   */
+  it("refuses to write inside .git", () => {
+    const root = freshWorkspace();
+    const ws = openWorkspace(root);
+    expect(() => ws.write(".git/hooks/pre-commit", "#!/bin/sh\nid\n")).toThrow(WorkspacePathError);
+    expect(existsSync(path.join(root, ".git", "hooks", "pre-commit"))).toBe(false);
+  });
+
+  it("refuses to rename a git template hook into place", () => {
+    const root = freshWorkspace();
+    mkdirSync(path.join(root, ".git", "hooks"), { recursive: true });
+    writeFileSync(path.join(root, ".git", "hooks", "pre-commit.sample"), "#!/bin/sh\n", { mode: 0o755 });
+    const ws = openWorkspace(root);
+    expect(() => ws.rename(".git/hooks/pre-commit.sample", ".git/hooks/pre-commit")).toThrow(WorkspacePathError);
+    expect(existsSync(path.join(root, ".git", "hooks", "pre-commit"))).toBe(false);
+  });
+
+  it("refuses to read .git/config", () => {
+    const root = freshWorkspace();
+    mkdirSync(path.join(root, ".git"), { recursive: true });
+    writeFileSync(path.join(root, ".git", "config"), "[remote \"origin\"]\n", "utf8");
+    const ws = openWorkspace(root);
+    expect(() => ws.read(".git/config")).toThrow(WorkspacePathError);
+  });
+
+  it("refuses a .git segment reached through traversal or case", () => {
+    const root = freshWorkspace();
+    expect(() => resolveSafe(root, "src/../.git/config")).toThrow(WorkspacePathError);
+    expect(() => resolveSafe(root, ".GIT/config")).toThrow(WorkspacePathError);
+    expect(() => resolveSafe(root, "sub/.git/config")).toThrow(WorkspacePathError);
+  });
+
+  it("still allows the ordinary dotfiles a repo edits", () => {
+    const root = freshWorkspace();
+    const ws = openWorkspace(root);
+    expect(() => ws.write(".gitignore", "node_modules\n")).not.toThrow();
+    expect(() => ws.write(".github/workflows/ci.yml", "name: ci\n")).not.toThrow();
+    expect(() => ws.write("src/gitignore.ts", "export {};\n")).not.toThrow();
+  });
+});
