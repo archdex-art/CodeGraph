@@ -15,27 +15,34 @@ import { getSession } from "./session";
 import { getRepoOwnerId, getWorkspaceDir } from "./store";
 
 /**
- * May this request create a repo in the shared public bucket?
+ * May this deployment create repos in the shared public bucket at all?
  *
  * Reads scope correctly already — a signed-in owner's repos are private and every
- * other viewer gets a 404. The hole was never enforcement, it was the DEFAULT
- * IDENTITY: indexing signed out writes `owner_id IS NULL`, and that bucket is
- * world-readable and world-mutable by design. On a shared deployment one visitor's
- * repository therefore becomes everyone's, source contents included.
+ * other viewer gets a 404. The hole was never enforcement, it was that nobody was
+ * TOLD: indexing signed out writes `owner_id IS NULL`, and that bucket is
+ * world-readable and world-mutable, source contents included.
  *
- * Deliberately NOT solved with anonymous guest identities. That would mean a new
- * identity concept, a cookie to mint and sign, and a second notion of "owner"
- * threaded through queries that are currently exhaustive and type-checked — a large
- * surface to secure in order to keep a convenience that only matters on a host where
- * you are the sole user anyway. Gating the capability instead is a few lines and
- * leaves the isolation model untouched.
+ * So the answer is consent, not prohibition. This stays a capability an operator can
+ * switch off, but it defaults on; what actually protects the user is that the route
+ * below refuses an anonymous index unless the caller states it understands.
  */
 export function anonymousIndexingAllowed(): boolean {
   return config.allowAnonymousIndexing;
 }
 
-export const ANONYMOUS_INDEXING_MESSAGE =
-  "Sign in with GitHub to index a repository on this deployment. Indexing while signed out would place it in a shared bucket that every visitor can read, edit and delete — including its source. Self-hosting on a trusted single-operator host? Set CG_ALLOW_ANONYMOUS_INDEXING=true.";
+export const ANONYMOUS_INDEXING_DISABLED_MESSAGE =
+  "This deployment requires you to sign in with GitHub before indexing a repository.";
+
+/**
+ * An anonymous index must SAY it accepts the consequence.
+ *
+ * The consent lives in the request body, not in a UI-only dialog, because the dialog
+ * is trivially bypassed by posting to the endpoint directly — and a caller that has
+ * never heard of the flag is exactly the caller who did not mean to publish. Omitting
+ * it fails closed with an explanation instead of quietly creating a public repo.
+ */
+export const ANONYMOUS_CONSENT_MESSAGE =
+  "Indexing without signing in puts this repository in a shared bucket that every visitor to this deployment can read, edit and delete — including its source. Sign in with GitHub to keep it private, or re-send with `acknowledgePublic: true` to continue anyway.";
 
 /**
  * Current viewer for scoping persistence reads, or `null` when signed out.

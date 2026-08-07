@@ -3,6 +3,7 @@
 // they see. No server-side app registration/state beyond env vars — the
 // access token is handed to lib/session.ts's caller to encrypt into a cookie
 // and is never written to disk here.
+import type { NextRequest } from "next/server";
 import { config } from "@codegraph/config";
 
 export function githubOAuthConfigured(): boolean {
@@ -30,13 +31,40 @@ export function isAllowedOwnerLogin(login: string): boolean {
   return allowlist.includes(login.toLowerCase());
 }
 
-// Prefer an explicitly configured public URL (needed behind a proxy like
-// Render, where the request's own Host header may not be trustworthy/final
-// for building an OAuth redirect_uri that must exactly match what's
-// registered on the GitHub OAuth App) over deriving one from the request.
-export function publicBaseUrl(requestOrigin: string): string {
-  return config.publicAppUrl ?? requestOrigin;
+/**
+ * Hosts that are a SERVER BINDING, never a browser-reachable address.
+ *
+ * The Dockerfile sets `HOSTNAME=0.0.0.0` because Render requires binding all
+ * interfaces, and Next's standalone server builds `req.nextUrl` from it. So
+ * `nextUrl.origin` is `https://0.0.0.0:10000` behind the proxy, and an OAuth
+ * redirect_uri built from it can never match the GitHub App registration —
+ * every visitor lands on GitHub's "The redirect_uri is not associated with this
+ * application" page. Detected rather than assumed, so the failure names itself.
+ */
+const BIND_ONLY_HOST = /^(0\.0\.0\.0|::|\[::\]|0)(:\d+)?$/i;
+
+/**
+ * The origin this deployment is reachable at, or `null` if it cannot be known.
+ *
+ * Order: the explicit setting, then the proxy's forwarded host, then the request's
+ * own Host header. `nextUrl.origin` is deliberately NOT consulted — it is the one
+ * source that reports the bind address.
+ *
+ * Returning `null` rather than guessing is the point: a wrong redirect_uri fails at
+ * GitHub with a message about GitHub, several steps from the cause. `null` lets the
+ * caller say which variable to set.
+ */
+export function publicBaseUrl(req: NextRequest): string | null {
+  if (config.publicAppUrl) return config.publicAppUrl.replace(/\/+$/, "");
+  const first = (v: string | null) => v?.split(",")[0]?.trim() || null;
+  const host = first(req.headers.get("x-forwarded-host")) ?? first(req.headers.get("host"));
+  if (!host || BIND_ONLY_HOST.test(host)) return null;
+  const proto = first(req.headers.get("x-forwarded-proto")) ?? req.nextUrl.protocol.replace(":", "");
+  return `${proto}://${host}`;
 }
+
+export const PUBLIC_URL_UNKNOWN_MESSAGE =
+  "This deployment cannot work out its own public URL, so the GitHub sign-in redirect would be rejected. Set NEXT_PUBLIC_APP_URL to the address users visit (e.g. https://your-app.onrender.com) and register <that URL>/api/auth/github/callback as the Authorization callback URL on the GitHub OAuth App.";
 
 // `repo` scope is required for GitHub's classic OAuth to read/clone PRIVATE
 // repos at all (there's no finer-grained "read-only" classic scope); this

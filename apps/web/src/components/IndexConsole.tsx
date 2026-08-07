@@ -18,6 +18,7 @@ import {
   type AuthMe,
 } from "@/lib/api";
 import { FolderBrowser } from "@/components/FolderBrowser";
+import { Overlay } from "@/components/Overlay";
 import { GithubReposPicker } from "@/components/GithubReposPicker";
 import { GithubMark } from "@/components/GithubMark";
 import type { Job } from "@/lib/types";
@@ -72,6 +73,10 @@ export function IndexConsole() {
      it the server refuses with a 401, so the console offers the sign-in instead of a
      button that looks live. Optimistic until the probe resolves, like local access. */
   const needsAuth = !anonIndexingAllowed && !me?.user;
+  /* The index the user asked for, parked while they decide whether to publish it.
+     Held rather than re-derived so "Continue" cannot pick up a field edited behind
+     the dialog. */
+  const [pendingPublic, setPendingPublic] = useState<{ repoUrl?: string; localPath?: string } | null>(null);
 
   useEffect(() => {
     fetchHealth()
@@ -99,7 +104,15 @@ export function IndexConsole() {
   async function startWithInput(input: {
     repoUrl?: string;
     localPath?: string;
+    acknowledgePublic?: boolean;
   }) {
+    /* Ask before publishing, not after. The server refuses an unacknowledged
+       anonymous index anyway; catching it here means the user is asked rather than
+       shown a failure they then have to interpret. */
+    if (!me?.user && !input.acknowledgePublic) {
+      setPendingPublic({ repoUrl: input.repoUrl, localPath: input.localPath });
+      return;
+    }
     setError(null);
     setJob(null);
     try {
@@ -272,14 +285,6 @@ export function IndexConsole() {
               {/* Not disabled on an empty field: `required` already blocks submit
                   natively, and a permanently dimmed primary CTA is what made the
                   whole console read as inactive on first paint. */}
-              {needsAuth ? (
-                <a
-                  href={`/api/auth/github?returnTo=${encodeURIComponent("/")}`}
-                  className="group flex min-h-14 cursor-pointer items-center justify-center gap-sm rounded-xl bg-[var(--accent-fill)] px-lg py-md text-body font-semibold text-[var(--accent-on-fill)] transition-all duration-200 hover:bg-[var(--signal-400)] sm:px-lg"
-                >
-                  <GithubMark className="h-4 w-4" /> Sign in to index
-                </a>
-              ) : (
               <button
                 type="submit"
                 disabled={busy}
@@ -292,7 +297,6 @@ export function IndexConsole() {
                 )}
                 {busy ? "Indexing…" : "Index"}
               </button>
-              )}
             </div>
           </>
         )}
@@ -380,6 +384,50 @@ export function IndexConsole() {
         <p className="mt-md text-meta text-[var(--accent-text)]">
           Done — opening report…
         </p>
+      )}
+
+      {/* The choice, asked once, before anything is published. Two real options with
+          their consequence stated — not a warning banner the eye slides past. */}
+      {pendingPublic && (
+        <Overlay
+          onClose={() => setPendingPublic(null)}
+          label="This repository will be public"
+          /* `note` (440) is the helper-paragraph measure. The container scale here is
+             frame/wide/measure/note/rail only — a t-shirt width resolves to an
+             undefined variable and collapses the panel to a sliver. */
+          className="max-w-note"
+        >
+          {/* Overlay already supplies the border, surface and radius. */}
+          <div className="p-lg">
+            <h2 className="font-display mb-sm text-h3 text-[var(--text-primary)]">
+              Index without signing in?
+            </h2>
+            <p className="mb-md text-meta text-[var(--text-secondary)]">
+              Anyone who visits this deployment will be able to open this repository —
+              read its source, edit it and delete it. Sign in with GitHub and it stays
+              private to your account.
+            </p>
+            <div className="flex flex-col gap-sm sm:flex-row-reverse">
+              <a
+                href={`/api/auth/github?returnTo=${encodeURIComponent("/")}`}
+                className="flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-sm rounded-xl bg-[var(--accent-fill)] px-md text-meta font-semibold text-[var(--accent-on-fill)] transition-colors duration-200 hover:bg-[var(--signal-400)]"
+              >
+                <GithubMark className="h-4 w-4" /> Sign in with GitHub
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  const input = pendingPublic;
+                  setPendingPublic(null);
+                  void startWithInput({ ...input, acknowledgePublic: true });
+                }}
+                className="flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-xl border border-[var(--line)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--line-strong)] hover:text-[var(--text-primary)]"
+              >
+                Continue — make it public
+              </button>
+            </div>
+          </div>
+        </Overlay>
       )}
 
       {browsing && (

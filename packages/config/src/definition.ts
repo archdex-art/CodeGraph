@@ -196,13 +196,15 @@ export function buildSchema(options: LoadOptions = {}): Schema {
      * indexing makes file CONTENTS readable through the repo's fs/search/editor
      * endpoints — a disclosure of the indexed source to anyone with the URL.
      *
-     * That is the right default for a self-hosted single-operator box, where signing
-     * in to look at your own disk is pure friction, and the wrong one for a shared
-     * deployment, where one visitor's repository becomes everyone's. Same threat and
-     * therefore the same tri-state shape as `allowLocalAccess` directly above: off in
-     * production unless a trusted host opts in.
+     * Allowed by default, because the fix for "users did not realise" is to TELL them:
+     * the console asks before it happens, and the route refuses an anonymous index that
+     * does not carry an explicit acknowledgement. Consent, not a locked door — blocking
+     * outright also removes the try-it-without-an-account path the product depends on.
+     *
+     * Set false to forbid it entirely on a deployment that should never hold public
+     * repos; the console then offers only sign-in.
      */
-    allowAnonymousIndexing: boolVar("CG_ALLOW_ANONYMOUS_INDEXING", (env) => env["NODE_ENV"] !== "production"),
+    allowAnonymousIndexing: boolVar("CG_ALLOW_ANONYMOUS_INDEXING", () => true),
     /** Unset = the Basic Auth gate is off entirely. */
     basicAuthPassword: optionalStringVar("CG_BASIC_AUTH_PASSWORD"),
     basicAuthUser: stringVar("CG_BASIC_AUTH_USER", "codegraph"),
