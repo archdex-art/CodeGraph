@@ -62,7 +62,7 @@ The shared renderer lives in `src/components/NodeGraph.tsx` (SVG rounded-rects, 
 ### API (backend)
 | Endpoint | Method | Description |
 |---|---|---|
-| `/api/index` | POST | `{ repoUrl }` **or** `{ localPath }` → `{ jobId, repoId }` (202). Starts an async index job. |
+| `/api/index` | POST | `{ repoUrl }` **or** `{ localPath }` → `{ jobId, repoId }` (202). Starts an async index job. Signed out, add `acknowledgePublic: true` — the repo lands in the shared public bucket, so the API refuses without it (401, `requiresConsent`). |
 | `/api/jobs/[id]` | GET | Job status + progress (polled by the client). |
 | `/api/repos` | GET | List indexed repositories. |
 | `/api/repos/[id]` | GET | Full repo detail (score, dimensions, issues, graph stats, **viz graph**). |
