@@ -134,8 +134,19 @@ services:
       # ── Optional, prompted at Blueprint sync; leave blank to keep the feature off ──
       #
       # Base URL the app advertises for itself, used to build the GitHub OAuth redirect_uri.
-      # Blank is FINE and is the recommended setting: the app falls back to the request's own
-      # origin, which is already correct on Render. Set it only for a custom domain.
+      #
+      # SET THIS if you use GitHub sign-in. It used to say blank was fine "because the app
+      # falls back to the request's own origin, which is already correct on Render" — it is
+      # not. The image sets HOSTNAME=0.0.0.0 (Render requires binding all interfaces) and
+      # Next's standalone server builds request URLs from it, so the fallback produced
+      # `https://0.0.0.0:10000` and every visitor hit GitHub's "redirect_uri is not
+      # associated with this application" page. The app now reads the forwarded Host
+      # instead and refuses with a clear message when it cannot tell — but an explicit
+      # value is still the only thing guaranteed to match the GitHub App registration,
+      # and it is required behind a custom domain.
+      #
+      # Value: the address users visit, no trailing slash (e.g. https://your-app.onrender.com).
+      # Then register <that URL>/api/auth/github/callback on the GitHub OAuth App.
       - key: NEXT_PUBLIC_APP_URL
         sync: false
       # GitHub sign-in. Both unset = the feature is hidden; nothing else is affected.

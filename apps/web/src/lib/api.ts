@@ -6,6 +6,7 @@ import type { FixResult } from "./agents/executor-types";
 export interface HealthStatus {
   status: string;
   localAccessAllowed: boolean;
+  anonymousIndexingAllowed: boolean;
 }
 
 export async function fetchHealth(): Promise<HealthStatus> {
@@ -51,6 +52,8 @@ export async function fetchGithubRepoPage(page: number): Promise<{ repos: Github
 export async function startIndex(input: {
   repoUrl?: string;
   localPath?: string;
+  /** Signed-out only: states the caller accepts that the repo will be public. */
+  acknowledgePublic?: boolean;
 }): Promise<{ jobId: string; repoId: string }> {
   const res = await fetch("/api/index", {
     method: "POST",

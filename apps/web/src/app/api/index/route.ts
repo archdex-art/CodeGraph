@@ -9,6 +9,11 @@ import {
 } from "@/lib/localAccess";
 import { isPublicHttpUrl } from "@codegraph/vcs";
 import { getSession } from "@/lib/session";
+import {
+  anonymousIndexingAllowed,
+  ANONYMOUS_INDEXING_DISABLED_MESSAGE,
+  ANONYMOUS_CONSENT_MESSAGE,
+} from "@/lib/authz";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
 import { logger } from "@codegraph/observability";
 
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Too many indexing requests. Try again shortly." }, { status: 429, headers: { "Retry-After": String(limited.retryAfter) } });
   }
 
-  let body: { repoUrl?: string; localPath?: string };
+  let body: { repoUrl?: string; localPath?: string; acknowledgePublic?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -54,6 +59,22 @@ export async function POST(req: NextRequest) {
   const repoUrl = (body.repoUrl || "").trim();
   const localPath = (body.localPath || "").trim();
   const session = getSession(req);
+
+  // Before any work: a signed-out index lands in the shared public bucket, so it needs
+  // either an account or an explicit acknowledgement. `requiresConsent` is what lets the
+  // console tell the two refusals apart — one is answerable by the user, the other is
+  // the operator's decision and only offers sign-in.
+  if (!session) {
+    if (!anonymousIndexingAllowed()) {
+      return NextResponse.json({ error: ANONYMOUS_INDEXING_DISABLED_MESSAGE }, { status: 401 });
+    }
+    if (body.acknowledgePublic !== true) {
+      return NextResponse.json(
+        { error: ANONYMOUS_CONSENT_MESSAGE, requiresConsent: true },
+        { status: 401 }
+      );
+    }
+  }
 
   try {
     if (localPath) {

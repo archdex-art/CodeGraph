@@ -28,10 +28,15 @@ HEALTH=$(curl -sf --max-time 10 "$BASE_URL/api/health") || fail "health check un
 echo "$HEALTH" | grep -q '"status":"ok"' || fail "health check did not report ok: $HEALTH"
 log "health check ok"
 
-# 2. Start a real index job
+# 2. Start a real index job.
+#    `acknowledgePublic`: this script is signed out, and an anonymous index lands in
+#    the shared public bucket. The API refuses that unless the caller says so — the
+#    point being that a client which never heard of the flag cannot publish someone's
+#    repository by accident. A smoke test pointed at a throwaway server is the one
+#    caller for which "public" is the correct answer.
 START=$(curl -sf --max-time 15 -X POST "$BASE_URL/api/index" \
   -H "Content-Type: application/json" \
-  -d "{\"repoUrl\":\"$REPO_URL\"}") || fail "POST /api/index failed"
+  -d "{\"repoUrl\":\"$REPO_URL\",\"acknowledgePublic\":true}") || fail "POST /api/index failed"
 JOB_ID=$(echo "$START" | python3 -c "import sys,json;print(json.load(sys.stdin)['jobId'])" 2>/dev/null) \
   || fail "unexpected /api/index response: $START"
 log "started job $JOB_ID"

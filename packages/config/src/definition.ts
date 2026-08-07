@@ -80,6 +80,7 @@ export interface Config {
   readonly localAccessRoot: string | undefined;
 
   // ---------- auth ----------
+  readonly allowAnonymousIndexing: boolean;
   readonly basicAuthPassword: string | undefined;
   readonly basicAuthUser: string;
   readonly githubOauthClientId: string | undefined;
@@ -189,6 +190,21 @@ export function buildSchema(options: LoadOptions = {}): Schema {
     allowLocalAccess: boolVar("CG_ALLOW_LOCAL_ACCESS", (env) => env["NODE_ENV"] !== "production"),
     localAccessRoot: optionalStringVar("CG_LOCAL_ACCESS_ROOT"),
 
+    /**
+     * Indexing while signed out writes `owner_id IS NULL`, which `authz.ts` treats
+     * as a shared public bucket: readable AND mutable by every visitor, and — since
+     * indexing makes file CONTENTS readable through the repo's fs/search/editor
+     * endpoints — a disclosure of the indexed source to anyone with the URL.
+     *
+     * Allowed by default, because the fix for "users did not realise" is to TELL them:
+     * the console asks before it happens, and the route refuses an anonymous index that
+     * does not carry an explicit acknowledgement. Consent, not a locked door — blocking
+     * outright also removes the try-it-without-an-account path the product depends on.
+     *
+     * Set false to forbid it entirely on a deployment that should never hold public
+     * repos; the console then offers only sign-in.
+     */
+    allowAnonymousIndexing: boolVar("CG_ALLOW_ANONYMOUS_INDEXING", () => true),
     /** Unset = the Basic Auth gate is off entirely. */
     basicAuthPassword: optionalStringVar("CG_BASIC_AUTH_PASSWORD"),
     basicAuthUser: stringVar("CG_BASIC_AUTH_USER", "codegraph"),
