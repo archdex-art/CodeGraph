@@ -121,7 +121,7 @@ export function forceLayout(
     // Pack disconnected components into a compact grid. Force-directed layout
     // pushes unconnected islands far apart, which makes "fit to view" zoom
     // everything down to nothing. Packing keeps the whole graph tight.
-    packComponents(px, py, E, n, opts.collideW + 40, opts.collideH + 40);
+    packComponents(px, py, E, n, opts.collideW + 40, opts.collideH + 40, halfW, halfH);
   }
 
   const out = new Map<string, XY>();
@@ -140,7 +140,14 @@ function packComponents(
   E: [number, number][],
   n: number,
   boxW: number,
-  boxH: number
+  boxH: number,
+  /**
+   * Per-node half-extents. A component's footprint has to be measured from the sizes
+   * the nodes actually have: measured with the default box, an oversized node was
+   * packed as if it were small and its neighbours landed inside it.
+   */
+  halfW: number[],
+  halfH: number[]
 ): void {
   if (n === 0) return;
   const parent = new Int32Array(n);
@@ -168,8 +175,10 @@ function packComponents(
   for (const idxs of groups.values()) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const i of idxs) {
-      minX = Math.min(minX, px[i] - boxW / 2); maxX = Math.max(maxX, px[i] + boxW / 2);
-      minY = Math.min(minY, py[i] - boxH / 2); maxY = Math.max(maxY, py[i] + boxH / 2);
+      const hw = halfW[i] ?? boxW / 2;
+      const hh = halfH[i] ?? boxH / 2;
+      minX = Math.min(minX, px[i] - hw); maxX = Math.max(maxX, px[i] + hw);
+      minY = Math.min(minY, py[i] - hh); maxY = Math.max(maxY, py[i] + hh);
     }
     comps.push({ idxs, minX, minY, w: maxX - minX, h: maxY - minY });
   }

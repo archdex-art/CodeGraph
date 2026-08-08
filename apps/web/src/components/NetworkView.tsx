@@ -204,13 +204,14 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
    * in NodeGraph: hovering any of them dims what it does not touch, which is transient
    * and follows the pointer rather than sticking to whatever was last clicked.
    *
-   * Opening is idempotent rather than a toggle. `focusId` centres the module the `+`
-   * button just opened, and NodeGraph reports a focus as a selection — a toggle would
-   * see that report and immediately close what the button opened.
+   * `focusId` is CLEARED here rather than pointed at the module. NodeGraph re-fits the
+   * camera whenever the layout's bounds change, which frames the module together with
+   * the files it just revealed; a focus overrides that fit with a centre-on-one-node at
+   * a clamped zoom, which put 112 of the 131 nodes outside the viewport.
    */
   const open = (id: string | null) => {
     setOpenId(id);
-    setFocusId(id);
+    setFocusId(null);
   };
   const handleSelect = (id: string | null) => {
     if (id === null) {

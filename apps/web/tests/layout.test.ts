@@ -96,3 +96,28 @@ describe("forceLayout sizeOf", () => {
     }
   });
 });
+
+describe("forceLayout component packing", () => {
+  /**
+   * With no edges every node is its own component, so packing — not the collision
+   * pass — decides the whole layout. Measured with the DEFAULT box, an oversized node
+   * was packed as if it were small and its neighbours landed inside it: in the network
+   * view a revealed file sat on top of the `tsconfig.base.json` module box.
+   */
+  it("packs disconnected components around an oversized node", () => {
+    const ids = ["big", "a", "b", "c", "d", "e"];
+    const BIG = { w: 800, h: 600 };
+    const pos = forceLayout(ids, [], {
+      collideW: 150,
+      collideH: 50,
+      sizeOf: (id) => (id === "big" ? BIG : undefined),
+    });
+    const big = pos.get("big")!;
+    for (const id of ids.filter((i) => i !== "big")) {
+      const p = pos.get(id)!;
+      const insideX = Math.abs(p.x - big.x) < (BIG.w + 150) / 2;
+      const insideY = Math.abs(p.y - big.y) < (BIG.h + 50) / 2;
+      expect(insideX && insideY, `${id} landed inside the oversized node`).toBe(false);
+    }
+  });
+});
