@@ -403,7 +403,18 @@ export function NodeGraph({
   /** Joined to the active node — drawn emphasised rather than merely un-dimmed. */
   const isNeighbor = (id: string) =>
     active != null && id !== active && !!activeNeighbors?.has(id);
-  const edgeActive = (e: NGEdge) => active != null && (e.source === active || e.target === active);
+  /**
+   * An edge is emphasised when it touches the active node — and ALSO when it runs
+   * between two of its children. Selecting a module whose files have just been revealed
+   * is a request to see that module's internals; the imports among those files touch the
+   * module through nothing, so the strict rule dimmed every one of them to 8% and left
+   * the revealed nodes floating unconnected.
+   */
+  const edgeActive = (e: NGEdge) => {
+    if (active == null) return false;
+    if (e.source === active || e.target === active) return true;
+    return nodeMap.get(e.source)?.parent === active && nodeMap.get(e.target)?.parent === active;
+  };
 
   /**
    * A wheel tick is a request to zoom, not an immediate transform.

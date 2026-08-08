@@ -17,7 +17,17 @@ export interface SimEdge {
 export function forceLayout(
   ids: string[],
   edges: SimEdge[],
-  opts: { iterations?: number; collideW?: number; collideH?: number } = {}
+  opts: {
+    iterations?: number;
+    collideW?: number;
+    collideH?: number;
+    /**
+     * Per-node footprint, for the nodes that are not the default box — an opened
+     * container is many times a collapsed one, and separating everything by the
+     * collapsed size buries its neighbours underneath it.
+     */
+    sizeOf?: (id: string) => { w: number; h: number } | undefined;
+  } = {}
 ): Map<string, XY> {
   const n = ids.length;
   const idx = new Map(ids.map((id, i) => [id, i]));
@@ -82,16 +92,16 @@ export function forceLayout(
 
   // Collision relaxation: treat nodes as rectangles, push apart overlaps.
   if (opts.collideW && opts.collideH) {
-    const cw = opts.collideW + 16;
-    const ch = opts.collideH + 16;
+    const halfW = ids.map((id) => ((opts.sizeOf?.(id)?.w ?? opts.collideW!) + 16) / 2);
+    const halfH = ids.map((id) => ((opts.sizeOf?.(id)?.h ?? opts.collideH!) + 16) / 2);
     for (let pass = 0; pass < 60; pass++) {
       let moved = false;
       for (let i = 0; i < n; i++) {
         for (let j = i + 1; j < n; j++) {
           const dx = px[j] - px[i];
           const dy = py[j] - py[i];
-          const ox = cw - Math.abs(dx);
-          const oy = ch - Math.abs(dy);
+          const ox = halfW[i]! + halfW[j]! - Math.abs(dx);
+          const oy = halfH[i]! + halfH[j]! - Math.abs(dy);
           if (ox > 0 && oy > 0) {
             moved = true;
             // Resolve along the axis of least penetration.
