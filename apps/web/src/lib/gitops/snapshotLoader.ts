@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { isCommitHash } from "./timelineStore";
 import { logger } from "@codegraph/observability";
 
 export interface LoadedSnapshot {
@@ -21,6 +22,11 @@ export interface LoadedSnapshot {
  * runs once per Timeline snapshot generated.
  */
 export async function loadSnapshot(repoDir: string, hash: string): Promise<LoadedSnapshot> {
+  // `hash` becomes both an argv token for `git archive` and part of a filesystem path. It
+  // reaches here from a query parameter, so it is checked at the boundary that uses it —
+  // the same placement as `assertRefArg` in @codegraph/vcs, for the same reason: the next
+  // call site must not have to remember.
+  if (!isCommitHash(hash)) throw new Error("Invalid commit hash");
   const tempDir = await mkdtemp(join(tmpdir(), `codegraph-snapshot-${hash}-`));
 
   try {

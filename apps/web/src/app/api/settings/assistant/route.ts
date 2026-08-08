@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { githubOAuthConfigured } from "@/lib/githubOAuth";
 import { deleteLocalProvider, saveLocalProvider, setAssistantSettings, applyLocalProvider, viewAssistantSettings, ANONYMOUS_USER_ID } from "@/lib/settings";
 import { verifyAnthropicApiKey } from "@/lib/anthropicKeyCheck";
+import { rateLimit, clientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,17 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const denied = unauthorized(req);
   if (denied) return denied;
+  // The key-verification call below reaches out to Anthropic on the caller's behalf, so an
+  // unthrottled POST loop turns this route into an outbound request amplifier (and, on a
+  // deployment where sign-in is not configured, an anonymous one). Same limiter, same
+  // shape as /api/browse and /api/index.
+  const limited = rateLimit(`settings:${clientIp(req)}`, { capacity: 20, windowMs: 60_000 });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "Too many settings updates. Try again shortly." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfter) } }
+    );
+  }
   const userId = userIdFrom(req);
   let body: Record<string, unknown>;
   try {

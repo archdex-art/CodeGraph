@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main, master]
 
+# The default GITHUB_TOKEN grant follows repository settings, which is write on many repos.
+# This workflow installs and runs the dependency tree (`npm ci`, build, tests), so anything
+# in it executes with whatever that token can do — read is all it needs.
+permissions:
+  contents: read
+
 jobs:
   test-and-build:
     name: Test & Build (workspace)
