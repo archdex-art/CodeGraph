@@ -716,6 +716,20 @@ body:has([data-immersive]) {
   to { stroke-dashoffset: -13; }
 }
 
+/* A node that was not on the previous frame: fade and settle in, rather than appear
+   mid-diagram at full strength. Expanding a module reveals dozens at once, and the
+   pop is what made it read as a redraw instead of as a reveal. Position easing is the
+   other half and lives in NodeGraph's `useAnimatedRects`. */
+.ng-enter {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ng-enter 320ms var(--ease-out-expo) both;
+}
+@keyframes ng-enter {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 /* Search landing halo — a ring that expands off the node and fades, three times.
 
    Finite, not infinite: this answers "where did the camera just put me", and once

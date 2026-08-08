@@ -264,6 +264,21 @@ export function NodeGraph({
   const animated = useAnimatedRects(nodes, !reducedMotion);
 
   /**
+   * Which nodes are NEW to this layout, so they can be animated in.
+   *
+   * Derived during render from the previous `nodes` identity, the same pattern the fit
+   * and focus blocks below use. The eased map cannot answer this: it is rebuilt on the
+   * next animation frame, sixteen milliseconds later, so a class keyed on it was removed
+   * before the entrance had played and nothing was ever seen. Keyed on the layout, the
+   * flag survives every frame of that layout and the CSS animation runs exactly once.
+   */
+  const [generation, setGeneration] = useState<{ nodes: NGNode[]; fresh: Set<string> }>({ nodes, fresh: new Set() });
+  if (generation.nodes !== nodes) {
+    const previous = new Set(generation.nodes.map((n) => n.id));
+    setGeneration({ nodes, fresh: new Set(nodes.filter((n) => !previous.has(n.id)).map((n) => n.id)) });
+  }
+
+  /**
    * What the frame actually draws: the node's identity and styling, its geometry
    * taken from the eased map. Every consumer below — edges, labels, hit targets —
    * reads this and only this, so nothing is ever drawn from a half-updated layout.
@@ -277,10 +292,13 @@ export function NodeGraph({
   /**
    * Adjacency for the hover highlight — edges, plus CONTAINMENT.
    *
-   * Containment has to count. Hovering an opened module dims everything not joined
-   * to it by an edge, and its own children are joined to it by nothing: the moment
-   * you moved the pointer onto the container you just opened, the files inside it
-   * faded out. A child and its container are as related as two nodes get.
+   * Containment counts in ONE direction of meaning: a node and the module it belongs
+   * to are related, so hovering an opened module keeps the files it revealed bright.
+   *
+   * Siblings do NOT count, and used to. Every file of the opened module was joined to
+   * every other, so hovering any one of them left all hundred-and-twenty lit and the
+   * highlight answered nothing — the whole point is "what does this one touch", and
+   * "it lives in the same folder" is not touching.
    */
   const adj = useMemo(() => {
     const m = new Map<string, Set<string>>();
@@ -293,9 +311,6 @@ export function NodeGraph({
       if (!n.parent) continue;
       m.get(n.id)?.add(n.parent);
       m.get(n.parent)?.add(n.id);
-      // Siblings too: reading one file's neighbourhood should not grey out the
-      // module it sits in.
-      for (const s of nodes) if (s.parent === n.parent && s.id !== n.id) m.get(n.id)?.add(s.id);
     }
     return m;
   }, [nodes, edges]);
@@ -594,11 +609,16 @@ export function NodeGraph({
             const firstBase = BODY_TOP + (n.h - BODY_TOP - blockH) / 2 + capH;
             const subY = firstBase;
             const metaY = showSub ? firstBase + LEAD : firstBase;
+            /* A node the eased map has never seen is new to this frame — the same
+               signal `drawn` already uses to fall back to the target rect, so it costs
+               no extra bookkeeping and no render-time mutation. */
+            const entering = !reducedMotion && generation.fresh.has(n.id);
             return (
               <g
                 key={n.id}
                 transform={`translate(${n.x - n.w / 2} ${n.y - n.h / 2})`}
                 opacity={dim ? 0.25 : 1}
+                className={entering ? "ng-enter" : undefined}
                 style={{ cursor: "pointer", transition: "opacity 0.15s" }}
                 onMouseEnter={() => setHoverId(n.id)}
                 onMouseLeave={() => setHoverId(null)}
