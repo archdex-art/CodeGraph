@@ -56,3 +56,68 @@ describe("layeredLayout", () => {
     expect(height).toBeGreaterThan(0);
   });
 });
+
+describe("forceLayout sizeOf", () => {
+  /**
+   * A module opened in the network view claims the room its revealed files occupy.
+   * Separating it from its neighbours by a COLLAPSED box's width is what put those
+   * files on top of the modules beside it.
+   */
+  const BIG = { w: 900, h: 700 };
+
+  it("keeps an oversized node clear of every other node", () => {
+    const pos = forceLayout(IDS, EDGES, {
+      collideW: 150,
+      collideH: 50,
+      sizeOf: (id) => (id === "n0" ? BIG : undefined),
+    });
+    const big = pos.get("n0")!;
+    for (const id of IDS.filter((i) => i !== "n0")) {
+      const p = pos.get(id)!;
+      const gapX = Math.abs(p.x - big.x) - (BIG.w + 150) / 2;
+      const gapY = Math.abs(p.y - big.y) - (BIG.h + 50) / 2;
+      expect(gapX > -1 || gapY > -1).toBe(true);
+    }
+  });
+
+  it("leaves default-sized nodes on the default spacing", () => {
+    // Positions are seeded randomly, so the property — not the coordinates — is what
+    // can be asserted: with no override, every pair is still separated by the box.
+    const pos = forceLayout(IDS, EDGES, { collideW: 150, collideH: 50, sizeOf: () => undefined });
+    for (const a of IDS) {
+      for (const b of IDS) {
+        if (a >= b) continue;
+        const pa = pos.get(a)!;
+        const pb = pos.get(b)!;
+        const clearX = Math.abs(pa.x - pb.x) >= 150 - 1;
+        const clearY = Math.abs(pa.y - pb.y) >= 50 - 1;
+        expect(clearX || clearY).toBe(true);
+      }
+    }
+  });
+});
+
+describe("forceLayout component packing", () => {
+  /**
+   * With no edges every node is its own component, so packing — not the collision
+   * pass — decides the whole layout. Measured with the DEFAULT box, an oversized node
+   * was packed as if it were small and its neighbours landed inside it: in the network
+   * view a revealed file sat on top of the `tsconfig.base.json` module box.
+   */
+  it("packs disconnected components around an oversized node", () => {
+    const ids = ["big", "a", "b", "c", "d", "e"];
+    const BIG = { w: 800, h: 600 };
+    const pos = forceLayout(ids, [], {
+      collideW: 150,
+      collideH: 50,
+      sizeOf: (id) => (id === "big" ? BIG : undefined),
+    });
+    const big = pos.get("big")!;
+    for (const id of ids.filter((i) => i !== "big")) {
+      const p = pos.get(id)!;
+      const insideX = Math.abs(p.x - big.x) < (BIG.w + 150) / 2;
+      const insideY = Math.abs(p.y - big.y) < (BIG.h + 50) / 2;
+      expect(insideX && insideY, `${id} landed inside the oversized node`).toBe(false);
+    }
+  });
+});

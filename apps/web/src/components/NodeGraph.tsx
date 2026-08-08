@@ -261,15 +261,12 @@ export function NodeGraph({
   const [vp, setVp] = useState({ w: 900, h: fill ? 800 : height });
   const [view, setView] = useState<View>({ scale: 1, ox: 0, oy: 0 });
   const [hoverId, setHoverId] = useState<string | null>(null);
-  const [selId, setSelId] = useState<string | null>(null);
   /**
    * The node a SEARCH just landed on, as distinct from the node you clicked.
    *
-   * Both end up selected, but they need different treatment: a click happens where
-   * your eye already is, whereas a search result arrives after the camera has flown
-   * somewhere else entirely — so it has to announce where it landed. This drives a
-   * one-shot halo, and it is cleared by the next manual interaction so the ring does
-   * not linger as a second, competing "selected" marker.
+   * A click happens where your eye already is; a search result arrives after the camera
+   * has flown somewhere else entirely, so it has to announce where it landed. This drives
+   * a one-shot halo, cleared by the next manual interaction so the ring does not linger.
    */
   const [focusPulseId, setFocusPulseId] = useState<string | null>(null);
   const drag = useRef<{ on: boolean; lx: number; ly: number; moved: boolean }>({ on: false, lx: 0, ly: 0, moved: false });
@@ -285,6 +282,21 @@ export function NodeGraph({
   const animated = useAnimatedRects(nodes, !reducedMotion);
 
   /**
+   * Which nodes are NEW to this layout, so they can be animated in.
+   *
+   * Derived during render from the previous `nodes` identity, the same pattern the fit
+   * and focus blocks below use. The eased map cannot answer this: it is rebuilt on the
+   * next animation frame, sixteen milliseconds later, so a class keyed on it was removed
+   * before the entrance had played and nothing was ever seen. Keyed on the layout, the
+   * flag survives every frame of that layout and the CSS animation runs exactly once.
+   */
+  const [generation, setGeneration] = useState<{ nodes: NGNode[]; fresh: Set<string> }>({ nodes, fresh: new Set() });
+  if (generation.nodes !== nodes) {
+    const previous = new Set(generation.nodes.map((n) => n.id));
+    setGeneration({ nodes, fresh: new Set(nodes.filter((n) => !previous.has(n.id)).map((n) => n.id)) });
+  }
+
+  /**
    * What the frame actually draws: the node's identity and styling, its geometry
    * taken from the eased map. Every consumer below — edges, labels, hit targets —
    * reads this and only this, so nothing is ever drawn from a half-updated layout.
@@ -298,10 +310,13 @@ export function NodeGraph({
   /**
    * Adjacency for the hover highlight — edges, plus CONTAINMENT.
    *
-   * Containment has to count. Hovering an opened module dims everything not joined
-   * to it by an edge, and its own children are joined to it by nothing: the moment
-   * you moved the pointer onto the container you just opened, the files inside it
-   * faded out. A child and its container are as related as two nodes get.
+   * Containment counts in ONE direction of meaning: a node and the module it belongs
+   * to are related, so hovering an opened module keeps the files it revealed bright.
+   *
+   * Siblings do NOT count, and used to. Every file of the opened module was joined to
+   * every other, so hovering any one of them left all hundred-and-twenty lit and the
+   * highlight answered nothing — the whole point is "what does this one touch", and
+   * "it lives in the same folder" is not touching.
    */
   const adj = useMemo(() => {
     const m = new Map<string, Set<string>>();
@@ -314,9 +329,6 @@ export function NodeGraph({
       if (!n.parent) continue;
       m.get(n.id)?.add(n.parent);
       m.get(n.parent)?.add(n.id);
-      // Siblings too: reading one file's neighbourhood should not grey out the
-      // module it sits in.
-      for (const s of nodes) if (s.parent === n.parent && s.id !== n.id) m.get(n.id)?.add(s.id);
     }
     return m;
   }, [nodes, edges]);
@@ -397,7 +409,6 @@ export function NodeGraph({
     setFocusApplied({ id: focusId, nodes });
     const target = focusId ? nodes.find((n) => n.id === focusId) : undefined;
     if (target) {
-      setSelId(target.id);
       setFocusPulseId(target.id);
       setSmoothView(true);
       setView((v) => centreView(target, v, vp));
@@ -415,13 +426,32 @@ export function NodeGraph({
     if (focusId && nodeMap.has(focusId)) onSelectRef.current?.(focusId);
   }, [focusId, nodeMap]);
 
-  const active = hoverId ?? selId;
+  /**
+   * Highlighting follows the POINTER, not the selection. A selection persists — click a
+   * node to open it in the inspector and the diagram stayed dimmed around it until you
+   * clicked somewhere else, so the default state of the graph became "mostly faded".
+   * Hover is transient and asks the question the highlight answers: what does this one
+   * touch? A click still reports to `onSelect` and still lands the search pulse; it just
+   * no longer holds the rest of the diagram down.
+   */
+  const active = hoverId;
   const activeNeighbors = active ? adj.get(active) : null;
   const isDim = (id: string) => active != null && id !== active && !activeNeighbors?.has(id);
   /** Joined to the active node — drawn emphasised rather than merely un-dimmed. */
   const isNeighbor = (id: string) =>
     active != null && id !== active && !!activeNeighbors?.has(id);
-  const edgeActive = (e: NGEdge) => active != null && (e.source === active || e.target === active);
+  /**
+   * An edge is emphasised when it touches the active node — and ALSO when it runs
+   * between two of its children. Selecting a module whose files have just been revealed
+   * is a request to see that module's internals; the imports among those files touch the
+   * module through nothing, so the strict rule dimmed every one of them to 8% and left
+   * the revealed nodes floating unconnected.
+   */
+  const edgeActive = (e: NGEdge) => {
+    if (active == null) return false;
+    if (e.source === active || e.target === active) return true;
+    return nodeMap.get(e.source)?.parent === active && nodeMap.get(e.target)?.parent === active;
+  };
 
   /**
    * A wheel tick is a request to zoom, not an immediate transform.
@@ -518,7 +548,7 @@ export function NodeGraph({
         onMouseMove={onMove}
         onMouseUp={onUp}
         onMouseLeave={onUp}
-        onClick={() => { if (!drag.current.moved) { setSelId(null); setFocusPulseId(null); onSelect?.(null); } }}
+        onClick={() => { if (!drag.current.moved) { setFocusPulseId(null); onSelect?.(null); } }}
       >
         <defs>
           <marker id="ng-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -597,15 +627,20 @@ export function NodeGraph({
             const firstBase = BODY_TOP + (n.h - BODY_TOP - blockH) / 2 + capH;
             const subY = firstBase;
             const metaY = showSub ? firstBase + LEAD : firstBase;
+            /* A node the eased map has never seen is new to this frame — the same
+               signal `drawn` already uses to fall back to the target rect, so it costs
+               no extra bookkeeping and no render-time mutation. */
+            const entering = !reducedMotion && generation.fresh.has(n.id);
             return (
               <g
                 key={n.id}
                 transform={`translate(${n.x - n.w / 2} ${n.y - n.h / 2})`}
                 opacity={dim ? 0.25 : 1}
+                className={entering ? "ng-enter" : undefined}
                 style={{ cursor: "pointer", transition: "opacity 0.15s" }}
                 onMouseEnter={() => setHoverId(n.id)}
                 onMouseLeave={() => setHoverId(null)}
-                onClick={(ev) => { ev.stopPropagation(); if (!drag.current.moved) { setSelId(n.id); setFocusPulseId(null); onSelect?.(n.id); } }}
+                onClick={(ev) => { ev.stopPropagation(); if (!drag.current.moved) { setFocusPulseId(null); onSelect?.(n.id); } }}
                 onDoubleClick={(ev) => { ev.stopPropagation(); if (canExpand) onExpand?.(expanded ? null : n.id); }}
               >
                 {/* Search landing halo. Drawn OUTSIDE the card and behind it, so it
