@@ -28,7 +28,9 @@ export async function GET(req: NextRequest) {
   // state and any sibling subdomain or script that can write it bypasses that check.
   const rawReturnTo = req.cookies.get("cg_oauth_return")?.value || "/";
   const returnTo = isSafeReturnPath(rawReturnTo) ? rawReturnTo : "/";
-  const base = publicBaseUrl(req.nextUrl.origin);
+  // Falls back to the request URL only for building the error redirect below;
+  // the token exchange itself refuses to run without a known public base.
+  const base = publicBaseUrl(req) ?? new URL(req.url).origin;
 
   // F022: constant-time compare for consistency with basicAuth.ts's own
   // stated security posture for this class of secret comparison.

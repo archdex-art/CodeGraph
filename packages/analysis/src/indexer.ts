@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, lstatSync } from "node:fs";
 import path from "node:path";
 import { config } from "@codegraph/config";
 import { gitSignals, type FileSignals } from "@codegraph/vcs";
@@ -144,8 +144,18 @@ function walk(root: string): { files: string[]; coverage: WalkCoverage } {
       const full = path.join(cur, name);
       let st;
       try {
-        st = statSync(full);
+        // `lstat`, not `stat`: a repository may ship a symlink pointing anywhere the
+        // server process can read (`rootfs -> /`, `passwd -> /etc/passwd`), and `stat`
+        // reports the TARGET's type — the walk would then descend out of the clone and
+        // index host files into the graph, findings and search index of a repo any
+        // visitor can open. The sandbox walks in `agents/executor.ts` and
+        // `remediate-engine/apply.ts` already refuse symlinks; this one did not.
+        st = lstatSync(full);
       } catch {
+        skippedUnreadable++;
+        continue;
+      }
+      if (st.isSymbolicLink()) {
         skippedUnreadable++;
         continue;
       }

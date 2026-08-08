@@ -9,9 +9,40 @@
 //     signed-in accounts and anonymous visitors — gets a 404, not a 403, so
 //     a private repo's mere existence isn't leaked to anyone but its owner.
 import { NextRequest, NextResponse } from "next/server";
+import { config } from "@codegraph/config";
 import { viewerId as brandViewerId, type ViewerId } from "@codegraph/core-domain";
 import { getSession } from "./session";
 import { getRepoOwnerId, getWorkspaceDir } from "./store";
+
+/**
+ * May this deployment create repos in the shared public bucket at all?
+ *
+ * Reads scope correctly already — a signed-in owner's repos are private and every
+ * other viewer gets a 404. The hole was never enforcement, it was that nobody was
+ * TOLD: indexing signed out writes `owner_id IS NULL`, and that bucket is
+ * world-readable and world-mutable, source contents included.
+ *
+ * So the answer is consent, not prohibition. This stays a capability an operator can
+ * switch off, but it defaults on; what actually protects the user is that the route
+ * below refuses an anonymous index unless the caller states it understands.
+ */
+export function anonymousIndexingAllowed(): boolean {
+  return config.allowAnonymousIndexing;
+}
+
+export const ANONYMOUS_INDEXING_DISABLED_MESSAGE =
+  "This deployment requires you to sign in with GitHub before indexing a repository.";
+
+/**
+ * An anonymous index must SAY it accepts the consequence.
+ *
+ * The consent lives in the request body, not in a UI-only dialog, because the dialog
+ * is trivially bypassed by posting to the endpoint directly — and a caller that has
+ * never heard of the flag is exactly the caller who did not mean to publish. Omitting
+ * it fails closed with an explanation instead of quietly creating a public repo.
+ */
+export const ANONYMOUS_CONSENT_MESSAGE =
+  "Indexing without signing in puts this repository in a shared bucket that every visitor to this deployment can read, edit and delete — including its source. Sign in with GitHub to keep it private, or re-send with `acknowledgePublic: true` to continue anyway.";
 
 /**
  * Current viewer for scoping persistence reads, or `null` when signed out.

@@ -37,9 +37,17 @@ export async function cloneRepo(url: string, destDir?: string): Promise<string> 
   }
   const dir = destDir ?? mkdtempSync(path.join(tmpdir(), "cg-"));
   if (destDir) mkdirSync(path.dirname(destDir), { recursive: true });
+  // `-c http.followRedirects=false`: git's default is `initial`, which follows a redirect
+  // on the first request of a clone — and that request is made AFTER `isPublicHttpUrl` has
+  // vetted the URL string, so an attacker-controlled public host answering 302
+  // `http://169.254.169.254/…` (or an internal git server) reaches the private network the
+  // guard exists to keep it out of. Redirects are refused instead; the cost is that a
+  // renamed GitHub repo, or an `http://` URL the host upgrades to `https://`, must be given
+  // by its final URL.
+  const REFUSE_REDIRECTS = ["-c", "http.followRedirects=false"];
   const args = destDir
-    ? ["clone", "--depth", "50", url, dir]
-    : ["clone", "--depth", "1", "--single-branch", url, dir];
+    ? [...REFUSE_REDIRECTS, "clone", "--depth", "50", url, dir]
+    : [...REFUSE_REDIRECTS, "clone", "--depth", "1", "--single-branch", url, dir];
   try {
     await exec("git", args, {
       timeout: config.cloneTimeoutMs,

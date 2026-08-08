@@ -16,6 +16,24 @@ const MAX_SCALE = 4;
 /** A fit crosses the whole diagram, so it is paced with the node easing, not a zoom tick. */
 const FIT_DURATION_MS = 450;
 
+/**
+ * Truncate to a PIXEL budget, not a character count.
+ *
+ * `label.length > 20` cannot see the box: "DatabaseManager.java" is exactly 20
+ * chars, so it never truncated and ran straight out of a 148px file card. Cards
+ * come in three widths (148 file, 156 network, 180 module) and containers are
+ * sized by their contents, so any fixed count is wrong for all but one of them.
+ *
+ * ponytail: 0.55em average advance instead of measuring glyphs. Real widths need
+ * `getComputedTextLength()`, which forces layout per node per frame — too costly
+ * during a 60fps expansion. Swap to `<text textLength>` if a font ever lands where
+ * the estimate visibly lies.
+ */
+function fitText(text: string, px: number, size: number): string {
+  const max = Math.max(1, Math.floor(px / (size * 0.55)));
+  return text.length > max ? text.slice(0, max - 1) + "…" : text;
+}
+
 export interface NGNode {
   id: string;
   x: number; // center
@@ -689,17 +707,19 @@ export function NodeGraph({
                     opacity={n.container ? 0.16 : 0.1}
                   />
                 </g>
+                {/* Right inset clears the issues dot when there is one, so a long
+                    name ellipsises before it collides instead of running under it. */}
                 <text x={14} y={16} fontSize={13} fontWeight={600} style={{ fill: "var(--text-primary)" }}>
-                  {n.label.length > 20 ? n.label.slice(0, 19) + "…" : n.label}
+                  {fitText(n.label, n.w - 14 - (n.issues && !n.container ? 24 : 10), 13)}
                 </text>
                 {showSub && (
                   <text x={14} y={subY} fontSize={10.5} style={{ fill: "var(--text-secondary)" }}>
-                    {n.subtitle!.length > 26 ? n.subtitle!.slice(0, 25) + "…" : n.subtitle}
+                    {fitText(n.subtitle!, n.w - 24, 10.5)}
                   </text>
                 )}
                 {showMeta && (
                   <text x={14} y={metaY} fontSize={10} style={{ fill: "var(--text-muted)" }}>
-                    {n.meta}
+                    {fitText(n.meta!, n.w - 24, 10)}
                   </text>
                 )}
                 {!!n.issues && !n.container && (

@@ -106,6 +106,11 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Served on every response, including plain http, where browsers ignore it by
+          // spec — so this is safe for a local http deployment and effective for the
+          // https one. No `preload`: that is a one-way commitment for the whole domain,
+          // which is the operator's call, not this file's.
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },

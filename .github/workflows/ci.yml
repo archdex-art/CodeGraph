@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main, master]
 
+# The default GITHUB_TOKEN grant follows repository settings, which is write on many repos.
+# This workflow installs and runs the dependency tree (`npm ci`, build, tests), so anything
+# in it executes with whatever that token can do — read is all it needs.
+permissions:
+  contents: read
+
 jobs:
   test-and-build:
     name: Test & Build (workspace)
@@ -128,9 +134,14 @@ jobs:
           index_and_wait() {
             local repo_url="$1"
             echo "=== indexing $repo_url ==="
+            # `acknowledgePublic`: this container is signed out, and an anonymous index
+            # lands in the shared public bucket. The API refuses that unless the caller
+            # says so, precisely so a client that never heard of the flag cannot publish
+            # by accident — which is what this script was until it started 401ing here.
+            # A throwaway CI container is the one caller for which "public" is correct.
             RESP=$(curl -sf -X POST http://localhost:4000/api/index \
               -H "Content-Type: application/json" \
-              -d "{\"repoUrl\":\"$repo_url\"}")
+              -d "{\"repoUrl\":\"$repo_url\",\"acknowledgePublic\":true}")
             JOB_ID=$(echo "$RESP" | python3 -c "import sys,json;print(json.load(sys.stdin)['jobId'])")
             for i in $(seq 1 40); do
               STATUS=$(curl -sf "http://localhost:4000/api/jobs/$JOB_ID")

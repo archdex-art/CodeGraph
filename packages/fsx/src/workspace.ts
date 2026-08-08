@@ -49,6 +49,28 @@ const SYMLINK_MAX_HOPS = 64;
 
 export class WorkspacePathError extends Error {}
 
+/**
+ * `.git` is metadata, not content, and it is EXECUTABLE metadata: a hook written
+ * under `.git/hooks/` runs as the server process on the next `git commit` the
+ * editor performs, and `.git/config` can point `core.fsmonitor` at a command git
+ * runs on its own. The workspace API is reachable by any visitor who may edit a
+ * repo (including anonymously, on the shared public bucket), so allowing writes
+ * there turns "edit a file" into "run code on the host". Reads are refused for the
+ * same reason the listing already hides the directory: it is not the user's source.
+ *
+ * Checked per path SEGMENT, after normalisation, so `a/../.git/x` and `.GIT/x` on a
+ * case-insensitive filesystem are refused too.
+ */
+function assertNotGitDir(root: string, full: string, relPath: string): void {
+  const rel = path.relative(path.resolve(root), full);
+  if (!rel) return;
+  for (const segment of rel.split(path.sep)) {
+    if (segment.toLowerCase() === ".git") {
+      throw new WorkspacePathError(`Path is inside the repository's .git directory: ${relPath}`);
+    }
+  }
+}
+
 /** Resolve `relPath` against `root`, throwing if it escapes the root. */
 export function resolveSafe(root: string, relPath: string): string {
   const cleaned = (relPath || ".").replace(/^\/+/, "");
@@ -57,6 +79,7 @@ export function resolveSafe(root: string, relPath: string): string {
   if (full !== rootResolved && !full.startsWith(rootResolved + path.sep)) {
     throw new WorkspacePathError(`Path escapes workspace: ${relPath}`);
   }
+  assertNotGitDir(root, full, relPath);
   // Lexical check passed; now defeat symlink escapes. A symlinked ancestor
   // (legitimately present in a cloned repo, or attacker-crafted) can make a
   // lexically-safe path resolve outside root at the OS level. Walk up from

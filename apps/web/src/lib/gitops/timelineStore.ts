@@ -16,7 +16,19 @@ function getTimelineDir(repoId: string): string {
   return dir;
 }
 
+/**
+ * A snapshot filename is built from a commit hash that arrives, ultimately, from a query
+ * parameter (`/api/repos/:id/timeline?op=snapshot&hash=…`). Unvalidated it is a path:
+ * `hash=../<other-repo-id>/<commit>` reads another tenant's cached architecture graph out
+ * of `data/timeline/<repoId>/`, and `hash=../../../…` reaches any `.json` on the host.
+ * Git object names are hex, so the check that removes the whole class is the shape.
+ */
+export function isCommitHash(hash: string): boolean {
+  return /^[0-9a-fA-F]{4,64}$/.test(hash);
+}
+
 function getSnapshotPath(repoId: string, hash: string): string {
+  if (!isCommitHash(hash)) throw new Error("Invalid commit hash");
   return path.join(getTimelineDir(repoId), `${hash}.json`);
 }
 
