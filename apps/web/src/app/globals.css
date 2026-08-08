@@ -716,18 +716,25 @@ body:has([data-immersive]) {
   to { stroke-dashoffset: -13; }
 }
 
-/* A node that was not on the previous frame: fade and settle in, rather than appear
-   mid-diagram at full strength. Expanding a module reveals dozens at once, and the
-   pop is what made it read as a redraw instead of as a reveal. Position easing is the
-   other half and lives in NodeGraph's `useAnimatedRects`. */
+/* A node that was not on the previous frame: fade it in, rather than have it appear
+   mid-diagram at full strength. Expanding a module reveals dozens at once, and the pop
+   is what made it read as a redraw instead of as a reveal. Position easing is the other
+   half and lives in NodeGraph's `useAnimatedRects`.
+
+   OPACITY ONLY, deliberately. The group's position is an SVG `transform` ATTRIBUTE, and
+   a CSS `transform` — even `scale(1)` — overrides the attribute entirely: every revealed
+   node lost its translate and stacked on the origin, leaving a diagram of edges going
+   nowhere with one card on top of the pile. A scale here would need its own inner group
+   to animate, which is not worth a node's worth of DOM. */
 .ng-enter {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: ng-enter 320ms var(--ease-out-expo) both;
+  /* No fill mode: once it ends the group's own `opacity` attribute governs again, which
+     is what the hover dimming writes. `both` held the animated value forever and made a
+     revealed node permanently undimmable. */
+  animation: ng-enter 320ms var(--ease-out-expo);
 }
 @keyframes ng-enter {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Search landing halo — a ring that expands off the node and fades, three times.
