@@ -199,13 +199,13 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
   }
 
   /**
-   * Clicking a module REVEALS its files, and the click is also what highlights them:
-   * NodeGraph dims everything not joined to the selection and counts containment as a
-   * join, so the revealed files and the imports between them stay lit while the rest of
-   * the repository drops back. Clicking empty canvas (`id === null`) puts it away.
+   * Clicking a module REVEALS its files, laid out below it as ordinary nodes; clicking
+   * empty canvas (`id === null`) puts them away. Emphasis is a separate thing and lives
+   * in NodeGraph: hovering any of them dims what it does not touch, which is transient
+   * and follows the pointer rather than sticking to whatever was last clicked.
    *
-   * Opening is idempotent rather than a toggle. `focusId` makes the `+` button light the
-   * module it just opened, and NodeGraph reports a focus as a selection — a toggle would
+   * Opening is idempotent rather than a toggle. `focusId` centres the module the `+`
+   * button just opened, and NodeGraph reports a focus as a selection — a toggle would
    * see that report and immediately close what the button opened.
    */
   const open = (id: string | null) => {
@@ -274,9 +274,9 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
         expandedId={openId}
       />
       <p className="mt-sm max-w-note text-micro text-[var(--text-muted)]">
-        Module-level import network. Each box is a directory — click one to reveal the files inside it and
-        the imports between them, highlighted against the rest; click empty space to put them away.
-        Showing {scope}.
+        Module-level import network. Each box is a directory — click one to reveal the files inside it
+        and the imports between them; click empty space to put them away. Hover anything to dim what it
+        does not touch. Showing {scope}.
       </p>
     </div>
   );
