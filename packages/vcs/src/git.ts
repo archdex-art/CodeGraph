@@ -164,6 +164,22 @@ export async function getStatus(dir: string): Promise<GitStatus> {
   return { branch, ahead, behind, clean: entries.length === 0, entries, detached };
 }
 
+/**
+ * Every branch the editor's picker can offer: what is on disk, plus what the remote has.
+ *
+ * WHY THE `ls-remote` HALF EXISTS. The workspace clone is `--single-branch` (see
+ * `acquire.ts` — without it, `--depth 50` fetched 50 commits on every branch, which
+ * dominates the clone on a repository with hundreds of them). A single-branch clone has
+ * exactly one remote-tracking ref, so `git branch -a` alone would have reduced this list
+ * to the checked-out branch and silently turned the branch picker into a read-only label.
+ * `ls-remote` answers from the remote's ref advertisement — one round trip, no objects —
+ * so the picker keeps showing every branch and `checkoutBranch` downloads only the one
+ * that is actually chosen.
+ *
+ * The remote half is BEST-EFFORT on purpose: a workspace on a laptop that is offline, or
+ * behind a remote that has since gone away, must still list its local branches rather than
+ * fail the whole panel.
+ */
 export async function listBranches(dir: string): Promise<GitBranch[]> {
   // %(symref:short) is non-empty only for symbolic refs (e.g. the remote's
   // HEAD -> origin/master alias) — those aren't real branches, skip them.
@@ -178,6 +194,24 @@ export async function listBranches(dir: string): Promise<GitBranch[]> {
     const remote = name.startsWith("origin/");
     out.push({ name, current: head === "*", remote });
   }
+
+  try {
+    // `http.followRedirects=false` for the same reason `acquire.ts` sets it on every
+    // network invocation: this contacts a URL the workspace's own config supplies, and
+    // git's default follows the first redirect wherever it points.
+    const heads = await git(dir, ["-c", "http.followRedirects=false", "ls-remote", "--heads", "origin"]);
+    for (const line of heads.split("\n")) {
+      // "<sha>\trefs/heads/<name>". A branch name may contain "/", so this cannot split on it.
+      const ref = line.split("\t")[1];
+      if (ref === undefined || !ref.startsWith("refs/heads/")) continue;
+      const name = `origin/${ref.slice("refs/heads/".length)}`;
+      if (seen.has(name)) continue;
+      seen.add(name);
+      out.push({ name, current: false, remote: true });
+    }
+  } catch {
+    // Offline, or the remote is gone. The local branches are still a usable answer.
+  }
   return out;
 }
 
@@ -191,13 +225,79 @@ export async function createBranch(dir: string, name: string, from?: string): Pr
   await git(dir, args);
 }
 
+/**
+ * Refuse a branch name that cannot be spliced into a fetch REFSPEC.
+ *
+ * `assertRefArg` covers option injection, which is a different question: inside
+ * `+refs/heads/<name>:refs/remotes/origin/<name>` the characters below are STRUCTURAL, and
+ * `:` in particular would let one name describe a different destination ref. Every
+ * character rejected here is one `git check-ref-format` also rejects, so this refuses
+ * exactly the names that could never have named a real branch.
+ */
+function assertRefspecSafe(name: string): void {
+  if (name === "" || /[\s:?*[\\^~]/.test(name) || name.includes("..") || name.includes("@{")) {
+    throw new Error("Invalid branch: not a valid branch name");
+  }
+}
+
+/**
+ * Check out `name`, downloading it first when the single-branch clone did not include it.
+ *
+ * The fetch is what keeps branch switching working now that the workspace clone is
+ * `--single-branch`: a branch the picker learned about from `ls-remote` has no local ref
+ * yet, and `git checkout` on it would fail with "pathspec did not match any file(s) known
+ * to git" — the picker would list every branch and refuse to switch to most of them.
+ *
+ * `--depth 50` matches the clone, so switching costs one branch rather than the whole
+ * history. The `git checkout <name>` that follows is unchanged, which keeps today's
+ * semantics exactly: a bare name gets git's DWIM tracking branch, an explicit `origin/x`
+ * lands on a detached HEAD as it always has.
+ */
 export async function checkoutBranch(dir: string, name: string): Promise<void> {
   // The arbitrary-file-read primitive. See assertRefArg.
   assertRefArg("branch", name);
+  const short = name.startsWith("origin/") ? name.slice("origin/".length) : name;
+  if (!(await refResolves(dir, name)) && !(await refResolves(dir, `origin/${short}`))) {
+    assertRefspecSafe(short);
+    await git(dir, [
+      "-c",
+      "http.followRedirects=false",
+      "fetch",
+      "--depth",
+      "50",
+      "origin",
+      `+refs/heads/${short}:refs/remotes/origin/${short}`,
+    ]);
+  }
   await git(dir, ["checkout", name]);
 }
 
-export async function pull(dir: string): Promise<string> {
+/** Whether `ref` names something in THIS repository. Callers have already run `assertRefArg`. */
+async function refResolves(dir: string, ref: string): Promise<boolean> {
+  try {
+    await git(dir, ["rev-parse", "--verify", "--quiet", ref]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * `remoteUrl` mirrors `push` below: supply a credentialed URL per invocation rather than
+ * relying on one baked into `.git/config`.
+ *
+ * The workspace clone used to carry `https://x-access-token:<PAT>@github.com/...` as its
+ * stored remote, which put a live `repo`-scoped token in plaintext on the persistent disk for
+ * the lifetime of the workspace. `push` already took its credential this way; `pull` did not,
+ * and that asymmetry was the only reason the stored URL had to keep the token.
+ *
+ * `--ff-only` is kept: a merge commit nobody asked for is not a "pull".
+ */
+export async function pull(dir: string, remoteUrl?: string): Promise<string> {
+  if (remoteUrl) {
+    const branch = (await git(dir, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
+    return git(dir, ["pull", "--ff-only", remoteUrl, branch]);
+  }
   return git(dir, ["pull", "--ff-only"]);
 }
 
@@ -220,6 +320,39 @@ export async function diffFile(dir: string, relPath: string): Promise<string> {
   } catch {
     return "";
   }
+}
+
+/**
+ * The full unified diff between two revisions, for PR analysis.
+ *
+ * `--unified=0` because the only consumer intersects the changed line ranges with symbol
+ * spans: context lines widen every hunk by three lines in each direction, which would attribute
+ * a change to whatever function happens to sit next to it. Three lines is enough to reach into
+ * a neighbouring symbol, so this is a correctness choice, not a size one.
+ *
+ * `--no-color` and `--no-ext-diff` because a repository can set `diff.external` and
+ * `color.diff` in its OWN `.git/config`, and both would otherwise apply here: the first runs a
+ * command of the repository's choosing, the second corrupts the parse with escape codes. The
+ * editor API can no longer write `.git/config`, but a CLONED repository brings its own, so the
+ * flags are the guard that does not depend on that.
+ *
+ * Two dots, not three: `base..head` is "what changed between these commits", while `...` is
+ * "what changed on head since the merge base", which silently answers a different question
+ * when base has moved on.
+ */
+export async function diffRange(dir: string, base: string, head: string): Promise<string> {
+  // BOTH, because the two are concatenated into ONE argv token below: a leading `-` on either
+  // makes the whole token an option to `git diff`.
+  assertRefArg("revision", base);
+  assertRefArg("revision", head);
+  return git(dir, [
+    "diff",
+    // Subcommand options, not top-level git options — `git --no-ext-diff` is not a thing.
+    "--no-ext-diff",
+    "--no-color",
+    "--unified=0",
+    `${base}..${head}`,
+  ]);
 }
 
 export async function diffCommitsFile(dir: string, base: string, head: string, relPath: string): Promise<string> {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceDir } from "@/lib/store";
-import { repoAccessDenied } from "@/lib/authz";
+import { repoAccessDenied, requireWorkspace } from "@/lib/authz";
 import { listTrash, restoreFromTrash, purgeTrashEntry, emptyTrash } from "@/lib/trash";
 import { WorkspacePathError } from "@codegraph/fsx";
 import { logger } from "@codegraph/observability";
@@ -45,8 +44,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { op, trashId } = body as { op: string; trashId?: string };
   try {
     if (op === "restore") {
-      const ws = getWorkspaceDir(id);
-      if (!ws) return NextResponse.json({ error: "Workspace not ready" }, { status: 404 });
+      /*
+       * Through `requireWorkspace`, not `getWorkspaceDir`, so restoring a file lands in a tree
+       * that actually exists: repositories are cloned `--no-checkout` and materialised on
+       * first file access. This was the one route reaching past the shared guard, which also
+       * meant it was the one route not getting the guard's access semantics.
+       */
+      const { denied: noWs, ws } = requireWorkspace(req, id);
+      if (noWs) return noWs;
       if (!trashId) return NextResponse.json({ error: "Missing trashId" }, { status: 400 });
       return NextResponse.json({ ok: true, entry: restoreFromTrash(id, ws.dir, trashId) });
     }

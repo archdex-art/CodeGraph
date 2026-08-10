@@ -29,7 +29,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Same gate as every other workspace-touching route: the check and the workspace
   // resolution are one step so a handler cannot obtain a directory without having
   // passed the tenant check.
-  const { denied } = requireWorkspace(req, id);
+  //
+  // `files: false` because re-indexing reads the repository out of git, not off disk. Letting
+  // this materialise the working tree would reintroduce the 614 MB checkout at exactly the
+  // moment the design exists to avoid it — and re-index is the one route guaranteed to run.
+  const { denied } = requireWorkspace(req, id, { files: false });
   if (denied) return denied;
 
   const result = reindexRepo(id);

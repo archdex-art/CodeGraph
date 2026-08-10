@@ -35,11 +35,16 @@ describe("import extraction under adversarial input", () => {
 
   it("still extracts every ordinary form", () => {
     // A speed guard is worthless if it is met by extracting nothing.
-    // Only RELATIVE specifiers: this builds a file-level graph, and a bare package name does
-    // not resolve to a file in the repository (line 74).
+    //
+    // BOTH kinds of specifier, deliberately. This used to assert that `pkg` was DROPPED,
+    // because the only consumer resolved file-to-file edges and a bare name never names a
+    // file here. That discarded every third-party import three layers before anything could
+    // record one, and the repository reported zero dependencies against a manifest declaring
+    // twenty-six. Classifying a specifier is `computeImportGraph`'s job; finding them is this
+    // function's, and it must find them all.
     const ts = extractImports('import { a } from "./m";\nimport d from "pkg";\n', ".ts");
     expect(ts).toContain("./m");
-    expect(ts).not.toContain("pkg");
+    expect(ts).toContain("pkg");
     const py = extractImports("from .rel import thing\nimport os\n", ".py");
     expect(py.length).toBeGreaterThan(0);
   });

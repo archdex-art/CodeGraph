@@ -53,17 +53,31 @@ describe("scan coverage", () => {
     expect(c.filesAnalysed).toBeLessThan(c.filesKept);
   });
 
-  it("holds the accounting invariant on a real tree", async () => {
+  /*
+   * A FULL index of this repository, so it is budgeted like the other whole-repo tests
+   * (`signals-integration.test.ts` takes 120s for the same reason). It runs in ~20s alone and
+   * comfortably over vitest's 30s default when the suite runs it beside everything else — a
+   * timeout there measures the machine's parallelism, not this invariant.
+   */
+  it("holds the accounting invariant on a real tree", { timeout: 120_000 }, async () => {
     const r = await indexRepo(".");
     const c = r.coverage!;
-    // Every file seen is either kept or was too large; every kept file is either analysed or
-    // had no language. If these drift, some category of skip is going uncounted again.
-    expect(c.filesKept + c.skippedTooLarge).toBe(c.filesSeen);
+    /**
+     * Every file seen lands in exactly one bucket — kept, too large, or excluded by the
+     * project's own `.gitignore` — and every kept file is either analysed or had no language.
+     * If these drift, some category of skip is going uncounted again.
+     *
+     * `skippedIgnored` joined this SUM rather than sitting beside it: a skip category that is
+     * reported but never reconciled is exactly how the last one went unnoticed. It counts
+     * ignored FILES only — a wholly-ignored directory is pruned unentered, as `node_modules`
+     * is, so its contents are never "seen" and belong in no bucket.
+     */
+    expect(c.filesKept + c.skippedTooLarge + (c.skippedIgnored ?? 0)).toBe(c.filesSeen);
     expect(c.filesAnalysed + c.skippedNoLanguage).toBe(c.filesKept);
   });
 
   it("counts a file over the size cap", async () => {
-    // MAX_FILE_BYTES is 400_000.
+    // `CG_MAX_FILE_BYTES` unset, so the cap is its 400_000 default.
     const r = await indexRepo(
       repo({ "src/a.ts": "export const a = 1;\n", "src/huge.ts": "//" + "x".repeat(450_000) }),
     );
@@ -86,6 +100,59 @@ describe("scan coverage", () => {
     // The 999-line binary contributes nothing — it has no language.
     expect(c.locAnalysed).toBeLessThan(100);
     expect(c.locAnalysed).toBe(r.loc);
+  });
+});
+
+/**
+ * The size cap used to be a bare `400_000` in `indexer.ts` while its sibling `CG_MAX_FILES`
+ * was already an env var. Both decide what the Health Score is computed over, so both have to
+ * be movable by the operator who has to live with the score.
+ */
+describe("the size cap is configurable", () => {
+  const KEY = "CG_MAX_FILE_BYTES";
+  const original = process.env[KEY];
+  afterEach(() => {
+    if (original === undefined) delete process.env[KEY];
+    else process.env[KEY] = original;
+  });
+
+  /** One file either side of the configured limit, both far under the 400_000 default. */
+  function twoFiles(): string {
+    return repo({
+      "src/small.ts": `export const small = ${"1".repeat(200)};\n`,
+      "src/large.ts": `export const large = ${"1".repeat(4_000)};\n`,
+    });
+  }
+
+  it("skips only the file above the configured limit", async () => {
+    process.env[KEY] = "1000";
+    const c = (await indexRepo(twoFiles())).coverage!;
+    expect(c.skippedTooLarge).toBe(1);
+    expect(c.filesKept).toBe(c.filesSeen - 1);
+    expect(c.filesAnalysed).toBe(1);
+  });
+
+  /**
+   * The same tree at the default keeps both files — otherwise the assertion above would pass
+   * for a fixture that was oversized all along and prove nothing about the variable.
+   */
+  it("keeps both files when the limit is left at its default", async () => {
+    delete process.env[KEY];
+    const c = (await indexRepo(twoFiles())).coverage!;
+    expect(c.skippedTooLarge).toBe(0);
+    expect(c.filesAnalysed).toBe(2);
+  });
+
+  /**
+   * Read per walk, not once at module load: an import-time snapshot would make the variable
+   * take effect only for a process that set it before `indexer.ts` was evaluated.
+   */
+  it("is read at walk time, so a value set after import still applies", async () => {
+    const root = twoFiles();
+    process.env[KEY] = "1000";
+    expect((await indexRepo(root)).coverage!.skippedTooLarge).toBe(1);
+    process.env[KEY] = "400000";
+    expect((await indexRepo(root)).coverage!.skippedTooLarge).toBe(0);
   });
 });
 

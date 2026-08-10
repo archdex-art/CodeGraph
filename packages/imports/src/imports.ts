@@ -1,6 +1,7 @@
 import path from "node:path";
 import {
   YIELD_EVERY,
+  emitPhase,
   throwIfAborted,
   yieldToEventLoop,
   type PipelineContext,
@@ -71,13 +72,20 @@ export function extractImports(text: string, ext: string): string[] {
     return imports;
   }
 
-  // JS/TS (and other C-family): relative specifiers, resolved against the file dir.
+  /*
+   * JS/TS (and other C-family): EVERY specifier, relative or not.
+   *
+   * This used to keep only the ones starting with `.`, because the single consumer resolved
+   * file-to-file edges and a bare specifier can never name a file in the tree. The cost was
+   * invisible until something else wanted them: third-party imports were discarded here, three
+   * layers before anything could have recorded them, so a TypeScript repository reported zero
+   * external dependencies while its manifest declared twenty-six. Deciding what a specifier
+   * names is the resolver's job; this function's job is to find them all.
+   */
   if (CODE_EXTS[ext]) {
     const re = /(?:import\s+[^'"]*from\s+|require\(\s*|import\s*\(\s*|from\s+)['"]([^'"]+)['"]/g;
     let m;
-    while ((m = re.exec(text))) {
-      if (m[1].startsWith(".")) imports.push(m[1]);
-    }
+    while ((m = re.exec(text))) imports.push(m[1]!);
   }
   return imports;
 }
@@ -96,7 +104,88 @@ export function extractImports(text: string, ext: string): string[] {
 export interface ImportGraph {
   fanIn: Map<string, number>;
   importEdges: Array<{ from: string; to: string }>;
+  /**
+   * File -> external package it imports, one entry per distinct pair.
+   *
+   * The resolution loop below already decides, for every specifier, whether it names a file in
+   * this repository. The ones that do not are exactly the third-party dependencies, and until
+   * now they were dropped on the floor: `GraphNodeKind` has declared a `"dependency"` node and
+   * `GraphEdge.kind` a `"depends"` edge since the model was written, and nothing ever produced
+   * either. "What depends on <package>" could therefore only ever answer "nothing", which is
+   * not an absence of dependencies but an absence of the analysis.
+   */
+  externalEdges: Array<{ from: string; pkg: string }>;
 }
+
+/**
+ * The installable name a specifier belongs to.
+ *
+ * `@scope/pkg/deep/path` -> `@scope/pkg`, `pkg/sub` -> `pkg`. Deep imports are extremely
+ * common (`lucide-react/icons/x`, `date-fns/format`) and counting them as separate packages
+ * would fragment the very grouping this exists to produce.
+ *
+ * Returns null for everything that is not an installable dependency:
+ *
+ * - Relative and absolute paths, URLs, and `#private` subpath imports.
+ * - Build-tool path ALIASES. `@/lib/store` is this repository's own source behind a tsconfig
+ *   path mapping, and a naive scope split turns it into a package called `@/lib`. A scope has
+ *   a name; `@` alone does not. `~/…` is the same idea in another tool.
+ * - The standard libraries. A builtin is not a dependency, it is the platform, and listing one
+ *   would put `path` at the top of every JavaScript repository's chart and `typing` at the top
+ *   of every Python one - which is exactly what the first run of this analysis produced.
+ */
+export function packageOf(specifier: string): string | null {
+  const s = specifier.trim();
+  if (!s || s.startsWith(".") || s.startsWith("/") || s.startsWith("#") || s.startsWith("~")) return null;
+  /*
+   * A module specifier is one word. The extraction regex has a `from\s+['"]...['"]` branch that
+   * cannot tell a real import from the same shape occurring inside a template literal or a
+   * comment, and while only relative specifiers were kept the junk filtered itself out. Once
+   * every specifier was kept, a fragment of source code - `")) {\n        cur.status ="` -
+   * became a "dependency" on the graph. Anything containing whitespace, quotes or brackets is
+   * not a package name, whatever the regex thought it found.
+   */
+  if (/[\s"'`(){}[\]<>;=]/.test(s)) return null;
+  if (s.startsWith("@/")) return null; // path alias, not a scope
+  if (/^[a-z][a-z0-9+.-]*:/i.test(s) && !s.startsWith("node:")) return null; // http:, data:, file:
+  if (s.startsWith("node:")) return null;
+  if (NODE_BUILTINS.has(s) || PYTHON_STDLIB.has(s)) return null;
+  const parts = s.split("/").filter(Boolean);
+  if (parts.length === 0) return null;
+  if (s.startsWith("@")) return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : null;
+  return parts[0]!;
+}
+
+/** Bare builtin specifiers. `node:`-prefixed ones are handled by the prefix test above. */
+const NODE_BUILTINS = new Set([
+  "assert", "async_hooks", "buffer", "child_process", "cluster", "console", "constants", "crypto",
+  "dgram", "diagnostics_channel", "dns", "domain", "events", "fs", "http", "http2", "https",
+  "inspector", "module", "net", "os", "path", "perf_hooks", "process", "punycode", "querystring",
+  "readline", "repl", "stream", "string_decoder", "sys", "timers", "tls", "trace_events", "tty",
+  "url", "util", "v8", "vm", "wasi", "worker_threads", "zlib",
+]);
+
+/**
+ * Python's standard library, top-level module names only.
+ *
+ * Measured on this repository before this set existed: the five most-depended-upon
+ * "dependencies" were `__future__`, `time`, `dataclasses`, `typing` and `collections`, and the
+ * only genuine third-party name in the list was `pytest`.
+ */
+const PYTHON_STDLIB = new Set([
+  "__future__", "abc", "argparse", "ast", "asyncio", "base64", "binascii", "bisect", "builtins",
+  "bz2", "calendar", "cmath", "collections", "concurrent", "configparser", "contextlib", "copy",
+  "csv", "ctypes", "dataclasses", "datetime", "decimal", "difflib", "dis", "email", "enum",
+  "errno", "faulthandler", "filecmp", "fileinput", "fnmatch", "fractions", "functools", "gc",
+  "getpass", "glob", "gzip", "hashlib", "heapq", "hmac", "html", "http", "importlib", "inspect",
+  "io", "ipaddress", "itertools", "json", "keyword", "linecache", "locale", "logging", "lzma",
+  "math", "mimetypes", "multiprocessing", "operator", "os", "pathlib", "pickle", "platform",
+  "pprint", "queue", "random", "re", "secrets", "select", "shlex", "shutil", "signal", "site",
+  "socket", "sqlite3", "ssl", "stat", "statistics", "string", "struct", "subprocess", "sys",
+  "tarfile", "tempfile", "textwrap", "threading", "time", "timeit", "tkinter", "token",
+  "tokenize", "traceback", "types", "typing", "unicodedata", "unittest", "urllib", "uuid",
+  "warnings", "weakref", "webbrowser", "xml", "zipfile", "zlib", "zoneinfo",
+]);
 export async function computeImportGraph(files: ScannedFile[], ctx?: PipelineContext): Promise<ImportGraph> {
   const toPosix = (r: string) => r.split(path.sep).join("/");
   const byNoExt = new Map<string, string>();      // JS/TS: path (with/without ext) -> rel
@@ -131,10 +220,24 @@ export async function computeImportGraph(files: ScannedFile[], ctx?: PipelineCon
     }
   };
 
+  /* Deduplicated: a file importing four symbols from one package in four statements depends on
+     it once. Without this the node's weight would measure statement style, not coupling. */
+  const externalSeen = new Set<string>();
+  const externalEdges: Array<{ from: string; pkg: string }> = [];
+  const linkExternal = (from: string, specifier: string) => {
+    const pkg = packageOf(specifier);
+    if (!pkg) return;
+    const key = `${from}\u0000${pkg}`;
+    if (externalSeen.has(key)) return;
+    externalSeen.add(key);
+    externalEdges.push({ from, pkg });
+  };
+
   for (let idx = 0; idx < files.length; idx++) {
     if (idx > 0 && idx % YIELD_EVERY === 0) {
       await yieldToEventLoop();
       throwIfAborted(ctx);
+      emitPhase(ctx, "imports", idx, files.length);
     }
     const f = files[idx];
     const rel = toPosix(f.rel);
@@ -145,12 +248,25 @@ export async function computeImportGraph(files: ScannedFile[], ctx?: PipelineCon
         // Local Go imports share the repo's module prefix; match the longest
         // trailing path segment run against an actual repo directory.
         const segs = imp.split("/").filter(Boolean);
+        let matched = false;
         for (let k = Math.min(segs.length, 8); k >= 1; k--) {
           const suffix = segs.slice(segs.length - k).join("/");
           const pkgFiles = goDirs.get(suffix);
           if (pkgFiles && suffix !== dir) {
             for (const target of pkgFiles) link(f.rel, target);
+            matched = true;
             break;
+          }
+        }
+        // A Go import path is a domain-qualified module (`github.com/gorilla/mux`), so the
+        // JS package rules do not apply: take the first three segments, which is the
+        // host/owner/repo that `go.mod` requires, and skip the standard library, which has
+        // no dot in its first segment (`fmt`, `net/http`).
+        if (!matched && segs.length >= 3 && segs[0]!.includes(".")) {
+          const key = `${f.rel}\u0000${segs.slice(0, 3).join("/")}`;
+          if (!externalSeen.has(key)) {
+            externalSeen.add(key);
+            externalEdges.push({ from: f.rel, pkg: segs.slice(0, 3).join("/") });
           }
         }
       } else if (f.ext === ".py") {
@@ -165,15 +281,21 @@ export async function computeImportGraph(files: ScannedFile[], ctx?: PipelineCon
           target = pyByDotted.get(imp);
         }
         if (target) link(f.rel, target);
+        // The top-level module is the distribution name often enough to be useful, and a
+        // relative import is never external.
+        else if (!imp.startsWith(".")) linkExternal(f.rel, imp.split(".")[0]!);
       } else {
         // JS/TS relative import.
         const t = path.posix.normalize(path.posix.join(dir, imp)).replace(/^\.\//, "");
         const cand = byNoExt.get(t) || byNoExt.get(t + "/index") || byNoExt.get(t.replace(/\/$/, ""));
         if (cand) link(f.rel, cand);
+        // Unresolved AND not relative: the specifier names something outside this tree.
+        // A relative path that resolved to nothing is a broken import, not a dependency.
+        else linkExternal(f.rel, imp);
       }
     }
   }
-  return { fanIn, importEdges };
+  return { fanIn, importEdges, externalEdges };
 }
 
 
