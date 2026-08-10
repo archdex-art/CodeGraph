@@ -17,23 +17,12 @@ const MAX_SCALE = 4;
 /** A fit crosses the whole diagram, so it is paced with the node easing, not a zoom tick. */
 const FIT_DURATION_MS = 450;
 
-/**
- * Truncate to a PIXEL budget, not a character count.
- *
- * `label.length > 20` cannot see the box: "DatabaseManager.java" is exactly 20
- * chars, so it never truncated and ran straight out of a 148px file card. Cards
- * come in three widths (148 file, 156 network, 180 module) and containers are
- * sized by their contents, so any fixed count is wrong for all but one of them.
- *
- * ponytail: 0.55em average advance instead of measuring glyphs. Real widths need
- * `getComputedTextLength()`, which forces layout per node per frame — too costly
- * during a 60fps expansion. Swap to `<text textLength>` if a font ever lands where
- * the estimate visibly lies.
+/*
+ * The character-count estimator that used to live here is gone. It divided a pixel budget by
+ * `size * 0.55`, which is an average advance and therefore wrong per string: it truncated
+ * `IIII` early and let `WWWW` overflow. `@/lib/fitText` measures the real string against the
+ * real font once and caches it, so the two callers that used to disagree now cannot.
  */
-function fitText(text: string, px: number, size: number): string {
-  const max = Math.max(1, Math.floor(px / (size * 0.55)));
-  return text.length > max ? text.slice(0, max - 1) + "…" : text;
-}
 
 export interface NGNode {
   id: string;

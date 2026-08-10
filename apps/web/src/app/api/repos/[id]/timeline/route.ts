@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireWorkspace } from "@/lib/authz";
 import { TimelineEngine, Strategies } from "@/lib/gitops/timelineApi";
-import { isCommitHash, loadSnapshotCache } from "@/lib/gitops/timelineStore";
+import { loadSnapshotCache } from "@/lib/gitops/timelineStore";
 import { isGitRepo } from "@codegraph/vcs";
 import { logger } from "@codegraph/observability";
 
