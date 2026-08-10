@@ -18,4 +18,10 @@
  * `testsGate` already takes `allowed`/`canIsolate` as parameters, so that decision stays with
  * the caller who knows the answer and never leaks in here.
  */
-export { createSandbox, detectTestRunner, hasTypeConfig, type SandboxOptions } from "./sandbox";
+export {
+  createSandbox,
+  detectTestRunner,
+  hasTypeConfig,
+  typescriptCompiler,
+  type SandboxOptions,
+} from "./sandbox";

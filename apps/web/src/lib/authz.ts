@@ -12,9 +12,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { config } from "@codegraph/config";
 import { viewerId as brandViewerId, type ViewerId } from "@codegraph/core-domain";
 import { getSession } from "./session";
+import { getVisitorId } from "./visitor";
 import { getRepoOwnerId, getWorkspaceDir } from "./store";
+import { hasWorkingTree, materialiseWorkingTree } from "@codegraph/vcs";
+import { logger } from "@codegraph/observability";
 
 /**
+<<<<<<< HEAD
  * May this deployment create repos in the shared public bucket at all?
  *
  * Reads scope correctly already — a signed-in owner's repos are private and every
@@ -46,13 +50,23 @@ export const ANONYMOUS_CONSENT_MESSAGE =
 
 /**
  * Current viewer for scoping persistence reads, or `null` when signed out.
+=======
+ * Current viewer for scoping persistence reads, or `null` when this request carries no
+ * identity at all.
+ *
+ * Two kinds of identity, in priority order. A GitHub session is the strong one. Failing that,
+ * a signed visitor cookie (`lib/visitor.ts`) names the browser that indexed a repository
+ * without signing in — its repositories are private to it, which is what makes the trial path
+ * usable for code somebody actually cares about. A request with neither sees only the shared
+ * public bucket, exactly as before.
+>>>>>>> 14271d6 (feat(vcs): read a repository out of git instead of off a checkout)
  *
  * Returns the branded `ViewerId` so it cannot be confused with any other numeric
  * id at a call site, and so a repository read cannot be handed a repo id by
  * mistake (LLD §2, §8).
  */
 export function viewerId(req: NextRequest): ViewerId {
-  return brandViewerId(getSession(req)?.userId ?? null);
+  return brandViewerId(getSession(req)?.userId ?? getVisitorId(req));
 }
 
 /**
@@ -89,7 +103,17 @@ type Workspace = NonNullable<ReturnType<typeof getWorkspaceDir>>;
 
 export function requireWorkspace(
   req: NextRequest,
-  id: string
+  id: string,
+  opts?: {
+    /**
+     * Whether this route reads or writes real FILES, as opposed to only talking to `.git`.
+     *
+     * Defaults to true, and the default is the safe direction on purpose: a route that needs
+     * files and forgets to say so gets a correct (if slower) answer, whereas one that opts out
+     * wrongly would see an empty directory and report a repository as having no content.
+     */
+    readonly files?: boolean;
+  },
 ):
   | { denied: NextResponse; ws?: undefined }
   | { denied?: undefined; ws: Workspace } {
@@ -97,6 +121,30 @@ export function requireWorkspace(
   if (denied) return { denied };
   const ws = getWorkspaceDir(id);
   if (!ws) return { denied: NextResponse.json({ error: "Workspace not ready" }, { status: 404 }) };
+
+  /**
+   * The working tree is created HERE, on first use, not at index time.
+   *
+   * Analysis reads its files out of git (`gitTreeFiles` / `readBlobs`), so a repository is
+   * cloned with `--no-checkout` and the checkout is pure cost until something wants real
+   * paths. Measured on `microsoft/TypeScript`: the git objects are 41 MB and the checkout is
+   * 655 MB. A visitor who indexes a repository and looks at the graph never touches this
+   * function, and never pays the 614 MB.
+   *
+   * This is the one place worth doing it because it is the one place every file-touching
+   * route already funnels through — the access check made it a choke point, and that makes it
+   * the choke point for materialisation too. `hasWorkingTree` is a single `git ls-tree` plus
+   * one `existsSync`, so the common case (already checked out, or a local folder that was
+   * never a clone) costs nothing measurable.
+   */
+  if (opts?.files !== false && !hasWorkingTree(ws.dir)) {
+    try {
+      materialiseWorkingTree(ws.dir);
+    } catch (e) {
+      logger.warn("could not materialise working tree", { repoId: id, err: e instanceof Error ? e.message : String(e) });
+      return { denied: NextResponse.json({ error: "Workspace files are not available" }, { status: 409 }) };
+    }
+  }
   return { ws };
 }
 

@@ -76,35 +76,75 @@ export interface IntOptions {
   readonly max?: number;
 }
 
-export function intVar(key: string, options: IntOptions): Reader<number> {
-  const { fallback, min, max } = options;
-  const bounds = [
-    "an integer",
-    min !== undefined ? `>= ${min}` : null,
-    max !== undefined ? `<= ${max}` : null,
-  ]
+function intBounds(options: IntOptions): string {
+  const { min, max } = options;
+  return ["an integer", min !== undefined ? `>= ${min}` : null, max !== undefined ? `<= ${max}` : null]
     .filter((part): part is string => part !== null)
     .join(" ");
+}
 
+/**
+ * The parsed value of one key, or `undefined` when it is absent OR invalid.
+ *
+ * Collapsing "absent" and "invalid" into one return is safe because an invalid value
+ * has already appended a `Problem`, and both `resolve` and `resolveOne` refuse to hand
+ * back a configuration that carries one. So the fallback a caller substitutes for
+ * `undefined` is only ever observed on the absent path.
+ */
+function readInt(
+  source: EnvSource,
+  key: string,
+  options: IntOptions,
+  bounds: string,
+  problems: Problem[],
+): number | undefined {
+  const raw = present(source, key);
+  if (raw === undefined) return undefined;
+  const parsed = Number(raw);
+  // Number("") is 0 and Number(" 1 ") is 1, so guard explicitly rather than
+  // trusting the coercion. v1 used `Number(x) || default`, which silently
+  // swallowed both garbage AND a deliberate 0.
+  if (!Number.isInteger(parsed)) {
+    problems.push({ key, value: raw, expected: bounds });
+    return undefined;
+  }
+  const { min, max } = options;
+  if ((min !== undefined && parsed < min) || (max !== undefined && parsed > max)) {
+    problems.push({ key, value: raw, expected: bounds });
+    return undefined;
+  }
+  return parsed;
+}
+
+export function intVar(key: string, options: IntOptions): Reader<number> {
+  const bounds = intBounds(options);
   return {
     keys: [key],
-    read: (source, problems) => {
-      const raw = present(source, key);
-      if (raw === undefined) return fallback;
-      const parsed = Number(raw);
-      // Number("") is 0 and Number(" 1 ") is 1, so guard explicitly rather than
-      // trusting the coercion. v1 used `Number(x) || default`, which silently
-      // swallowed both garbage AND a deliberate 0.
-      if (!Number.isInteger(parsed)) {
-        problems.push({ key, value: raw, expected: bounds });
-        return fallback;
-      }
-      if ((min !== undefined && parsed < min) || (max !== undefined && parsed > max)) {
-        problems.push({ key, value: raw, expected: bounds });
-        return fallback;
-      }
-      return parsed;
-    },
+    read: (source, problems) => readInt(source, key, options, bounds, problems) ?? options.fallback,
+  };
+}
+
+/**
+ * An integer that also answers to a RENAMED variable, so a rename is not a silent
+ * behaviour change on deployments that set the old name.
+ *
+ * The alternative — reading only the new key — is the worst possible outcome of a
+ * rename: the operator's tuning stops applying and nothing says so, which presents as
+ * the fixed default coming back on the one deployment that had already hit the limit
+ * hard enough to raise it. `CG_CLONE_TIMEOUT_MS` is the live case (see
+ * `cloneStallMs` in `definition.ts`).
+ *
+ * `key` wins when both are set, because the current name is the one an operator can
+ * look up.
+ */
+export function aliasedIntVar(key: string, deprecatedKey: string, options: IntOptions): Reader<number> {
+  const bounds = intBounds(options);
+  return {
+    keys: [key, deprecatedKey],
+    read: (source, problems) =>
+      readInt(source, key, options, bounds, problems) ??
+      readInt(source, deprecatedKey, options, bounds, problems) ??
+      options.fallback,
   };
 }
 

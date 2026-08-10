@@ -34,7 +34,7 @@ export async function buildSnapshot(
     metrics
   };
 
-  baseSnapshot.evolution = await analyzeEvolution(previousSnapshot || null, baseSnapshot);
+  baseSnapshot.evolution = analyzeEvolution(previousSnapshot || null, baseSnapshot);
 
   return baseSnapshot;
 }

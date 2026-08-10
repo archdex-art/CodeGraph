@@ -78,6 +78,10 @@ const FLAT_CONFIG = [
 ];
 
 export interface EslintSecurityFinding {
+  /** The ESLint rule id, used verbatim as `Issue.rule` — already stable and already unique. */
+  rule: string;
+  /** The linter's own sentence about this match; the evidence line a reader checks. */
+  message: string;
   line: number;
   /** 1-indexed, needed to locate the call structurally for taint classification. */
   column: number;
@@ -109,7 +113,7 @@ const TAINTABLE = new Set([
  * indexing the rest of the workspace.
  */
 /** Bump when RULE_META, the rule set, or the finding shape changes. */
-const SECURITY_VERSION = "eslint-sec-3-redos-confidence";
+const SECURITY_VERSION = "eslint-sec-4-rule-ids";
 
 export function lintForSecurity(text: string, ext: string, maxFindings = 10): EslintSecurityFinding[] {
   if (!JS_EXTS[ext]) return [];
@@ -132,6 +136,8 @@ function computeSecurityFindings(text: string, ext: string, maxFindings: number)
       const meta = RULE_META[m.ruleId];
       if (!meta) continue;
       out.push({
+        rule: m.ruleId,
+        message: m.message,
         line: Math.max(1, m.line || 1),
         column: Math.max(1, m.column || 1),
         title: meta.title,

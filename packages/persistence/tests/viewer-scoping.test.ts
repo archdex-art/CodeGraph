@@ -12,7 +12,7 @@ const {
   deleteRepo,
   findRepo,
   findRepoUnscoped,
-  insertRepo,
+  upsertRepo,
   listRepos,
   repoOwnerId,
 } = await import("../src/index");
@@ -41,9 +41,9 @@ const ANONYMOUS = viewerId(null);
 
 beforeEach(() => {
   db().exec("DELETE FROM repos");
-  insertRepo({ id: "public-repo", url: "https://github.com/o/pub", name: "o/pub", sourceType: "git", ownerId: null, createdAt: 1 });
-  insertRepo({ id: "alice-repo", url: "https://github.com/o/alice", name: "o/alice", sourceType: "git", ownerId: 1001, createdAt: 2 });
-  insertRepo({ id: "bob-repo", url: "https://github.com/o/bob", name: "o/bob", sourceType: "git", ownerId: 2002, createdAt: 3 });
+  upsertRepo({ id: "public-repo", url: "https://github.com/o/pub", name: "o/pub", sourceType: "git", ownerId: null, createdAt: 1 });
+  upsertRepo({ id: "alice-repo", url: "https://github.com/o/alice", name: "o/alice", sourceType: "git", ownerId: 1001, createdAt: 2 });
+  upsertRepo({ id: "bob-repo", url: "https://github.com/o/bob", name: "o/bob", sourceType: "git", ownerId: 2002, createdAt: 3 });
 });
 
 describe("findRepo is scoped by viewer", () => {

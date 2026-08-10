@@ -57,10 +57,19 @@ function resolveModulePath(fromFile: string, spec: string, knownFiles: Set<strin
 // contains `line` -- the innermost enclosing function/method for a call site,
 // replacing the old "attribute every call to the file's first function"
 // approximation now that references carry a line number.
-function findEnclosingCaller(candidates: CodeSymbol[], line: number, excludeId: string): CodeSymbol | null {
+//
+// The callee is deliberately NOT excluded from the candidates. It used to be, and that made
+// recursion produce a confidently wrong answer rather than no answer: for
+// `function fact(n) { return n * fact(n - 1); }` the innermost enclosing context IS `fact`,
+// so excluding it fell through to the next-outer context and recorded
+// `<module> -calls-> fact`. The module does not call `fact`; `fact` does. That one wrong edge
+// then produced a synthetic `<module>` node nothing needed, inflated `fact`'s fan-in with a
+// caller that does not exist, and hid every self-recursive cycle from `cycles()`. A nested
+// helper recursing inside an outer function was attributed to the OUTER function, which is
+// worse: a real symbol named as a caller that never makes the call.
+function findEnclosingCaller(candidates: CodeSymbol[], line: number): CodeSymbol | null {
   let best: CodeSymbol | null = null;
   for (const s of candidates) {
-    if (s.id === excludeId) continue;
     if (line < s.line || line > s.endLine) continue;
     if (!best || s.endLine - s.line < best.endLine - best.line) best = s;
   }
@@ -442,11 +451,9 @@ export async function buildSymbolGraph(
           s.kind === "component" ||
           s.kind === "class",
       );
-      const enclosing = findEnclosingCaller(callerCandidates, ref.line, targetSym.id);
+      const enclosing = findEnclosingCaller(callerCandidates, ref.line);
       // No enclosing symbol means module scope - which is a real caller, not an absence.
       const caller = enclosing ?? moduleSymbolOf(fr.file);
-
-      if (caller.id === targetSym.id) continue;
 
       const key = `${caller.id}->${targetSym.id}`;
       edgeCounts.set(key, (edgeCounts.get(key) || 0) + 1);
@@ -459,7 +466,17 @@ export async function buildSymbolGraph(
     const s = symbolById.get(source)!;
     const t = symbolById.get(target)!;
     s.fanOut += 1;
-    t.fanIn += Math.min(count, 5); // cap at 5 per distinct caller to prevent massive spam from one file
+    /**
+     * A self-edge (recursion) is a real outgoing call, so it counts in `fanOut` and in
+     * `resolvedCalls`, and it is emitted so `cycles()` can see it. It deliberately does NOT
+     * count in `fanIn`: fan-in answers "who else depends on this", and it is what `deadCode()`
+     * and blast radius read. A recursive function that nothing else calls is still unreferenced,
+     * and letting it call itself out of the dead-code list would be the symbol marking its own
+     * homework.
+     */
+    if (source !== target) {
+      t.fanIn += Math.min(count, 5); // cap at 5 per distinct caller to prevent massive spam from one file
+    }
     resolvedCalls++;
   }
 

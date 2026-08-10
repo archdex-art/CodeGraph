@@ -176,7 +176,8 @@ failures was reproducible locally in seconds, and none of them was reproducible 
 | `NEXT_PUBLIC_APP_URL` | website build + GitHub OAuth callback | `https://app.codegraph.dev` | Marketing "Start Indexing" target; also the base URL used to build the OAuth `redirect_uri` (falls back to the request's own origin if unset) |
 | `PORT` | app runtime | `4000` | HTTP port |
 | `HOSTNAME` | app runtime | `0.0.0.0` | Bind address (Docker) |
-| `CG_MAX_FILES` | app runtime | `4000` | Max files scanned per repo |
+| `CG_MAX_FILES` | app runtime | `4000` | Max files scanned per repo. Reaching it truncates the walk, and the report then says so — the Health Score is labelled a sample rather than presented as the repository's score. `microsoft/TypeScript` holds 39,334 analysable files, so raise this if you want a whole-repository score for a codebase that size. |
+| `CG_MAX_FILE_BYTES` | app runtime | `400000` | Per-file size ceiling; anything larger is counted in the coverage report as "over the size cap" and never read. Guards against minified bundles and vendored blobs. |
 | `CG_CLONE_TIMEOUT_MS` | app runtime | `90000` | git clone timeout |
 | `CG_DATA_DIR` | app runtime | `./data` | SQLite location |
 | `CG_ALLOW_LOCAL_ACCESS` | app runtime | unset (= off in production) | Opt in to local-folder indexing + server-side folder browsing on a public deployment. Only set `true` on a trusted, single-operator host. |

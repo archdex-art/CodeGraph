@@ -5,7 +5,10 @@ import {
   Gauge,
   History,
   LayoutGrid,
+  MessagesSquare,
   Network,
+  Radius,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -64,6 +67,27 @@ export const SECTIONS: readonly Section[] = [
     icon: Network,
     blurb: "Force-directed import graph. Click a file to inspect its symbols and callers.",
     immersive: true,
+  },
+  {
+    group: "Intelligence",
+    slug: "ask",
+    label: "Ask",
+    icon: MessagesSquare,
+    blurb: "A question in English, compiled into graph operations and answered from the index.",
+  },
+  {
+    group: "Intelligence",
+    slug: "impact",
+    label: "Impact",
+    icon: Radius,
+    blurb: "What breaks if you change a symbol, and which hubs no test reaches.",
+  },
+  {
+    group: "Intelligence",
+    slug: "ownership",
+    label: "Ownership",
+    icon: Users,
+    blurb: "Who knows this code, where nobody does any more, and who should review a change.",
   },
   {
     group: "Intelligence",

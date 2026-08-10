@@ -9,7 +9,7 @@ function emptyGraph() {
 function repoWithIssues(issues: Issue[], score = 50): RepoDetail {
   return {
     id: "r", url: "", name: "test", status: "done", sourceType: "git",
-    score, createdAt: 0, finishedAt: 0, hasWorkspace: false, error: null,
+    score, createdAt: 0, finishedAt: 0, hasWorkspace: false, error: null, drift: null,
     loc: 100, languages: [], graphStats: { nodes: 0, edges: 0, files: 0, dirs: 0, dependencies: 0 },
     dimensions: [], issues, dependencies: [], churnByFile: {},
     tree: { name: "/", path: ".", children: [] },

@@ -5,6 +5,9 @@ import { hierarchy, pack, type HierarchyCircularNode } from "d3-hierarchy";
 import type { TreeNode } from "@/lib/types";
 import { extColor } from "@/lib/colors";
 import { Search, X } from "lucide-react";
+import { useGraphUrl } from "@/lib/useGraphUrl";
+import { plural } from "@/lib/plural";
+import { GraphExport } from "./GraphExport";
 
 import {
   createWheelZoom,
@@ -31,7 +34,26 @@ interface PackDatum {
 
 type View = [number, number, number]; // [cx, cy, diameter] in pack coords
 
-export function CirclePackView({ tree, onSelect }: { tree: TreeNode; onSelect?: (id: string | null) => void }) {
+export function CirclePackView({
+  tree,
+  repoName = "",
+  onSelect,
+  deepLink = false,
+}: {
+  tree: TreeNode;
+  /** Names the exported file. */
+  repoName?: string;
+  onSelect?: (id: string | null) => void;
+  /**
+   * Whether the zoomed circle belongs in the page's URL, and with it the Share pill.
+   *
+   * Off by default because of the embedded case: the timeline scrubber draws this view
+   * as one snapshot among many, where the circle you zoomed is a detail of the frame
+   * rather than the page's state — and a "Copy link" that hands back a URL missing the
+   * thing it just promised to capture is worse than no button.
+   */
+  deepLink?: boolean;
+}) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [vp, setVp] = useState({ w: 900, h: 600 });
   const [hover, setHover] = useState<{ d: HierarchyCircularNode<PackDatum>; x: number; y: number } | null>(null);
@@ -88,11 +110,24 @@ export function CirclePackView({ tree, onSelect }: { tree: TreeNode; onSelect?: 
     setFocus(n);
   };
 
-  // Reset view when the layout (size/tree) changes.
+  const [{ open }, setUrl] = useGraphUrl(deepLink);
+
+  /**
+   * Park on the circle the URL names — on load, and again whenever the layout is
+   * rebuilt (a resize re-runs `pack()`, so every coordinate the view holds is stale).
+   *
+   * Snapped, not eased: this fires for an arrival, not for a gesture, and animating
+   * from a viewport the visitor never saw just delays the picture they asked for.
+   * The identity check is what keeps a click from being re-applied — `focusNode` has
+   * already moved there and started its animation by the time the param lands, while
+   * a rebuilt `root` yields fresh node objects and so always re-applies.
+   */
   useEffect(() => {
-    applyView([root.x, root.y, root.r * 2]);
-    applyFocus(root);
-  }, [root]);
+    const target = (open && root.descendants().find((n) => n.data.path === open)) || root;
+    if (target === focusRef.current) return;
+    applyView([target.x, target.y, target.r * 2]);
+    applyFocus(target);
+  }, [root, open]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -141,6 +176,8 @@ export function CirclePackView({ tree, onSelect }: { tree: TreeNode; onSelect?: 
   function focusNode(n: HierarchyCircularNode<PackDatum>) {
     applyFocus(n);
     zoomTo([n.x, n.y, n.r * 2]);
+    // The whole tree is this view's default, so it is spelled as no param at all.
+    setUrl({ open: n === root ? null : n.data.path, focus: null });
   }
 
   /**
@@ -282,6 +319,9 @@ export function CirclePackView({ tree, onSelect }: { tree: TreeNode; onSelect?: 
 
       <div ref={wrapRef} className="relative w-full h-[600px] rounded-xl border border-[var(--line)] bg-[var(--surface-1)] overflow-hidden">
         <svg
+          /* How `GraphExport` finds the drawing — see `NodeGraph` for why it is not
+             just `querySelector("svg")`. */
+          data-graph-canvas
           width={vp.w}
           height={vp.h}
           className="block select-none"
@@ -368,6 +408,7 @@ export function CirclePackView({ tree, onSelect }: { tree: TreeNode; onSelect?: 
           >
             Reset
           </button>
+          {deepLink && <GraphExport canvasRef={wrapRef} repoName={repoName} view="circle-pack" />}
           {!atRoot && <span className="text-[var(--text-secondary)] font-mono">{focus.data.path}</span>}
         </div>
         <div className="absolute top-md right-md text-micro text-[var(--text-muted)]">scroll = zoom · drag = pan · click a directory to focus · size = LOC · color = file type</div>
@@ -389,7 +430,7 @@ export function CirclePackView({ tree, onSelect }: { tree: TreeNode; onSelect?: 
             <div className="font-mono text-[var(--text-primary)] break-all">{hover.d.data.path}</div>
             <div className="text-[var(--text-secondary)] mt-2xs">
               {hover.d.children ? `${hover.d.descendants().length - 1} items` : `${hover.d.data.loc || 0} LOC`}
-              {hover.d.data.issues ? ` · ${hover.d.data.issues} issue(s)` : ""}
+              {hover.d.data.issues ? ` · ${plural(hover.d.data.issues, "issue")}` : ""}
             </div>
           </div>
         )}

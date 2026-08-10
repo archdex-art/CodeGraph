@@ -112,6 +112,31 @@ export interface ExecResult {
   readonly timedOut: boolean;
 }
 
+/**
+ * The outcome of ONE run of the project's own test suite.
+ *
+ * Exists because a `GateResult` cannot hold two runs, and the honest tests verdict needs two:
+ * the suite BEFORE the edits and the suite AFTER them. Without the baseline, "the suite passes"
+ * is not evidence a fix is safe — a repository whose suite was already red passes nothing, and
+ * one whose suite was already green is the only place a post-fix pass means anything.
+ *
+ * `no-command` and `not-allowed` stay distinct from `failed` on purpose. "The suite did not
+ * run" and "the suite ran and was red" are different sentences to a user, and collapsing them
+ * is how a verdict of "verified" came to include "we never managed to check".
+ */
+export type SuiteVerdict = "passed" | "failed" | "timed-out" | "no-command" | "not-allowed";
+
+export interface SuiteRun {
+  readonly verdict: SuiteVerdict;
+  /** One line, safe to show a user, naming why. */
+  readonly reason: string;
+  /** The command that ran, or null when nothing ran. */
+  readonly command: string | null;
+  readonly ms: number;
+  /** Truncated and credential-redacted. Absent when the run produced no output. */
+  readonly log?: string;
+}
+
 export interface Verifier {
   verify(candidate: FixCandidate, sandbox: SandboxHandle): Promise<VerificationRecord>;
 }

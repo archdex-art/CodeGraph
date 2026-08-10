@@ -44,6 +44,20 @@ const LEVEL = {
     label: "Partially verified",
     detail: "checks passed, but your test suite did not run here",
   },
+  /*
+   * A run that patched NOTHING is not an unverified patch — there is no patch. This read
+   * "Not verified — no verification gate completed" beside an amber warning triangle, which
+   * is the product's headline promise apparently failing, when the accurate statement is that
+   * the gates had nothing to run against. Same imprecision `failed` exists to remove, in the
+   * other direction: conflating "nothing to do" with "we could not check".
+   */
+  nothing: {
+    Icon: Minus,
+    ring: "border-[var(--line)] bg-[var(--surface-inset)]",
+    fg: "text-[var(--text-secondary)]",
+    label: "Nothing to fix",
+    detail: "no finding here is auto-fixable, so no patch was produced",
+  },
   none: {
     Icon: AlertTriangle,
     ring: "border-[var(--amber-text)]/20 bg-[var(--amber-text)]/[0.06]",
@@ -81,9 +95,14 @@ const STATUS = {
  * Which verdict a record earns. Exported and pure because this is the LOGIC — "is a failed
  * gate still partial?" is a judgement, not markup, and it is the part that can be wrong in a
  * way users see. The component below only paints what this returns.
+ *
+ * `applied` distinguishes the two ways a record can be absent. A run that produced no edits
+ * has nothing to verify and says so; a run that produced edits and then failed to gate them
+ * is genuinely unverified. Defaulted so existing callers keep their meaning — they all pass
+ * a record, and the ones that do not are asking the "no patch attempted" question anyway.
  */
-export function verdictFor(record?: VerificationRecord): keyof typeof LEVEL {
-  if (!record) return "none";
+export function verdictFor(record?: VerificationRecord, applied = 0): keyof typeof LEVEL {
+  if (!record) return applied > 0 ? "none" : "nothing";
   // A failed gate outranks the level, and gets its OWN verdict. `level` describes how much of
   // the suite COULD run, so a record can read `partial` while a gate actively failed. Painting
   // that as the benign "we could not run everything" case would be the same overclaim one
@@ -98,6 +117,7 @@ export function VerificationVerdict({
   scoreBefore,
   scoreAfter,
   showScores,
+  applied = 0,
 }: {
   /** Absent on paths that never ran verification — then there is no verdict to show. */
   record?: VerificationRecord;
@@ -105,8 +125,10 @@ export function VerificationVerdict({
   scoreBefore: number;
   scoreAfter: number;
   showScores: boolean;
+  /** Edits the run produced. Zero with no record means "nothing to fix", not "unverified". */
+  applied?: number;
 }) {
-  const level = verdictFor(record);
+  const level = verdictFor(record, applied);
   const { Icon, ring, fg, label, detail } = LEVEL[level];
 
   return (

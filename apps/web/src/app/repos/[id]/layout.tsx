@@ -409,8 +409,11 @@ export default function RepoLayout({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-sm">
+                  {/* Points at `ask`, not `network`. It used to open the force-directed graph,
+                      which is already one click away in the sidebar and answers no question:
+                      the label promised a query surface and delivered a picture. */}
                   <Link
-                    href={sectionHref(id, "network")}
+                    href={sectionHref(id, "ask")}
                     className="flex min-h-10 cursor-pointer items-center justify-center gap-sm rounded-md border border-[var(--line)] px-md text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-line-strong hover:text-[var(--text-primary)]"
                   >
                     Query the graph

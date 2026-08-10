@@ -1,3 +1,4 @@
+import { ruleIdOf } from "./findings";
 import { DIMENSION_META, type Dimension } from "./models";
 import type { Issue } from "./models";
 
@@ -46,6 +47,12 @@ interface SarifResult {
     };
   }>;
   properties: Record<string, unknown>;
+  /**
+   * SARIF's own word for "reported, and accepted anyway". Present only on accepted findings:
+   * an empty array means "not suppressed" to some consumers and "suppressed by nothing" to
+   * others, and the spec's own advice is to omit it.
+   */
+  suppressions?: Array<{ kind: "external" }>;
 }
 
 type SarifLevel = "error" | "warning" | "note";
@@ -63,10 +70,12 @@ function levelFor(severity: number): SarifLevel {
 }
 
 /**
- * A stable rule id derived from the title, because CodeGraph's rules are declared inline and
- * have no ids of their own yet (PLAN.md P5 item 3 gives them one). Slugging is deterministic,
- * so the same finding produces the same id across runs - which is what a consumer diffing two
- * SARIF files needs.
+ * A stable rule id derived from the title, for findings persisted before `Issue.rule` existed.
+ *
+ * Kept as a FALLBACK rather than deleted: this slug is the id already published to every
+ * consumer that has ingested a CodeGraph log, and `ruleIdOf`'s own fallback slugs differently
+ * (it strips digits and bracketed spans). Re-slugging old rows would make GitHub code scanning
+ * close every existing alert and open an identical one under a new id.
  */
 export function sarifRuleId(title: string): string {
   const slug = title
@@ -101,7 +110,9 @@ export function toSarif(issues: readonly Issue[], opts: SarifOptions = {}): Sari
   const results: SarifResult[] = [];
 
   for (const issue of issues) {
-    const ruleId = sarifRuleId(issue.title);
+    // The declared rule id when the finding has one, the legacy title slug when it does not.
+    // `ruleIdOf`'s own fallback is NOT used here — see `sarifRuleId`.
+    const ruleId = issue.rule ? ruleIdOf(issue) : sarifRuleId(issue.title);
     if (!rules.has(ruleId)) {
       rules.set(ruleId, {
         id: ruleId,
@@ -135,7 +146,16 @@ export function toSarif(issues: readonly Issue[], opts: SarifOptions = {}): Sari
         ...(issue.confidence === undefined ? {} : { confidence: issue.confidence }),
         ...(issue.churn === undefined ? {} : { churn: issue.churn }),
         ...(issue.occurrences === undefined ? {} : { occurrences: issue.occurrences }),
+        // The one line that lets a reviewer falsify the finding without opening the file. In
+        // `properties` rather than folded into `message.text`, so a consumer can show the
+        // claim and the evidence separately — GitHub renders the message as the alert title.
+        ...(issue.evidence === undefined ? {} : { evidence: issue.evidence }),
       },
+      // `kind: "external"` — the acceptance lives outside the log, in `.codegraph-baseline.json`
+      // or an inline `codegraph-ignore`. Emitting the result and marking it beats dropping it:
+      // GitHub code scanning then shows the alert as dismissed, so a baseline stays auditable
+      // instead of becoming an invisible allowlist.
+      ...(issue.suppressed ? { suppressions: [{ kind: "external" as const }] } : {}),
     });
   }
 

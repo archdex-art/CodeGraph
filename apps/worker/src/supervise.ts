@@ -176,13 +176,14 @@ function forward(line: string, ctx: JobContext, logger: Logger, jobId: string): 
     try {
       const m: unknown = JSON.parse(line);
       if (typeof m === "object" && m !== null && "stage" in m) {
-        const p = m as { percent?: unknown; stage?: unknown; message?: unknown };
+        const p = m as { percent?: unknown; stage?: unknown; message?: unknown; phase?: unknown };
         // Returns false once the lease is gone; `runJob` then abandons the job, so
         // there is nothing useful to do with it beyond stopping the noise.
         ctx.progress(
           typeof p.percent === "number" ? p.percent : 0,
           String(p.stage ?? ""),
-          typeof p.message === "string" ? p.message : ""
+          typeof p.message === "string" ? p.message : "",
+          typeof p.phase === "string" ? p.phase : null
         );
         return;
       }

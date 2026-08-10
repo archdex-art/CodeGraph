@@ -97,7 +97,7 @@ describe("QueryEngine", () => {
 });
 
 describe("buildContext", () => {
-  it("assembles a Graph-RAG prompt with slices for a matching query", () => {
+  it("assembles an evidence bundle with slices for a matching query", () => {
     const ctx = buildContext(graph, "beta");
     expect(typeof ctx.prompt).toBe("string");
     expect(ctx.prompt).toContain("<task>");

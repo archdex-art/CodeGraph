@@ -10,25 +10,31 @@ interface BuildOpts {
 }
 
 /**
- * Escape text for safe embedding inside the assembled XML-tagged prompt.
+ * Escape text for safe embedding inside the assembled XML-tagged bundle.
  * Real signatures/docstrings routinely contain `<`, `>`, `&`, `"` — generics
  * (`Record<string, T>`), intersection types (`A & B`), or literal HTML/quotes
- * in a comment — which would otherwise corrupt the tag structure of the
- * context handed to a downstream LLM or any strict XML/HTML consumer.
+ * in a comment — which would otherwise corrupt the tag structure for the
+ * renderer or any strict XML/HTML consumer downstream.
  */
 function escapeXml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 /**
- * Graph-RAG context builder.
+ * Assembles a graph-derived evidence bundle for one question about the code.
+ *
+ * Every symbol, edge and line number in the output was read out of the symbol
+ * graph this repository's own parsers produced — nothing here is generated,
+ * summarised or guessed, and the same query against the same graph returns the
+ * same bundle. It is evidence a reader (or `ask.ts`) cites, not prose.
+ *
  * 1. Seed: rank symbols against the query (name/tag/doc + centrality).
  * 2. Expand: pull callees (dependencies the code needs) + top callers (usage sites) + siblings.
  * 3. Budget: greedily fill a token budget by descending relevance, deduped — using the
- *    SAME rendered XML block that lands in the final prompt, so `tokenBudget` is honored
+ *    SAME rendered XML block that lands in the final text, so `tokenBudget` is honored
  *    (tag/attribute overhead was previously excluded from the budgeting pass, letting the
- *    real prompt run meaningfully over the requested budget).
- * 4. Assemble: structured, escaped, LLM-friendly prompt with provenance.
+ *    real output run meaningfully over the requested budget).
+ * 4. Assemble: structured, escaped text with provenance on every slice.
  */
 export function buildContext(graph: SymbolGraph, query: string, opts: BuildOpts = {}): AIContext {
   const tokenBudget = opts.tokenBudget ?? 3000;
@@ -95,7 +101,7 @@ export function buildContext(graph: SymbolGraph, query: string, opts: BuildOpts 
   };
 }
 
-/** Render one symbol as the exact `<symbol>` XML block that lands in the final prompt
+/** Render one symbol as the exact `<symbol>` XML block that lands in the final bundle
  *  (shared by the budgeting pass and `assemble()` so the two never diverge). */
 function symbolBlock(s: CodeSymbol, role: string): string {
   const attrs = [
@@ -125,7 +131,7 @@ function assemble(query: string, slices: ContextSlice[], blocks: Map<string, str
   parts.push(`<task>${escapeXml(query)}</task>`);
   parts.push(`<codegraph_context symbols="${slices.length}">`);
   parts.push(
-    `<!-- Assembled by CodeGraph Graph-RAG: seeds ranked by relevance, expanded along call/containment edges. -->`
+    `<!-- Assembled by CodeGraph: seeds ranked by relevance, expanded along call/containment edges. -->`
   );
   for (const [file, group] of byFile) {
     parts.push(`  <file path="${escapeXml(file)}">`);

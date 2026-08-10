@@ -27,3 +27,6 @@ export type {
   JobStatus,
 } from "./types";
 export { isJobKind, isTerminal, JOB_KINDS, JOB_STATUSES, TERMINAL_STATUSES } from "./types";
+
+export type { SlotGate } from "./slots";
+export { createSlotGate } from "./slots";

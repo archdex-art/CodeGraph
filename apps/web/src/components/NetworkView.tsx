@@ -1,11 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef } from "react";
 import type { VizGraph } from "@/lib/types";
 import { langColor } from "@/lib/colors";
 import { forceLayout, layeredLayout } from "@/lib/layout";
+import { ALL_MODULES } from "@/lib/graph-url";
+import { moduleOf, resolveOpenIds, moduleMembers } from "@/lib/moduleScope";
+import { useGraphUrl } from "@/lib/useGraphUrl";
 import { NodeGraph, type NGNode, type NGEdge } from "./NodeGraph";
 import { GraphSearch } from "./GraphSearch";
+import { GraphExport } from "./GraphExport";
+import { plural } from "@/lib/plural";
 
 const BOX_W = 156;
 const BOX_H = 56;
@@ -19,11 +24,6 @@ const FILE = { w: 148, h: 44, gap: 18, vGap: 46 };
 /** Space between an opened module's box and the first row of the files it reveals. */
 const OPEN_GAP = 40;
 
-/** Top-level directory a file belongs to — the unit a module box represents. */
-function moduleOf(fileId: string): string {
-  return fileId.split("/")[0] || "(root)";
-}
-
 interface Opened {
   /** Files drawn for this module, already capped. */
   children: VizGraph["nodes"];
@@ -35,10 +35,16 @@ interface Opened {
   region: { w: number; h: number };
 }
 
-export function NetworkView({ graph, onSelect, immersive = false }: { graph: VizGraph; onSelect?: (id: string | null) => void; immersive?: boolean }) {
-  const [focusId, setFocusId] = useState<string | null>(null);
+export function NetworkView({ graph, repoName = "", onSelect, immersive = false }: { graph: VizGraph; repoName?: string; onSelect?: (id: string | null) => void; immersive?: boolean }) {
+  /** Wrapper the export reaches through to find the `<svg>`. */
+  const canvasRef = useRef<HTMLDivElement | null>(null);
   /**
-   * Which modules are open — none, one, or all of them.
+   * Which module is open and which node the camera is parked on, held in the query
+   * string rather than in `useState`.
+   *
+   * The URL is the only copy: a second one in state would drift the moment someone
+   * edits the address bar or hits Back, and the picture would stop matching the link
+   * that produced it — which is the one thing a shareable view has to get right.
    *
    * While anything is open the CLOSED modules are not drawn at all. Dimming them was
    * the first attempt and it kept the clutter: eleven faded boxes still occupy the
@@ -46,9 +52,9 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
    * corner. Hiding them gives the opened module the whole canvas and makes the reveal
    * read as a step into it rather than as a busier version of the same picture.
    */
-  const [openIds, setOpenIds] = useState<readonly string[]>([]);
+  const [{ open, focus }, setUrl] = useGraphUrl();
 
-  const { nodes, edges, moduleIdSet, expandableIds, moduleCount, filesShown, filesTotal } = useMemo(() => {
+  const { nodes, edges, moduleIdSet, openIds, moduleCount, filesShown, filesTotal } = useMemo(() => {
     const importEdges = graph.edges.filter((e) => e.kind === "imports");
     const files = graph.nodes.filter((n) => n.kind === "file");
 
@@ -76,9 +82,11 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
 
     const all = Array.from(groups.values()).sort((a, b) => b.files - a.files).slice(0, MAX_NODES);
     const moduleIdSet = new Set(all.map((g) => g.id));
-    const expandableIds = all.filter((g) => g.files > 1).map((g) => g.id);
 
-    const openSet = new Set(openIds.filter((id) => moduleIdSet.has(id)));
+    /* Kept as data rather than folded into the view: `resolveOpenIds` is where the "a module of
+       one file has nothing to open into" rule lives, and it is tested there. */
+    const openIds = resolveOpenIds(open, all);
+    const openSet = new Set(openIds);
     // Opening ONE module hides the others — that is the step-into. Opening every module
     // is the opposite request, so the single-file ones (which have nothing to open) stay
     // on screen rather than vanishing for lacking an inside.
@@ -101,7 +109,8 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
     const slice = openSet.size ? Math.max(MIN_SLICE, Math.floor(MAX_NODES / openSet.size)) : 0;
     const opened = new Map<string, Opened>();
     for (const id of openSet) {
-      const inModule = files.filter((f) => moduleOf(f.id) === id);
+      /* `moduleMembers` carries the "a module is never its own child" rule, and its test. */
+      const inModule = moduleMembers(files, id);
       const memberIds = new Set(inModule.map((f) => f.id));
       const internal = importEdges.filter((e) => memberIds.has(e.source) && memberIds.has(e.target));
       const degree = new Map<string, number>();
@@ -174,7 +183,7 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
         h: BOX_H,
         label: g.id,
         subtitle: domLang || "mixed",
-        meta: `${g.files} files · ${g.loc.toLocaleString()} LOC`,
+        meta: `${plural(g.files, "file")} · ${g.loc.toLocaleString()} LOC`,
         color: langColor(domLang),
         issues: g.issues,
         // A module of one file has nothing to open into.
@@ -215,46 +224,55 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
       filesTotal += o.total;
     }
 
-    return { nodes, edges, moduleIdSet, expandableIds, moduleCount: all.length, filesShown, filesTotal };
-  }, [graph, openIds]);
+    return { nodes, edges, moduleIdSet, openIds, moduleCount: all.length, filesShown, filesTotal };
+  }, [graph, open]);
 
   if (!nodes.length) {
     return <p className="text-meta text-[var(--text-muted)] border border-dashed border-[var(--line)] rounded-xl p-xl text-center">No import network to display.</p>;
   }
+
+  const allOpen = openIds.length > 1;
+  /**
+   * The `open=` value for what is drawn right now — what a focus change has to carry
+   * forward, and what normalises a stale `all` back to the single module it resolved to.
+   */
+  const openParam = allOpen ? ALL_MODULES : openIds[0] ?? null;
 
   /**
    * Clicking a module REVEALS its files and hides the other modules; clicking empty
    * canvas (`id === null`) brings them back. Emphasis is a separate thing and lives in
    * NodeGraph: hovering dims what the hovered node does not touch.
    *
-   * `focusId` is CLEARED rather than pointed at the module. NodeGraph re-fits the camera
+   * The focus is CLEARED rather than pointed at the module. NodeGraph re-fits the camera
    * whenever the layout's bounds change, which frames what is now on screen; a focus
    * overrides that fit with a centre-on-one-node at a clamped zoom.
    */
-  const show = (ids: readonly string[]) => {
-    setOpenIds(ids);
-    setFocusId(null);
-  };
+  const show = (next: string | null) => setUrl({ open: next, focus: null });
+  /** Searching moves the camera without changing what is open, so the open module rides along. */
+  const focusOn = (id: string | null) => setUrl({ open: openParam, focus: id });
   const handleSelect = (id: string | null) => {
     if (id === null) {
-      show([]);
+      show(null);
       return;
     }
     if (moduleIdSet.has(id)) {
-      if (!openIds.includes(id)) show([id]);
+      if (!openIds.includes(id)) show(id);
       return;
     }
     onSelect?.(id);
   };
-  const allOpen = openIds.length > 1;
   const scope = openIds.length
-    ? `${allOpen ? "every module" : openIds[0]} · ${filesShown === filesTotal ? filesShown : `${filesShown} of ${filesTotal}`} files`
-    : `${moduleCount} modules`;
+    ? `${allOpen ? "every module" : openIds[0]} · ${
+        // Only the "N of M" form keeps a bare number: it already reads as a fraction, and
+        // "1 of 12 file" would be wrong. The complete case gets the pluralised noun.
+        filesShown === filesTotal ? plural(filesShown, "file") : `${filesShown} of ${filesTotal} files`
+      }`
+    : plural(moduleCount, "module");
 
   /** Small floating control: open every module at once, or put them all away. */
   const expandAll = (
     <button
-      onClick={() => show(allOpen ? [] : expandableIds)}
+      onClick={() => show(allOpen ? null : ALL_MODULES)}
       className="group flex items-center gap-2xs self-start rounded-full border border-[var(--line)] bg-[var(--surface-1)]/85 px-sm py-xs text-micro text-[var(--text-secondary)] shadow-lg backdrop-blur transition-[transform,color,border-color,background-color] duration-200 ease-out hover:-translate-y-px hover:border-[var(--accent-text)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] active:translate-y-0"
       title={allOpen ? "Close every module" : "Open every module at once"}
     >
@@ -271,13 +289,14 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
 
   if (immersive) {
     return (
-      <div className="relative h-full w-full">
+      <div ref={canvasRef} className="relative h-full w-full">
         <div className="absolute top-md left-md z-10 flex w-64 flex-col gap-sm">
-          <GraphSearch nodes={nodes} onFocus={setFocusId} placeholder={openIds.length ? "Search files…" : "Search modules…"} />
+          <GraphSearch nodes={nodes} onFocus={focusOn} placeholder={openIds.length ? "Search files…" : "Search modules…"} />
           <div className="flex items-center gap-sm">
             {expandAll}
+            <GraphExport canvasRef={canvasRef} repoName={repoName} view="network" />
             {openIds.length === 1 && (
-              <button onClick={() => show([])} className="rounded-full border border-[var(--line)] bg-[var(--surface-1)]/85 px-sm py-xs text-micro text-[var(--text-secondary)] backdrop-blur transition-colors duration-200 hover:text-[var(--text-primary)]">
+              <button onClick={() => show(null)} className="rounded-full border border-[var(--line)] bg-[var(--surface-1)]/85 px-sm py-xs text-micro text-[var(--text-secondary)] backdrop-blur transition-colors duration-200 hover:text-[var(--text-primary)]">
                 Back
               </button>
             )}
@@ -290,9 +309,9 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
           nodes={nodes}
           edges={edges}
           fill
-          focusId={focusId}
+          focusId={focus}
           onSelect={handleSelect}
-          onExpand={(id) => show(id && !openIds.includes(id) ? [id] : [])}
+          onExpand={(id) => show(id && !openIds.includes(id) ? id : null)}
           expandedId={openIds.length === 1 ? openIds[0]! : null}
         />
       </div>
@@ -300,13 +319,14 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
   }
 
   return (
-    <div className="space-y-sm">
+    <div ref={canvasRef} className="space-y-sm">
       <div className="flex items-start justify-between gap-md">
-        <GraphSearch nodes={nodes} onFocus={setFocusId} placeholder={openIds.length ? "Search files…" : "Search modules…"} />
+        <GraphSearch nodes={nodes} onFocus={focusOn} placeholder={openIds.length ? "Search files…" : "Search modules…"} />
         <div className="flex items-center gap-sm">
           {expandAll}
+          <GraphExport canvasRef={canvasRef} repoName={repoName} view="network" />
           {openIds.length === 1 && (
-            <button onClick={() => show([])} className="rounded-full border border-[var(--line)] bg-[var(--surface-1)]/85 px-sm py-xs text-micro text-[var(--text-secondary)] transition-colors duration-200 hover:text-[var(--text-primary)] whitespace-nowrap">
+            <button onClick={() => show(null)} className="rounded-full border border-[var(--line)] bg-[var(--surface-1)]/85 px-sm py-xs text-micro text-[var(--text-secondary)] transition-colors duration-200 hover:text-[var(--text-primary)] whitespace-nowrap">
               Back
             </button>
           )}
@@ -316,9 +336,9 @@ export function NetworkView({ graph, onSelect, immersive = false }: { graph: Viz
         nodes={nodes}
         edges={edges}
         height={620}
-        focusId={focusId}
+        focusId={focus}
         onSelect={handleSelect}
-        onExpand={(id) => show(id && !openIds.includes(id) ? [id] : [])}
+        onExpand={(id) => show(id && !openIds.includes(id) ? id : null)}
         expandedId={openIds.length === 1 ? openIds[0]! : null}
       />
       <p className="mt-sm max-w-note text-micro text-[var(--text-muted)]">

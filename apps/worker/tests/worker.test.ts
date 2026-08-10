@@ -21,7 +21,7 @@ process.env["CG_DATA_DIR"] = dataDir;
 process.env["CG_WORKER_POLL_INTERVAL_MS"] = "50";
 process.env["CG_WORKER_LEASE_MS"] = "5000";
 
-const { db, enqueueJob, findQueuedJob, findRepoUnscoped, insertRepo, setRepoStatus } =
+const { db, enqueueJob, findQueuedJob, findRepoUnscoped, upsertRepo, setRepoStatus } =
   await import("@codegraph/persistence");
 const { createJobQueue } = await import("@codegraph/jobs");
 const { runWorker } = await import("../src/main");
@@ -232,7 +232,7 @@ describe("runWorker", () => {
     // the repo stayed at `indexing` with a NULL error forever. The web app's
     // BUSY_STATUSES check reads exactly that column, so every later re-index of the
     // repo was refused as busy — permanently, with nothing in the UI explaining why.
-    insertRepo({
+    upsertRepo({
       id: "repo-stuck",
       url: "x",
       name: "stuck",
@@ -269,7 +269,7 @@ describe("runWorker", () => {
     // going to be indexed, so flipping the repo to `error` between attempts would show
     // the user a failure the very next poll contradicts — and would hand the repo back
     // to the enqueue path while a retry is pending.
-    insertRepo({
+    upsertRepo({
       id: "repo-retry",
       url: "x",
       name: "retry",

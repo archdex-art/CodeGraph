@@ -1,10 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
-import { Play, Pause, Loader2, ChevronLeft, ChevronRight, Info, FileText, X } from "lucide-react";
+import { Play, Pause, Loader2, GitCompare, Info, FileText, X } from "lucide-react";
 import { logger } from "@codegraph/observability";
-import { timelineMetadata, timelineSnapshot, timelineBuild, timelineCompare, gitDiffFiles, gitDiffCommits } from "@/lib/api";
+import { timelineMetadata, timelineSnapshot, timelineBuild, timelineCompare, timelineDelta, timelinePoints, gitDiffFiles, gitDiffCommits } from "@/lib/api";
 import type { TimelineSnapshot, ArchitectureSnapshot, ArchitectureEvolution } from "@/lib/gitops/timelineApi";
+import {
+  TIMELINE_SERIES,
+  deltaTone,
+  formatDelta,
+  formatSeries,
+  type DeltaTone,
+  type RuleDelta,
+  type SeriesDef,
+  type SnapshotDelta,
+  type TrendPoint,
+} from "@/lib/gitops/timelineDelta";
 import { CirclePackView } from "@/components/CirclePackView";
 import { Overlay } from "@/components/Overlay";
 import { once, useSharedState, writeState } from "@/lib/ui-state";
@@ -39,6 +50,10 @@ export function TimelineView({ repoId }: { repoId: string }) {
   const [compareError, setCompareError] = useSharedState<string | null>(key(repoId, "compareError"), null);
   const [comparing, setComparing] = useState(false);
   const [changedFiles, setChangedFiles] = useSharedState<Array<{ status: string, path: string }>>(key(repoId, "changedFiles"), NO_FILES);
+  // The structural series, and the delta the compare view renders. Both come off the
+  // snapshot CACHE, so they are available without building anything.
+  const [points, setPoints] = useState<TrendPoint[]>([]);
+  const [delta, setDelta] = useSharedState<SnapshotDelta | null>(key(repoId, "delta"), null);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileDiffText, setFileDiffText] = useState<string | null>(null);
   const [loadingDiff, setLoadingDiff] = useState(false);
@@ -83,6 +98,47 @@ export function TimelineView({ repoId }: { repoId: string }) {
       .finally(() => { if (active) setLoadedHash(hash); });
     return () => { active = false; };
   }, [repoId, currentIndex, snapshots]);
+
+  // The series load separately from the metadata: metadata is every COMMIT in the history,
+  // the series are only the commits that have actually been indexed.
+  useEffect(() => {
+    let active = true;
+    timelinePoints(repoId)
+      .then((data) => { if (active) setPoints(data); })
+      .catch((e) => logger.error("Failed to load timeline series", { err: e, repoId }));
+    return () => { active = false; };
+  }, [repoId, reloadToken]);
+
+  /**
+   * One comparison path for both entry points.
+   *
+   * `build` is the difference that matters: the ad-hoc picker may name commits nobody has
+   * indexed, so it pays for `git archive` + a full re-index; "what changed since last index"
+   * names two snapshots that are already cached and must never start that.
+   */
+  const runCompare = useCallback(async (base: string, head: string, build: boolean) => {
+    setCompareBase(base);
+    setCompareHead(head);
+    setComparing(true);
+    setCompareError(null);
+    try {
+      const compared = build ? await timelineCompare(repoId, base, head) : await timelineDelta(repoId, base, head);
+      const files = await gitDiffFiles(repoId, base, head);
+      setDelta(compared.delta);
+      setComparisonEvolution(compared.evolution);
+      setChangedFiles(files);
+    } catch (err) {
+      // Logging alone left the button springing back with the previous
+      // comparison still on screen and no word that this one failed.
+      logger.error("Failed to compare timeline snapshots", { err, repoId, base, head });
+      setDelta(null);
+      setComparisonEvolution(null);
+      setChangedFiles(NO_FILES);
+      setCompareError(err instanceof Error ? err.message : "Comparison failed");
+    } finally {
+      setComparing(false);
+    }
+  }, [repoId, setCompareBase, setCompareHead, setCompareError, setDelta, setComparisonEvolution, setChangedFiles]);
 
   function handleBuild() {
     // A timeline build is minutes of git work. `once` keeps a second click — or a
@@ -170,6 +226,20 @@ export function TimelineView({ repoId }: { repoId: string }) {
         <MetricCard label="LOC" value={currentGraph?.metrics?.loc ?? "-"} />
       </div>
 
+      {points.length > 0 && (
+        <StructuralSeries
+          points={points}
+          comparing={comparing}
+          onCompareLatest={() => {
+            // The report renders in the compare section further down; a click that produced
+            // output the reader has to go hunting for is not one click.
+            void runCompare(points[points.length - 2].hash, points[points.length - 1].hash, false).then(() =>
+              document.getElementById("timeline-delta")?.scrollIntoView({ behavior: "smooth", block: "start" })
+            );
+          }}
+        />
+      )}
+
       {/* Main View & Ledger Split */}
       <div className="grid grid-cols-3 gap-lg">
         <div className="col-span-2 relative min-h-[500px] border border-[var(--line-soft)] bg-[var(--surface-1)] rounded-xl overflow-hidden p-md">
@@ -189,14 +259,6 @@ export function TimelineView({ repoId }: { repoId: string }) {
         {/* Evolution Ledger */}
         <div className="col-span-1 border border-[var(--line-soft)] bg-[var(--surface-1)] rounded-xl p-md flex flex-col gap-md overflow-y-auto max-h-[600px]">
           <h3 className="text-meta font-semibold text-[var(--text-primary)]">Architecture Evolution</h3>
-          
-          {currentGraph?.evolution?.aiNarrative && (
-            <div className="bg-[var(--violet-500)]/10 border border-[var(--violet-500)]/20 p-sm rounded-lg">
-              <p className="text-meta text-[var(--violet-text)] mb-sm">{currentGraph.evolution.aiNarrative.reason}</p>
-              <p className="text-meta text-[var(--violet-text)] font-medium">💡 {currentGraph.evolution.aiNarrative.recommendation}</p>
-            </div>
-          )}
-
           <div className="flex flex-col gap-sm">
             <h4 className="text-meta text-[var(--text-secondary)] uppercase tracking-wider">Events</h4>
             {currentGraph?.evolution?.events.map((e, i) => (
@@ -273,8 +335,8 @@ export function TimelineView({ repoId }: { repoId: string }) {
 
       {/* Ad-Hoc Compare Section */}
       <div className="bg-[var(--surface-1)] border border-[var(--line)] rounded-xl p-lg mt-md">
-        <h3 className="text-lede font-semibold text-[var(--text-primary)] mb-md">Ad-Hoc Architecture Diff</h3>
-        <p className="text-meta text-[var(--text-secondary)] mb-lg">Select any two commits to compare their architectural evolution.</p>
+        <h3 className="text-lede font-semibold text-[var(--text-primary)] mb-md">Compare any two commits</h3>
+        <p className="text-meta text-[var(--text-secondary)] mb-lg">Anything not already indexed is checked out and analysed first, which takes a while. The button above the fold compares the two newest indexed snapshots instead, straight from the cache.</p>
         
         <div className="flex items-end gap-md mb-lg">
           <div className="flex-1">
@@ -304,25 +366,7 @@ export function TimelineView({ repoId }: { repoId: string }) {
           <button 
             onClick={() => {
               if (!compareBase || !compareHead) return;
-              setComparing(true);
-              setCompareError(null);
-              void Promise.all([
-                timelineCompare(repoId, compareBase, compareHead),
-                gitDiffFiles(repoId, compareBase, compareHead)
-              ])
-                .then(([evo, files]) => {
-                  setComparisonEvolution(evo);
-                  setChangedFiles(files);
-                })
-                .catch((err) => {
-                  // Logging alone left the button springing back with the previous
-                  // comparison still on screen and no word that this one failed.
-                  logger.error("Failed to compare timeline snapshots", { err, repoId, base: compareBase, head: compareHead });
-                  setComparisonEvolution(null);
-                  setChangedFiles(NO_FILES);
-                  setCompareError(err instanceof Error ? err.message : "Comparison failed");
-                })
-                .finally(() => setComparing(false));
+              void runCompare(compareBase, compareHead, true);
             }}
             disabled={comparing || !compareBase || !compareHead}
             className="bg-[var(--accent-fill)] hover:bg-[var(--signal-400)] disabled:opacity-50 text-[var(--accent-on-fill)] px-lg py-sm rounded-lg text-meta font-medium transition-colors"
@@ -332,6 +376,7 @@ export function TimelineView({ repoId }: { repoId: string }) {
         </div>
 
         {compareError && <p className="text-meta text-[var(--coral-text)] mb-lg">{compareError}</p>}
+        {delta && <div id="timeline-delta" className="mb-lg scroll-mt-md"><DeltaReport delta={delta} /></div>}
         {comparisonEvolution && (
           <div className="flex flex-col gap-lg mt-lg">
             <div className="grid grid-cols-3 gap-lg bg-[var(--surface-2)] border border-[var(--line-soft)] rounded-xl p-md">
@@ -407,14 +452,6 @@ export function TimelineView({ repoId }: { repoId: string }) {
                     />
                   </div>
                 </div>
-                
-                {comparisonEvolution.aiNarrative && (
-                  <div className="bg-[var(--violet-500)]/10 border border-[var(--violet-500)]/20 p-sm rounded-lg">
-                    <h4 className="text-meta text-[var(--violet-text)] uppercase tracking-wider mb-sm">AI Summary</h4>
-                    <p className="text-meta text-[var(--violet-text)] mb-sm">{comparisonEvolution.aiNarrative.reason}</p>
-                    <p className="text-meta text-[var(--violet-text)] font-medium">💡 {comparisonEvolution.aiNarrative.recommendation}</p>
-                  </div>
-                )}
               </div>
             </div>
             
@@ -515,17 +552,211 @@ function MetricCard({ label, value, sub, info }: { label: string, value: string 
     <div className="bg-[var(--surface-1)] border border-[var(--line)] p-md rounded-xl flex flex-col">
       <div className="flex items-center gap-xs mb-2xs">
         <span className="text-meta text-[var(--text-secondary)]">{label}</span>
-        {info && (
-          <div className="group relative flex items-center">
-            <Info className="w-3 h-3 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-help" />
-            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-sm w-48 opacity-0 transition-opacity group-hover:opacity-100 z-50 bg-[var(--surface-4)] border border-[var(--line)] text-[var(--text-primary)] text-meta rounded p-sm shadow-xl">
-              {info}
-            </div>
-          </div>
-        )}
+        {info && <InfoTip text={info} />}
       </div>
       <span className="text-lede font-medium text-[var(--text-primary)]">{value}</span>
       {sub && <span className="text-meta text-[var(--text-secondary)] mt-2xs truncate">{sub}</span>}
+    </div>
+  );
+}
+
+/** The hover note every metric and every series row hangs off its label. */
+function InfoTip({ text }: { text: string }) {
+  return (
+    <span className="group relative flex items-center">
+      <Info className="w-3 h-3 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-help" />
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-sm w-48 opacity-0 transition-opacity group-hover:opacity-100 z-50 bg-[var(--surface-4)] border border-[var(--line)] text-[var(--text-primary)] text-meta rounded p-sm shadow-xl">
+        {text}
+      </span>
+    </span>
+  );
+}
+
+const TONE_CHIP: Record<DeltaTone, string> = {
+  better: "text-[var(--accent-text)] bg-[var(--accent-fill)]/15",
+  worse: "text-[var(--coral-text)] bg-[var(--coral-500)]/15",
+  neutral: "text-[var(--text-secondary)] bg-[var(--surface-active)]",
+};
+
+const TONE_STROKE: Record<DeltaTone, string> = {
+  better: "var(--accent-text)",
+  worse: "var(--coral-text)",
+  neutral: "var(--text-muted)",
+};
+
+/**
+ * The shape of one series across the indexed snapshots.
+ *
+ * Deliberately not a chart: there are as many points as there are indexed commits, which is
+ * usually a handful, and axes on five points are furniture. The numbers beside it are the
+ * content; this is only here so a reader can see whether the last move was the trend or a jump.
+ */
+function Spark({ values, tone }: { values: number[]; tone: DeltaTone }) {
+  if (values.length < 2 || !values.every((v) => Number.isFinite(v))) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const points = values
+    .map((v, i) => `${(i / (values.length - 1)) * 100},${28 - ((v - min) / span) * 26}`)
+    .join(" ");
+  return (
+    <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="w-full" style={{ height: "var(--space-lg)" }} aria-hidden>
+      <polyline points={points} fill="none" stroke={TONE_STROKE[tone]} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+/** One series: label, shape, the two most recent values, and the move between them. */
+function SeriesRow({ def, points }: { def: SeriesDef; points: TrendPoint[] }) {
+  const values = points.map((p) => p.values[def.key]);
+  const head = values[values.length - 1];
+  const base = values.length > 1 ? values[values.length - 2] : head;
+  const tone = deltaTone(def, base, head);
+  return (
+    <div
+      className="grid items-center gap-md py-sm border-b border-[var(--line-soft)] last:border-0"
+      style={{ gridTemplateColumns: "minmax(0,1.4fr) minmax(0,1fr) auto auto" }}
+    >
+      <span className="flex items-center gap-xs min-w-0">
+        <span className="text-meta text-[var(--text-secondary)] truncate">{def.label}</span>
+        <InfoTip text={def.info} />
+      </span>
+      <Spark values={values} tone={tone} />
+      <span className="text-meta font-mono text-[var(--text-secondary)] whitespace-nowrap justify-self-end">
+        {formatSeries(def, base)} → <span className="text-[var(--text-primary)] font-medium">{formatSeries(def, head)}</span>
+      </span>
+      <span className={`text-micro font-mono px-xs py-hair rounded whitespace-nowrap justify-self-end ${TONE_CHIP[tone]}`}>
+        {formatDelta(def, base, head)}
+      </span>
+    </div>
+  );
+}
+
+function SeriesGroup({ title, note, kind, points }: { title: string; note: string; kind: SeriesDef["kind"]; points: TrendPoint[] }) {
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-baseline gap-sm flex-wrap">
+        <span className="text-micro uppercase tracking-wider text-[var(--text-primary)]">{title}</span>
+        <span className="text-micro text-[var(--text-muted)]">{note}</span>
+      </div>
+      {TIMELINE_SERIES.filter((def) => def.kind === kind).map((def) => (
+        <SeriesRow key={def.key} def={def} points={points} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * What the timeline actually trends.
+ *
+ * The measured group is first and the scored group is last, because that is the order a
+ * reader should trust them in — "cycles 3 → 11" is a fact, "score 74 → 71" is an opinion.
+ */
+function StructuralSeries({ points, onCompareLatest, comparing }: {
+  points: TrendPoint[];
+  onCompareLatest: () => void;
+  comparing: boolean;
+}) {
+  const latest = points[points.length - 1];
+  const prior = points.length > 1 ? points[points.length - 2] : null;
+  return (
+    <div className="bg-[var(--surface-1)] border border-[var(--line)] rounded-xl p-lg flex flex-col gap-md">
+      <div className="flex items-baseline justify-between gap-md flex-wrap">
+        <h3 className="text-lede font-semibold text-[var(--text-primary)]">Structural series</h3>
+        <span className="text-meta text-[var(--text-secondary)] font-mono">
+          {points.length} indexed {points.length === 1 ? "snapshot" : "snapshots"} · latest {latest.hash.substring(0, 7)} · {new Date(latest.timestamp * 1000).toLocaleDateString()}
+        </span>
+      </div>
+
+      <SeriesGroup title="Measured" note="Counted off the graph — checkable by hand." kind="measured" points={points} />
+      <SeriesGroup title="Scored" note="Weighted judgements, uncalibrated. Read the measured rows first." kind="scored" points={points} />
+
+      <p className="text-micro text-[var(--text-secondary)]">
+        {latest.facts.cycleFiles} files sit inside those {latest.facts.cycles} cycles; {latest.facts.testFiles} of {latest.facts.totalFiles} code files are tests.
+        {latest.facts.importGraphTruncated && " The import graph was capped for rendering, so the cycle count is a lower bound."}
+      </p>
+
+      {prior && (
+        <button
+          onClick={onCompareLatest}
+          disabled={comparing}
+          className="self-start flex items-center gap-sm bg-[var(--violet-500)]/15 text-[var(--violet-text)] hover:bg-[var(--violet-500)]/25 px-md py-sm rounded-lg text-meta transition-colors disabled:opacity-50"
+        >
+          {comparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitCompare className="w-4 h-4" />}
+          What changed since last index ({prior.hash.substring(0, 7)} → {latest.hash.substring(0, 7)})
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Findings that appeared and disappeared under one rule id, with the files they moved in. */
+function RuleDeltaRow({ rule }: { rule: RuleDelta }) {
+  return (
+    <div className="py-sm border-b border-[var(--line-soft)] last:border-0">
+      <div className="flex items-center gap-sm">
+        <code className="text-meta font-mono text-[var(--text-primary)] flex-1 truncate">{rule.rule}</code>
+        {rule.added > 0 && (
+          <span className="text-micro font-mono px-xs py-hair rounded shrink-0 text-[var(--coral-text)] bg-[var(--coral-500)]/15">+{rule.added}</span>
+        )}
+        {rule.removed > 0 && (
+          <span className="text-micro font-mono px-xs py-hair rounded shrink-0 text-[var(--accent-text)] bg-[var(--accent-fill)]/15">−{rule.removed}</span>
+        )}
+      </div>
+      <PathList paths={rule.addedFiles} sign="+" className="text-[var(--coral-text)]" />
+      <PathList paths={rule.removedFiles} sign="−" className="text-[var(--accent-text)]" />
+    </div>
+  );
+}
+
+/** A capped list of paths. Four is enough to recognise the area; the count carries the rest. */
+function PathList({ paths, sign, className }: { paths: string[]; sign: string; className: string }) {
+  if (paths.length === 0) return null;
+  return (
+    <div className="flex flex-col mt-hair">
+      {paths.slice(0, 4).map((p) => (
+        <span key={p} className={`text-micro font-mono truncate ${className}`}>{sign} {p}</span>
+      ))}
+      {paths.length > 4 && (
+        <span className="text-micro text-[var(--text-muted)]">…and {paths.length - 4} more</span>
+      )}
+    </div>
+  );
+}
+
+/** The whole answer to "what changed": findings by rule, the structural series, and files. */
+function DeltaReport({ delta }: { delta: SnapshotDelta }) {
+  const pair = [delta.base, delta.head];
+  return (
+    <div className="grid grid-cols-2 gap-lg bg-[var(--surface-2)] border border-[var(--line-soft)] rounded-xl p-md">
+      <div className="flex flex-col gap-sm max-h-[400px] overflow-y-auto pr-sm">
+        <h4 className="text-meta text-[var(--text-secondary)] uppercase tracking-wider sticky top-0 bg-[var(--surface-2)] py-sm z-10">
+          Findings by rule (+{delta.findings.added} / −{delta.findings.removed})
+        </h4>
+        {delta.findings.byRule.length === 0 ? (
+          <div className="text-meta text-[var(--text-secondary)] italic">No finding changed rule or file between these two snapshots.</div>
+        ) : (
+          delta.findings.byRule.map((rule) => <RuleDeltaRow key={rule.rule} rule={rule} />)
+        )}
+      </div>
+
+      <div className="flex flex-col gap-md max-h-[400px] overflow-y-auto pr-sm">
+        <div>
+          <h4 className="text-meta text-[var(--text-secondary)] uppercase tracking-wider py-sm">Structural change</h4>
+          <SeriesGroup title="Measured" note="Counted, not scored." kind="measured" points={pair} />
+          <SeriesGroup title="Scored" note="Judgement." kind="scored" points={pair} />
+        </div>
+        <div>
+          <h4 className="text-meta text-[var(--text-secondary)] uppercase tracking-wider py-sm">
+            Files (+{delta.files.added.length} / −{delta.files.removed.length})
+          </h4>
+          <PathList paths={delta.files.added} sign="+" className="text-[var(--accent-text)]" />
+          <PathList paths={delta.files.removed} sign="−" className="text-[var(--coral-text)]" />
+          {delta.files.added.length === 0 && delta.files.removed.length === 0 && (
+            <div className="text-meta text-[var(--text-secondary)] italic">No file was added or removed.</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

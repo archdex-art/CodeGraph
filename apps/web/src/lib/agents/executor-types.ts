@@ -1,4 +1,4 @@
-import type { VerificationRecord } from "@codegraph/verify";
+import type { SuiteRun, VerificationRecord } from "@codegraph/verify";
 // M4 Remediation Executor domain types.
 
 export interface FileEdit {
@@ -50,6 +50,18 @@ export interface FixResult {
   verified: boolean;
   /** The gate-by-gate record. Absent only on the paths that never ran verification. */
   verification?: VerificationRecord;
+  /**
+   * Score movement, reported BESIDE the verdict and never as it.
+   *
+   * Keeping them separate is the point: a run can improve the score and still be unverified,
+   * and the version that conflated them printed "verification failed (score regressed)" over
+   * a score that had gone up. Absent on paths that never re-analysed.
+   */
+  scoreDelta?: number;
+  /** The project's own suite before any edit — the baseline a verdict is only meaningful against. */
+  testsBefore?: SuiteRun;
+  /** The same suite after the edits. Green-before + green-after is what "verified" means. */
+  testsAfter?: SuiteRun;
   pr: PRDraft | null;
   steps: ExecutionStep[];
   message: string;

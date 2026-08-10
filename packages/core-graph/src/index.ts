@@ -58,3 +58,48 @@ export { classifyTaint, callAt } from "./dataflow";
 export type { TaintQuery, TaintVerdict } from "./dataflow";
 export { ContentCache, contentCache } from "./content-cache";
 export type { ContentCacheStats } from "./content-cache";
+
+/**
+ * APIs as first-class entities, and inter-procedural taint.
+ *
+ * Both sit ABOVE the symbol graph rather than inside it: each takes a built `SymbolGraph` and
+ * derives from it, so the extractor stays a pure function of a file's bytes and either can be
+ * skipped without changing what the graph contains.
+ */
+export {
+  buildApiSurface,
+  endpointsAffectedBy,
+  extractEndpoints,
+  unauthenticatedSinkPaths,
+} from "./api";
+export type {
+  ApiEndpoint,
+  ApiMethod,
+  ApiSinkKind,
+  ApiSourceFile,
+  ApiSurface,
+  DataFlowPath,
+} from "./api";
+export { analyseTaint } from "./taint";
+export type { AnalysedFile, TaintPath, TaintReport } from "./taint";
+
+/**
+ * Deterministic natural-language querying.
+ *
+ * Sits above everything else here: a question compiles into the operations already exported
+ * from this package, so the surface adds a parser and a set of answer templates, never a new
+ * source of facts. `AskPlan` travels with every answer because a query surface that cannot
+ * show what it ran is indistinguishable from one that guessed.
+ */
+export { ask, compileAsk } from "./ask";
+export type {
+  AskAnswer,
+  AskCorpus,
+  AskEntity,
+  AskEntityKind,
+  AskFailure,
+  AskIntent,
+  AskPlan,
+  AskResult,
+  AskRow,
+} from "./ask";

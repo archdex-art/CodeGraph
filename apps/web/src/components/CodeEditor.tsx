@@ -9,10 +9,6 @@ import {
 import { FileExplorer } from "./editor/FileExplorer";
 import { GitPanel } from "./editor/GitPanel";
 import { SearchPanel } from "./editor/SearchPanel";
-import { AssistantPanel } from "./editor/AssistantPanel";
-import { fetchAssistantProviders } from "@/lib/api";
-import type { AssistantProviders } from "@/lib/types";
-import { Bot } from "lucide-react";
 import { logger } from "@codegraph/observability";
 import { TrashPanel } from "./editor/TrashPanel";
 import { IssuesPanel } from "./editor/IssuesPanel";
@@ -127,24 +123,6 @@ export function CodeEditor({
   const [diffModal, setDiffModal] = useState<{ path: string; diff: string } | null>(null);
   const tabsRef = useRef(tabs);
   useEffect(() => { tabsRef.current = tabs; }, [tabs]);
-  const [assistantOpen, setAssistantOpen] = useState(false);
-  const [assistantProviders, setAssistantProviders] = useState<AssistantProviders>({ claude: false, local: false });
-  
-  useEffect(() => {
-    fetchAssistantProviders(repoId).then(setAssistantProviders).catch(() => setAssistantProviders({ claude: false, local: false }));
-  }, [repoId]);
-
-  const refreshFileFromDisk = useCallback(async (path: string) => {
-    const tab = tabsRef.current.find((t) => t.path === path);
-    if (!tab || tab.dirty) return;
-    try {
-      const { content, binary } = await fsRead(repoId, path);
-      if (binary) return;
-      setTabs((prev) => prev.map((t) => (t.path === path && !t.dirty ? { ...t, content, dirty: t.original !== content } : t)));
-    } catch {
-      // Renamed/deleted by the assistant
-    }
-  }, [repoId]);
   const [trashCount, setTrashCount] = useState(0);
   const [pendingReveal, setPendingReveal] = useState<{ path: string; line: number } | null>(null);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
@@ -530,14 +508,6 @@ export function CodeEditor({
                 <Save className="w-3 h-3" /> Save
               </button>
             </div>
-            <button
-              onClick={() => setAssistantOpen(!assistantOpen)}
-              className={`flex items-center gap-2xs text-meta px-sm py-2xs rounded-xs border ${
-                assistantOpen ? "border-[var(--violet-500)]/50 bg-[var(--violet-500)]/10 text-[var(--text-primary)]" : "border-[var(--line)] text-[var(--text-secondary)] hover:bg-[var(--surface-active)] hover:text-[var(--text-primary)]"
-              }`}
-            >
-              <Bot className="w-3.5 h-3.5" /> AI Assistant
-            </button>
           </div>
 
           {/* Editor Area */}
@@ -590,17 +560,6 @@ export function CodeEditor({
                   />
                 )
               )}
-            </div>
-            {/* Assistant Panel (Right) */}
-            <div className={`w-80 border-l border-[var(--line)] flex flex-col bg-[var(--surface-1)] shrink-0 ${assistantOpen ? "block" : "hidden"}`}>
-              <AssistantPanel
-                repoId={repoId}
-                providers={assistantProviders}
-                onOpenFile={openFile}
-                onFileTouched={refreshFileFromDisk}
-                onMutated={() => setRefreshToken((n) => n + 1)}
-                onClose={() => setAssistantOpen(false)}
-              />
             </div>
           </div>
         </div>

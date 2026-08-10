@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { parseArgs } from "../src/main";
-import { runFix } from "../src/fix";
+import { buildDiff, runFix } from "../src/fix";
 
 /**
  * `codegraph fix` — the command that makes `verified: full` reachable (SPIKES.md §2).
@@ -28,6 +28,8 @@ function fixture(opts: { testExits?: number } = {}): string {
     path.join(root, "src/app.js"),
     [
       "export function add(a, b) {",
+      // Reported, deliberately NOT auto-fixed: the debug-output codemod was withdrawn after
+      // it deleted a script's intended print(). It must survive every run below.
       '  console.log("debug", a, b);',
       "  return a + b;",
       "}",
@@ -38,8 +40,14 @@ function fixture(opts: { testExits?: number } = {}): string {
       "  } catch (e) {}",
       "}",
       "",
-      "// TODO: remove before release",
+      "// TODO: remove before release — also reported, also not auto-fixed",
       'export const VERSION = "1.0.0";',
+      "",
+      "export function alsoRisky() {",
+      "  try {",
+      '    return JSON.parse("[]");',
+      "  } catch (e) {}",
+      "}",
       "",
     ].join("\n")
   );
@@ -144,12 +152,16 @@ describe("runFix", () => {
       verify: false,
       json: false,
       testTimeout: 60,
-      rule: "legacy/todo-fixme-marker",
+      rule: "legacy/empty-catch-block",
     });
-    expect(out.editCount).toBe(1);
-    expect(out.diff).toMatch(/TODO/);
-    // The debug line is a different rule and must survive.
-    expect(out.diff).not.toMatch(/console\.log/);
+    // Two empty catches in the fixture, both annotated by the one surviving fixer.
+    expect(out.editCount).toBe(2);
+    expect(out.diff).toMatch(/intentionally ignored/);
+    // Other reported classes have no fixer and must survive untouched. They may still appear
+    // as CONTEXT lines in the diff, so the assertion is on the changed lines only.
+    const changedLines = out.diff.split("\n").filter((l) => /^[+-]/.test(l) && !/^[+-]{3}/.test(l));
+    expect(changedLines.some((l) => l.includes("console.log"))).toBe(false);
+    expect(changedLines.some((l) => l.includes("TODO"))).toBe(false);
   });
 
   it("refuses a rule no provider handles instead of running everything", async () => {
@@ -190,8 +202,13 @@ describe("the emitted diff", () => {
     ).not.toThrow();
 
     const after = readFileSync(path.join(root, "src/app.js"), "utf8");
-    expect(after).not.toMatch(/console\.log/);
-    expect(after).not.toMatch(/TODO/);
+    // What the run DID: both empty catches documented, nothing deleted.
+    expect(after.match(/intentionally ignored/g)?.length).toBe(2);
+    // What it deliberately did NOT do. These classes are reported and left to a human since
+    // the line-deleting codemods were withdrawn; a run that silently removed them again is
+    // the regression this pins.
+    expect(after).toMatch(/console\.log/);
+    expect(after).toMatch(/TODO/);
   });
 
   it("numbers the new side of each hunk correctly", async () => {
@@ -215,14 +232,67 @@ describe("the emitted diff", () => {
       expect(h.newStart).toBe(h.oldStart - delta);
       delta += h.oldCount - h.newCount;
     }
-    // The fixture deletes lines, so the shift must actually be exercised — otherwise this test
-    // would pass on a diff where every delta is zero and prove nothing.
-    expect(delta).toBeGreaterThan(0);
+    // Every surviving fixer REPLACES lines, so `delta` is zero here by construction. The
+    // offset arithmetic that a deleting edit exercises is pinned directly against `buildDiff`
+    // in "shifts later hunks by the lines removed before them" below — via a real fixer it
+    // would need a line-deleting codemod, and those were withdrawn for good reason.
+    expect(delta).toBe(0);
   });
 
   it("produces a multi-hunk diff for edits far apart in one file", async () => {
     // Single-hunk diffs hid the offset bug entirely — it only appears from the second hunk on.
     const out = await runFix({ repo: fixture(), verify: false, json: false, testTimeout: 60 });
     expect(out.diff.match(/^@@ /gm)?.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("buildDiff hunk offsets", () => {
+  /**
+   * The new-side offset arithmetic, pinned directly.
+   *
+   * It used to be exercised through `runFix` because a fixer DELETED lines, and deletion is
+   * what makes the second hunk's `+` start diverge from its `-` start. Those codemods were
+   * withdrawn (they deleted a script's intended output), so every surviving fixer replaces
+   * rather than removes and the property became unobservable end to end. It is not
+   * hypothetical: emitting the before-index on both sides produced a diff `git apply` rejected
+   * with "patch does not apply", twice, and neither failure was visible by reading the output.
+   */
+  const file = Array.from({ length: 40 }, (_, i) => `line ${i + 1}`);
+
+  it("shifts later hunks by the lines removed before them", () => {
+    const diff = buildDiff(
+      new Map([
+        [
+          "src/a.ts",
+          {
+            before: [...file, ""],
+            // Line 5 (index 4) deleted; line 30 (index 29) replaced, far enough away to force
+            // a second hunk.
+            edits: new Map<number, string | null>([
+              [4, null],
+              [29, "line 30 (annotated)"],
+            ]),
+          },
+        ],
+      ]),
+    );
+    const headers = [...diff.matchAll(/^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$/gm)].map((m) => ({
+      oldStart: Number(m[1]),
+      newStart: Number(m[3]),
+    }));
+    expect(headers).toHaveLength(2);
+    // First hunk: nothing removed before it, so both sides agree.
+    expect(headers[0]!.newStart).toBe(headers[0]!.oldStart);
+    // Second hunk: exactly one line was deleted earlier in the file.
+    expect(headers[1]!.newStart).toBe(headers[1]!.oldStart - 1);
+  });
+
+  it("never emits the phantom trailing line a newline-terminated file splits into", () => {
+    const diff = buildDiff(
+      new Map([["src/a.ts", { before: [...file, ""], edits: new Map<number, string | null>([[39, null]]) }]]),
+    );
+    const header = /^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$/m.exec(diff)!;
+    // The hunk may not claim more lines than the file actually has.
+    expect(Number(header[1]) + Number(header[2]) - 1).toBeLessThanOrEqual(file.length);
   });
 });

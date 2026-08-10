@@ -148,7 +148,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ ok: true, output: out });
     }
     if (op === "pull") {
-      const out = await pull(ws.dir);
+      // Same per-invocation credential as `push`, and the same host pin. The workspace's
+      // stored remote no longer carries a token (`cloneRepo` strips it), so a private repo
+      // is pulled with the caller's own PAT or not at all — the credential is never at rest
+      // on the data disk.
+      const repo = getRepo(id, viewerId(req));
+      if (githubToken && repo?.sourceType === "git" && !isGithubHost(repo.url)) {
+        return NextResponse.json(
+          { error: "A GitHub PAT can only be used to pull from a github.com-hosted repo." },
+          { status: 400 }
+        );
+      }
+      const remote = githubToken && repo?.sourceType === "git" ? withToken(repo.url, githubToken) : undefined;
+      const out = await pull(ws.dir, remote);
       scheduleReindex(id);
       return NextResponse.json({ ok: true, output: out });
     }

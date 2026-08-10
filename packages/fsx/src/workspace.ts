@@ -128,6 +128,13 @@ export function resolveSafe(root: string, relPath: string): string {
     if (real !== rootReal && !real.startsWith(rootReal + path.sep)) {
       throw new WorkspacePathError(`Path escapes workspace: ${relPath}`);
     }
+    // Re-applied after symlink resolution: the lexical check above sees `link/config`, and
+    // the link can point at `.git`. Checking only the text would leave the whole rule one
+    // `ln -s .git innocent` away from useless.
+    const realRel = path.relative(rootReal, real);
+    if (realRel !== "" && realRel.split(path.sep).some((s) => s.toLowerCase() === ".git")) {
+      throw new WorkspacePathError(`Path is inside the git directory: ${relPath}`);
+    }
     resolved = true;
     break;
   }

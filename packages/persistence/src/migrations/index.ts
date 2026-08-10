@@ -4,6 +4,10 @@ import { migration002 } from "./002_findings_rows";
 import { migration003 } from "./003_backfill_findings";
 import { migration004 } from "./004_jobs_queue";
 import { migration005 } from "./005_metrics";
+import { migration006 } from "./006_job_phase";
+import { migration007 } from "./007_analysis_reports";
+import { migration008 } from "./008_package_names";
+import { migration009 } from "./009_repo_identity";
 
 /**
  * The migration list, in version order.
@@ -18,4 +22,8 @@ export const MIGRATIONS: readonly Migration[] = [
   migration003,
   migration004,
   migration005,
+  migration006,
+  migration007,
+  migration008,
+  migration009,
 ];

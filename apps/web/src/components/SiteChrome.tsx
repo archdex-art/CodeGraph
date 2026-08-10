@@ -9,11 +9,16 @@ import { AuthNav } from "@/components/AuthNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useScrollSpring } from "@/components/motion/primitives";
 
+/*
+ * `Settings` is deliberately absent. The page held exactly two sections - "Claude AI
+ * Assistant" and "Local Model (OpenAI-Compatible)" - and went with them when the product
+ * became LLM-free. There is nothing else configurable per account, so a nav entry here would
+ * link to a 404; when something genuinely per-account arrives, this is where it goes back.
+ */
 const NAV = [
   { href: "/", label: "Index" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/fleet", label: "Fleet" },
-  { href: "/settings", label: "Settings" },
 ];
 
 /**

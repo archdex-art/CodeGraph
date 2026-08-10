@@ -6,7 +6,7 @@ import type { IndexResult, Issue } from "../types";
  *
  * These types live here rather than beside the functions that produce them because
  * the producers form a legitimate runtime call chain — `historicalAnalysis` calls
- * `analyzeEvolution`, which calls `diffSnapshots` and `generateNarrative` — while every
+ * `analyzeEvolution`, which calls `diffSnapshots` — while every
  * one of those modules also needs to *name* the types the others produce. Declaring the
  * types in the producer modules turned that one-way call chain into three import cycles
  * (dependency-cruiser `no-circular`). Types have no runtime edge, so hoisting them to a
@@ -112,8 +112,4 @@ export interface ArchitectureEvolution {
   issueDiff: IssueDiff;
   moduleHealth: Record<string, ModuleHealth>;
   featureEvolution: Record<string, FeatureEvolution>;
-  aiNarrative?: {
-    reason: string;
-    recommendation: string;
-  };
 }

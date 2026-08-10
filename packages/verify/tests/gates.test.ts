@@ -95,20 +95,24 @@ describe("gate 1 — syntax", () => {
 });
 
 describe("gate 2 — types", () => {
+  // The compiler is injected as an absolute argv pair the analysed repository cannot choose.
+  // `node` here stands for `process.execPath`; the stub keys on the command name.
+  const tsc = () => ({ command: "node", args: ["/trusted/tsc"] as readonly string[] });
+
   it("skips when the project has no type config", async () => {
     // Most JavaScript repos have none. Failing them would make every such fix unverifiable.
-    const r = await typesGate(sandbox(tree({}), {}), async () => false);
+    const r = await typesGate(sandbox(tree({}), {}), async () => false, tsc);
     expect(r.status).toBe("skipped");
     expect(r.reason).toMatch(/no tsconfig/);
   });
 
   it("passes when tsc exits 0", async () => {
-    const r = await typesGate(sandbox(tree({}), { npx: ok }), async () => true);
+    const r = await typesGate(sandbox(tree({}), { node: ok }), async () => true, tsc);
     expect(r.status).toBe("passed");
   });
 
   it("fails when tsc reports errors, keeping the output", async () => {
-    const r = await typesGate(sandbox(tree({}), { npx: fail }), async () => true);
+    const r = await typesGate(sandbox(tree({}), { node: fail }), async () => true, tsc);
     expect(r.status).toBe("failed");
     expect(r.log).toContain("boom");
   });
@@ -116,9 +120,40 @@ describe("gate 2 — types", () => {
   it("treats a timeout as a failure, not a skip", async () => {
     // The check did not complete. Skipping would let a pathological project quietly
     // downgrade its own verification level.
-    const r = await typesGate(sandbox(tree({}), { npx: hung }), async () => true);
+    const r = await typesGate(sandbox(tree({}), { node: hung }), async () => true, tsc);
     expect(r.status).toBe("failed");
     expect(r.reason).toMatch(/timed out/);
+  });
+
+  it("never invokes a compiler resolved from the analysed tree", async () => {
+    /**
+     * The RCE this gate shipped with: `sandbox.exec("npx", ["tsc", "--noEmit"])` with cwd set
+     * to a freshly cloned, attacker-controlled repository. `npx` prefers
+     * `./node_modules/.bin/tsc`, which a repository can commit mode 100755, so an anonymous
+     * caller who could get a repo indexed could execute code in the web process.
+     *
+     * Asserting on the argv is the assertion that matters: any command that is not the
+     * injected absolute one is a path the repository can influence.
+     */
+    const seen: string[][] = [];
+    const handle: SandboxHandle = {
+      root: tree({}),
+      exec: async (command, args) => {
+        seen.push([command, ...args]);
+        return ok;
+      },
+    };
+    await typesGate(handle, async () => true, tsc);
+    expect(seen).toEqual([["node", "/trusted/tsc", "--noEmit"]]);
+    expect(seen.flat()).not.toContain("npx");
+  });
+
+  it("skips rather than falling back when this runtime has no compiler", async () => {
+    // "We could not check" is a true statement about the verification. Reaching for the
+    // repository's own binary to avoid saying it is the trade that created the RCE.
+    const r = await typesGate(sandbox(tree({}), { node: ok }), async () => true, () => null);
+    expect(r.status).toBe("skipped");
+    expect(r.reason).toMatch(/no TypeScript compiler/);
   });
 });
 

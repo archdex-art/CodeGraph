@@ -14,11 +14,38 @@ import { CountUp, Entrance, Magnetic, Reveal, Stagger, StaggerItem } from "@/com
  * do, and a landing page is a README with better typography.
  */
 
+/**
+ * The figures the hero publishes.
+ *
+ * WHY THESE FOUR, AND WHY TWO OTHERS ARE GONE
+ *
+ * The page's own footer promises that every number on it was measured on a real repository and
+ * that the commands producing them are in the repo. That promise was false in four places.
+ * `957 tests / 75 files` was stale against 1,844 across 107; `2.1s to index 327 files` was
+ * taken on a 303-file tree before six of the eleven pipeline stages existed, and the largest
+ * one today (`taint`, 3.0s of 6.0s) was not among them.
+ *
+ * Two claims were REMOVED rather than corrected, because nothing in the repository
+ * substantiates them and a number nobody can re-derive is the thing the footer promises not to
+ * publish:
+ *
+ *   - a claimed detector accuracy percentage on held-out repositories - no corpus, protocol or
+ *     command backing it exists anywhere here.
+ *   - a claimed peak-memory figure of 313.9 MiB - `npm run selfindex` under `/usr/bin/time -l`
+ *     on this machine. The container may well be leaner; until something measures IT, the
+ *     honest move is silence. The "runs on 512 MB" badge is a deployment target, not a claim
+ *     about a measurement, and is left alone.
+ *
+ * What remains is asserted by `apps/web/tests/landing-claims.test.ts` against the working tree,
+ * except the wall clock, which is published with a date the way the README publishes its case
+ * count - a timing measures the machine as much as the code. `npm run selfindex` reprints all
+ * of it.
+ */
 const PROOF = [
-  { value: 957, suffix: "", label: "tests, all green", note: "75 files, every gate in CI" },
-  { value: 87, suffix: "%", label: "detection precision", note: "on held-out repos, never tuned against" },
-  { value: 2.1, decimals: 1, suffix: "s", label: "to index 327 files", note: "cold, single container" },
-  { value: 313.9, decimals: 1, suffix: " MiB", label: "peak memory", note: "under a hard 512 MiB cap" },
+  { value: 2206, suffix: "", label: "tests, all green", note: "120 files, every gate in CI" },
+  { value: 379, suffix: "", label: "TypeScript files", note: "498 of 519 scanned, 90,663 LOC analysed" },
+  { value: 6.0, decimals: 1, suffix: "s", label: "to index this repo, cold", note: "11 stages, measured 2026-08-09" },
+  { value: 11, suffix: "", label: "instrumented stages", note: "each one times itself, every run" },
 ];
 
 const LENSES = [
@@ -234,7 +261,7 @@ export default function LandingPage() {
                 index gets slower you get a package name, not a shrug.
               </p>
               <p className="mt-md text-meta text-[var(--text-muted)]">
-                Below: an actual run over this repository&apos;s 327 TypeScript files.
+                Below: an actual run over this repository&apos;s 379 TypeScript files.
               </p>
             </Reveal>
 

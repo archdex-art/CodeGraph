@@ -21,7 +21,7 @@ const USER_B = 5002;
 const TOKEN_A = "gho_token_for_user_a";
 const TOKEN_B = "gho_token_for_user_b";
 
-function insertRepo(ownerId: number | null): string {
+function upsertRepo(ownerId: number | null): string {
   const id = randomUUID();
   db()
     .prepare(
@@ -57,9 +57,9 @@ describe("publishCredential", () => {
   let ownedByB: string;
 
   beforeAll(() => {
-    publicRepo = insertRepo(null);
-    ownedByA = insertRepo(USER_A);
-    ownedByB = insertRepo(USER_B);
+    publicRepo = upsertRepo(null);
+    ownedByA = upsertRepo(USER_A);
+    ownedByB = upsertRepo(USER_B);
   });
 
   it("gives the owner their own session token", () => {

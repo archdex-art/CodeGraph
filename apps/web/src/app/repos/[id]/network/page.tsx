@@ -10,7 +10,7 @@ export default function NetworkPage() {
     <>
       {repo.viz && repo.viz.nodes.length > 0 ? (
         <GraphWorkbench repoId={repo.id} graph={repo.symbolGraph} immersive>
-          {(onSelect) => <NetworkView graph={repo.viz!} onSelect={onSelect} immersive />}
+          {(onSelect) => <NetworkView graph={repo.viz!} repoName={repo.name} onSelect={onSelect} immersive />}
         </GraphWorkbench>
       ) : (
         <Empty msg="No import network for this repository." />

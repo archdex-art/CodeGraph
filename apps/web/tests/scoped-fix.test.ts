@@ -47,7 +47,7 @@ function buildRepo(): string {
 
 async function seed(root: string) {
   const result = await indexRepo(root);
-  P.insertRepo({ id: "r1", url: root, name: "c1", sourceType: "local", ownerId: null, createdAt: 1 });
+  P.upsertRepo({ id: "r1", url: root, name: "c1", sourceType: "local", ownerId: null, createdAt: 1 });
   P.recordRun(
     { id: "run-1", repoId: "r1", commitSha: null, score: result.score, loc: result.loc, startedAt: 1, finishedAt: 2 },
     result.issues

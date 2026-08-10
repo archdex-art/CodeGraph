@@ -1,2 +1,2 @@
-export { extractImports, computeImportGraph } from "./imports";
+export { extractImports, computeImportGraph, packageOf } from "./imports";
 export type { ImportGraph } from "./imports";

@@ -1,90 +1,33 @@
-import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { FIXERS } from "@codegraph/remediate-engine";
 import { deletableDebugLines } from "@codegraph/remediate-engine";
 
 /**
- * Review B1's structural cure: the debug fixer decides from the AST, not from a line scan.
+ * Review B1's structural cure, tested directly on the guard.
  *
- * The shipped guard walked backward to the previous non-blank line and tested whether it
- * *looked like* a brace-less block opener. Two failures were reproduced against it, and the
- * first is the one that matters most because nothing downstream could catch it:
+ * WHY THIS FILE NO LONGER GOES THROUGH A FIXER. `remove-debug-output` was deleted: its safety
+ * argument was "a standalone `print()`/`console.log` has no production behaviour", and a real
+ * run deleted `print(f"check_boundaries: OK — …")` from `scripts/check_boundaries.py`, which is
+ * that script's entire output. No AST guard can recover intent, so the codemod went and the
+ * guard stayed — it answers a narrower, and true, question: "is this line a standalone
+ * statement, or is it text inside a string, a comment, or the sole body of a construct that
+ * needs one?"
+ *
+ * That question is what the shipped line-scan got wrong. Given
  *
  *   const helpText = `
  *     Usage: run --verbose
  *     console.log("hello");
  *   `;
  *
- * It deleted the third line — string CONTENT — silently rewriting a user-visible help message
- * while reporting "no production behavior". The file still parses, so verification gate 1's
- * bracket-balance check passes too. Valid file, wrong data.
+ * it reported the third line — string CONTENT — as deletable, and the file still parses
+ * afterwards, so verification gate 1 could not catch it either. Valid file, wrong data. The
+ * cases below pin the guard's answers so the next codemod that needs them inherits the fix
+ * rather than the bug.
  */
 
-const fx = FIXERS.find((f) => f.id === "remove-debug-output")!;
+const linesOf = (src: string) => [...deletableDebugLines(src, "t.ts").deletable];
 
-function run(src: string, ext = ".ts") {
-  const res = fx.apply({ rel: `t${ext}`, ext, lines: src.split("\n") });
-  const after = res.lines.join("\n");
-  const sf = ts.createSourceFile("t.ts", after, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  const parseFailed =
-    ((sf as unknown as { parseDiagnostics?: readonly unknown[] }).parseDiagnostics ?? []).length > 0;
-  return { edits: res.edits.length, after, parseFailed };
-}
-
-describe("debug fixer — must not touch these", () => {
-  it("leaves a console.log inside a template literal alone", () => {
-    // The bug. Asserted on CONTENT, not just edit count, because the point is the string's
-    // value survives.
-    const src = 'const h = `\n  Usage: x\n  console.log("hello");\n`;\nexport const y = h;';
-    const { edits, after } = run(src);
-    expect(edits).toBe(0);
-    expect(after).toContain('console.log("hello")');
-  });
-
-  it("leaves the body of a labelled statement alone", () => {
-    // Removing it moves the label onto the following statement.
-    expect(run('outer:\n  console.log("x");\nnext();').edits).toBe(0);
-  });
-
-  it.each([
-    ["brace-less if", 'if (a)\n  console.log("x");\nnext();'],
-    ["multi-line condition", 'if (\n  a &&\n  b\n)\n  console.log("x");\nnext();'],
-    ["brace-less else", 'if (a) { y(); } else\n  console.log("x");\nnext();'],
-    ["brace-less for-of", 'for (const a of b)\n  console.log(a);\nnext();'],
-    ["brace-less while", 'while (a)\n  console.log(a);\nnext();'],
-    ["brace-less do-while", 'do\n  console.log("x");\nwhile (a);'],
-    ["arrow expression body", 'const f = () =>\n  console.log("x");\nexport { f };'],
-  ])("leaves the sole body of %s alone", (_name, src) => {
-    const { edits, parseFailed } = run(src);
-    expect(edits).toBe(0);
-    expect(parseFailed).toBe(false);
-  });
-
-  it("leaves a commented-out call alone", () => {
-    expect(run('// console.log("x");\nnext();').edits).toBe(0);
-  });
-
-  it("leaves a console.log nested in a larger expression alone", () => {
-    // Deleting the line would delete the surrounding expression with it.
-    expect(run("const v = [1].map((n) => console.log(n));\nexport { v };").edits).toBe(0);
-  });
-});
-
-describe("debug fixer — must still fix these", () => {
-  it.each([
-    ["a statement inside a function block", 'function f() {\n  console.log("x");\n  return 1;\n}\nexport { f };'],
-    ["a top-level statement", 'console.log("x");\nexport const y = 1;'],
-    ["a statement inside a braced if", 'if (a) {\n  console.log("x");\n  y();\n}\nexport {};'],
-    ["a debugger statement", "function f() {\n  debugger;\n  return 1;\n}\nexport { f };"],
-    ["a statement in a switch case", 'switch (a) {\n  case 1:\n    console.log("x");\n    break;\n}\nexport {};'],
-  ])("removes %s", (_name, src) => {
-    const { edits, parseFailed } = run(src);
-    expect(edits).toBe(1);
-    expect(parseFailed).toBe(false);
-  });
-});
-
-describe("deletableDebugLines", () => {
+describe("deletableDebugLines — never deletable", () => {
   it("refuses everything when the file does not parse", () => {
     // A file whose structure is unknown is a file no fixer should edit. Falling back to a
     // regex here is exactly what produced B1.
@@ -96,30 +39,47 @@ describe("deletableDebugLines", () => {
     expect(deletable.size).toBe(0);
   });
 
-  it("reports 0-based line indexes", () => {
-    const { deletable } = deletableDebugLines('const a = 1;\nconsole.log("x");\n', "t.ts");
-    expect([...deletable]).toEqual([1]);
+  it("does not report a console.log inside a template literal", () => {
+    // The failure nothing downstream could catch: the line is string content, not a statement.
+    expect(linesOf('const help = `\n  Usage: run\n  console.log("hello");\n`;\n')).toEqual([]);
+  });
+
+  it("does not report the body of a labelled statement", () => {
+    expect(linesOf('outer:\n  console.log("x");\nnext();\n')).toEqual([]);
+  });
+
+  it.each([
+    ["a brace-less if", 'if (!authorized)\n  console.log("denied");\ngrantAccess();\n'],
+    ["a brace-less else", 'if (a) {\n  b();\n} else\n  console.log("f");\nafter();\n'],
+    ["a brace-less for", 'for (const x of xs)\n  console.log(x);\nafter();\n'],
+    ["a brace-less while", 'while (go)\n  console.log("tick");\nafter();\n'],
+    ["an arrow body", 'xs.forEach((x) =>\n  console.log(x)\n);\n'],
+  ])("does not report the sole body of %s", (_name, src) => {
+    // Deleting these either promotes the NEXT statement into the block — the file still
+    // parses and the program does the opposite of what it did — or breaks the parse outright.
+    expect(linesOf(src)).toEqual([]);
+  });
+
+  it("does not report a commented-out call", () => {
+    expect(linesOf('// console.log("x");\nnext();\n')).toEqual([]);
+  });
+
+  it("does not report a console.log nested in a larger expression", () => {
+    expect(linesOf("const y = (console.log('x'), 5);\n")).toEqual([]);
   });
 });
 
-describe("python is unaffected", () => {
-  it("still removes a standalone print via the indentation-aware path", () => {
-    // No Python parser in this process, so Python keeps the line-based guard — which is the
-    // right tool where indentation IS the block structure.
-    const res = fx.apply({
-      rel: "t.py",
-      ext: ".py",
-      lines: ["def f():", "    x = 1", "    print('debug')", "    return x"],
-    });
-    expect(res.edits).toHaveLength(1);
+describe("deletableDebugLines — deletable, with 0-based indexes", () => {
+  it("reports 0-based line indexes", () => {
+    expect(linesOf('const a = 1;\nconsole.log("x");\n')).toEqual([1]);
   });
 
-  it("still protects a print that is a block's only statement", () => {
-    const res = fx.apply({
-      rel: "t.py",
-      ext: ".py",
-      lines: ["def f():", "    print('only')"],
-    });
-    expect(res.edits).toHaveLength(0);
+  it.each([
+    ["a statement inside a function block", 'function f() {\n  console.log("x");\n  return 1;\n}\n', 1],
+    ["a statement inside a braced if", 'if (a) {\n  console.log("x");\n  y();\n}\n', 1],
+    ["a debugger statement", "function f() {\n  debugger;\n  return 1;\n}\n", 1],
+    ["a statement in a switch case", 'switch (a) {\n  case 1:\n    console.log("x");\n    break;\n}\n', 2],
+  ])("reports %s", (_name, src, line) => {
+    expect(linesOf(src as string)).toEqual([line]);
   });
 });

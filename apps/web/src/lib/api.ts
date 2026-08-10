@@ -1,7 +1,44 @@
 // Client-side fetch helpers for the backend API.
-import type { AIContext, AssistantEvent, AssistantProvider, AssistantProviders, CodeSymbol, FsEntry, GitBranch, GitLogEntry, GitStatus, Job, RepoDetail, RepoSummary, SaveMode, TrashEntry } from "./types";
+import type { AIContext, CodeSymbol, FsEntry, GitBranch, GitLogEntry, GitStatus, Job, RepoDetail, RepoSummary, SaveMode, TrashEntry } from "./types";
 import type { RemediationPlan } from "./agents/types";
 import type { FixResult } from "./agents/executor-types";
+import type { BlastReport } from "./codeintel/query";
+import type { AskResult } from "@codegraph/core-graph";
+
+/**
+ * What `/ownership?op=summary` returns.
+ *
+ * Declared here rather than exported from the route because a route module cannot be imported
+ * by a client component — Next would pull the server handler into the bundle. The shapes are
+ * small and the route is the only producer, so one declaration on the consumer side is the
+ * honest place for it.
+ */
+export interface OwnershipSummary {
+  readonly authors: ReadonlyArray<{
+    readonly name: string;
+    readonly email: string;
+    readonly commits: number;
+    readonly firstAt: number;
+    readonly lastAt: number;
+    readonly filesTouched: number;
+  }>;
+  readonly windowDays: number;
+  readonly commitsAnalysed: number;
+  readonly truncated: boolean;
+  readonly stale: ReadonlyArray<{
+    readonly path: string;
+    readonly owners: ReadonlyArray<{ author: string; share: number; commits: number; lastAt: number }>;
+    readonly busFactor: number;
+    readonly staleDays: number | null;
+    readonly orphaned: boolean;
+  }>;
+}
+
+export interface ReviewerSuggestion {
+  readonly author: string;
+  readonly score: number;
+  readonly reasons: readonly string[];
+}
 
 export interface HealthStatus {
   status: string;
@@ -148,6 +185,59 @@ export async function intelAudit(
 ): Promise<{ results?: CodeSymbol[]; cycles?: string[][] }> {
   const res = await fetch(`/api/repos/${repoId}/intel?op=${op}`, { cache: "no-store" });
   return asJson(res);
+}
+
+/** Blast radius: the transitive callers of one symbol, with hop distance and test marks. */
+export async function intelBlast(repoId: string, symbolId: string, depth = 4): Promise<BlastReport> {
+  const res = await fetch(
+    `/api/repos/${repoId}/intel?op=blast&symbol=${encodeURIComponent(symbolId)}&depth=${depth}`,
+    { cache: "no-store" }
+  );
+  return asJson<BlastReport>(res);
+}
+
+/** Hub symbols no test file calls, most-depended-upon first. */
+export async function intelUntestedHubs(repoId: string): Promise<CodeSymbol[]> {
+  const res = await fetch(`/api/repos/${repoId}/intel?op=untested`, { cache: "no-store" });
+  const d = await asJson<{ results?: CodeSymbol[] }>(res);
+  return d.results ?? [];
+}
+
+/**
+ * Ask the graph a question in English.
+ *
+ * The compiler answers a refusal as a 200 with `ok: false`, so a well-formed question it
+ * cannot classify is NOT an error here — it carries the supported forms and any near misses,
+ * and the page renders them. Only a malformed request (empty or over-long) is a 4xx, and that
+ * goes through `asJson` like every other route's failure.
+ */
+export async function intelAsk(repoId: string, question: string): Promise<AskResult> {
+  const res = await fetch(`/api/repos/${repoId}/intel?op=ask&q=${encodeURIComponent(question)}`, { cache: "no-store" });
+  return asJson<AskResult>(res);
+}
+
+/**
+ * The ownership report computed at index time.
+ *
+ * A 409 here is meaningful and is allowed to surface: it means the repository was indexed
+ * before ownership analysis existed, which the caller renders as "re-index this repo" rather
+ * than as "this repository has no owners". `asJson` turns it into the route's own message.
+ */
+export async function ownershipSummary(repoId: string): Promise<OwnershipSummary> {
+  const res = await fetch(`/api/repos/${repoId}/ownership?op=summary`, { cache: "no-store" });
+  return asJson<OwnershipSummary>(res);
+}
+
+/** Reviewer suggestions for a set of changed files, ranked over real history. */
+export async function ownershipReviewers(
+  repoId: string,
+  files: readonly string[],
+): Promise<{ reviewers: ReviewerSuggestion[]; commitsAnalysed: number }> {
+  const res = await fetch(
+    `/api/repos/${repoId}/ownership?op=reviewers&files=${encodeURIComponent(files.join(","))}`,
+    { cache: "no-store" },
+  );
+  return asJson<{ reviewers: ReviewerSuggestion[]; commitsAnalysed: number }>(res);
 }
 
 export async function runAgents(repoId: string): Promise<RemediationPlan> {
@@ -364,88 +454,6 @@ export async function setSaveMode(repoId: string, mode: SaveMode): Promise<void>
   await gitPost(repoId, { op: "setSaveMode", saveMode: mode });
 }
 
-// --- Built-in editor: AI Assistant (opt-in — Claude needs ANTHROPIC_API_KEY,
-// local models need CG_LOCAL_LLM_BASE_URL + CG_LOCAL_LLM_MODEL) ---
-
-export async function fetchAssistantProviders(repoId: string): Promise<AssistantProviders> {
-  const res = await fetch(`/api/repos/${repoId}/assistant`, { cache: "no-store" });
-  const d = await asJson<{ providers: AssistantProviders }>(res);
-  return d.providers;
-}
-
-export async function resetAssistant(repoId: string): Promise<void> {
-  await asJson(await fetch(`/api/repos/${repoId}/assistant`, { method: "DELETE" }));
-}
-
-/** Sends one chat message and streams the reply as `AssistantEvent`s via
- *  SSE, invoking `onEvent` for each as it arrives. Resolves once the
- *  response stream ends (after a terminal `done`/`error` event). */
-export async function streamAssistantChat(
-  repoId: string,
-  message: string,
-  provider: AssistantProvider,
-  onEvent: (event: AssistantEvent) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  const res = await fetch(`/api/repos/${repoId}/assistant`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, provider }),
-    signal,
-  });
-  if (!res.ok || !res.body) {
-    const data: unknown = await res.json().catch(() => ({}));
-    throw new Error(errorMessage(data) || `Assistant request failed (${res.status})`);
-  }
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let frameEnd: number;
-    while ((frameEnd = buffer.indexOf("\n\n")) !== -1) {
-      const frame = buffer.slice(0, frameEnd);
-      buffer = buffer.slice(frameEnd + 2);
-      const dataLine = frame.split("\n").find((l) => l.startsWith("data: "));
-      if (!dataLine) continue;
-      try {
-        onEvent(JSON.parse(dataLine.slice(6)) as AssistantEvent);
-      } catch {
-        // malformed frame — drop it rather than crashing the chat stream
-      }
-    }
-  }
-}
-
-import type { AssistantSettingsView } from "./settings";
-
-export async function fetchAssistantSettingsView(): Promise<AssistantSettingsView> {
-  const res = await fetch("/api/settings/assistant", { cache: "no-store" });
-  return asJson<AssistantSettingsView>(res);
-}
-
-export async function updateAssistantSettings(patch: {
-  anthropicApiKey?: string | null;
-  claudeModel?: string | null;
-  useClaudeSubscription?: boolean;
-  localBaseUrl?: string | null;
-  localModel?: string | null;
-  localApiKey?: string | null;
-  localModelList?: string[] | null;
-  saveProvider?: { id?: string; name: string; baseUrl: string; apiKey?: string | null; models: string[] };
-  deleteProviderId?: string;
-  useProviderId?: string;
-}): Promise<AssistantSettingsView> {
-  const res = await fetch("/api/settings/assistant", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
-  return asJson<AssistantSettingsView>(res);
-}
-
 // --- Timeline Engine ---
 import type { TimelineSnapshot, ArchitectureSnapshot, SnapshotMetrics, GraphDiff, ArchitectureEvolution } from "./gitops/timelineApi";
 
@@ -466,10 +474,19 @@ export async function timelineSnapshot(repoId: string, hash: string): Promise<Ar
   const d = await asJson<{ snapshot: ArchitectureSnapshot }>(res);
   return d.snapshot;
 }
-export async function timelineCompare(repoId: string, base: string, head: string): Promise<ArchitectureEvolution> {
+
+/**
+ * Builds any missing snapshot, then returns BOTH halves of the comparison: the evolution
+ * narrative and the per-rule/per-file delta the route computed on the same two snapshots.
+ * Returning one and re-fetching the other would parse both snapshots twice.
+ */
+export async function timelineCompare(
+  repoId: string,
+  base: string,
+  head: string
+): Promise<{ evolution: ArchitectureEvolution; delta: SnapshotDelta }> {
   const res = await fetch(`/api/repos/${repoId}/timeline?op=compare&base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`, { cache: "no-store" });
-  const d = await asJson<{ evolution: ArchitectureEvolution }>(res);
-  return d.evolution;
+  return asJson<{ evolution: ArchitectureEvolution; delta: SnapshotDelta }>(res);
 }
 
 
@@ -480,4 +497,27 @@ export async function timelineBuild(repoId: string, strategy: string = "monthly"
     body: JSON.stringify({ op: "build", strategy }),
   });
   await asJson(res);
+}
+
+// --- Timeline: structural series and snapshot deltas (see lib/gitops/timelineDelta.ts) ---
+// Both read the snapshot CACHE only: no `git archive`, no re-index, no build. That is what
+// makes "what changed since last index" a click rather than a coffee break.
+import type { SnapshotDelta, TrendPoint } from "./gitops/timelineDelta";
+
+export async function timelinePoints(repoId: string): Promise<TrendPoint[]> {
+  const res = await fetch(`/api/repos/${repoId}/timeline?op=points`, { cache: "no-store" });
+  const d = await asJson<{ points: TrendPoint[] }>(res);
+  return d.points;
+}
+
+export async function timelineDelta(
+  repoId: string,
+  base: string,
+  head: string
+): Promise<{ delta: SnapshotDelta; evolution: ArchitectureEvolution | null }> {
+  const res = await fetch(
+    `/api/repos/${repoId}/timeline?op=delta&base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`,
+    { cache: "no-store" }
+  );
+  return asJson<{ delta: SnapshotDelta; evolution: ArchitectureEvolution | null }>(res);
 }

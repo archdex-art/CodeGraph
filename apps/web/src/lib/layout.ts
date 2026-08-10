@@ -11,6 +11,57 @@ export interface SimEdge {
 }
 
 /**
+ * A seeded PRNG, so a layout is a function of its INPUT and nothing else.
+ *
+ * WHAT THIS REPLACES. `forceLayout` seeded its starting positions with `Math.random()` and
+ * jittered coincident nodes with it too, so the same repository produced a different picture
+ * on every call. Verified: two back-to-back calls with identical ids and edges returned
+ * completely different coordinates.
+ *
+ * That is not a cosmetic complaint. Three things depended on it and all three were broken:
+ *
+ *   · Any re-render that changed the `graph` identity — a refetch, a poll — re-ran the layout
+ *     and sent EVERY node travelling to a new home. The eased transition then drew cards
+ *     sliding across and through one another, which is what a screenshot taken mid-flight
+ *     shows as "overlapping boxes". A stable layout has nothing to animate, so the transient
+ *     cannot occur.
+ *   · `GraphExport` writes a PNG of the current view. Two exports of one commit disagreed,
+ *     which makes the image useless as evidence in a review.
+ *   · A shared `?open=…&focus=…` link landed the recipient on a differently-arranged graph
+ *     from the one the sender was describing.
+ *
+ * mulberry32: 32 bits of state, uniform enough for jitter, and four lines. The quality bar
+ * here is "spreads the initial ring evenly", not cryptographic.
+ */
+function seededRandom(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * A seed derived from the node ids, so two DIFFERENT graphs still get different starting
+ * rings while one graph always gets its own.
+ *
+ * Order-insensitive on purpose: the caller builds `ids` from a `Map`, and a layout that
+ * changed when an unrelated insertion reordered that map would be reproducible in name only.
+ */
+function seedFrom(ids: readonly string[]): number {
+  let h = 2166136261;
+  for (const id of ids) {
+    let s = 0;
+    for (let i = 0; i < id.length; i++) s = (Math.imul(s, 31) + id.charCodeAt(i)) | 0;
+    // XOR accumulates commutatively, so the seed does not depend on iteration order.
+    h = (h ^ s) >>> 0;
+  }
+  return h || 1;
+}
+
+/**
  * Force-directed layout for the Blender-style network.
  * Runs synchronously to a settled state and returns id -> {x,y} (centered at 0,0).
  */
@@ -29,18 +80,32 @@ export function forceLayout(
     sizeOf?: (id: string) => { w: number; h: number } | undefined;
   } = {}
 ): Map<string, XY> {
-  const n = ids.length;
-  const idx = new Map(ids.map((id, i) => [id, i]));
+  /**
+   * SORTED, and everything below indexes into this rather than the caller's array.
+   *
+   * The seed alone is not enough to make a layout reproducible. Every internal loop —
+   * the starting ring, the O(n²) repulsion, the collision passes, the component packing —
+   * walks nodes by index, and floating-point accumulation is not commutative, so the same
+   * graph handed over in a different order settled somewhere different. Callers build these
+   * lists from `Map`s, where an unrelated insertion reorders everything.
+   *
+   * Sorting once here makes the result a function of the id SET and the edges. The return is
+   * keyed by id, so no caller can observe the reordering.
+   */
+  const sorted = [...ids].sort();
+  const n = sorted.length;
+  const idx = new Map(sorted.map((id, i) => [id, i]));
   const px = new Float64Array(n);
   const py = new Float64Array(n);
   const vx = new Float64Array(n);
   const vy = new Float64Array(n);
 
+  const rand = seededRandom(seedFrom(sorted));
   for (let i = 0; i < n; i++) {
     const a = (i / Math.max(1, n)) * Math.PI * 2;
-    const r = 160 + Math.random() * 160;
-    px[i] = Math.cos(a) * r + (Math.random() - 0.5) * 30;
-    py[i] = Math.sin(a) * r + (Math.random() - 0.5) * 30;
+    const r = 160 + rand() * 160;
+    px[i] = Math.cos(a) * r + (rand() - 0.5) * 30;
+    py[i] = Math.sin(a) * r + (rand() - 0.5) * 30;
   }
 
   const E = edges
@@ -59,7 +124,7 @@ export function forceLayout(
         let dx = px[i] - px[j];
         let dy = py[i] - py[j];
         let d2 = dx * dx + dy * dy;
-        if (d2 < 0.01) { d2 = 0.01; dx = Math.random(); dy = Math.random(); }
+        if (d2 < 0.01) { d2 = 0.01; dx = rand(); dy = rand(); }
         const d = Math.sqrt(d2);
         const f = ((K * K) / d) * 0.05 * alpha;
         const fx = (dx / d) * f;
@@ -92,8 +157,8 @@ export function forceLayout(
 
   // Collision relaxation: treat nodes as rectangles, push apart overlaps.
   if (opts.collideW && opts.collideH) {
-    const halfW = ids.map((id) => ((opts.sizeOf?.(id)?.w ?? opts.collideW!) + 16) / 2);
-    const halfH = ids.map((id) => ((opts.sizeOf?.(id)?.h ?? opts.collideH!) + 16) / 2);
+    const halfW = sorted.map((id) => ((opts.sizeOf?.(id)?.w ?? opts.collideW!) + 16) / 2);
+    const halfH = sorted.map((id) => ((opts.sizeOf?.(id)?.h ?? opts.collideH!) + 16) / 2);
     for (let pass = 0; pass < 60; pass++) {
       let moved = false;
       for (let i = 0; i < n; i++) {
@@ -125,7 +190,7 @@ export function forceLayout(
   }
 
   const out = new Map<string, XY>();
-  for (let i = 0; i < n; i++) out.set(ids[i], { x: px[i], y: py[i] });
+  for (let i = 0; i < n; i++) out.set(sorted[i]!, { x: px[i]!, y: py[i]! });
   return out;
 }
 

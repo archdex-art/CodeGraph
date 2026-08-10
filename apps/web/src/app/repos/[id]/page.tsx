@@ -1,11 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, ArrowUpRight, Crosshair, Layers, SquareArrowOutUpRight, Target } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { AlertTriangle, ArrowRight, ArrowUpRight, ChevronRight, Crosshair, Layers, SquareArrowOutUpRight, Target, TrendingDown } from "lucide-react";
+import { tallyByRule } from "@codegraph/analysis-model";
 import type { Dimension } from "@/lib/types";
 import { DIMENSION_META, PILLAR_META, pillarsFrom } from "@/lib/types";
+import type { FindingGroupKey, TierFilter } from "@/lib/findings";
+import { GROUP_META, editorHref, findingLocation, groupByTier, parseTierFilter, ruleBreakdown } from "@/lib/findings";
+import { coverageNote } from "@/lib/coverage-note";
+import { plural } from "@/lib/plural";
 import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
+import { FindingEvidence } from "@/components/FindingEvidence";
 import { ScoreDial } from "@/components/ScoreDial";
+import { TierFilterBar } from "@/components/TierFilterBar";
 import { band, useRepo } from "./repo-context";
 import { SECTIONS, sectionHref } from "./sections";
 
@@ -63,6 +71,25 @@ const TIER_META: Record<string, { label: string; color: string; note: string }> 
 };
 const TIER_ORDER = ["full", "ast", "lexical", "skipped"] as const;
 
+/**
+ * A tier's colour, defined once so the breakdown's bars, its tier counts and the group
+ * headers below it cannot drift into disagreeing about what "medium" looks like.
+ */
+const TIER_TONE: Record<FindingGroupKey, string> = {
+  high: "var(--coral-text)",
+  medium: "var(--amber-text)",
+  low: "var(--text-muted)",
+  accepted: "var(--text-faint)",
+};
+const TIER_KEYS: readonly FindingGroupKey[] = ["high", "medium", "low", "accepted"];
+
+/**
+ * Rows drawn per open group. The group header always states the true count, so this
+ * trims the page without trimming the fact — 71 high-confidence rows inline would push
+ * every other section off the bottom of the overview.
+ */
+const GROUP_CAP = 12;
+
 export default function RepoOverview() {
   const repo = useRepo();
 
@@ -82,7 +109,33 @@ export default function RepoOverview() {
   const measured = other.filter((p) => p.score !== null);
   const unmeasured = other.filter((p) => p.score === null);
 
-  const ranked = [...repo.issues].slice(0, 12);
+  /**
+   * The filter lives in the query string, not in `useState`: "here are the 11 medium
+   * findings" is a thing one person sends another, and a filter held in component state
+   * makes that link show them the default view instead.
+   *
+   * `replace`, not `push` — flipping chips is browsing one list, not visiting six pages.
+   */
+  const router = useRouter();
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const filter = parseTierFilter(search.get("tier"));
+  const setFilter = (next: TierFilter) => {
+    const params = new URLSearchParams(search);
+    // `default` is the absence of a choice, so it is the absence of a param.
+    if (next === "default") params.delete("tier");
+    else params.set("tier", next);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
+
+  const tiered = groupByTier(repo.issues, filter);
+  const breakdown = ruleBreakdown(repo.issues);
+  const topRule = breakdown.rows[0];
+
+  // Null means the run recorded no coverage at all, which the sentence below renders as
+  // UNKNOWN — never as complete.
+  const coverage = repo.coverage ? coverageNote(repo.coverage) : null;
 
   /**
    * Percentages are computed over the tiers PRESENT, not over `locAnalysed`, so the
@@ -148,26 +201,16 @@ export default function RepoOverview() {
                   )}{" "}
                   {/* ADR-008: the score states the coverage it was computed over, inside the
                       sentence that makes the claim. */}
-                  {repo.coverage ? (
-                    <span className="text-[var(--text-muted)]">
-                      Scored over{" "}
-                      <span className="tnum">
-                        {repo.coverage.filesSeen === 0
-                          ? "—"
-                          : `${Math.round((repo.coverage.filesAnalysed / repo.coverage.filesSeen) * 100)}%`}
-                      </span>{" "}
-                      of files (<span className="tnum">{repo.coverage.filesAnalysed}</span> of{" "}
-                      <span className="tnum">{repo.coverage.filesSeen}</span>
-                      {repo.coverage.skippedTooLarge > 0 && (
-                        <>, <span className="tnum">{repo.coverage.skippedTooLarge}</span> over the size cap</>
+                  {coverage ? (
+                    <>
+                      <span className="text-[var(--text-muted)]">{coverage.scope}</span>
+                      {coverage.sample !== null && (
+                        <>
+                          {" "}
+                          <span className="text-[var(--amber-text)]">{coverage.sample}</span>
+                        </>
                       )}
-                      {repo.coverage.skippedNoLanguage > 0 && (
-                        <>, <span className="tnum">{repo.coverage.skippedNoLanguage}</span> unsupported</>
-                      )}
-                      ){repo.coverage.capHit && (
-                        <span className="text-[var(--amber-text)]"> — the scan hit the file cap</span>
-                      )}.
-                    </span>
+                    </>
                   ) : (
                     <span className="text-[var(--text-faint)]">
                       Coverage was not recorded for this index, so what it was computed over is
@@ -223,6 +266,126 @@ export default function RepoOverview() {
                 </div>
               );
             })}
+          </section>
+        </Reveal>
+
+        {/* ---- What is producing the list --------------------------------
+            The Health Score says 72 and the stat strip says 200 findings; neither
+            answers the first question a reader actually has, which is whether those
+            200 are 200 problems or one problem counted 100 times. The tally is the
+            answer and it fits in a row. */}
+        <Reveal delay={0.12} className="lg:col-span-3">
+          <section className="panel h-full p-lg">
+            <div className="flex flex-wrap items-center justify-between gap-x-lg gap-y-sm">
+              <div className="flex items-center gap-sm">
+                <TrendingDown className="h-3.5 w-3.5 text-[var(--text-faint)]" />
+                <p className="eyebrow">What is producing the findings</p>
+              </div>
+              {/* Every tier, including the empty ones — "accepted 0" is a fact, and
+                  omitting it reads as "not measured". */}
+              <dl className="flex flex-wrap items-baseline gap-x-md gap-y-2xs">
+                {TIER_KEYS.map((key) => (
+                  <div key={key} className="flex items-baseline gap-2xs">
+                    <dt className="text-micro text-[var(--text-muted)]">{GROUP_META[key].short}</dt>
+                    <dd className="tnum text-micro" style={{ color: TIER_TONE[key] }}>
+                      {breakdown.tiers[key]}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+
+            {breakdown.total === 0 ? (
+              <p className="mt-md text-meta text-[var(--text-muted)]">
+                No findings, so there is nothing to break down by rule.
+              </p>
+            ) : (
+              <>
+                <ul className="mt-md space-y-xs">
+                  {breakdown.rows.map((row) => (
+                    <li
+                      key={row.rule}
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-md sm:grid-cols-[minmax(0,22rem)_minmax(0,1fr)_3rem_6rem_6rem]"
+                    >
+                      <span className="flex min-w-0 items-center gap-2xs">
+                        {/* A derived id is title prose, not a rule id, so it is not dressed
+                            as one: chrome that says "copy me into a baseline" on a string
+                            the next index can change is the lie this label prevents. */}
+                        {row.derived ? (
+                          <span className="min-w-0 truncate text-micro text-[var(--text-secondary)]" title={row.title}>
+                            {row.title}
+                          </span>
+                        ) : (
+                          <code
+                            title={row.rule}
+                            className="min-w-0 truncate rounded-xs border border-[var(--line)] bg-[var(--surface-3)] px-2xs py-hair font-mono text-micro text-[var(--text-secondary)]"
+                          >
+                            {row.rule}
+                          </code>
+                        )}
+                        {row.derived && (
+                          <span
+                            title="Indexed before rule ids were recorded — grouped by title text"
+                            className="shrink-0 rounded-xs border border-[var(--line)] px-2xs py-hair text-micro text-[var(--text-faint)]"
+                          >
+                            no rule id
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="hidden h-1.5 overflow-hidden rounded-full bg-[var(--surface-3)] sm:block"
+                      >
+                        <span
+                          className="block h-full rounded-full"
+                          style={{ width: `${row.share * 100}%`, background: TIER_TONE[row.tier] }}
+                        />
+                      </span>
+                      <span className="tnum justify-self-end text-micro text-[var(--text-primary)] sm:justify-self-end">
+                        {row.count}
+                      </span>
+                      <span
+                        className="hidden text-micro sm:block"
+                        style={{ color: TIER_TONE[row.tier] }}
+                      >
+                        {GROUP_META[row.tier].short}
+                      </span>
+                      <span className="tnum hidden text-micro text-[var(--text-muted)] sm:block">
+                        {row.suppressed > 0 ? `${row.suppressed} accepted` : "—"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <p className="mt-md max-w-note text-meta text-[var(--text-muted)]">
+                  {topRule && (
+                    <>
+                      One rule,{" "}
+                      <span className="text-[var(--text-secondary)]">
+                        {topRule.derived ? topRule.title : topRule.rule}
+                      </span>
+                      , is <span className="tnum">{Math.round(topRule.share * 100)}%</span> of all{" "}
+                      <span className="tnum">{breakdown.total}</span> findings.{" "}
+                    </>
+                  )}
+                  {breakdown.restRules > 0 && (
+                    <>
+                      <span className="tnum">{breakdown.restRules}</span> further{" "}
+                      {breakdown.restRules === 1 ? "rule accounts" : "rules account"} for the
+                      remaining <span className="tnum">{breakdown.restFindings}</span>.
+                    </>
+                  )}
+                </p>
+
+                {breakdown.derivedFindings > 0 && (
+                  <p className="mt-sm max-w-note text-meta text-[var(--amber-text)]">
+                    <span className="tnum">{breakdown.derivedFindings}</span> of these findings were
+                    indexed before rule ids were recorded, so they are grouped by their title text
+                    rather than by a rule — re-index for rule-level grouping.
+                  </p>
+                )}
+              </>
+            )}
           </section>
         </Reveal>
 
@@ -389,18 +552,20 @@ export default function RepoOverview() {
             <h2 className="font-display text-lede tracking-tight text-[var(--text-primary)]">
               Where the risk concentrates
             </h2>
-            {repo.issues.length > ranked.length && (
-              <Link
-                href={sectionHref(repo.id, "agents")}
-                className="cursor-pointer text-meta text-[var(--accent-text)] transition-opacity duration-200 hover:opacity-80"
-              >
-                All <span className="tnum">{repo.issues.length}</span> findings
-              </Link>
+            {repo.issues.length > 0 && (
+              <p className="text-meta text-[var(--text-muted)]">
+                Reading <span className="tnum text-[var(--text-secondary)]">{tiered.shown}</span> of{" "}
+                <span className="tnum">{tiered.total}</span>
+                {tiered.hidden > 0 && (
+                  <> · <span className="tnum">{tiered.hidden}</span> in closed groups</>
+                )}
+              </p>
             )}
           </div>
           <p className="mt-sm max-w-note text-meta text-[var(--text-muted)]">
             Ranked by severity weighted with blast radius — how many symbols reach this one through
-            the graph — rather than by severity alone.
+            the graph — rather than by severity alone, and grouped by how much the detector could
+            prove.
           </p>
 
           {repo.issues.length === 0 ? (
@@ -409,68 +574,121 @@ export default function RepoOverview() {
               No findings detected in this index.
             </p>
           ) : (
-            <div className="mt-lg overflow-hidden">
-              <div className="hidden grid-cols-[minmax(0,1fr)_7rem_5rem_5rem_2.5rem] gap-md border-b border-[var(--line)] pb-sm sm:grid">
-                <span className="eyebrow">Finding</span>
-                <span className="eyebrow">Severity</span>
-                <span className="eyebrow text-right">Blast</span>
-                <span className="eyebrow text-right">Churn</span>
-                <span className="sr-only">Open in editor</span>
+            <>
+              <div className="mt-lg">
+                <TierFilterBar tiered={tiered} value={filter} onChange={setFilter} />
               </div>
-              <Stagger className="divide-y divide-[var(--line-soft)]" step={0.03}>
-                {ranked.map((iss) => {
-                  const sev = SEVERITY[iss.severity] ?? SEVERITY[1];
-                  return (
-                    <StaggerItem key={iss.id}>
-                      <div className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-md py-md sm:grid-cols-[minmax(0,1fr)_7rem_5rem_5rem_2.5rem]">
-                        <div className="min-w-0">
-                          <p className="truncate text-meta text-[var(--text-primary)]">{iss.title}</p>
-                          <p className="mt-2xs truncate font-mono text-micro text-[var(--text-muted)]">
-                            {iss.file}
-                            {iss.line > 1 ? `:${iss.line}` : ""}
-                          </p>
-                        </div>
-                        <span
-                          className={`justify-self-start rounded-sm border px-sm py-2xs text-micro font-medium tracking-[0.08em] uppercase ${sev.chip} ${sev.tone}`}
-                        >
-                          <span className="tnum">S{iss.severity}</span> {sev.label}
-                        </span>
-                        <span className="tnum hidden text-right text-meta text-[var(--text-secondary)] sm:block">
-                          ×{iss.blastRadius}
-                        </span>
-                        <span className="tnum hidden text-right text-meta text-[var(--text-muted)] sm:block">
-                          {iss.churn ?? "—"}
-                        </span>
-                        {/* Straight to the line. A finding names a file and a line and
-                            then makes you go and find them yourself, which is the one
-                            step of this workflow the product can just do.
 
-                            Enabled only with a live workspace: without a clone there is
-                            nothing for the editor to open, and a link that lands on an
-                            empty state is worse than a disabled control that says why. */}
-                        {repo.hasWorkspace ? (
-                          <Link
-                            href={`${sectionHref(repo.id, "editor")}?file=${encodeURIComponent(iss.file)}&line=${iss.line}`}
-                            aria-label={`Open ${iss.file} at line ${iss.line} in the editor`}
-                            title={`Open ${iss.file}:${iss.line} in the editor`}
-                            className="col-start-2 row-start-1 flex h-8 w-8 cursor-pointer items-center justify-center justify-self-end rounded-md text-[var(--text-faint)] opacity-0 transition-colors duration-200 hover:bg-[var(--surface-hover)] hover:text-[var(--accent-text)] focus-visible:opacity-100 group-hover:opacity-100 sm:col-start-5 max-sm:opacity-100"
-                          >
-                            <SquareArrowOutUpRight className="h-3.5 w-3.5" />
-                          </Link>
-                        ) : (
-                          <span
-                            title="Re-index this repository to enable the built-in editor"
-                            className="hidden h-8 w-8 items-center justify-center justify-self-end text-[var(--text-faint)] opacity-40 sm:flex"
-                          >
-                            <SquareArrowOutUpRight className="h-3.5 w-3.5" />
-                          </span>
-                        )}
-                      </div>
-                    </StaggerItem>
-                  );
-                })}
-              </Stagger>
-            </div>
+              <div className="mt-lg space-y-xl">
+                {tiered.groups.map((group) => (
+                  <div key={group.key}>
+                    <div className="flex flex-wrap items-baseline justify-between gap-md border-b border-[var(--line)] pb-sm">
+                      <h3 className="text-meta text-[var(--text-primary)]">
+                        {group.label}{" "}
+                        <span className="tnum text-[var(--text-muted)]">{group.issues.length}</span>
+                      </h3>
+                      {/* A closed group is a count with a way in, not a count. */}
+                      {!group.open && (
+                        <button
+                          type="button"
+                          onClick={() => setFilter(group.key)}
+                          className="group/open inline-flex cursor-pointer items-center gap-2xs text-meta text-[var(--accent-text)] transition-opacity duration-200 hover:opacity-80"
+                        >
+                          Show {group.short}
+                          <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover/open:translate-x-0.5" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="mt-sm max-w-note text-micro text-[var(--text-muted)]">{group.note}</p>
+
+                    {group.open && (
+                      <Stagger className="mt-sm divide-y divide-[var(--line-soft)]" step={0.03}>
+                        {group.issues.slice(0, GROUP_CAP).map((iss) => {
+                          const sev = SEVERITY[iss.severity] ?? SEVERITY[1];
+                          return (
+                            <StaggerItem key={iss.id}>
+                              <div className="group grid grid-cols-[minmax(0,1fr)_auto] items-start gap-md py-md sm:grid-cols-[minmax(0,1fr)_7rem_5rem_5rem_2.5rem]">
+                                <div className="min-w-0">
+                                  <p className="truncate text-meta text-[var(--text-primary)]">{iss.title}</p>
+                                  {/* The location is the link, not just the icon at the end of
+                                      the row. `index.js:123` is what a reader reaches for — it
+                                      names the destination — and until now it was inert text
+                                      while the only working affordance was a 14px glyph that
+                                      appears on hover. Both go to the same place. */}
+                                  <p className="mt-2xs truncate font-mono text-micro text-[var(--text-muted)]">
+                                    {repo.hasWorkspace ? (
+                                      <Link
+                                        href={editorHref(repo.id, iss.file, iss.line)}
+                                        title={`Open ${findingLocation(iss)} in the editor`}
+                                        className="cursor-pointer underline decoration-dotted underline-offset-2 transition-colors duration-200 hover:text-[var(--accent-text)]"
+                                      >
+                                        {findingLocation(iss)}
+                                      </Link>
+                                    ) : (
+                                      findingLocation(iss)
+                                    )}
+                                  </p>
+                                  {/* The evidence, the rule id, and the two strings you need to
+                                      accept this finding — in the row, because "why do you
+                                      believe this" and "how do I make it stop" are the two
+                                      questions every row raises. */}
+                                  <FindingEvidence issue={iss} />
+                                </div>
+                                <span
+                                  className={`justify-self-start rounded-sm border px-sm py-2xs text-micro font-medium tracking-[0.08em] uppercase ${sev.chip} ${sev.tone}`}
+                                >
+                                  <span className="tnum">S{iss.severity}</span> {sev.label}
+                                </span>
+                                <span className="tnum hidden text-right text-meta text-[var(--text-secondary)] sm:block">
+                                  ×{iss.blastRadius}
+                                </span>
+                                <span className="tnum hidden text-right text-meta text-[var(--text-muted)] sm:block">
+                                  {iss.churn ?? "—"}
+                                </span>
+                                {/* Straight to the line. A finding names a file and a line and
+                                    then makes you go and find them yourself, which is the one
+                                    step of this workflow the product can just do.
+
+                                    Enabled only with a live workspace: without a clone there is
+                                    nothing for the editor to open, and a link that lands on an
+                                    empty state is worse than a disabled control that says why. */}
+                                {repo.hasWorkspace ? (
+                                  <Link
+                                    href={editorHref(repo.id, iss.file, iss.line)}
+                                    aria-label={`Open ${iss.file} at line ${iss.line} in the editor`}
+                                    title={`Open ${iss.file}:${iss.line} in the editor`}
+                                    className="col-start-2 row-start-1 flex h-8 w-8 cursor-pointer items-center justify-center justify-self-end rounded-md text-[var(--text-faint)] opacity-0 transition-colors duration-200 hover:bg-[var(--surface-hover)] hover:text-[var(--accent-text)] focus-visible:opacity-100 group-hover:opacity-100 sm:col-start-5 max-sm:opacity-100"
+                                  >
+                                    <SquareArrowOutUpRight className="h-3.5 w-3.5" />
+                                  </Link>
+                                ) : (
+                                  <span
+                                    title="Re-index this repository to enable the built-in editor"
+                                    className="hidden h-8 w-8 items-center justify-center justify-self-end text-[var(--text-faint)] opacity-40 sm:flex"
+                                  >
+                                    <SquareArrowOutUpRight className="h-3.5 w-3.5" />
+                                  </span>
+                                )}
+                              </div>
+                            </StaggerItem>
+                          );
+                        })}
+                      </Stagger>
+                    )}
+
+                    {group.open && group.issues.length > GROUP_CAP && (
+                      <Link
+                        href={sectionHref(repo.id, "agents")}
+                        className="mt-sm inline-block cursor-pointer text-meta text-[var(--accent-text)] transition-opacity duration-200 hover:opacity-80"
+                      >
+                        <span className="tnum">{group.issues.length - GROUP_CAP}</span> more in this
+                        group — take them to the swarm
+                      </Link>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </section>
       </Reveal>
@@ -494,7 +712,7 @@ export default function RepoOverview() {
                     <span className="text-meta text-[var(--text-primary)]">
                       {meta.label}{" "}
                       <span className="text-micro text-[var(--text-muted)]">
-                        · <span className="tnum">{d.issueCount}</span> issues · weight{" "}
+                        · <span className="tnum">{plural(d.issueCount, "issue")}</span> · weight{" "}
                         <span className="tnum">{Math.round(meta.weight * 100)}%</span>
                       </span>
                     </span>

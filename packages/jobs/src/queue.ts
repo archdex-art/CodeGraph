@@ -32,7 +32,8 @@ export interface JobQueue {
     workerId: string,
     percent: number,
     stage: string,
-    message: string
+    message: string,
+    phaseJson?: string | null
   ): boolean;
   succeed(jobId: string, workerId: string, message: string): void;
   fail(jobId: string, workerId: string, error: string, permanent?: boolean): { willRetry: boolean };
@@ -134,8 +135,8 @@ export function createJobQueue(): JobQueue {
       return heartbeatJob(jobId, workerId, Date.now() + leaseMs);
     },
 
-    progress(jobId, workerId, percent, stage, message) {
-      return updateJobProgress(jobId, workerId, clampPercent(percent), stage, message);
+    progress(jobId, workerId, percent, stage, message, phaseJson) {
+      return updateJobProgress(jobId, workerId, clampPercent(percent), stage, message, phaseJson ?? null);
     },
 
     succeed(jobId, workerId, message) {

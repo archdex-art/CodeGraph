@@ -20,7 +20,7 @@ process.env.CG_SESSION_SECRET = "test-secret-for-tenant-isolation";
 const USER_A = 1001;
 const USER_B = 2002;
 
-function insertRepo(ownerId: number | null): string {
+function upsertRepo(ownerId: number | null): string {
   const id = randomUUID();
   db()
     .prepare(
@@ -56,9 +56,9 @@ describe("listRepos tenant scoping", () => {
   let privateB: string;
 
   beforeAll(() => {
-    publicRepo = insertRepo(null);
-    privateA = insertRepo(USER_A);
-    privateB = insertRepo(USER_B);
+    publicRepo = upsertRepo(null);
+    privateA = upsertRepo(USER_A);
+    privateB = upsertRepo(USER_B);
   });
 
   it("shows an anonymous viewer only the public bucket", () => {
@@ -89,12 +89,12 @@ describe("getRepoOwnerId", () => {
   });
 
   it("returns null for a public-bucket repo", () => {
-    const id = insertRepo(null);
+    const id = upsertRepo(null);
     expect(getRepoOwnerId(id)).toBeNull();
   });
 
   it("returns the owning userId for a privately-owned repo", () => {
-    const id = insertRepo(USER_A);
+    const id = upsertRepo(USER_A);
     expect(getRepoOwnerId(id)).toBe(USER_A);
   });
 });
@@ -107,31 +107,31 @@ describe("repoAccessDenied — the cross-account leak this suite guards against"
   });
 
   it("allows anyone — signed out or any account — into the public bucket", () => {
-    const id = insertRepo(null);
+    const id = upsertRepo(null);
     expect(repoAccessDenied(requestAs(null), id)).toBeNull();
     expect(repoAccessDenied(requestAs(USER_A), id)).toBeNull();
     expect(repoAccessDenied(requestAs(USER_B), id)).toBeNull();
   });
 
   it("allows the owner into their own private repo", () => {
-    const id = insertRepo(USER_A);
+    const id = upsertRepo(USER_A);
     expect(repoAccessDenied(requestAs(USER_A), id)).toBeNull();
   });
 
   it("denies a signed-out visitor access to someone else's private repo", () => {
-    const id = insertRepo(USER_A);
+    const id = upsertRepo(USER_A);
     expect(repoAccessDenied(requestAs(null), id)?.status).toBe(404);
   });
 
   it("denies a DIFFERENT signed-in account access to another account's private repo", () => {
-    const id = insertRepo(USER_A);
+    const id = upsertRepo(USER_A);
     const denied = repoAccessDenied(requestAs(USER_B), id);
     expect(denied?.status).toBe(404);
   });
 
   it("never leaks a private repo's existence: denial looks identical to not-found", async () => {
     const missing = randomUUID();
-    const owned = insertRepo(USER_A);
+    const owned = upsertRepo(USER_A);
     const missingBody = await repoAccessDenied(requestAs(USER_B), missing)?.json();
     const ownedBody = await repoAccessDenied(requestAs(USER_B), owned)?.json();
     expect(missingBody).toEqual(ownedBody);

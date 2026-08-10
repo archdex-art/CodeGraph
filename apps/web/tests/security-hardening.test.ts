@@ -135,16 +135,19 @@ describe("executeFixes sandbox walk (F002 — never follow a symlink out of the 
     const src = mkdtempSync(path.join(tmpdir(), "cg-exec-src-"));
     const outside = mkdtempSync(path.join(tmpdir(), "cg-exec-outside-"));
     try {
-      // A real, in-tree fixable file — proves normal files still get processed.
-      writeFileSync(path.join(src, "real.ts"), "export function f() {\n  console.log('debug');\n}\n", "utf8");
-      // Outside the sandbox, reachable only through the symlink below. If
-      // walkCode ever followed it, this marker would leak into the diff.
-      writeFileSync(path.join(outside, "secret.ts"), "console.log('OUTSIDE_SECRET_MARKER');\n", "utf8");
+      // A real, in-tree fixable file — proves normal files still get processed. The fixable
+      // smell is an empty catch: `annotate-empty-catch` is the surviving fixer since the
+      // line-deleting codemods were withdrawn, and this test needs SOME edit in-tree to
+      // prove the walk did its job at all.
+      writeFileSync(path.join(src, "real.ts"), "export function f() {\n  try {\n    g();\n  } catch (e) {}\n}\n", "utf8");
+      // Outside the sandbox, reachable only through the symlink below, and carrying the same
+      // fixable smell — so if walkCode ever followed the link this marker reaches the diff.
+      writeFileSync(path.join(outside, "secret.ts"), "// OUTSIDE_SECRET_MARKER\ntry { g(); } catch (e) {}\n", "utf8");
       symlinkSync(path.join(outside, "secret.ts"), path.join(src, "escape.ts"));
 
       const repo: RepoDetail = {
         id: "sym-e2e", url: src, name: "sym-e2e", status: "done", sourceType: "local",
-        score: 0, createdAt: 0, finishedAt: 0, hasWorkspace: false, error: null,
+        score: 0, createdAt: 0, finishedAt: 0, hasWorkspace: false, error: null, drift: null,
         loc: 0, languages: [], graphStats: { nodes: 0, edges: 0, files: 0, dirs: 0, dependencies: 0 },
         dimensions: [], issues: [], dependencies: [], churnByFile: {},
         tree: { name: "/", path: ".", children: [] },
@@ -171,7 +174,7 @@ describe("GET /api/jobs/:id ownership check (F005)", () => {
   const OWNER = 4001;
   const OTHER = 5002;
 
-  function insertRepoAndJob(ownerId: number | null): { repoId: string; jobId: string } {
+  function upsertRepoAndJob(ownerId: number | null): { repoId: string; jobId: string } {
     const repoId = randomUUID();
     const jobId = randomUUID();
     db()
@@ -197,25 +200,25 @@ describe("GET /api/jobs/:id ownership check (F005)", () => {
   }
 
   it("returns the job to its owner", async () => {
-    const { jobId } = insertRepoAndJob(OWNER);
+    const { jobId } = upsertRepoAndJob(OWNER);
     const res = await jobsGet(requestAs(OWNER, jobId), { params: Promise.resolve({ id: jobId }) });
     expect(res.status).toBe(200);
   });
 
   it("returns the job for a public-bucket (anonymously-indexed) repo to anyone", async () => {
-    const { jobId } = insertRepoAndJob(null);
+    const { jobId } = upsertRepoAndJob(null);
     const res = await jobsGet(requestAs(null, jobId), { params: Promise.resolve({ id: jobId }) });
     expect(res.status).toBe(200);
   });
 
   it("denies a signed-in non-owner (404, matching the tenant-isolation model)", async () => {
-    const { jobId } = insertRepoAndJob(OWNER);
+    const { jobId } = upsertRepoAndJob(OWNER);
     const res = await jobsGet(requestAs(OTHER, jobId), { params: Promise.resolve({ id: jobId }) });
     expect(res.status).toBe(404);
   });
 
   it("denies an anonymous caller for a privately-owned repo's job", async () => {
-    const { jobId } = insertRepoAndJob(OWNER);
+    const { jobId } = upsertRepoAndJob(OWNER);
     const res = await jobsGet(requestAs(null, jobId), { params: Promise.resolve({ id: jobId }) });
     expect(res.status).toBe(404);
   });

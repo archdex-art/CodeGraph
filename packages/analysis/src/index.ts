@@ -35,3 +35,23 @@ export { scoreIssues, expectedHarm } from "@codegraph/score-engine";
 
 export type { EslintSecurityFinding } from "@codegraph/detect-engine";
 export { lintForSecurity } from "@codegraph/detect-engine";
+
+// The pure half of baseline handling. `apps/cli` reads a caller-named path and the pipeline
+// reads the repo root; both must agree on what a valid baseline IS, so exactly one parser.
+export { BASELINE_FILE, parseBaseline } from "./baseline";
+
+/**
+ * Dependency intelligence and vulnerability advisories.
+ *
+ * Exported because `apps/web` serves them on a route and `apps/cli` may gate on them — both
+ * are outside this package and neither may reach into `src/` directly.
+ */
+export { findUnusedDependencies, replacementImpact } from "./depintel";
+export type {
+  DependencyScope,
+  PackageImportSite,
+  ReplacementImpact,
+  UnusedDependency,
+} from "./depintel";
+export { disabledReport, fetchAdvisories, osvTransport, resolvePackages } from "./advisories";
+export type { Advisory, AdvisoryReport, OsvTransport, ResolvedPackage } from "./advisories";

@@ -36,6 +36,8 @@ export interface QueuedJobRow extends JobRow {
   readonly lease_until: number | null;
   readonly worker_id: string | null;
   readonly stage: string | null;
+  /** Live pipeline phase as JSON, or null. See migration 006. */
+  readonly phase_json: string | null;
   readonly idempotency_key: string | null;
   readonly created_at: number;
   readonly updated_at: number;
@@ -82,6 +84,14 @@ export function findJob(id: string): JobRow | null {
   return row ?? null;
 }
 
+/**
+ * Coarse state write for the in-process path.
+ *
+ * Clears `phase_json`: this is only ever called when the job moves between the coarse
+ * states, and the fine-grained phase belongs to the state being left. Leaving it would
+ * park "detect · 462/462 files" underneath "Computing Health Score…", which is a line
+ * that contradicts the one above it.
+ */
 export function updateJob(
   id: string,
   status: string,
@@ -90,12 +100,23 @@ export function updateJob(
   error?: string,
 ): void {
   db()
-    .prepare("UPDATE jobs SET status=?, progress=?, message=?, error=? WHERE id=?")
+    .prepare("UPDATE jobs SET status=?, progress=?, message=?, error=?, phase_json=NULL WHERE id=?")
     .run(status, progress, message, error ?? null, id);
 }
 
+/**
+ * Live phase for a job the in-process path is running.
+ *
+ * Not worker-scoped, unlike `updateJobProgress`: there is no worker and no lease on this
+ * path — the web process both owns and runs the job. Writes nothing but the phase, so it
+ * cannot resurrect or contradict a terminal row's status.
+ */
+export function setJobPhase(id: string, phaseJson: string | null): void {
+  db().prepare("UPDATE jobs SET phase_json=? WHERE id=?").run(phaseJson, id);
+}
+
 const QUEUED_JOB_COLUMNS = `id, repo_id, status, progress, message, error, kind, payload_json,
-  priority, attempts, max_attempts, lease_until, worker_id, stage, idempotency_key,
+  priority, attempts, max_attempts, lease_until, worker_id, stage, phase_json, idempotency_key,
   created_at, updated_at`;
 
 /**
@@ -246,21 +267,29 @@ export function heartbeatJob(id: string, workerId: string, leaseUntil: number): 
   return row !== undefined;
 }
 
-/** Report progress. Same worker-scoping rule as `heartbeatJob`. */
+/**
+ * Report progress. Same worker-scoping rule as `heartbeatJob`.
+ *
+ * `phaseJson` is opaque here on purpose — this layer moves the bytes and the web tier
+ * decides what they mean, exactly as `payload_json` already works. Passing `null` (which
+ * every coarse stage report does) CLEARS the phase, so the fine-grained line never
+ * outlives the stage that produced it.
+ */
 export function updateJobProgress(
   id: string,
   workerId: string,
   progress: number,
   stage: string,
-  message: string
+  message: string,
+  phaseJson: string | null = null
 ): boolean {
   const row = db()
     .prepare(
-      `UPDATE jobs SET progress=?, stage=?, message=?, status='running', updated_at=?
+      `UPDATE jobs SET progress=?, stage=?, message=?, phase_json=?, status='running', updated_at=?
         WHERE id=? AND worker_id=? AND status IN ('leased','running')
         RETURNING id`
     )
-    .get(progress, stage, message, Date.now(), id, workerId) as { id: string } | undefined;
+    .get(progress, stage, message, phaseJson, Date.now(), id, workerId) as { id: string } | undefined;
   return row !== undefined;
 }
 
@@ -270,7 +299,7 @@ export function succeedJob(id: string, workerId: string, message: string): void 
     .prepare(
       `UPDATE jobs
           SET status='succeeded', progress=100, message=?, error=NULL,
-              lease_until=NULL, updated_at=?
+              lease_until=NULL, phase_json=NULL, updated_at=?
         WHERE id=? AND worker_id=?`
     )
     .run(message, Date.now(), id, workerId);
@@ -326,6 +355,58 @@ export function cancelJob(id: string): boolean {
     )
     .get(Date.now(), id) as { id: string } | undefined;
   return row !== undefined;
+}
+
+/**
+ * Fail every non-terminal job, and un-stick the repositories they hold.
+ *
+ * For the INLINE executor only, and correct only there — which is why the caller passes the
+ * decision in rather than this module reading a flag. With `CG_USE_WORKER=false` the process
+ * that dispatches a job is the process that runs it, so a non-terminal row at startup cannot
+ * belong to anything still alive: whatever owned it is gone. With a worker, the identical row
+ * is a job legitimately waiting to be claimed, and failing it here would delete queued work.
+ *
+ * The hole this closes is the inline twin of the expired-lease arm in `claimJob`, and it has
+ * the same consequence, spelled out in that comment: `findLiveJobForRepo` treats every
+ * non-terminal status as live, so `enqueue` answers `repo-busy` forever and the repository can
+ * never be indexed again. A lease cannot close it — nothing renews one in inline mode — so the
+ * boundary that does is process start.
+ *
+ * Observed on a dev server that had been left running: repo `archdex-art/CodeGraph` sat at
+ * `indexing` for five hours behind a `queued` row from an executor that no longer existed,
+ * with no way to recover it from the UI.
+ *
+ * FIVE terminal statuses, not three, because `jobs.status` carries TWO vocabularies. The queue
+ * writes `queued|leased|running|succeeded|failed|cancelled` (`@codegraph/jobs`), while the
+ * inline executor writes the web one — `queued|cloning|indexing|scoring|done|error` — through
+ * `updateJob`. They overlap on `queued` and nowhere else, so a list that knows only the queue's
+ * three terminal names treats every finished INLINE job as abandoned and rewrites its history.
+ * Caught by running this against a real database: it restamped a five-hour-old `error` row.
+ *
+ */
+export function abandonOrphanedJobs(): number {
+  const now = Date.now();
+  const rows = db()
+    .prepare(
+      `UPDATE jobs
+          SET status='failed',
+              error='Abandoned: the process running this job exited',
+              message='Indexing failed',
+              lease_until=NULL, worker_id=NULL, updated_at=?
+        WHERE status NOT IN ('succeeded','failed','cancelled','done','error')
+        RETURNING repo_id`
+    )
+    .all(now) as Array<{ repo_id: string }>;
+
+  // The repo row carries its own status, and the UI reads THAT. Leaving it at `indexing`
+  // would fix the queue and still show a spinner that never resolves.
+  const repo = db().prepare(
+    `UPDATE repos SET status='error', error='Indexing was interrupted — index again to retry'
+      WHERE id=? AND status NOT IN ('done','error')`
+  );
+  for (const r of rows) repo.run(r.repo_id);
+
+  return rows.length;
 }
 
 /** Cheap cancellation check for a worker's checkpoints. */

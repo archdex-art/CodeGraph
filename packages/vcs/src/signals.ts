@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 /**
  * Organisational signals from ONE `git log` pass (PLAN.md §5.2).
@@ -151,12 +151,47 @@ export interface FileSignals {
  *
  * Readonly because `signalsFromCommits` only reads. Exported so a caller can hold the shape
  * without redeclaring it.
+ *
+ * `sha`, `email` and `subject` were added for ownership attribution (`ownership.ts`) and are
+ * ADDITIVE: `signalsFromCommits` still reads only `author`, `at`, `isFix` and `files`, so the
+ * Health Score's inputs are unchanged. `email` is what makes author canonicalisation possible
+ * — the same person commits as "Ada L", "ada" and "Ada Lovelace", and grouping by name alone
+ * reports three contributors and a bus factor of 3 for a file only one person has ever
+ * touched.
  */
 export interface Commit {
   readonly author: string;
   readonly at: number;
   readonly isFix: boolean;
   readonly files: readonly string[];
+  /** Full commit hash. Empty only for a hand-built fixture that omitted it. */
+  readonly sha: string;
+  /** Author email, lowercased by git's own storage rules but NOT normalised here. */
+  readonly email: string;
+  readonly subject: string;
+}
+
+/**
+ * `git log --format` template shared by the `--name-only` pass and the `-p -U0` pass.
+ *
+ * ONE template, because the two passes must agree on field order: they are parsed by two
+ * functions and a divergence would silently misattribute every commit in one of them.
+ *
+ * `%ae` is LAST rather than beside `%an` so that a payload written before it existed — every
+ * fixture in `signals.test.ts`, and any recorded log — still parses, with an empty email
+ * instead of a shifted subject.
+ */
+export const GIT_LOG_FORMAT = `${RS}%H${US}%an${US}%at${US}%s${US}%ae`;
+
+/**
+ * The header line of one `GIT_LOG_FORMAT` record.
+ *
+ * Shared by `parseGitLog` and `parseGitLogHunks` so the two passes cannot drift apart on
+ * field order or on how a short (pre-`%ae`) record degrades.
+ */
+export function parseCommitHeader(header: string): Omit<Commit, "files"> {
+  const [sha = "", author = "", at = "0", subject = "", email = ""] = header.split(US);
+  return { sha, author, at: Number(at) || 0, isFix: isFixSubject(subject), subject, email };
 }
 
 /** Parse one `git log` payload into commits. Exported for tests — no git required. */
@@ -166,7 +201,6 @@ export function parseGitLog(raw: string): Commit[] {
     if (!chunk.trim()) continue;
     const nl = chunk.indexOf("\n");
     const header = nl === -1 ? chunk : chunk.slice(0, nl);
-    const [, author = "", at = "0", subject = ""] = header.split(US);
     const files =
       nl === -1
         ? []
@@ -175,14 +209,34 @@ export function parseGitLog(raw: string): Commit[] {
             .split("\n")
             .map((l) => l.trim())
             .filter(Boolean);
-    commits.push({
-      author,
-      at: Number(at) || 0,
-      isFix: isFixSubject(subject),
-      files,
-    });
+    commits.push({ ...parseCommitHeader(header), files });
   }
   return commits;
+}
+
+/**
+ * Fewest authors accounting for >= 50% of a file's edits. 1 means one person holds it.
+ *
+ * THE definition of bus factor in this codebase, exported so `ownership.ts` calls it rather
+ * than restating the ">= 50%" rule. Two implementations of a number the UI labels "bus
+ * factor" is two answers to the same question, and the file view and the ownership view would
+ * eventually disagree over a rounding boundary — `acc * 2 >= total` versus `acc / total >=
+ * 0.5` already differ for odd totals in floating point.
+ *
+ * `editCounts` may be in any order; it is sorted here rather than trusted, because a caller
+ * that forgets to sort gets a plausible wrong answer rather than a crash.
+ */
+export function busFactorOf(editCounts: readonly number[]): number {
+  const counts = [...editCounts].sort((a, b) => b - a);
+  const total = counts.reduce((s, n) => s + n, 0);
+  let acc = 0;
+  let busFactor = 0;
+  for (const n of counts) {
+    acc += n;
+    busFactor++;
+    if (acc * 2 >= total) break;
+  }
+  return busFactor;
 }
 
 /** Compute every signal from parsed commits. Pure — the testable half. */
@@ -247,14 +301,7 @@ export function signalsFromCommits(all: readonly Commit[]): Map<string, FileSign
     const counts = [...e.byAuthor.values()].sort((a, b) => b - a);
     const total = counts.reduce((s, n) => s + n, 0);
 
-    // Bus factor: how many of the top authors it takes to reach half the edits.
-    let acc = 0;
-    let busFactor = 0;
-    for (const n of counts) {
-      acc += n;
-      busFactor++;
-      if (acc * 2 >= total) break;
-    }
+    const busFactor = busFactorOf(counts);
 
     // Shannon entropy over the author distribution, normalised by log2(authors) so a
     // two-author file and a ten-author file are comparable.
@@ -322,18 +369,36 @@ export interface GitWindow {
 /**
  * Raw `git log` output for a window. Separated from parsing so the T0 boundary is one
  * auditable place: calibration correctness depends entirely on which commits are in scope.
+ *
+ * COMMAND INJECTION, fixed 2026-08-09. This built a SHELL STRING for `execSync` and
+ * interpolated `window.since` and `window.until` into it between double quotes. `since` is
+ * caller-supplied — the calibration harness reads it from a config file and a route could
+ * pass it through — so `{ since: '1.year.ago" ; touch /tmp/pwned ; git log --since="x' }`
+ * closed the quote and ran an arbitrary command as the server user. Every other git call in
+ * this package already went through `execFile` with an argv array (see the header of
+ * `git.ts`); this one was the exception, and there was no reason for it beyond the string
+ * being easier to read.
+ *
+ * ARGUMENT injection is closed too, which the shell removal alone would NOT have done: the
+ * value is glued into a single `--since=<value>` token, so a `since` of `--output=/tmp/x`
+ * arrives as the datum `--since=--output=/tmp/x` rather than as a second option. That is the
+ * `assertRefArg` failure mode from `git.ts`, avoided by construction instead of by a check,
+ * because unlike a ref these values legitimately may contain almost anything.
  */
 export function gitLogRange(root: string, window: GitWindow): string {
-  const until = window.until === undefined ? "" : ` --until="${window.until}"`;
-  return execSync(
-    `git log --since="${window.since}"${until} --name-only --format="${RS}%H${US}%an${US}%at${US}%s"`,
-    {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-      maxBuffer: 64 * 1024 * 1024,
-    },
-  );
+  const args = [
+    "log",
+    `--since=${window.since}`,
+    ...(window.until === undefined ? [] : [`--until=${window.until}`]),
+    "--name-only",
+    `--format=${GIT_LOG_FORMAT}`,
+  ];
+  return execFileSync("git", args, {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+    maxBuffer: 64 * 1024 * 1024,
+  });
 }
 
 /**
@@ -350,13 +415,30 @@ export function gitSignals(
   root: string,
   windowOrMonths: GitWindow | number = 6,
 ): Map<string, FileSignals> {
+  return signalsFromCommits(gitCommits(root, windowOrMonths));
+}
+
+/**
+ * The commits of ONE `git log --name-only` pass, or `[]` when the directory is not a git
+ * repository or git is unavailable.
+ *
+ * Exists so a caller that needs more than one derivation of the history — `indexRepo` wants
+ * both the organisational signals and the ownership report — pays for a single invocation.
+ * `gitSignals` was the only entry point, and the ownership work would otherwise have added a
+ * second full log of the same range, which on a large repository is the most expensive thing
+ * the indexer does.
+ */
+export function gitCommits(
+  root: string,
+  windowOrMonths: GitWindow | number = 6,
+): Commit[] {
   const window: GitWindow =
     typeof windowOrMonths === "number"
       ? { since: `${windowOrMonths}.months.ago` }
       : windowOrMonths;
   try {
-    return signalsFromCommits(parseGitLog(gitLogRange(root, window)));
+    return parseGitLog(gitLogRange(root, window));
   } catch {
-    return new Map();
+    return [];
   }
 }

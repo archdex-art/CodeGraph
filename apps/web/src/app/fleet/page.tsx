@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { rankByDrift } from "@/lib/fleet-drift";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Loader2, Network } from "lucide-react";
 import type { FleetGraph } from "@/lib/types";
@@ -33,9 +34,15 @@ function scoreColor(s: number | null): string {
   return "text-[var(--coral-text)]";
 }
 
-/** One grid track definition shared by the header row and every data row. */
+/**
+ * One grid track definition shared by the header row and every data row.
+ *
+ * At <sm only three tracks survive, and DRIFT keeps one of them at the expense of Edges:
+ * this table is ordered by movement, and a column the order depends on that is invisible
+ * on the width most people open a link at makes the order look arbitrary.
+ */
 const ROW =
-  "grid grid-cols-[minmax(0,1fr)_5rem_4rem] items-center gap-md sm:grid-cols-[minmax(0,1fr)_4.5rem_7rem_5rem_4rem]";
+  "grid grid-cols-[minmax(0,1fr)_6rem_3rem] items-center gap-md sm:grid-cols-[minmax(0,1fr)_4.5rem_6rem_4rem_7rem_3rem]";
 
 const BTN_PRIMARY =
   "inline-flex min-h-11 cursor-pointer items-center gap-sm rounded-lg bg-[var(--accent-fill)] px-md text-meta font-medium text-[var(--accent-on-fill)] transition-colors duration-200 hover:bg-[var(--signal-400)]";
@@ -127,6 +134,19 @@ export default function FleetPage() {
   const outDegree = new Map<string, number>();
   for (const e of graph.edges) outDegree.set(e.source, (outDegree.get(e.source) ?? 0) + 1);
 
+  // The order the table is drawn in: biggest movers since each repo's previous index.
+  // Same comparator the dashboard's ranked table uses, so the two pages cannot disagree
+  // about which repository is first.
+  const ranked = rankByDrift(graph.nodes);
+
+  // The mean is a secondary reading, not the headline: it says how the estate is doing
+  // overall and nothing at all about where to look next, which is what the ranking above
+  // is for.
+  const scored = graph.nodes.filter((n) => n.score !== null);
+  const mean = scored.length
+    ? Math.round(scored.reduce((acc, n) => acc + (n.score ?? 0), 0) / scored.length)
+    : null;
+
   return (
     <div className="shell py-xl">
       <Link
@@ -193,7 +213,22 @@ export default function FleetPage() {
               className={`${ROW} min-h-[3.25rem] cursor-pointer px-md py-sm transition-colors duration-200 hover:bg-[var(--surface-hover)]`}
             >
               <span className="min-w-0">
-                <span className="block truncate text-meta text-[var(--text-primary)]">{n.name}</span>
+                <span className="flex items-center gap-sm">
+                  <span className="truncate text-meta text-[var(--text-primary)]">{n.name}</span>
+                  {/* Same marker the dashboard row carries, for the same reason: this list is
+                      ranked by score, and a truncated walk's score is not comparable with a
+                      whole repository's without saying so. */}
+                  {n.capHit && (
+                    <span className="eyebrow shrink-0 rounded-xs border border-[var(--amber-400)]/30 bg-[var(--amber-400)]/[0.08] px-xs py-2xs leading-none text-[var(--amber-text)]">
+                      sample
+                      <span className="sr-only">
+                        {" "}
+                        — the walk stopped at the CG_MAX_FILES cap, so this score was computed
+                        over part of the repository
+                      </span>
+                    </span>
+                  )}
+                </span>
                 <span className="block truncate font-mono text-meta text-[var(--text-muted)]">{n.url}</span>
               </span>
               <span className="eyebrow hidden sm:block">{n.sourceType === "git" ? "git" : "local"}</span>

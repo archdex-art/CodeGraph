@@ -152,7 +152,11 @@ export function scoreIssues(
   const k = 0.06;
 
   const dims: DimensionScore[] = (Object.keys(DIMENSION_META) as Dimension[]).map((dim) => {
-    const di = issues.filter((i) => i.dimension === dim);
+    // Accepted findings (an inline `codegraph-ignore`, or an entry in `.codegraph-baseline.json`)
+    // are still REPORTED — they just do not charge the score. A suppression that also hid the
+    // finding would make the baseline a place findings go to die; one that charged the score
+    // anyway would make accepting them pointless.
+    const di = issues.filter((i) => i.dimension === dim && !i.suppressed);
     const penalty = di.reduce((s, i) => s + expectedHarm(i), 0);
     const norm = penalty / sizeFactor;
     const sub = 100 * Math.exp(-k * norm);

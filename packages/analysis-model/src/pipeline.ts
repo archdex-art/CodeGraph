@@ -39,6 +39,20 @@ export interface PipelineContext {
    * answer.
    */
   readonly cache?: IndexCacheStore;
+  /**
+   * Where a stage says what it is doing WHILE it does it.
+   *
+   * `stageTimings` below is a post-mortem — it records elapsed ms once a stage has
+   * ended, which is exactly no use to someone watching a job that is still running.
+   * This is the live channel, and it is deliberately the weakest thing in this type:
+   * absent is normal, and a sink that throws is swallowed (see `emitPhase`). A run
+   * must never fail, slow, or change its output because someone was watching it.
+   *
+   * Consumers persist these, so a sink is expected to be wrapped in `coalescePhases`
+   * — the pipeline emits per yield point (every `YIELD_EVERY` files) and a write per
+   * file is not a thing any store should be asked to absorb.
+   */
+  readonly onPhase?: PhaseSink;
 }
 
 /**
@@ -57,6 +71,76 @@ export interface IndexCacheStore {
   load(): unknown | null;
   /** Best-effort persist. Silent no-op on failure. */
   save(payload: unknown): void;
+}
+
+/**
+ * What a stage is doing right now.
+ *
+ * `stage` is the same token `StageTimings` keys on, so the live line and the run record
+ * name the same thing. `done`/`total` are files and are absent at a stage BOUNDARY —
+ * "detect" with no counts means detection just started, and rendering a `0/0` there
+ * would claim a total the stage has not computed yet.
+ */
+export interface IndexPhase {
+  readonly stage: string;
+  readonly done?: number;
+  readonly total?: number;
+}
+
+export type PhaseSink = (phase: IndexPhase) => void;
+
+/**
+ * Report a phase, swallowing anything the sink throws.
+ *
+ * The swallow is the contract, not defensiveness: the sink is a UI/database write
+ * injected by a caller two layers up, and an index that fails because a progress row
+ * could not be written would be a strictly worse product than one that goes quiet.
+ * Same reasoning as `IndexCacheStore` — an observability feature may not be able to
+ * fail the run it observes.
+ */
+export function emitPhase(
+  ctx: PipelineContext | undefined,
+  stage: string,
+  done?: number,
+  total?: number,
+): void {
+  const sink = ctx?.onPhase;
+  if (!sink) return;
+  try {
+    sink(done === undefined ? { stage } : { stage, done, total });
+  } catch {
+    // Deliberately silent: `analysis` has no logger, and a sink that throws every
+    // yield point would otherwise produce one log line per 15 files.
+  }
+}
+
+/** Floor between two persisted phases of the SAME stage. ~2/second. */
+export const PHASE_MIN_INTERVAL_MS = 500;
+
+/**
+ * Rate-limit a sink to one write per `everyMs`, except on a stage change which always
+ * passes through.
+ *
+ * The pipeline emits every `YIELD_EVERY` files because that is the only place it is
+ * allowed to do anything at all (LLD: no work between file boundaries), and on a small
+ * repo that is hundreds of emissions a second. Throttling HERE rather than in each
+ * consumer is what stops the two consumers — the inline path and the worker's stdout
+ * protocol — from drifting into two different definitions of "too often".
+ *
+ * A stage change is exempt because it is the transition a watcher is actually waiting
+ * for, and dropping it would leave the previous stage's counts on screen for up to half
+ * a second after that stage ended — the one moment the line would be lying.
+ */
+export function coalescePhases(sink: PhaseSink, everyMs: number = PHASE_MIN_INTERVAL_MS): PhaseSink {
+  let lastStage: string | null = null;
+  let lastAt = 0;
+  return (phase) => {
+    const now = Date.now();
+    if (phase.stage === lastStage && now - lastAt < everyMs) return;
+    lastStage = phase.stage;
+    lastAt = now;
+    sink(phase);
+  };
 }
 
 /** Throws if cancellation was requested. Called at stage yield points. */
