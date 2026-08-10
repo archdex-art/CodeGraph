@@ -65,9 +65,18 @@ describe("verdictFor", () => {
     expect(verdictFor(record("none", [gate("syntax", "failed")]))).toBe("failed");
   });
 
-  it("is `none` when no record exists", () => {
-    // Paths that never verified must not borrow a verdict they did not earn.
-    expect(verdictFor(undefined)).toBe("none");
+  it("separates a patch that could not be verified from a run with nothing to patch", () => {
+    /*
+     * Both arrive with no record, and they mean opposite things. A run that produced edits and
+     * then gated none of them is genuinely unverified. A run that produced NO edits has nothing
+     * to verify, and rendering it as "Not verified — no verification gate completed" beside an
+     * amber warning made the product's headline promise look like it had failed, on every
+     * repository whose findings no provider claims.
+     */
+    expect(verdictFor(undefined, 3)).toBe("none");
+    expect(verdictFor(undefined, 0)).toBe("nothing");
+    // A real patch that WAS gated keeps its own verdict regardless of the count.
+    expect(verdictFor(record("full", [gate("tests", "passed")]), 0)).toBe("full");
   });
 
   it("is `none` when the record says none", () => {
@@ -75,7 +84,7 @@ describe("verdictFor", () => {
   });
 });
 
-describe("the four verdicts are visually distinct", () => {
+describe("the five verdicts are visually distinct", () => {
   // Source-level, matching this repo's convention for UI claims (see publish-consent.test.ts):
   // the requirement is about what a user can TELL APART, and the colour tokens are the thing
   // that differs. A shared palette would silently defeat the whole point.
@@ -85,8 +94,15 @@ describe("the four verdicts are visually distinct", () => {
     // Scope to the LEVEL table — STATUS below has its own `fg` tokens for the gate chips.
     const levels = src.slice(src.indexOf("const LEVEL = {"), src.indexOf("const GATE_LABEL"));
     const fgs = [...levels.matchAll(/fg:\s*"([^"]+)"/g)].map((m) => m[1]);
-    expect(fgs).toHaveLength(4);
-    expect(new Set(fgs).size).toBe(4);
+    expect(fgs).toHaveLength(5);
+    expect(new Set(fgs).size).toBe(5);
+  });
+
+  it("does not dress `nothing to fix` as a warning", () => {
+    // The whole point of the fifth verdict: a no-op must not borrow the amber palette that
+    // means "we could not check this", nor the green that means "we did".
+    const block = src.slice(src.indexOf("nothing: {"), src.indexOf("none: {"));
+    expect(block).not.toMatch(/amber|coral|accent-text/);
   });
 
   it("does not paint `partial` with the `full` palette", () => {

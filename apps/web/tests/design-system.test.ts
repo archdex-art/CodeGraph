@@ -123,3 +123,49 @@ describe("the tokens themselves", () => {
     expect(measure / rail).toBeCloseTo(2.618, 1); // φ², i.e. two more divisions
   });
 });
+
+/**
+ * Every custom property a component names must exist.
+ *
+ * WHY THIS IS A TEST AND NOT A CONVENTION
+ *
+ * An undefined custom property fails SILENTLY and invisibly. `var(--accent-on)` is not a
+ * syntax error; it makes the declaration invalid at computed-value time, so `color` falls
+ * back to the inherited value and `background-color` to transparent. Nothing warns. Nothing
+ * throws. The build passes, the page renders, and the only symptom is a control that looks
+ * slightly wrong to whoever happens to look at it.
+ *
+ * Both instances found when this was written were exactly that shape and both had shipped:
+ * the Ask button asked for `--accent-on` (the token is `--accent-on-fill`) and rendered its
+ * label in inherited grey on the accent fill instead of ink, and the ownership share bar
+ * asked for `--accent` (the token is `--accent-fill`) and rendered no bar at all.
+ *
+ * A typo in a token name is indistinguishable from a deliberate one by eye, which is what
+ * makes this worth asserting rather than reviewing.
+ */
+describe("custom properties resolve", () => {
+  /*
+   * Injected at runtime by `next/font` in `app/layout.tsx`, which sets each one on the html
+   * element via a generated class. They are genuinely defined, just not in the stylesheet, so
+   * they are named here rather than weakening the check to a warning.
+   */
+  const RUNTIME_INJECTED = new Set(["--font-geist-sans", "--font-geist-mono", "--font-instrument"]);
+
+  const sheet = readFileSync(path.join(SRC, "app/globals.css"), "utf8");
+  const declared = new Set([...sheet.matchAll(/(--[a-z0-9-]+)\s*:/gi)].map((m) => m[1]!));
+  // A component may define a property inline (`style={{ "--w": … }}`) and read it back.
+  const inline = new Set(FILES.flatMap(([, src]) => [...src.matchAll(/["'`](--[a-z0-9-]+)["'`]\s*:/gi)].map((m) => m[1]!)));
+
+  it.each(FILES.map(([name, src]) => [name, src]))("%s names only properties that exist", (name, src) => {
+    const missing = [...src.matchAll(/var\((--[a-z0-9-]+)/gi)]
+      .map((m) => m[1]!)
+      .filter((v) => !declared.has(v) && !inline.has(v) && !RUNTIME_INJECTED.has(v));
+    expect([...new Set(missing)], `${name} reads properties nothing defines`).toEqual([]);
+  });
+
+  it("reads the stylesheet it is checking against", () => {
+    // The check passes trivially if `declared` is empty, so prove the parse worked.
+    expect(declared.has("--accent-fill")).toBe(true);
+    expect(declared.size).toBeGreaterThan(100);
+  });
+});

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, FolderGit2, Loader2, Network, Trash2 } from "lucide-react";
-import { fetchRepos, deleteRepo } from "@/lib/api";
+import { ArrowRight, FolderGit2, Loader2, Network, RotateCw, Trash2 } from "lucide-react";
+import { fetchRepos, deleteRepo, startIndex } from "@/lib/api";
+import { plural } from "@/lib/plural";
 import type { RepoSummary } from "@/lib/types";
 import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
 import { ScoreDial } from "@/components/ScoreDial";
@@ -87,9 +88,50 @@ const BTN_GHOST =
 
 type Order = "risk" | "recent";
 
+/**
+ * Which repositories compete for attention, and which are merely dead entries.
+ *
+ * Default order is RISK, not recency: the question this page exists to answer is "where do I
+ * look first", and insertion order answers a different one. In-flight rows sort to the top of
+ * the risk view because an index still running is the most urgent thing on the page and has no
+ * score to rank it by.
+ *
+ * FAILED ROWS ARE NOT RANKED AT ALL, and that is a correction. They used to sort above
+ * everything for the same "no score" reason. Measured on a real dashboard: three dead entries
+ * — a typo'd URL from the previous day among them — sat above every repository the reader
+ * actually works on, 4 of 19 rows outranking the other 15. A run that never finished is
+ * urgent; a run that finished by failing yesterday is a dead entry needing dismissal or
+ * another attempt. They get their own group, where they can be acted on without competing.
+ *
+ * Pure and exported because the partition is the part that can be wrong in a way users see,
+ * and a rendered component is a bad place to prove it is not.
+ */
+export function triage(
+  repos: readonly RepoSummary[] | null,
+  order: Order,
+): { live: RepoSummary[]; failed: RepoSummary[] } {
+  const recent = (a: RepoSummary, b: RepoSummary) =>
+    (b.finishedAt ?? b.createdAt) - (a.finishedAt ?? a.createdAt);
+  // `filter` allocates, so neither branch can reach the caller's array — no defensive copy.
+  const all = repos ?? [];
+  return {
+    live: all
+      .filter((r) => r.status !== "error")
+      .sort((a, b) =>
+        order === "recent"
+          ? recent(a, b)
+          : (a.status !== "done" ? -1 : (a.score ?? 101)) - (b.status !== "done" ? -1 : (b.score ?? 101)),
+      ),
+    // Always newest-first: there is no risk to rank, and the one you just tried is the one
+    // you are still thinking about.
+    failed: all.filter((r) => r.status === "error").sort(recent),
+  };
+}
+
 export default function DashboardPage() {
   const [repos, setRepos] = useState<RepoSummary[] | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [order, setOrder] = useState<Order>("risk");
 
   async function handleDelete(id: string, name: string) {
@@ -102,6 +144,36 @@ export default function DashboardPage() {
       window.alert(err instanceof Error ? err.message : "Failed to delete repository");
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  /**
+   * Another attempt at a repository whose index failed.
+   *
+   * Re-submits the URL rather than calling `/api/repos/:id/reindex`. Verified, not assumed:
+   * re-index answers 404 "Workspace not ready" for a failed row, and correctly so — the clone
+   * never landed, so there is nothing on disk to read again.
+   *
+   * THE OLD ROW IS THEN RETIRED, because `/api/index` does NOT reuse it. Measured: retrying
+   * left two rows for the same URL, both errored, so the dashboard grew a duplicate every time
+   * someone tried again — turning a fix for clutter into a source of it. Deleting only when
+   * the id actually changed keeps this correct if that ever starts reusing: superseding a row
+   * is the intent, and deleting the id the new job is running under would kill the retry.
+   *
+   * Worth having because the common cause is transient or trivially correctable — a rate
+   * limit, a private repo before signing in, a typo already visible in the row — and the URL
+   * is right there. Without it the only path forward is retyping it on another page.
+   */
+  async function handleRetry(repo: RepoSummary) {
+    setRetryingId(repo.id);
+    try {
+      const { repoId } = await startIndex({ repoUrl: repo.url });
+      if (repoId !== repo.id) await deleteRepo(repo.id);
+      setRepos(await fetchRepos());
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Failed to start indexing");
+    } finally {
+      setRetryingId(null);
     }
   }
 
@@ -134,20 +206,7 @@ export default function DashboardPage() {
     ? scored.reduce((lo, r) => ((r.score ?? 100) < (lo.score ?? 100) ? r : lo))
     : null;
 
-  /**
-   * Default order is RISK, not recency.
-   *
-   * The question this page exists to answer is "where do I look first", and
-   * insertion order answers a different one. In-flight and failed rows sort to the
-   * top of the risk view because an index that never finished is the most urgent
-   * thing on the page and has no score to rank it by.
-   */
-  const rows = [...(repos ?? [])].sort((a, b) => {
-    if (order === "recent") return (b.finishedAt ?? b.createdAt) - (a.finishedAt ?? a.createdAt);
-    const rank = (r: RepoSummary) =>
-      r.status === "error" ? -2 : r.status !== "done" ? -1 : (r.score ?? 101);
-    return rank(a) - rank(b);
-  });
+  const { live, failed } = triage(repos, order);
 
   const meanBand = band(mean);
   const meanBandColor = meanBand.color;
@@ -331,7 +390,7 @@ export default function DashboardPage() {
             </div>
 
             <Stagger className="divide-y divide-[var(--line-soft)]" step={0.035}>
-              {rows.map((r) => {
+              {live.map((r) => {
                 const processing = r.status !== "done" && r.status !== "error";
                 const clickable = r.status === "done";
                 const b = band(r.score);
@@ -380,6 +439,28 @@ export default function DashboardPage() {
                                 }}
                               >
                                 lowest
+                              </span>
+                            )}
+                            {/* A ranked table that puts a sampled score beside whole-repository
+                                ones without saying so is the misleading case ADR-008 names. The
+                                word carries the meaning; the colour only reinforces it. */}
+                            {r.capHit && (
+                              <span
+                                className="eyebrow shrink-0 rounded-xs border px-xs py-2xs leading-none"
+                                style={{
+                                  color: "var(--amber-text)",
+                                  borderColor: "color-mix(in srgb, var(--amber-400) 30%, transparent)",
+                                  background: "color-mix(in srgb, var(--amber-400) 8%, transparent)",
+                                }}
+                              >
+                                sample
+                                {/* The row is `pointer-events-none`, so a `title` tooltip would
+                                    never open — the explanation goes where it can still be read. */}
+                                <span className="sr-only">
+                                  {" "}
+                                  — the walk stopped at the CG_MAX_FILES cap, so this score was
+                                  computed over part of the repository
+                                </span>
                               </span>
                             )}
                             <span className="eyebrow hidden shrink-0 rounded-xs border border-[var(--line)] px-xs py-2xs leading-none md:inline">
@@ -446,6 +527,52 @@ export default function DashboardPage() {
               })}
             </Stagger>
           </div>
+
+          {/*
+            * Below the list, not inside it. These have no score to rank and no page to open;
+            * what they need is another attempt or removal, which is all this group offers.
+            */}
+          {failed.length > 0 && (
+            <div className="mt-xl" data-testid="failed-group">
+              <p className="eyebrow mb-md">
+                {plural(failed.length, "repository", "repositories")} failed to index · not scored, not counted
+              </p>
+              <div className="panel divide-y divide-[var(--line-soft)] overflow-hidden">
+                {failed.map((r) => (
+                  <div key={r.id} className="flex flex-wrap items-center gap-md px-lg py-md">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-meta text-[var(--text-secondary)]">{r.name}</p>
+                      {/* The URL is the diagnosis for the most common cause: a typo you can
+                          see the moment it is put in front of you. */}
+                      <p className="truncate font-mono text-micro text-[var(--text-faint)]">{r.url}</p>
+                    </div>
+                    <span className="tnum shrink-0 text-micro text-[var(--text-muted)]">{ago(r.finishedAt ?? r.createdAt)}</span>
+                    <div className="flex shrink-0 items-center gap-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleRetry(r)}
+                        disabled={retryingId === r.id}
+                        aria-label={`Retry ${r.name}`}
+                        className="flex min-h-9 cursor-pointer items-center gap-xs rounded-lg border border-[var(--line)] px-sm text-meta text-[var(--text-secondary)] transition-colors duration-200 hover:border-[var(--accent-text)]/30 hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {retryingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}
+                        Retry
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(r.id, r.name)}
+                        disabled={deletingId === r.id}
+                        aria-label={`Remove ${r.name}`}
+                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-transparent text-[var(--text-faint)] transition-colors duration-200 hover:border-[var(--coral-500)]/25 hover:bg-[var(--coral-500)]/10 hover:text-[var(--coral-text)] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

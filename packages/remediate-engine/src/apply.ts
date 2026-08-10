@@ -46,7 +46,15 @@ const SKIP_DIRS = new Set([
   "vendor", ".cache",
 ]);
 
-/** Files a codemod may read. Bounded so a repository with a huge vendored tree cannot stall. */
+/**
+ * Files a codemod may read. Bounded so a repository with a huge vendored tree cannot stall.
+ *
+ * The listing is SORTED. Two reasons, and the second is the load-bearing one: the diff this
+ * produces is ordered by the walk, so an unsorted walk emits the same patch with its files
+ * shuffled between machines; and the walk is capped at `limit`, so past the cap filesystem
+ * order would decide WHICH files a run even fixes. `codegraph fix` claims a deterministic
+ * result for identical input, and a sort is what makes that claim true.
+ */
 export function walkCode(root: string, limit = 5000): string[] {
   const out: string[] = [];
   const stack = [root];
@@ -58,19 +66,23 @@ export function walkCode(root: string, limit = 5000): string[] {
     } catch {
       continue;
     }
+    entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    // Sub-directories go on the stack in REVERSE, so `pop()` descends in ascending name order.
+    const dirs: string[] = [];
     for (const e of entries) {
       const full = path.join(dir, e.name);
       // Symlinks are not followed: a repository can point one outside the tree, and a fixer
       // that follows it edits a file the caller never offered.
       if (e.isSymbolicLink()) continue;
       if (e.isDirectory()) {
-        if (!SKIP_DIRS.has(e.name)) stack.push(full);
+        if (!SKIP_DIRS.has(e.name)) dirs.push(full);
         continue;
       }
       if (!e.isFile()) continue;
       if (CODE_EXTS.has(path.extname(e.name).toLowerCase())) out.push(full);
       if (out.length >= limit) break;
     }
+    for (let i = dirs.length - 1; i >= 0; i--) stack.push(dirs[i]!);
   }
   return out;
 }

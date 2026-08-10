@@ -12,6 +12,46 @@
  * recorded here, not an accident that compiles.
  */
 
+const { readdirSync, readFileSync, existsSync } = require("node:fs");
+const path = require("node:path");
+
+/**
+ * What "published entry point" MEANS, read from the packages themselves.
+ *
+ * Both deep-import rules below used to hardcode `src/index.ts`. That was a proxy for the real
+ * rule and it was accurate only while every package had exactly one entry — the moment one
+ * needed a second, the guard reported a violation for something the package had deliberately
+ * published, and the tempting fix is to bolt the new path into a regex by hand.
+ *
+ * `exports` is already the declaration of what a package publishes; Node enforces it at
+ * resolution time. Reading it here makes the guard agree with the manifest by construction,
+ * so a package still controls exactly what apps may import — the boundary is unchanged, only
+ * the place it is written down. Same reasoning as `ALLOWED` above: state it once, mechanically.
+ *
+ * A package with no `exports` map falls back to `src/index.ts`, which is what it would have
+ * been held to before.
+ */
+function publishedEntryPoints() {
+  const root = path.join(__dirname, "packages");
+  const out = [];
+  for (const name of readdirSync(root)) {
+    const manifest = path.join(root, name, "package.json");
+    if (!existsSync(manifest)) continue;
+    const map = JSON.parse(readFileSync(manifest, "utf8")).exports ?? { ".": "./src/index.ts" };
+    for (const target of Object.values(map)) {
+      // Only string targets. A conditional export object would need resolving per condition,
+      // and no package here uses one — if that changes this must grow, not silently pass.
+      if (typeof target === "string") out.push(`packages/${name}/${target.replace(/^\.\//, "")}`);
+    }
+  }
+  return out;
+}
+
+/** The entry points as one anchored alternation, for `pathNot`. */
+const ENTRY_POINT_RE = `^(${publishedEntryPoints()
+  .map((p) => p.replace(/\./g, "\\."))
+  .join("|")})$`;
+
 /** @type {Record<string, readonly string[]>} */
 const ALLOWED = {
   // Bottom of the stack: pure types, zero deps, zero I/O (LLD §2).
@@ -195,7 +235,7 @@ module.exports = {
     {
       name: "no-deep-import-across-packages",
       comment:
-        "src/index.ts is a package's ONLY public surface (LLD §1.1). Reaching " +
+        "A package's `exports` map is its ONLY public surface (LLD §1.1). Reaching " +
         "past it freezes another package's internals into your contract, which " +
         "is exactly what this refactor exists to undo. Relative imports inside " +
         "a package are unaffected — the $1 back-reference exempts self.",
@@ -203,20 +243,21 @@ module.exports = {
       from: { path: "^packages/([^/]+)/" },
       to: {
         path: "^packages/[^/]+/src/",
-        pathNot: ["^packages/$1/", "^packages/[^/]+/src/index\\.ts$"],
+        pathNot: ["^packages/$1/", ENTRY_POINT_RE],
       },
     },
 
     {
       name: "no-deep-import-from-app",
       comment:
-        "An app consumes a package through its published entry point only " +
-        "(LLD §1.1).",
+        "An app consumes a package through an entry point that package DECLARES " +
+        "in its `exports` map (LLD §1.1). Publishing a second one is a deliberate " +
+        "act recorded in the manifest, not a path an app may reach for.",
       severity: "error",
       from: { path: "^apps/" },
       to: {
         path: "^packages/[^/]+/src/",
-        pathNot: "^packages/[^/]+/src/index\\.ts$",
+        pathNot: ENTRY_POINT_RE,
       },
     },
 
@@ -269,6 +310,28 @@ module.exports = {
           // `cloneRepo` produces one. What `indexer.ts` does is bulk read-only
           // enumeration of an already-validated root. It writes nothing.
           "^packages/analysis/src/indexer\\.ts$",
+          // `advisories.ts`, 2026-08-09. Same shape and the same argument as `indexer.ts`
+          // above, restated rather than pointed at, because a waiver nobody can re-derive is
+          // the kind that outlives its reason:
+          //
+          //   It READS ONLY — `existsSync`, `readFileSync`, `readdirSync`, `statSync`, and
+          //   nothing else. Checked by grep, not assumed: no write, no mkdir, no unlink. The
+          //   failure this rule exists to prevent is a WRITE that escapes a root, and there is
+          //   no write here to escape with.
+          //
+          //   The root is validated before it arrives — `vcs.resolveLocalDir` or `cloneRepo`
+          //   produced it — so this is bulk read-only enumeration of a directory the boundary
+          //   already accepted, exactly as `indexer.ts` is.
+          //
+          //   It cannot route through `fsx` for the reason `indexer.ts` cannot: the
+          //   WorkspaceHandle is async by design (§10.1) and this scan is synchronous
+          //   throughout, so the conversion changes the pipeline's execution shape rather than
+          //   moving a call.
+          //
+          //   It bounds what it reads — walk depth, manifest count, lockfile bytes — and skips
+          //   symlinks via `withFileTypes`, so a crafted repository cannot use it to read
+          //   outside the tree or to stall an index.
+          "^packages/analysis/src/advisories\\.ts$",
         ],
       },
       to: { path: "^(node:)?fs(/promises)?$", dependencyTypes: ["core"] },
@@ -330,11 +393,11 @@ module.exports = {
       to: { circular: true },
     },
 
-    // `no-orphans` is deliberately NOT enabled. It fired on nine modules that
+    // `no-orphans` is deliberately NOT enabled. It fired on eight modules that
     // are all genuinely imported (urlSafety, localAccess, basicAuth, colors,
-    // layout, editorLang, anthropicKeyCheck, GithubMark, postcss.config) —
-    // false positives caused by unresolved path aliases, plus config files that
-    // are legitimately never imported. A warn-level rule that cries wolf nine
+    // layout, editorLang, GithubMark, postcss.config) — false positives caused
+    // by unresolved path aliases, plus config files that
+    // are legitimately never imported. A warn-level rule that cries wolf eight
     // times teaches everyone to ignore the tool, which costs more than the
     // dead code it would find. Unreferenced-export detection is knip's job
     // (LLD §13.1 already uses it to find dead shims).
