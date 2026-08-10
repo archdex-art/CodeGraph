@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { indexRepo } from "../src/indexer";
 
 /**
@@ -181,7 +181,24 @@ describe("self-index invariant — against this actual repository", () => {
    * re-implements the aggregation and compares it to itself proves only that the function is
    * deterministic.
    */
-  it("finds exactly the external dependencies this repo's manifests declare", { timeout: 120_000 }, async () => {
+  /*
+   * ONE index, two assertions.
+   *
+   * Both of these used to call `indexRepo(".")` themselves — a full walk of the whole
+   * repository, twice, for ~19s each locally. That is the entire cost of this file, and it
+   * had no reason to be paid twice: the two tests assert different properties of the SAME
+   * analysis. The first already carried a 120s override; the second inherited the 30s default
+   * and timed out on a two-core CI runner as soon as this branch made the tree bigger.
+   *
+   * Raising the second timeout would have hidden that. Indexing once removes it: the work
+   * halves, and a third assertion about the real tree now costs nothing.
+   */
+  let real: Awaited<ReturnType<typeof indexRepo>>;
+  beforeAll(async () => {
+    real = await indexRepo(".");
+  }, 180_000);
+
+  it("finds exactly the external dependencies this repo's manifests declare", async () => {
     const { readdirSync, readFileSync, existsSync } = await import("node:fs");
 
     const manifestPaths = ["package.json"];
@@ -209,14 +226,12 @@ describe("self-index invariant — against this actual repository", () => {
     }
     for (const n of internal) declared.delete(n);
 
-    const r = await indexRepo(".");
-    expect([...r.dependencies].sort()).toEqual([...declared].sort());
+    expect([...real.dependencies].sort()).toEqual([...declared].sort());
   });
 
-  it("does not attribute a nested clone's dependencies to this repo", async () => {
+  it("does not attribute a nested clone's dependencies to this repo", () => {
     // `apps/web/data/workspaces/` really does contain cloned repositories on a working
     // checkout. This asserts the exclusion holds on the real tree, not just a fixture.
-    const r = await indexRepo(".");
-    expect(r.issues.filter((i) => i.file.startsWith("apps/web/data/workspaces/"))).toEqual([]);
+    expect(real.issues.filter((i) => i.file.startsWith("apps/web/data/workspaces/"))).toEqual([]);
   });
 });
