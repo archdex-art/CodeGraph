@@ -76,9 +76,9 @@ export async function runJob(
     jobId: job.id,
     repoId: job.repoId,
     attempts: job.attempts,
-    progress(percent, stage, message) {
+    progress(percent, stage, message, phaseJson) {
       if (leaseLost) return false;
-      const held = queue.progress(job.id, job.workerId, percent, stage, message);
+      const held = queue.progress(job.id, job.workerId, percent, stage, message, phaseJson);
       if (!held) leaseLost = true;
       return held;
     },

@@ -12,6 +12,7 @@ import {
 } from "@codegraph/core-graph";
 import {
   YIELD_EVERY,
+  emitPhase,
   throwIfAborted,
   yieldToEventLoop,
   type Dimension,
@@ -39,6 +40,8 @@ import { lintForSecurity } from "./eslintSecurity";
  */
 
 interface Rule {
+  /** Stable machine identity — see `Issue.rule`. Never derived from `title`. */
+  id: string;
   re: RegExp;
   dimension: Dimension;
   severity: number;
@@ -51,6 +54,12 @@ interface Rule {
    * finding: a weak signal should move the weight, not silence the report.
    */
   adjust?: (m: RegExpExecArray) => number;
+  /**
+   * One line a reader can check without opening the file. Defaults to the matched text,
+   * trimmed and bounded; a rule overrides it when the raw match is misleading (a secret's
+   * value) or uninformative on its own.
+   */
+  evidence?: (m: RegExpExecArray, line: string) => string;
   /**
    * Syntactic contexts in which this rule can legitimately fire. Defaults to `["code"]`.
    *
@@ -69,6 +78,50 @@ interface Rule {
 
 const DEFAULT_CONTEXT: readonly SourceContext[] = ["code"];
 
+/**
+ * Inline acceptance: `codegraph-ignore` on the offending line or the line above it, and
+ * `codegraph-ignore-file` anywhere in a file's first lines.
+ *
+ * An optional rule list narrows it — `// codegraph-ignore hardcoded-secret — fixture` accepts
+ * that rule and leaves every other finding on the line reportable. A bare directive accepts
+ * the line. This is the escape hatch that makes a strict gate survivable; without one, the
+ * first false positive in CI gets the whole check disabled.
+ */
+const IGNORE_RE = /codegraph-ignore(-file)?\b[ \t]*([a-z0-9/_-]+(?:[ \t,]+[a-z0-9/_-]+)*)?/i;
+/** How far into a file a file-level directive may sit: a licence header's worth of lines. */
+const IGNORE_FILE_SCAN_LINES = 10;
+
+function parseIgnore(line: string): { file: boolean; rules: Set<string> | null } | null {
+  const m = IGNORE_RE.exec(line);
+  if (!m) return null;
+  const list = m[2]?.trim();
+  // An em-dash reason (`codegraph-ignore — fixture`) is not a rule list.
+  const rules = list ? new Set(list.split(/[ \t,]+/).filter((r) => /[a-z]/i.test(r) && r.includes("-"))) : null;
+  return { file: !!m[1], rules: rules && rules.size ? rules : null };
+}
+
+/** Rule ids accepted at `lineIndex`, or `"all"`. Null when nothing is accepted there. */
+function ignoredAt(lines: string[], lineIndex: number): Set<string> | "all" | null {
+  for (const candidate of [lines[lineIndex], lineIndex > 0 ? lines[lineIndex - 1] : undefined]) {
+    if (candidate === undefined) continue;
+    const parsed = parseIgnore(candidate);
+    if (parsed && !parsed.file) return parsed.rules ?? "all";
+  }
+  return null;
+}
+
+function fileIgnored(lines: string[]): Set<string> | "all" | null {
+  for (const line of lines.slice(0, IGNORE_FILE_SCAN_LINES)) {
+    const parsed = parseIgnore(line);
+    if (parsed?.file) return parsed.rules ?? "all";
+  }
+  return null;
+}
+
+function isIgnored(scope: Set<string> | "all" | null, rule: string): boolean {
+  return scope === "all" || (scope !== null && scope.has(rule));
+}
+
 // A real secret never contains a literal "..." ellipsis or matches a common
 // placeholder word — those are documentation/example conventions.
 const PLACEHOLDER_SECRET_RE = /^(\.{3,}|x{4,}|\*{4,}|your[-_ ]?\w*|example\w*|placeholder\w*|changeme|insert[-_ ]?\w*|redacted|dummy|fake|sample|todo|<.*>|\{\{.*\}\})$/i;
@@ -82,7 +135,9 @@ const PLACEHOLDER_SECRET_RE = /^(\.{3,}|x{4,}|\*{4,}|your[-_ ]?\w*|example\w*|pl
  *   apps/web/src/lib/settings.ts:71  anthropicApiKey: "assistant.anthropicApiKey"
  *   apps/web/tests/redact.test.ts:13 anthropicApiKey: "sk-ant-BAD-KEY"
  *
- * The first is a settings PATH, not a value. The second is a test fixture.
+ * The first is a settings PATH, not a value. The second is a test fixture. Both files went
+ * with the assistant when the product became LLM-free, but the two SHAPES did not: a config
+ * path used as a value and a deliberately fake fixture are what this rule exists to separate.
  *
  * Entropy was tried first and does not separate them: the fixture
  * `sk-ant-SCOPED-BUT-VALID-KEY` scores H=4.18, ABOVE the real-shaped `AKIAIOSFODNN7EXAMPLE`
@@ -167,21 +222,25 @@ function markerNotQuoted(re: RegExp, line: string): boolean {
 
 // Heuristic, language-agnostic-ish defect/risk rules.
 const RULES: Rule[] = [
-  { re: /\beval\s*\(/, dimension: "security", severity: 5, confidence: 0.95, title: "Use of eval()" },
-  { re: /child_process|os\.system\(|subprocess\.(call|run|Popen)\(/, dimension: "security", severity: 3, confidence: 0.85, title: "Shell/process execution" },
+  { id: "eval-call", re: /\beval\s*\(/, dimension: "security", severity: 5, confidence: 0.95, title: "Use of eval()" },
+  { id: "shell-execution", re: /child_process|os\.system\(|subprocess\.(call|run|Popen)\(/, dimension: "security", severity: 3, confidence: 0.85, title: "Shell/process execution" },
   {
+    id: "hardcoded-secret",
     re: /(password|secret|api[_-]?key|token)\s*[:=]\s*['"]([^'"]{6,})['"]/i,
     dimension: "security", severity: 5, confidence: 0.8, title: "Possible hardcoded secret",
     validate: (_line, m) => !isPlaceholderSecret(m[2]),
     adjust: (m) => (looksLikeCredential(m[2]) ? 1 : WEAK_SECRET_FACTOR),
+    // Never the value itself: the evidence line is rendered in a browser, stored in SQLite
+    // and posted to a pull request. Shape is what the reader needs to judge the finding.
+    evidence: (m) => `assigned to \`${m[1]}\`, ${m[2]!.length} chars, ${looksLikeCredential(m[2]!) ? "generated-looking" : "hand-written-looking"}`,
   },
   // A hardcoded URL IS a string literal; in a comment it is an example, not a config value.
-  { re: /https?:\/\/[^"'\s]*(?<![\w.])(localhost|127\.0\.0\.1)/, dimension: "security", severity: 2, confidence: 0.9, title: "Hardcoded local URL", context: ["string", "code"] },
-  { re: /\bdangerouslySetInnerHTML\b|innerHTML\s*=/, dimension: "security", severity: 3, confidence: 0.95, title: "Raw HTML injection sink" },
+  { id: "hardcoded-local-url", re: /https?:\/\/[^"'\s]*(?<![\w.])(localhost|127\.0\.0\.1)/, dimension: "security", severity: 2, confidence: 0.9, title: "Hardcoded local URL", context: ["string", "code"] },
+  { id: "raw-html-sink", re: /\bdangerouslySetInnerHTML\b|innerHTML\s*=/, dimension: "security", severity: 3, confidence: 0.95, title: "Raw HTML injection sink" },
   // The SELECT half matches inside the query string; the `query(` half matches in code.
-  { re: /SELECT\s+.+\+|query\(\s*['"`].*\$\{/i, dimension: "security", severity: 4, confidence: 0.7, title: "Possible SQL string concatenation", context: ["code", "string"] },
+  { id: "sql-concatenation", re: /SELECT\s+.+\+|query\(\s*['"`].*\$\{/i, dimension: "security", severity: 4, confidence: 0.7, title: "Possible SQL string concatenation", context: ["code", "string"] },
 
-  { re: /\bconsole\.(log|debug)\b|^\s*print\(/m, dimension: "correctness", severity: 1, confidence: 1.0, title: "Leftover debug output" },
+  { id: "debug-output", re: /\bconsole\.(log|debug)\b|^\s*print\(/m, dimension: "correctness", severity: 1, confidence: 1.0, title: "Leftover debug output" },
   /**
    * A debugger STATEMENT, not the word.
    *
@@ -199,9 +258,9 @@ const RULES: Rule[] = [
    * that the lexical tier had never been precision-tested. It was the one place the held-out
    * run found a new failure.
    */
-  { re: /(?:^|[;{}]|\*\/)\s*debugger\s*(?:;|$)/, dimension: "correctness", severity: 2, confidence: 1.0, title: "debugger statement",
+  { id: "debugger-statement", re: /(?:^|[;{}]|\*\/)\s*debugger\s*(?:;|$)/, dimension: "correctness", severity: 2, confidence: 1.0, title: "debugger statement",
     exts: { ".ts": true, ".tsx": true, ".js": true, ".jsx": true, ".mjs": true, ".cjs": true } },
-  { re: /catch\s*\([^)]*\)\s*\{\s*\}/, dimension: "correctness", severity: 3, confidence: 0.9, title: "Empty catch block" },
+  { id: "empty-catch", re: /catch\s*\([^)]*\)\s*\{\s*\}/, dimension: "correctness", severity: 3, confidence: 0.9, title: "Empty catch block" },
   /**
    * A marker lives in a comment BY DEFINITION, and must FOLLOW the comment opener.
    *
@@ -215,7 +274,7 @@ const RULES: Rule[] = [
    * a JSDoc `*`, or `#`. A mention sits mid-sentence. Trailing markers
    * (`const x = 1; // TODO: later`) still match, because the opener is still immediately before.
    */
-  { re: TODO_MARKER_RE, dimension: "maintainability", severity: 1, confidence: 1.0, title: "TODO/FIXME marker", context: ["comment"],
+  { id: "todo-marker", re: TODO_MARKER_RE, dimension: "maintainability", severity: 1, confidence: 1.0, title: "TODO/FIXME marker", context: ["comment"],
     validate: (line) => markerNotQuoted(TODO_MARKER_RE, line) },
   /**
    * Same failure, same fix. A directive suppresses something only when the compiler reads it as
@@ -223,9 +282,9 @@ const RULES: Rule[] = [
    * comment EXPLAINING `@ts-ignore` - nothing was suppressed, so the finding's title was simply
    * untrue (protocol rule 5).
    */
-  { re: SUPPRESSION_RE, dimension: "maintainability", severity: 2, confidence: 1.0, title: "Suppressed checker", context: ["comment"],
+  { id: "suppressed-checker", re: SUPPRESSION_RE, dimension: "maintainability", severity: 2, confidence: 1.0, title: "Suppressed checker", context: ["comment"],
     validate: (line) => markerNotQuoted(SUPPRESSION_RE, line) },
-  { re: /:\s*any\b|\bas\s+any\b/, dimension: "correctness", severity: 1, confidence: 1.0, title: "Untyped `any`", exts: { ".ts": true, ".tsx": true } },
+  { id: "untyped-any", re: /:\s*any\b|\bas\s+any\b/, dimension: "correctness", severity: 1, confidence: 1.0, title: "Untyped `any`", exts: { ".ts": true, ".tsx": true } },
 ];
 
 /**
@@ -315,8 +374,24 @@ let _issueSeq = 0;
 export function resetIssueIds(): void {
   _issueSeq = 0;
 }
-export function mkIssue(dim: Dimension, sev: number, title: string, file: string, line: number, br: number, conf?: number, churn?: number): Issue {
-  return { id: `iss_${_issueSeq++}`, dimension: dim, severity: sev, confidence: conf, title, file, line, blastRadius: br, churn: churn ?? 1 };
+/**
+ * `rule` leads the parameter list because it is the finding's identity: a call site that has
+ * to state it cannot forget it, and every consumer downstream — suppression, baseline, SARIF,
+ * the per-rule tally — is keyed on it rather than on the prose title.
+ */
+export function mkIssue(
+  rule: string,
+  dim: Dimension,
+  sev: number,
+  title: string,
+  file: string,
+  line: number,
+  br: number,
+  conf?: number,
+  churn?: number,
+  evidence?: string,
+): Issue {
+  return { id: `iss_${_issueSeq++}`, rule, dimension: dim, severity: sev, confidence: conf, title, file, line, blastRadius: br, churn: churn ?? 1, ...(evidence ? { evidence } : {}) };
 }
 
 /**
@@ -334,12 +409,14 @@ export function mkIssue(dim: Dimension, sev: number, title: string, file: string
  * between two indexes of the same tree.
  */
 interface IssueSeed {
+  rule: string;
   dimension: Dimension;
   severity: number;
   title: string;
   line: number;
   confidence?: number;
   occurrences?: number;
+  evidence?: string;
 }
 
 /**
@@ -348,7 +425,13 @@ interface IssueSeed {
  * previous version of this file - a rule you just fixed would keep reporting the old answer,
  * and nothing would look broken.
  */
-const SEEDS_VERSION = "detect-seeds-v1";
+const SEEDS_VERSION = "detect-seeds-v2-rule-ids";
+
+/** Matched text, trimmed and bounded — the default evidence line. */
+function matchEvidence(m: RegExpExecArray): string {
+  const text = m[0].trim().replace(/\s+/g, " ");
+  return text.length > 120 ? `${text.slice(0, 117)}…` : text;
+}
 
 function computeSeeds(text: string, ext: string, loc: number): IssueSeed[] {
   const seeds: IssueSeed[] = [];
@@ -375,8 +458,10 @@ function computeSeeds(text: string, ext: string, loc: number): IssueSeed[] {
     lineStart[i] = at;
     at += lines[i].length + 1; // +1 for the "\n" removed by split
   }
+  const fileScope = fileIgnored(lines);
   for (const rule of RULES) {
     if (rule.exts && !rule.exts[ext]) continue;
+    if (isIgnored(fileScope, rule.id)) continue;
     const validContexts = rule.context ?? DEFAULT_CONTEXT;
     let emitted = 0;
     let occurrences = 0;
@@ -384,6 +469,7 @@ function computeSeeds(text: string, ext: string, loc: number): IssueSeed[] {
     for (const [lineIndex, line] of lines.entries()) {
       const m = rule.re.exec(line);
       if (!m || (rule.validate && !rule.validate(line, m))) continue;
+      if (isIgnored(ignoredAt(lines, lineIndex), rule.id)) continue;
       // Structural gate. `spans` empty => "code" => unchanged behaviour.
       if (spans.length && !validContexts.includes(contextAt(spans, lineStart[lineIndex] + m.index)))
         continue;
@@ -395,11 +481,13 @@ function computeSeeds(text: string, ext: string, loc: number): IssueSeed[] {
       if (emitted < HITS_PER_RULE_PER_FILE) {
         if (firstSeedIndex === -1) firstSeedIndex = seeds.length;
         seeds.push({
+          rule: rule.id,
           dimension: rule.dimension,
           severity: rule.severity,
           title: rule.title,
           line: lineIndex + 1,
           confidence: scaleConfidence(rule.confidence, tierPenalty * (rule.adjust?.(m) ?? 1)),
+          evidence: (rule.evidence ?? matchEvidence)(m, line),
         });
         emitted++;
       }
@@ -419,32 +507,50 @@ function computeSeeds(text: string, ext: string, loc: number): IssueSeed[] {
   // Parse once, and only if a sink finding actually needs provenance checking.
   let taintSf: ts.SourceFile | null = null;
   for (const f2 of secFindings) {
+    if (isIgnored(fileScope, f2.rule) || isIgnored(ignoredAt(lines, f2.line - 1), f2.rule)) continue;
     let confidence = f2.confidence;
+    let provenance = "";
     if (f2.taintable && TS_FAMILY_EXT[ext]) {
       // The filename is a label on the AST, never an input to the verdict, so a synthetic
       // one keeps this function pure in (text, ext) - which is what makes it cacheable.
       taintSf ??= ts.createSourceFile(`file${ext}`, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
       const call = callAt(taintSf, f2.line, f2.column);
       const arg = call?.arguments[0];
-      if (arg) confidence = adjustForTaint(confidence, classifyTaint(arg, TAINT_QUERY));
+      if (arg) {
+        const verdict = classifyTaint(arg, TAINT_QUERY);
+        confidence = adjustForTaint(confidence, verdict);
+        // The single most useful thing a reader of this finding can be told. "untraced" is
+        // why 100 of these were noise on this repository; saying so on the finding itself is
+        // what lets someone dismiss it in one glance instead of opening the file.
+        provenance =
+          verdict === "tainted"
+            ? " — argument reaches an untrusted source"
+            : verdict === "sanitized"
+              ? " — argument passes a sanitizer"
+              : " — argument is internal (no untrusted source in this function)";
+      }
     }
     seeds.push({
+      rule: f2.rule,
       dimension: "security",
       severity: f2.severity,
       title: f2.title,
       line: f2.line,
       confidence: scaleConfidence(confidence, tierPenalty),
+      evidence: `${f2.message ?? f2.title}${provenance}`,
     });
   }
 
   // God-file: very large source file → maintainability penalty scaled by fan-in.
-  if (loc > 600) {
+  if (loc > 600 && !isIgnored(fileScope, "large-file")) {
     seeds.push({
+      rule: "large-file",
       dimension: "maintainability",
       severity: loc > 1200 ? 4 : 2,
       title: `Large file (${loc} LOC)`,
       line: 1,
       confidence: 0.9,
+      evidence: `${loc} lines; this repository's own bar is 600`,
     });
   }
   return seeds;
@@ -456,6 +562,11 @@ export async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, numb
     if (idx > 0 && idx % YIELD_EVERY === 0) {
       await yieldToEventLoop();
       throwIfAborted(ctx);
+      // Reported HERE and never from inside `computeSeeds`: that function is memoised on
+      // (text, ext, loc), so a side effect in it would fire on a cache miss and not on a
+      // hit — progress would silently stop the moment the incremental cache warmed, and a
+      // pure function would have become impure to do it.
+      emitPhase(ctx, "detect", idx, files.length);
     }
     const f = files[idx];
     if (!f.text) continue;
@@ -469,7 +580,7 @@ export async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, numb
       computeSeeds(f.text, f.ext, f.loc),
     );
     for (const s of seeds) {
-      const issue = mkIssue(s.dimension, s.severity, s.title, f.rel, s.line, br, s.confidence, ch);
+      const issue = mkIssue(s.rule, s.dimension, s.severity, s.title, f.rel, s.line, br, s.confidence, ch, s.evidence);
       if (s.occurrences !== undefined) issue.occurrences = s.occurrences;
       issues.push(issue);
     }
@@ -478,17 +589,51 @@ export async function analyzeFiles(files: ScannedFile[], fanIn: Map<string, numb
 }
 
 
+/**
+ * Is this path a test file?
+ *
+ * THE BUG THIS FIXES, found by running CodeGraph on `sindresorhus/slugify`: the old pattern
+ * was `/(\.|_|\/)(test|spec)/`, which requires a separator BEFORE the word, so a repository
+ * whose entire suite is a top-level `test.js` — the AVA/ava-style convention across a large
+ * part of npm — reported "No test files detected" as its highest-severity finding, and the
+ * agent swarm then raised a P0 about untested code that was in fact tested. One wrong
+ * separator, at the top of the report, on a healthy repository.
+ *
+ * Written as an explicit list of the conventions that actually exist rather than one clever
+ * regex, because the failure above was a clever regex.
+ */
+export function isTestFile(rel: string): boolean {
+  const path = rel.replace(/\\/g, "/");
+  const base = path.slice(path.lastIndexOf("/") + 1);
+  const stem = base.replace(/\.[^.]+$/, "");
+  return (
+    // A directory anywhere in the path: test/, tests/, spec/, __tests__/, testing/
+    /(^|\/)(tests?|specs?|__tests__|testing)\//i.test(path) ||
+    // foo.test.ts, foo_test.go, foo-spec.rb, foo.spec.tsx
+    /[._-](test|spec)$/i.test(stem) ||
+    // test_foo.py, spec_foo.rb, test-foo.js
+    /^(test|spec)[._-]/i.test(stem) ||
+    // A file that IS the suite: test.js, spec.ts, tests.py
+    /^(tests?|specs?)$/i.test(stem) ||
+    // Java/Kotlin/C# conventions: FooTest.java, TestFoo.cs, FooTests.cs
+    /^(test|tests)[A-Z]/.test(stem) ||
+    /(Test|Tests|Spec)$/.test(stem) ||
+    // conftest.py is pytest's fixture module — a test file by any useful definition
+    /^conftest$/i.test(stem)
+  );
+}
+
 /** Test integrity: presence/ratio of test files. */
 export function analyzeTests(files: ScannedFile[]): Issue[] {
   const code = files.filter((f) => CODE_EXTS[f.ext]);
   if (code.length === 0) return [];
-  const tests = code.filter((f) => /(\.|_|\/)(test|spec)/i.test(f.rel) || /(^|\/)tests?\//i.test(f.rel));
+  const tests = code.filter((f) => isTestFile(f.rel));
   const ratio = tests.length / code.length;
   const issues: Issue[] = [];
   if (tests.length === 0) {
-    issues.push(mkIssue("test_integrity", 4, "No test files detected", ".", 1, 3, 0.6));
+    issues.push(mkIssue("no-tests", "test_integrity", 4, "No test files detected", ".", 1, 3, 0.6, 1, `${code.length} code files, none matching a test-file convention`));
   } else if (ratio < 0.1) {
-    issues.push(mkIssue("test_integrity", 2, `Low test coverage ratio (${(ratio * 100).toFixed(0)}% of code files)`, ".", 1, 2, 0.75));
+    issues.push(mkIssue("low-test-ratio", "test_integrity", 2, `Low test coverage ratio (${(ratio * 100).toFixed(0)}% of code files)`, ".", 1, 2, 0.75, 1, `${tests.length} test files against ${code.length} code files`));
   }
   return issues;
 }

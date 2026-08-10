@@ -10,7 +10,7 @@ const {
   db,
   findingById,
   findingsForRun,
-  insertRepo,
+  upsertRepo,
   latestRunCoverage,
   latestRunId,
   legacyRuleId,
@@ -26,7 +26,7 @@ beforeEach(() => {
   db().exec("DELETE FROM findings");
   db().exec("DELETE FROM runs");
   db().exec("DELETE FROM repos");
-  insertRepo({
+  upsertRepo({
     id: "r1",
     url: "/tmp/x",
     name: "x",
@@ -230,7 +230,7 @@ describe("run retention", () => {
     // The DELETE is repo-scoped on both sides of the NOT IN. Dropping the scope from the
     // subquery would silently delete every OTHER repo's history the moment one repo passed
     // the cap — the worst possible failure for a retention policy.
-    insertRepo({ id: "r2", url: "/tmp/y", name: "y", sourceType: "local", ownerId: null, createdAt: 1 });
+    upsertRepo({ id: "r2", url: "/tmp/y", name: "y", sourceType: "local", ownerId: null, createdAt: 1 });
     recordRun({ ...run("other-1", 500), repoId: "r2" }, []);
     for (let i = 0; i < 25; i++) recordRun(run(`run-${i}`, 1000 + i), []);
 

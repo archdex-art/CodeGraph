@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@codegraph/observability";
+import { config } from "@codegraph/config";
 import { repoAccessDenied } from "@/lib/authz";
+import { clientIp } from "@/lib/rateLimit";
 import { getJob } from "@/lib/store";
 
 export const runtime = "nodejs";
@@ -30,6 +32,44 @@ const TICK_MS = 500;
  * tab closed mid-index does not always deliver an abort promptly.
  */
 const MAX_STREAM_MS = 15 * 60_000;
+/**
+ * Concurrently open streams, globally and per client.
+ *
+ * Each one holds a Node handle and a twice-a-second SQLite read for up to fifteen minutes,
+ * and nothing bounded how many a single client could open. Refusing past the ceiling is safe
+ * to do bluntly because the client already falls back to polling `/api/jobs/:id` when the
+ * stream is unavailable — SSE through a proxy was never guaranteed, so the fallback exists
+ * and is exercised.
+ *
+ * Module-level state, which is correct here and not a coincidence: the thing being counted is
+ * connections held open by THIS process, so a per-process counter is exactly the scope of the
+ * resource. Nothing to coordinate across instances.
+ */
+const openStreams = { total: 0, byIp: new Map<string, number>() };
+
+function acquireStream(ip: string): boolean {
+  if (openStreams.total >= config.maxEventStreams) return false;
+  const forIp = openStreams.byIp.get(ip) ?? 0;
+  if (forIp >= config.maxEventStreamsPerIp) return false;
+  openStreams.total++;
+  openStreams.byIp.set(ip, forIp + 1);
+  return true;
+}
+
+function releaseStream(ip: string): void {
+  openStreams.total = Math.max(0, openStreams.total - 1);
+  const forIp = (openStreams.byIp.get(ip) ?? 1) - 1;
+  // Delete rather than keep a zero: the map is keyed by client IP and would otherwise grow
+  // once per distinct visitor for the life of the process.
+  if (forIp <= 0) openStreams.byIp.delete(ip);
+  else openStreams.byIp.set(ip, forIp);
+}
+
+/** Test seam — a module-level counter outlives a test file otherwise. */
+export function resetEventStreamsForTests(): void {
+  openStreams.total = 0;
+  openStreams.byIp.clear();
+}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -41,6 +81,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!initial) return NextResponse.json({ error: "Job not found" }, { status: 404 });
   const denied = repoAccessDenied(req, initial.repoId);
   if (denied) return denied;
+
+  // Taken AFTER the access check so a refused stream cannot be used to probe job ids, and
+  // released by `finish()` on every exit path below.
+  const ip = clientIp(req);
+  if (!acquireStream(ip)) {
+    logger.warn("SSE stream refused: at capacity", { jobId: id, open: openStreams.total });
+    return NextResponse.json(
+      { error: "Too many open progress streams. The client falls back to polling." },
+      { status: 503, headers: { "Retry-After": "5" } },
+    );
+  }
 
   const encoder = new TextEncoder();
   const started = Date.now();
@@ -67,6 +118,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const finish = (): void => {
         if (closed) return;
         closed = true;
+        // Every exit runs through here — timeout, terminal status, vanished job, client
+        // disconnect — which is why the slot is released here and nowhere else.
+        releaseStream(ip);
         if (timer !== undefined) clearInterval(timer);
         try {
           controller.close();

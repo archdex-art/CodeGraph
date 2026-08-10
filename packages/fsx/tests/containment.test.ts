@@ -62,6 +62,58 @@ describe("lexical traversal", () => {
   });
 });
 
+describe("the git directory is not part of the workspace", () => {
+  /**
+   * `.git/config` is inside the root, so containment alone accepted it. A git config the
+   * repository owner did not write is code execution — `filter.<driver>.clean` runs on the
+   * `git add -A` behind the editor's commit button, `[diff] external` runs on a diff — and
+   * reading it back yields the clone's `x-access-token:<PAT>@github.com` remote.
+   *
+   * `listDir` hid `.git` from the tree long before this, which is why every test here uses
+   * `resolveSafe` directly: hiding a path is not access control, and the API took an explicit
+   * path from the caller.
+   */
+  let root: string;
+  beforeEach(() => {
+    root = freshWorkspace();
+    mkdirSync(path.join(root, ".git"), { recursive: true });
+    writeFileSync(path.join(root, ".git", "config"), "[remote \"origin\"]\n", "utf8");
+  });
+
+  it("rejects a direct path into .git", () => {
+    expect(() => resolveSafe(root, ".git/config")).toThrow(WorkspacePathError);
+  });
+
+  it("rejects .git reached through a traversal that normalises back inside", () => {
+    expect(() => resolveSafe(root, "src/../.git/config")).toThrow(WorkspacePathError);
+  });
+
+  it("rejects the .git directory itself", () => {
+    expect(() => resolveSafe(root, ".git")).toThrow(WorkspacePathError);
+  });
+
+  it("rejects a nested submodule gitdir", () => {
+    expect(() => resolveSafe(root, "src/vendor/.git/hooks/pre-commit")).toThrow(WorkspacePathError);
+  });
+
+  it("rejects a case-variant on a case-insensitive filesystem", () => {
+    expect(() => resolveSafe(root, ".GIT/config")).toThrow(WorkspacePathError);
+  });
+
+  it("rejects .git reached through an in-workspace symlink", () => {
+    // The lexical check sees `innocent/config`. Only re-checking the resolved path catches it.
+    symlinkSync(path.join(root, ".git"), path.join(root, "innocent"));
+    expect(() => resolveSafe(root, "innocent/config")).toThrow(WorkspacePathError);
+  });
+
+  it("still allows .gitignore, which is ordinary editable source", () => {
+    // The rule is about the gitdir, not about every dotfile that starts with the same five
+    // characters. Over-blocking here would break editing a file users legitimately edit.
+    expect(() => resolveSafe(root, ".gitignore")).not.toThrow();
+    expect(() => resolveSafe(root, ".gitattributes")).not.toThrow();
+  });
+});
+
 describe("symlink escapes — what a lexical check alone would miss", () => {
   let root: string;
   let outside: string;

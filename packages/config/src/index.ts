@@ -43,11 +43,12 @@ export const config: Config = liveView(buildSchema(), () => process.env);
  * explicit overrides.
  *
  * This exists so "no `process.env` outside config" can be enforced without lying
- * about what the code needs. Three call sites legitimately require the *whole*
- * inherited environment rather than any particular value — `git` needs PATH,
- * HOME, SSH_AUTH_SOCK and the rest to run at all, and the Claude Agent SDK
- * spawns its own CLI. That is environment *propagation*, not a configuration
- * read, and no typed schema can stand in for it.
+ * about what the code needs. A handful of call sites legitimately require the
+ * *whole* inherited environment rather than any particular value — `git` needs
+ * PATH, HOME, SSH_AUTH_SOCK and the rest to run at all, and a sandboxed build
+ * toolchain needs whatever its own launcher put there. That is environment
+ * *propagation*, not a configuration read, and no typed schema can stand in for
+ * it.
  *
  * Keeping them here makes the ban a real invariant with one explicit, greppable
  * exception rather than a rule with three scattered violations.

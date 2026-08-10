@@ -89,6 +89,15 @@ export const migration001: Migration = {
         deleted_at INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_trash_repo ON trash(repo_id, deleted_at);
+      -- VESTIGIAL. The only thing that ever wrote rows here was the AI-assistant
+      -- configuration UI (Anthropic key, Claude model, local-LLM base URL and the
+      -- saved provider profiles), and CodeGraph is now LLM-free: nothing reads or
+      -- writes this table. It is still created, and never dropped, because a
+      -- destructive migration is the one change that can stop an existing
+      -- deployment from booting — SQLite would have to rebuild the table, and any
+      -- older binary rolled back onto the same file would then fail on a missing
+      -- table. A handful of dead key/value rows costs nothing; a failed boot on
+      -- someone's persistent volume costs everything.
       CREATE TABLE IF NOT EXISTS settings (
         key TEXT NOT NULL,
         user_id INTEGER NOT NULL DEFAULT 0,
@@ -125,6 +134,11 @@ export const migration001: Migration = {
     //
     // No explicit BEGIN/COMMIT here, unlike the v1 version: the runner already
     // wraps every migration in a transaction, and a nested BEGIN would throw.
+    //
+    // Also vestigial now (see the CREATE TABLE above), and kept for the same
+    // reason: it only ever runs against a database old enough to still have the
+    // single-row-per-key `settings` shape, and removing it would leave that
+    // database with a primary key the rest of this migration assumes away.
     if (!columnNames(db, "settings").has("user_id")) {
       db.exec(`
         ALTER TABLE settings RENAME TO settings_pre_peruser;

@@ -21,6 +21,7 @@ export default function ArchitecturePage() {
         <ArchitectureView
           modules={repo.modules!}
           viz={repo.viz}
+          repoName={repo.name}
           onSelect={onSelect}
           immersive
         />

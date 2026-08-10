@@ -1,5 +1,6 @@
 import type { RepoDetail } from "../types";
-import { QueryEngine } from "../codeintel/query";
+import { QueryEngine, untestedHubs } from "../codeintel/query";
+import { plural } from "../plural";
 import type { AgentId, Finding } from "./types";
 
 // Shared context passed to every specialist.
@@ -35,7 +36,7 @@ const security: Specialist = {
           severity: i.severity,
           confidence: i.confidence ?? (i.severity >= 4 ? 0.9 : 0.65),
           title: i.title,
-          detail: `Security-sensitive pattern on a path with blast radius ${i.blastRadius}. Exploitable code reachable from ${i.blastRadius} caller(s) warrants review.`,
+          detail: `Security-sensitive pattern on a path with blast radius ${i.blastRadius}. Exploitable code reachable from ${plural(i.blastRadius, "caller")} warrants review.`,
           file: i.file,
           line: i.line,
           symbol: null,
@@ -45,9 +46,61 @@ const security: Specialist = {
           effort: i.severity >= 4 ? "M" : "S",
         })
       );
-    return [...base, ...taintFindings(repo, qe)];
+    /**
+     * The real analysis when the index produced one, the reachability approximation when it
+     * did not — and never both, or the same flow would be reported twice under two different
+     * confidences. Absent means the row predates `analyseTaint`; a present-but-empty report
+     * means it ran and found nothing, which must NOT fall back to the weaker check and
+     * manufacture findings the better analysis rejected.
+     */
+    const taint = repo.taint ? taintReportFindings(repo) : taintFindings(repo, qe);
+    return [...base, ...taint];
   },
 };
+
+/**
+ * Findings from the REAL inter-procedural analysis, when the index produced one.
+ *
+ * `analyseTaint` follows the value — argument index to parameter index across resolved call
+ * edges — so a path here is a claim about data. The fallback below is reachability: "a handler
+ * can reach a function that contains a flagged line", which says nothing about whether the
+ * untrusted value arrives there. Preferring the real one when it exists is the whole reason
+ * the index pays for it.
+ *
+ * A `sanitized` path is DROPPED from the finding list rather than reported at low severity: the
+ * report keeps it (see `/intel?op=taint`) so a reader can see the defence, but a specialist
+ * exists to name things to fix, and a guarded path is not one.
+ */
+function taintReportFindings(repo: RepoDetail): Finding[] {
+  const report = repo.taint;
+  if (!report) return [];
+  const out: Finding[] = [];
+  for (const path of report.paths) {
+    if (path.sanitized) continue;
+    if (out.length >= 10) break;
+    const hops = Math.max(1, path.hops.length - 1);
+    out.push(
+      mk("security", {
+        // Severity follows confidence rather than a constant: a 4-hop heuristic chain and a
+        // 1-hop type-resolved one are not the same claim and must not read as one.
+        severity: path.confidence >= 0.7 ? 5 : 4,
+        confidence: path.confidence,
+        title: `Untrusted input reaches ${path.sink.rule.replace(/-/g, " ")}`,
+        detail:
+          `${path.source.evidence} flows to ${path.sink.evidence} through ${hops} call${hops > 1 ? "s" : ""}` +
+          ` (${path.hops.map((h) => h.name).join(" → ")}). Value-tracked across call boundaries, not just reachability.`,
+        file: path.source.file,
+        line: path.source.line,
+        symbol: path.source.symbolId,
+        blastRadius: path.hops.length,
+        churn: repo.churnByFile?.[path.source.file] ?? 1,
+        suggestedFix: `Validate or encode the value before it reaches ${path.sink.file}:${path.sink.line}.`,
+        effort: "M",
+      }),
+    );
+  }
+  return out;
+}
 
 // ---- Shallow taint reachability ----
 // Source: any callable whose signature suggests it receives raw request/user input
@@ -309,33 +362,26 @@ const test: Specialist = {
         })
       ));
 
-    // Pass 2: The actual intersection — identify hubs with zero test callers
-    const isTestFile = (f: string) => /(\.|_|\/)(test|spec)\./i.test(f) || /(^|\/)tests?\//i.test(f);
-    
-    for (const hub of qe.hubs(30)) {
-      if (isTestFile(hub.file) || hub.fanIn < 2) continue; // skip test files themselves
-      
-      const callers = qe.callers(hub.id);
-      const hasTestCaller = callers.some(c => isTestFile(c.file));
-      
-      if (!hasTestCaller) {
-        findings.push(
-          mk("test", {
-            severity: Math.min(4, 2 + Math.floor(hub.fanIn / 5)), // scale severity with fan-in
-            confidence: 0.85, // confident that we found no test callers in the graph
-            title: `Untested core logic: ${hub.name}`,
-            detail: `${hub.name} has ${hub.fanIn} production callers but zero callers from test files. A regression here has massive blast radius.`,
-            file: hub.file,
-            line: hub.line,
-            symbol: hub.id,
-            blastRadius: hub.fanIn,
-            churn: repo.churnByFile?.[hub.file] ?? 1,
-            suggestedFix: `Write a focused unit test for ${hub.name} covering its primary success and failure paths.`,
-            effort: "M",
-          })
-        );
-        if (findings.length >= 15) break;
-      }
+    // Pass 2: The actual intersection — hubs with zero test callers. The predicate and
+    // its ordering live in `codeintel/query.ts` because the impact page reports the same
+    // set; see `untestedHubs` for why it is shared rather than copied.
+    for (const hub of untestedHubs(qe)) {
+      findings.push(
+        mk("test", {
+          severity: Math.min(4, 2 + Math.floor(hub.fanIn / 5)), // scale severity with fan-in
+          confidence: 0.85, // confident that we found no test callers in the graph
+          title: `Untested core logic: ${hub.name}`,
+          detail: `${hub.name} has ${hub.fanIn} production callers but zero callers from test files. A regression here has massive blast radius.`,
+          file: hub.file,
+          line: hub.line,
+          symbol: hub.id,
+          blastRadius: hub.fanIn,
+          churn: repo.churnByFile?.[hub.file] ?? 1,
+          suggestedFix: `Write a focused unit test for ${hub.name} covering its primary success and failure paths.`,
+          effort: "M",
+        })
+      );
+      if (findings.length >= 15) break;
     }
     
     return findings;

@@ -181,7 +181,7 @@ describe("self-index invariant — against this actual repository", () => {
    * re-implements the aggregation and compares it to itself proves only that the function is
    * deterministic.
    */
-  it("finds exactly the external dependencies this repo's manifests declare", async () => {
+  it("finds exactly the external dependencies this repo's manifests declare", { timeout: 120_000 }, async () => {
     const { readdirSync, readFileSync, existsSync } = await import("node:fs");
 
     const manifestPaths = ["package.json"];

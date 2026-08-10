@@ -19,7 +19,8 @@
     "dev:worker": "npm run start --workspace @codegraph/worker",
     "docker:verify": "bash scripts/verify-docker.sh",
     "docker:paths": "bash scripts/verify-docker.sh --paths",
-    "bench": "tsx scripts/bench.mts"
+    "bench": "tsx scripts/bench.mts",
+    "selfindex": "tsx scripts/selfindex.mts"
   },
   "devDependencies": {
     "dependency-cruiser": "^17.0.1",

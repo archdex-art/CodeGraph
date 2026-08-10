@@ -2,6 +2,8 @@ import { getTimeline, Strategies, type TimelineSnapshot, type SelectionStrategy 
 import { loadSnapshot } from "./snapshotLoader";
 import { analyzeSnapshot, buildSnapshot } from "./historicalAnalysis";
 import type { ArchitectureEvolution, ArchitectureSnapshot, SnapshotMetrics } from "./types";
+import type { SnapshotDelta, TrendPoint } from "./timelineDelta";
+import { snapshotDelta, trendPointOf } from "./structuralFacts";
 import { saveSnapshot, loadSnapshotCache, hasSnapshot, listSnapshots } from "./timelineStore";
 import { TimelineController } from "./timelineController";
 import { getIndexedHead } from "../store";
@@ -111,5 +113,36 @@ export class TimelineEngine {
     }
     
     return trends.sort((a, b) => a.timestamp - b.timestamp);
+  }
+
+  /**
+   * Trend points for the snapshots ALREADY cached, oldest first.
+   *
+   * Cache-only on purpose: this is what the timeline opens with, and a `git archive` plus a
+   * full re-index per commit is minutes of work the reader did not ask for. Whatever has been
+   * indexed is what gets plotted; the Build button is how you get more of it.
+   */
+  public async getTrendPoints(): Promise<TrendPoint[]> {
+    const hashes = await listSnapshots(this.repoId);
+    const points: TrendPoint[] = [];
+    for (const hash of hashes) {
+      const snap = await loadSnapshotCache(this.repoId, hash);
+      if (snap) points.push(trendPointOf(snap));
+    }
+    return points.sort((a, b) => a.timestamp - b.timestamp);
+  }
+
+  /**
+   * What moved between two already-cached snapshots — findings by rule, files, and the
+   * structural series. Null when either side is not cached, so the caller can say "index
+   * it first" rather than silently starting a build.
+   */
+  public async getSnapshotDelta(base: string, head: string): Promise<SnapshotDelta | null> {
+    const [baseSnap, headSnap] = await Promise.all([
+      loadSnapshotCache(this.repoId, base),
+      loadSnapshotCache(this.repoId, head),
+    ]);
+    if (!baseSnap || !headSnap) return null;
+    return snapshotDelta(baseSnap, headSnap);
   }
 }

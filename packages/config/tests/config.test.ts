@@ -42,14 +42,12 @@ describe("defaults match the v1 call sites they replace", () => {
 
   it("leaves every optional credential undefined when unset", () => {
     // The app must boot with a completely empty environment — GitHub sign-in
-    // and both assistant backends are opt-in, and CG_SESSION_SECRET is
-    // validated lazily where a session is actually encrypted, not at boot.
+    // is opt-in, and CG_SESSION_SECRET is validated lazily where a session is
+    // actually encrypted, not at boot.
     const c = loadConfig(empty);
     expect(c.sessionSecret).toBeUndefined();
     expect(c.githubOauthClientId).toBeUndefined();
     expect(c.githubOauthClientSecret).toBeUndefined();
-    expect(c.anthropicApiKey).toBeUndefined();
-    expect(c.localLlmBaseUrl).toBeUndefined();
     expect(c.ownerGithubLogin).toBeUndefined();
     expect(c.publicAppUrl).toBeUndefined();
   });
@@ -221,5 +219,41 @@ describe("the exported `config` reads the environment live", () => {
       if (original === undefined) delete process.env["CG_MAX_FILES"];
       else process.env["CG_MAX_FILES"] = original;
     }
+  });
+});
+
+describe("execution topology defaults", () => {
+  /**
+   * `useWorker` is the one default that must track the PROCESS TOPOLOGY rather than a
+   * preference: a queued job is claimed by `apps/worker`, the container starts that process
+   * and `next dev` does not. Wrong in one direction, every dev index hangs forever waiting
+   * for a claimant; wrong in the other, every unconfigured deployment runs a memory-bound
+   * parse on the request path — the OOM ADR-001 exists to prevent.
+   */
+  it("routes through the worker in production", () => {
+    expect(loadConfig({ NODE_ENV: "production" }).useWorker).toBe(true);
+  });
+
+  it("runs inline anywhere else, because nothing would claim the job", () => {
+    expect(loadConfig({ NODE_ENV: "development" }).useWorker).toBe(false);
+    expect(loadConfig({ NODE_ENV: "test" }).useWorker).toBe(false);
+    expect(loadConfig(empty).useWorker).toBe(false);
+  });
+
+  it("lets either mode be chosen explicitly, whatever NODE_ENV says", () => {
+    expect(loadConfig({ NODE_ENV: "production", CG_USE_WORKER: "false" }).useWorker).toBe(false);
+    expect(loadConfig({ NODE_ENV: "development", CG_USE_WORKER: "true" }).useWorker).toBe(true);
+  });
+
+  it("bounds concurrent analysis on the host, in either mode", () => {
+    expect(loadConfig(empty).maxConcurrentJobs).toBe(2);
+    expect(loadConfig({ CG_MAX_CONCURRENT_JOBS: "4" }).maxConcurrentJobs).toBe(4);
+    // A ceiling of zero would accept work and never run it.
+    expect(() => loadConfig({ CG_MAX_CONCURRENT_JOBS: "0" })).toThrow(ConfigError);
+  });
+
+  it("bounds open progress streams globally and per client", () => {
+    expect(loadConfig(empty).maxEventStreams).toBe(64);
+    expect(loadConfig(empty).maxEventStreamsPerIp).toBe(8);
   });
 });

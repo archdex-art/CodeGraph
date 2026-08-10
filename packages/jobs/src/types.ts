@@ -78,7 +78,12 @@ export interface JobContext {
    * worker has taken the job over. A handler that sees false MUST stop: anything
    * it writes after that point races the new owner.
    */
-  progress(percent: number, stage: string, message: string): boolean;
+  /**
+   * `phaseJson` is the live sub-stage line (`{"stage":"detect","done":231,"total":462}`),
+   * opaque to the queue and cleared by every report that omits it — the phase belongs to
+   * the stage that produced it and must not outlive it.
+   */
+  progress(percent: number, stage: string, message: string, phaseJson?: string | null): boolean;
   /**
    * Whether cancellation has been requested.
    *

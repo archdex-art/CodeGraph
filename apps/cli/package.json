@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@codegraph/analysis": "*",
+    "@codegraph/analysis-model": "*",
     "@codegraph/config": "*",
     "@codegraph/core-domain": "*",
     "@codegraph/observability": "*",

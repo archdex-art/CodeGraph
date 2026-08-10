@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef } from "react";
 import type { ModuleGraph, VizGraph } from "@/lib/types";
 import { langColor } from "@/lib/colors";
 import { layeredLayout } from "@/lib/layout";
+import { useGraphUrl } from "@/lib/useGraphUrl";
 import { NodeGraph, type NGNode, type NGEdge } from "./NodeGraph";
 import { GraphSearch } from "./GraphSearch";
+import { GraphExport } from "./GraphExport";
+import { plural } from "@/lib/plural";
 
 const BOX = { w: 180, h: 64, hGap: 40, vGap: 84 };
 
@@ -33,18 +36,28 @@ function moduleOf(fileId: string, moduleIds: ReadonlySet<string>): string {
 export function ArchitectureView({
   modules,
   viz,
+  repoName = "",
   onSelect,
   immersive = false,
 }: {
   modules: ModuleGraph;
   /** File-level graph, used to fill an opened module. Without it, modules are leaves. */
   viz?: VizGraph | null;
+  /** Names the exported file; the export is otherwise indifferent to which repo this is. */
+  repoName?: string;
   onSelect?: (id: string | null) => void;
   /** Full-bleed canvas: fills parent height, floating search overlay. */
   immersive?: boolean;
 }) {
-  const [focusId, setFocusId] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  /** Wrapper the export reaches through to find the `<svg>`. */
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * The expanded module and the searched-for node live in the query string, so the
+   * link in a review comment opens the module it is talking about. `expandedId` is
+   * read straight off it — an id no module owns simply expands nothing, which is what
+   * a link into a repo that has since been reindexed should do.
+   */
+  const [{ open: expandedId, focus }, setUrl] = useGraphUrl();
 
   const { nodes, edges } = useMemo(() => {
     const moduleIds = new Set(modules.nodes.map((m) => m.id));
@@ -126,8 +139,8 @@ export function ArchitectureView({
         w: open ? containerSize!.w : BOX.w,
         h: open ? containerSize!.h : BOX.h,
         label: m.label,
-        subtitle: `${m.language || "mixed"} · ${m.files} files`,
-        meta: `${m.loc.toLocaleString()} LOC${m.issues ? ` · ${m.issues} issue(s)` : ""}`,
+        subtitle: `${m.language || "mixed"} · ${plural(m.files, "file")}`,
+        meta: `${m.loc.toLocaleString()} LOC${m.issues ? ` · ${plural(m.issues, "issue")}` : ""}`,
         color: langColor(m.language),
         issues: m.issues,
         container: open,
@@ -176,20 +189,29 @@ export function ArchitectureView({
     return <p className="text-meta text-[var(--text-muted)] border border-dashed border-[var(--line)] rounded-xl p-xl text-center">No module structure detected.</p>;
   }
 
+  /**
+   * Opening a module drops the focus, as in the network view: the new layout gets a
+   * fresh fit, and a focus left standing outranks that fit and parks the camera on a
+   * node from the picture you just left.
+   */
+  const expand = (id: string | null) => setUrl({ open: id, focus: null });
+  const focusOn = (id: string | null) => setUrl({ open: expandedId, focus: id });
+
   if (immersive) {
     return (
-      <div className="relative h-full w-full">
+      <div ref={canvasRef} className="relative h-full w-full">
         {/* Floating search — top-left, Apple Maps style */}
-        <div className="absolute top-md left-md z-10 w-64">
-          <GraphSearch nodes={nodes} onFocus={setFocusId} placeholder="Search modules…" />
+        <div className="absolute top-md left-md z-10 flex w-64 flex-col gap-sm">
+          <GraphSearch nodes={nodes} onFocus={focusOn} placeholder="Search modules…" />
+          <GraphExport canvasRef={canvasRef} repoName={repoName} view="architecture" />
         </div>
         <NodeGraph
           nodes={nodes}
           edges={edges}
           fill
-          focusId={focusId}
+          focusId={focus}
           onSelect={onSelect}
-          onExpand={setExpandedId}
+          onExpand={expand}
           expandedId={expandedId}
         />
       </div>
@@ -197,15 +219,18 @@ export function ArchitectureView({
   }
 
   return (
-    <div className="space-y-sm">
-      <GraphSearch nodes={nodes} onFocus={setFocusId} placeholder="Search modules…" />
+    <div ref={canvasRef} className="space-y-sm">
+      <div className="flex items-start justify-between gap-md">
+        <GraphSearch nodes={nodes} onFocus={focusOn} placeholder="Search modules…" />
+        <GraphExport canvasRef={canvasRef} repoName={repoName} view="architecture" />
+      </div>
       <NodeGraph
         nodes={nodes}
         edges={edges}
         height={620}
-        focusId={focusId}
+        focusId={focus}
         onSelect={onSelect}
-        onExpand={setExpandedId}
+        onExpand={expand}
         expandedId={expandedId}
       />
       <p className="mt-sm max-w-note text-micro text-[var(--text-muted)]">

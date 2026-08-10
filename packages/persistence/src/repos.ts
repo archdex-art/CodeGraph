@@ -1,5 +1,6 @@
 import type { ViewerId } from "@codegraph/core-domain";
 import { db } from "./db";
+import { canonicalTarget } from "./repo-identity";
 
 /**
  * Repo reads and writes, with tenant isolation as a type-level obligation
@@ -48,7 +49,19 @@ export interface RepoRow {
   readonly tree: string;
   readonly modules: string;
   readonly symbols: string;
+  /** Migration 007. NULL means the run predates the analysis, never "nothing found". */
+  readonly ownership_json: string | null;
+  readonly api_surface_json: string | null;
+  readonly taint_json: string | null;
+  readonly unused_deps_json: string | null;
+  readonly advisories_json: string | null;
+  readonly package_names_json: string | null;
   readonly churn_by_file: string;
+  /**
+   * Migration 009. The identity half of (owner, source type, target) — see `repo-identity.ts`.
+   * NULL only on a row written by raw SQL outside this module, which the unique index skips.
+   */
+  readonly canonical_target: string | null;
   readonly owner_id: number | null;
   readonly created_at: number;
   readonly finished_at: number | null;
@@ -68,6 +81,13 @@ export interface RepoSummaryRow {
   readonly finished_at: number | null;
 }
 
+/**
+ * A repository to index.
+ *
+ * `id` is the id to use IF a row has to be created. `upsertRepo` discards it when the target
+ * already has a row, because the whole point is that the existing id survives — links and
+ * bookmarks into `/repos/<id>` must keep working across a re-index.
+ */
 export interface NewRepo {
   readonly id: string;
   readonly url: string;
@@ -75,6 +95,21 @@ export interface NewRepo {
   readonly sourceType: string;
   readonly ownerId: number | null;
   readonly createdAt: number;
+}
+
+export interface UpsertedRepo {
+  /** The row's id: `NewRepo.id` for a fresh row, the existing row's id otherwise. */
+  readonly id: string;
+  readonly created: boolean;
+  /**
+   * The status the row carried BEFORE this call, or null when it was created.
+   *
+   * The caller needs it because reusing a row means a re-submission can now land on a
+   * repository whose previous run is still in flight, and two runs over one workspace
+   * directory is the race the per-repo mutex exists to stop. Reported rather than judged
+   * here: which statuses count as busy is the job runner's vocabulary, not this table's.
+   */
+  readonly previousStatus: string | null;
 }
 
 /**
@@ -96,8 +131,9 @@ export function listRepos(viewer: ViewerId): RepoSummaryRow[] {
 /**
  * The columns the cross-repo fleet graph draws with, and nothing else.
  *
- * `deps` is the one JSON blob here, and it is a short array of package-name
- * strings — kilobytes, not megabytes.
+ * `deps` and `package_names_json` are the only JSON blobs here, and both are short arrays of
+ * package-name strings — kilobytes, not megabytes. They are the two halves of an edge: what a
+ * repository CONSUMES and what it PUBLISHES.
  */
 export interface RepoFleetRow {
   readonly id: string;
@@ -107,6 +143,8 @@ export interface RepoFleetRow {
   readonly score: number | null;
   readonly loc: number | null;
   readonly deps: string;
+  /** NULL when the run predates migration 008 — nothing can depend on it BY NAME. */
+  readonly package_names_json: string | null;
 }
 
 /**
@@ -117,7 +155,7 @@ export interface RepoFleetRow {
  * and `issues` — the symbol graph alone is megabytes of JSON for a large
  * codebase — through SQLite and `JSON.parse` only for the caller to throw them
  * away. On the documented 512 MB / 0.5 vCPU deployment target, 100 of those is
- * an OOM. One statement, seven columns, no blob but `deps`.
+ * an OOM. One statement, eight columns, no blob but the two name arrays.
  *
  * Same `LIMIT 100` as `listRepos` so the fleet shows the same repo set the
  * dashboard does; lifting the cap would change which repos appear, which is a
@@ -127,7 +165,7 @@ export interface RepoFleetRow {
 export function listFleetRepos(viewer: ViewerId): RepoFleetRow[] {
   return db()
     .prepare(
-      `SELECT id, url, name, source_type, score, loc, deps
+      `SELECT id, url, name, source_type, score, loc, deps, package_names_json
        FROM repos WHERE status = 'done' AND ${VISIBLE}
        ORDER BY created_at DESC, id ASC LIMIT 100`,
     )
@@ -175,13 +213,45 @@ export function repoOwnerId(id: string): number | null | undefined {
   return row ? row.owner_id : undefined;
 }
 
-export function insertRepo(repo: NewRepo): void {
-  db()
+/**
+ * Create the row for an index target, or hand back the row that already represents it.
+ *
+ * UPSERT, NOT INSERT, and that is the fix for duplicate repositories. Keyed on
+ * (owner, source type, canonical target) — see `repo-identity.ts` for why a pasted URL is
+ * normalised before it is compared. Re-indexing updates in place: the score, findings and
+ * finish time that `completeRepoIndex` writes later land on the SAME id, so a repository has
+ * exactly one current answer instead of two contradictory ones sitting side by side.
+ *
+ * `url` and `name` are refreshed on the way through. The canonical target is what makes two
+ * spellings one repository; the spelling the user most recently gave is the one to clone with
+ * and the one to show them.
+ *
+ * The status is NOT reset here. A caller that finds `previousStatus` busy must be able to
+ * refuse without having already overwritten the evidence that a run is in flight.
+ */
+export function upsertRepo(repo: NewRepo): UpsertedRepo {
+  const d = db();
+  const target = canonicalTarget(repo.sourceType, repo.url);
+  // `COALESCE(owner_id, -1)` on both sides because the public bucket is NULL and NULL never
+  // equals NULL in SQL — a plain `owner_id = ?` would match no anonymous row and duplicate
+  // every one of them. -1 is the same impossible-owner sentinel `bind` uses.
+  const existing = d
     .prepare(
-      `INSERT INTO repos (id, url, name, source_type, status, owner_id, created_at)
-       VALUES (?, ?, ?, ?, 'queued', ?, ?)`,
+      `SELECT id, status FROM repos
+        WHERE canonical_target = ? AND source_type = ? AND COALESCE(owner_id, -1) = COALESCE(?, -1)`,
     )
-    .run(repo.id, repo.url, repo.name, repo.sourceType, repo.ownerId, repo.createdAt);
+    .get(target, repo.sourceType, repo.ownerId) as { id: string; status: string } | undefined;
+
+  if (existing) {
+    d.prepare("UPDATE repos SET url = ?, name = ? WHERE id = ?").run(repo.url, repo.name, existing.id);
+    return { id: existing.id, created: false, previousStatus: existing.status };
+  }
+
+  d.prepare(
+    `INSERT INTO repos (id, url, name, source_type, canonical_target, status, owner_id, created_at)
+     VALUES (?, ?, ?, ?, ?, 'queued', ?, ?)`,
+  ).run(repo.id, repo.url, repo.name, repo.sourceType, target, repo.ownerId, repo.createdAt);
+  return { id: repo.id, created: true, previousStatus: null };
 }
 
 export function setRepoStatus(id: string, status: string): void {
@@ -247,6 +317,21 @@ export interface IndexedResultColumns {
   readonly modules: string;
   readonly symbols: string;
   /**
+   * Analyses added after the first release (migration 007). Pre-serialised like the rest.
+   *
+   * `null` means the run did not produce one, and every reader must render that as NOT
+   * ANALYSED rather than as an empty result: a repository with no vulnerabilities and a
+   * repository nobody checked are different claims. A run that DID look writes a
+   * present-but-empty report instead, which is why these are nullable rather than defaulting
+   * to `"[]"`.
+   */
+  readonly ownership: string | null;
+  readonly apiSurface: string | null;
+  readonly taint: string | null;
+  readonly unusedDeps: string | null;
+  readonly advisories: string | null;
+  readonly packageNames: string | null;
+  /**
    * The on-disk checkout, kept as a persistent workspace for the editor. Git
    * clones are no longer deleted after indexing; local folders were never
    * copied in the first place.
@@ -261,6 +346,8 @@ export function completeRepoIndex(id: string, cols: IndexedResultColumns): void 
     .prepare(
       `UPDATE repos SET status='done', score=?, loc=?, languages=?, graph=?, dimensions=?,
         issues=?, deps=?, churn_by_file=?, viz=?, tree=?, modules=?, symbols=?,
+        ownership_json=?, api_surface_json=?, taint_json=?, unused_deps_json=?, advisories_json=?,
+        package_names_json=?,
         workspace_dir=?, head_hash=?, finished_at=?
        WHERE id=?`,
     )
@@ -277,6 +364,12 @@ export function completeRepoIndex(id: string, cols: IndexedResultColumns): void 
       cols.tree,
       cols.modules,
       cols.symbols,
+      cols.ownership,
+      cols.apiSurface,
+      cols.taint,
+      cols.unusedDeps,
+      cols.advisories,
+      cols.packageNames,
       cols.workspaceDir,
       cols.headHash,
       cols.finishedAt,

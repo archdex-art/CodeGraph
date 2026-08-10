@@ -9,6 +9,7 @@ import {
   ZOOM_DURATION_MS,
   ZOOM_STEP_RATIO,
 } from "@/lib/zoom";
+import { clearTextMeasurements, fitText, fontSpec } from "@/lib/fitText";
 
 /** How far in and out the diagram may be driven, in device pixels per world unit. */
 const MIN_SCALE = 0.1;
@@ -96,6 +97,9 @@ export interface NGBounds {
   maxX: number;
   maxY: number;
 }
+
+/** What the camera was last fitted to — the layout, and the box it had to fit inside. */
+type Fit = { bounds: NGBounds; w: number; h: number };
 
 /** The transform that fits `bounds` inside `vp`. Pure — exported for tests. */
 export function fitView(bounds: NGBounds, vp: { w: number; h: number }): View {
@@ -389,7 +393,7 @@ export function NodeGraph({
   // the effect version always committed one frame with the stale transform
   // first (on mount that is the unfitted `scale: 1, ox: 0, oy: 0`, i.e. a
   // graph drawn off-screen), then corrected it after paint.
-  const [fitted, setFitted] = useState<{ bounds: NGBounds; w: number; h: number } | null>(null);
+  const [fitted, setFitted] = useState<Fit | null>(null);
   if (!fitted || fitted.bounds !== bounds || fitted.w !== vp.w || fitted.h !== vp.h) {
     // The very first fit must be instant: easing from the unfitted origin would
     // fly the diagram in from off-screen on every mount.
@@ -403,10 +407,17 @@ export function NodeGraph({
    * rebuilt every animation frame, so keying on it re-ran this block sixty times a
    * second during a transition and re-centred the camera on each one — the graph
    * shook for the length of every expansion.
+   *
+   * It is keyed on the FIT as well, because the fit above is the competing camera and
+   * it lands last. A focus arriving with the page — a shared link naming the node the
+   * sender was looking at — is applied before the container has been measured, and the
+   * measurement then re-fits straight over it, so the link opened the right module at
+   * the wrong place. `bounds` is memoised on the layout rather than on the animated
+   * rectangles, so this re-runs when the frame genuinely changes, not per frame.
    */
-  const [focusApplied, setFocusApplied] = useState<{ id?: string | null; nodes?: NGNode[] }>({});
-  if (focusApplied.id !== focusId || focusApplied.nodes !== nodes) {
-    setFocusApplied({ id: focusId, nodes });
+  const [focusApplied, setFocusApplied] = useState<{ id?: string | null; nodes?: NGNode[]; fit?: Fit | null }>({});
+  if (focusApplied.id !== focusId || focusApplied.nodes !== nodes || focusApplied.fit !== fitted) {
+    setFocusApplied({ id: focusId, nodes, fit: fitted });
     const target = focusId ? nodes.find((n) => n.id === focusId) : undefined;
     if (target) {
       setFocusPulseId(target.id);
@@ -533,6 +544,38 @@ export function NodeGraph({
   const viewTransition =
     smoothView && !reducedMotion ? `transform ${viewDurationMs}ms cubic-bezier(0.22, 1, 0.36, 1)` : "none";
 
+  /**
+   * The font family the SVG text will ACTUALLY render with, read off the live element.
+   *
+   * Hardcoding a family here would measure one font and draw another the moment the theme or
+   * the font stack changes, which is the same class of mistake as counting characters. The
+   * computed style is the only source that cannot drift from what is painted.
+   *
+   * Re-resolved after `document.fonts.ready`: Next loads the webfont asynchronously, so the
+   * first frames measure the FALLBACK face. The fallback is narrower than Geist, so labels
+   * fitted against it are cut too late and overflow the moment the real font swaps in — the
+   * reason this bug appeared to be fixed locally and came back on a cold load.
+   */
+  const [fontFamily, setFontFamily] = useState("ui-sans-serif, system-ui, sans-serif");
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const resolve = (): void => {
+      const family = getComputedStyle(el).fontFamily;
+      if (family) {
+        clearTextMeasurements();
+        setFontFamily(family);
+      }
+    };
+    resolve();
+    // `fonts` is absent in jsdom and in older Safari; the initial resolve above still applies.
+    void document.fonts?.ready.then(resolve).catch(() => {});
+  }, []);
+
+  const titleFont = fontSpec(600, 13, fontFamily);
+  const subFont = fontSpec(400, 10.5, fontFamily);
+  const metaFont = fontSpec(400, 10, fontFamily);
+
   return (
     <div
       ref={wrapRef}
@@ -540,6 +583,9 @@ export function NodeGraph({
       style={fill ? { height: "100%" } : { height }}
     >
       <svg
+        /* The export finds the drawing by this attribute: a `querySelector("svg")` on
+           the surrounding overlay picks up the search box's magnifier icon instead. */
+        data-graph-canvas
         width={vp.w}
         height={vp.h}
         className="block select-none"
@@ -627,6 +673,28 @@ export function NodeGraph({
             const firstBase = BODY_TOP + (n.h - BODY_TOP - blockH) / 2 + capH;
             const subY = firstBase;
             const metaY = showSub ? firstBase + LEAD : firstBase;
+            /**
+             * How much room each text row actually has, in pixels.
+             *
+             * Text starts at x=14 and the card ends at n.w, but the right edge is not free:
+             * the issue dot sits at `cx = n.w - 12, r = 4.5`, a CONTAINER's expand control at
+             * `n.w - 18` spanning 14px, and a non-container's expand control at
+             * `n.w - 20, n.h - 18` — which is the bottom-right, so it collides with the META
+             * row rather than with the title. Budgeting per row instead of once per node is
+             * what stops a label from running under a control it never appeared to overlap in
+             * whatever fixture the number was eyeballed against.
+             */
+            const TEXT_X = 14;
+            const PAD_R = 10;
+            const titleReserve = Math.max(
+              PAD_R,
+              n.issues ? 20 : 0,
+              canExpand && n.container ? 29 : 0,
+            );
+            const bodyReserve = Math.max(PAD_R, canExpand && !n.container ? 29 : 0);
+            const titleWidth = n.w - TEXT_X - titleReserve;
+            const subWidth = n.w - TEXT_X - PAD_R;
+            const metaWidth = n.w - TEXT_X - bodyReserve;
             /* A node the eased map has never seen is new to this frame — the same
                signal `drawn` already uses to fall back to the target rect, so it costs
                no extra bookkeeping and no render-time mutation. */
@@ -707,19 +775,23 @@ export function NodeGraph({
                     opacity={n.container ? 0.16 : 0.1}
                   />
                 </g>
-                {/* Right inset clears the issues dot when there is one, so a long
-                    name ellipsises before it collides instead of running under it. */}
-                <text x={14} y={16} fontSize={13} fontWeight={600} style={{ fill: "var(--text-primary)" }}>
-                  {fitText(n.label, n.w - 14 - (n.issues && !n.container ? 24 : 10), 13)}
+                {/* Every row is fitted to a MEASURED width. The full string stays in a
+                    `<title>` so truncation never costs the reader the name — hovering, and
+                    every accessibility tree, still gets `LOCAL_RUNTIME_BENCHMARKS.md`. */}
+                <text x={TEXT_X} y={16} fontSize={13} fontWeight={600} style={{ fill: "var(--text-primary)" }}>
+                  <title>{n.label}</title>
+                  {fitText(n.label, titleWidth, titleFont)}
                 </text>
                 {showSub && (
-                  <text x={14} y={subY} fontSize={10.5} style={{ fill: "var(--text-secondary)" }}>
-                    {fitText(n.subtitle!, n.w - 24, 10.5)}
+                  <text x={TEXT_X} y={subY} fontSize={10.5} style={{ fill: "var(--text-secondary)" }}>
+                    {fitText(n.subtitle!, subWidth, subFont)}
                   </text>
                 )}
                 {showMeta && (
-                  <text x={14} y={metaY} fontSize={10} style={{ fill: "var(--text-muted)" }}>
-                    {fitText(n.meta!, n.w - 24, 10)}
+                  <text x={TEXT_X} y={metaY} fontSize={10} style={{ fill: "var(--text-muted)" }}>
+                    {/* `meta` was never truncated at all — it happened to be short in the
+                        fixtures. `1,234,567 LOC · 12 issues` is not. */}
+                    {fitText(n.meta!, metaWidth, metaFont)}
                   </text>
                 )}
                 {!!n.issues && !n.container && (

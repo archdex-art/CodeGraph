@@ -288,3 +288,120 @@ export function latestRunCoverage(repoId: string): Record<string, unknown> | nul
     return null;
   }
 }
+
+/**
+ * Which of `repoIds` were scored over a TRUNCATED walk — the file cap stopped the traversal
+ * before it reached the end of the repository.
+ *
+ * A set, not a map: absent means "the latest run reported no coverage, or none hit the cap",
+ * and both render as no marker. The dashboard and the fleet index rank repositories against
+ * each other by score, and a sampled score sitting in that ranking beside whole-repository
+ * ones without saying so is the overclaim ADR-008 exists to stop.
+ *
+ * ONE statement for the whole page, for the same reason `repoRunDeltas` below is: this feeds
+ * a list view, and `latestRunCoverage` in a loop is the N+1 REVIEW B7 removed from `/api/fleet`.
+ */
+export function reposScoredOverSample(repoIds: readonly string[]): Set<string> {
+  const out = new Set<string>();
+  if (repoIds.length === 0) return out;
+
+  const placeholders = repoIds.map(() => "?").join(",");
+  const rows = db()
+    .prepare(
+      `SELECT repo_id, coverage_json AS c FROM (
+         SELECT r.repo_id AS repo_id,
+                r.coverage_json AS coverage_json,
+                ROW_NUMBER() OVER (
+                  PARTITION BY r.repo_id ORDER BY r.started_at DESC, r.id DESC
+                ) AS rn
+           FROM runs r
+          WHERE r.repo_id IN (${placeholders}) AND r.status = 'done'
+       ) WHERE rn = 1`
+    )
+    .all(...repoIds) as Array<{ repo_id: string; c: string | null }>;
+
+  for (const row of rows) {
+    if (!row.c) continue;
+    try {
+      const parsed: unknown = JSON.parse(row.c);
+      // Narrowed rather than asserted, and `=== true` rather than truthy: a corrupt or
+      // pre-ADR-008 blob must read as "not reported", and the only thing allowed to raise
+      // this flag is the walk itself having said so.
+      if (parsed !== null && typeof parsed === "object" && "capHit" in parsed && parsed.capHit === true) {
+        out.add(row.repo_id);
+      }
+    } catch {
+      // A blob that will not parse says nothing about the walk. Claiming a sample would be as
+      // much an invention as claiming completeness.
+    }
+  }
+  return out;
+}
+
+/**
+ * The last two runs of each repo, as the movement between them.
+ *
+ * The fleet and the dashboard rank by CHANGE, and change is not a property of the repo
+ * row — `repos.score` holds the latest value and nothing else, so every earlier reading
+ * only exists here. Two runs is all the ranking needs, and taking exactly two keeps this
+ * bounded by the caller's page (≤100 repos) rather than by retention (20 runs each).
+ *
+ * ONE statement, not one per repo: this feeds a list view, and a per-repo query here is
+ * the same N+1 that REVIEW B7 removed from `/api/fleet`.
+ *
+ * A repo with a single run yields `scoreDelta: null` — NOT zero. "No previous index to
+ * compare against" and "indexed twice and nothing moved" are different facts, and a fake
+ * zero would rank a brand-new repository as the quietest thing in the fleet.
+ */
+export interface RunDelta {
+  /** Findings recorded by the latest run. */
+  readonly findings: number;
+  /** Latest minus previous. Null when there is no previous run. */
+  readonly scoreDelta: number | null;
+  readonly findingsDelta: number | null;
+}
+
+export function repoRunDeltas(repoIds: readonly string[]): Map<string, RunDelta> {
+  const out = new Map<string, RunDelta>();
+  if (repoIds.length === 0) return out;
+
+  const placeholders = repoIds.map(() => "?").join(",");
+  const rows = db()
+    .prepare(
+      `SELECT repo_id, score, findings FROM (
+         SELECT r.repo_id AS repo_id,
+                r.score AS score,
+                -- Suppressed findings are excluded on BOTH sides of the subtraction, so
+                -- dismissing a finding reads as the improvement it is rather than as noise.
+                COUNT(CASE WHEN f.status IS NOT 'suppressed' THEN f.id END) AS findings,
+                ROW_NUMBER() OVER (
+                  PARTITION BY r.repo_id ORDER BY r.started_at DESC, r.id DESC
+                ) AS rn
+           FROM runs r LEFT JOIN findings f ON f.run_id = r.id
+          WHERE r.repo_id IN (${placeholders}) AND r.status = 'done'
+          GROUP BY r.id
+       ) WHERE rn <= 2
+        ORDER BY repo_id, rn`
+    )
+    .all(...repoIds) as Array<{ repo_id: string; score: number | null; findings: number }>;
+
+  for (let i = 0; i < rows.length; i++) {
+    const latest = rows[i];
+    // `noUncheckedIndexedAccess`: the loop bound makes this present, but the compiler is
+    // right that indexing does not prove it.
+    if (!latest) continue;
+    if (out.has(latest.repo_id)) continue; // already consumed as somebody's `latest`
+    const previous = rows[i + 1]?.repo_id === latest.repo_id ? rows[i + 1] : undefined;
+    out.set(latest.repo_id, {
+      findings: latest.findings,
+      // A run recorded before scoring existed has a NULL score; a delta against it would
+      // be an invention, so it degrades to the same "no comparison" as a first index.
+      scoreDelta:
+        previous && latest.score !== null && previous.score !== null
+          ? Math.round(latest.score - previous.score)
+          : null,
+      findingsDelta: previous ? latest.findings - previous.findings : null,
+    });
+  }
+  return out;
+}

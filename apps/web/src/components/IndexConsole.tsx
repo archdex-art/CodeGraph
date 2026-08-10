@@ -33,6 +33,23 @@ import type { Job } from "@/lib/types";
  * deployment.
  */
 
+/**
+ * Stage tokens as a reader would say them.
+ *
+ * The tokens are the pipeline's own (`StageTimings` keys on the same strings), so an
+ * unmapped one still renders — as itself — rather than vanishing. That is the failure mode
+ * worth having: a new stage shows up looking raw instead of silently going missing.
+ */
+const STAGE_LABELS: Record<string, string> = {
+  scan: "Reading files",
+  imports: "Resolving imports",
+  dependencies: "Reading manifests",
+  detect: "Detecting issues",
+  score: "Scoring",
+  "symbol-graph": "Building the symbol graph",
+  "cache-write": "Saving the index cache",
+};
+
 const EXAMPLES = [
   "https://github.com/sindresorhus/slugify",
   "https://github.com/expressjs/express",
@@ -77,6 +94,7 @@ export function IndexConsole() {
      Held rather than re-derived so "Continue" cannot pick up a field edited behind
      the dialog. */
   const [pendingPublic, setPendingPublic] = useState<{ repoUrl?: string; localPath?: string } | null>(null);
+  const failed = job?.status === "error";
 
   useEffect(() => {
     fetchHealth()
@@ -357,17 +375,39 @@ export function IndexConsole() {
               <div className="mt-md">
                 <div className="mb-xs flex justify-between text-meta text-[var(--text-secondary)]">
                   <span>{job.message}</span>
-                  <span className="tnum text-[var(--accent-text)]">
+                  <span className={`tnum ${failed ? "text-[var(--coral-text)]" : "text-[var(--accent-text)]"}`}>
                     {job.progress}%
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-4)]">
+                  {/* Colour is driven by STATUS, not by width. The bar used to be accent-filled
+                      unconditionally while the failure path pinned progress to 100, so a failed
+                      run painted a full success-coloured bar directly above the word "failed" —
+                      the strongest signal on the card contradicting the text beside it. The bar
+                      now stops where the work stopped and turns coral, which is the same colour
+                      the dashboard already uses for a failed repo's rail. */}
                   <motion.div
-                    className="h-full rounded-full bg-[var(--accent-fill)]"
+                    className={`h-full rounded-full ${failed ? "bg-[var(--coral-500)]" : "bg-[var(--accent-fill)]"}`}
                     animate={{ width: `${job.progress}%` }}
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                   />
                 </div>
+                {/*
+                  The bar moves five times in a run; this line moves continuously, and it is
+                  what makes a 40-second index legible as work rather than a hang. Counts are
+                  omitted at a stage BOUNDARY, where the stage has not computed a total yet —
+                  rendering `0/0` there would state a total that does not exist.
+                */}
+                {job.phase && (
+                  <p className="mt-xs flex items-baseline gap-xs text-micro text-[var(--text-muted)]">
+                    <span>{STAGE_LABELS[job.phase.stage] ?? job.phase.stage}</span>
+                    {job.phase.total !== undefined && job.phase.done !== undefined && (
+                      <span className="tnum">
+                        {job.phase.done.toLocaleString()} / {job.phase.total.toLocaleString()} files
+                      </span>
+                    )}
+                  </p>
+                )}
               </div>
             </motion.div>
           )}

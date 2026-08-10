@@ -10,7 +10,18 @@ import { scoreIssues } from "@codegraph/score-engine";
  * richer single pass did not change churn, and that the new markers do NOT reach the score.
  */
 
-describe("gitSignals replaces churnByFile without changing it", () => {
+/**
+ * Each case here runs a FULL index of this repository, and there are three of them.
+ *
+ * Measured 2026-08-09 on the repo root: 5.5s per index, of which taint is 2.5s, the symbol
+ * graph 1.2s and detection 1.1s. Three of those is ~17s, and the suite runs files in parallel
+ * against `dependencies.test.ts`, which self-indexes too — so vitest's 30s default was being
+ * exceeded by contention rather than by anything being wrong.
+ *
+ * The budget is stated rather than the default raised globally: a full index that takes a
+ * MINUTE is a regression worth failing on, and a per-file timeout is what still catches it.
+ */
+describe("gitSignals replaces churnByFile without changing it", { timeout: 120_000 }, () => {
   it("derives churn identical to the churnByFile map", async () => {
     // The old call was `churnByFile(root)`; churn is now read off the same pass that produces
     // the other seven signals. If these ever disagree, the replacement changed behaviour —
@@ -26,7 +37,7 @@ describe("gitSignals replaces churnByFile without changing it", () => {
   });
 });
 
-describe("signals are reported, not scored", () => {
+describe("signals are reported, not scored", { timeout: 120_000 }, () => {
   it("leaves the Health Score a pure function of issues and LOC", async () => {
     // The guard against quietly wiring eight uncalibrated markers into the headline. §5.3 is
     // what earns them weight; until then the kernel must take nothing but issues and LOC.

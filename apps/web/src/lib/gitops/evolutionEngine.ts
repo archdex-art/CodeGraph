@@ -1,6 +1,5 @@
-import { generateNarrative } from "../agents/narrativeAgent";
 import { diffSnapshots, type GraphDiff } from "./graphDiff";
-import type { CodeSymbol, GraphNode, ModuleNode, Issue } from "../types";
+import type { CodeSymbol, GraphEdge, GraphNode, ModuleNode, Issue } from "../types";
 import type {
   ArchitectureEvolution,
   ArchitectureMetrics,
@@ -16,11 +15,18 @@ import type {
  * The Architecture Evolution Engine.
  * Deterministically analyzes state changes between two snapshots to produce
  * a rich, categorised evolution model.
+ *
+ * Synchronous, and that is the point: every number and every event below is
+ * computed from the two snapshots in front of it. This used to be `async`
+ * solely to await a language model that wrote a prose "why did this change"
+ * paragraph over the top of the metrics — an unverifiable claim attached to
+ * verifiable numbers. It is gone, and with it the only reason this function
+ * ever suspended.
  */
-export async function analyzeEvolution(
+export function analyzeEvolution(
   older: ArchitectureSnapshot | null,
   newer: ArchitectureSnapshot
-): Promise<ArchitectureEvolution> {
+): ArchitectureEvolution {
   // 1. Compute raw structural diff if an older snapshot exists
   const diff = older ? diffSnapshots(older, newer) : null;
   
@@ -39,16 +45,6 @@ export async function analyzeEvolution(
     }
   ];
 
-  // 5. Generate Narrative (Only for significant milestones)
-  let aiNarrative: { reason: string; recommendation: string } | undefined;
-  
-  // Heuristic for "significant milestone": multiple major events or >15% coupling shift
-  const significantEvents = events.filter(e => e.category !== "FEATURE_INTRODUCED").length > 0;
-  if (older && significantEvents) {
-    const oldMetrics = computeArchitectureMetrics(older);
-    aiNarrative = await generateNarrative(oldMetrics, metrics, events);
-  }
-
   // 4. Compute Module Health & Issue Diff
   const issueDiff = computeIssueDiff(older, newer);
   const moduleHealth = computeModuleHealth(older, newer, diff);
@@ -60,7 +56,6 @@ export async function analyzeEvolution(
     events,
     moduleHealth,
     featureEvolution: {}, // To be populated across timelines
-    aiNarrative
   };
 }
 
@@ -77,18 +72,112 @@ function computeIssueDiff(older: ArchitectureSnapshot | null, newer: Architectur
   };
 }
 
+/**
+ * Circular dependencies in the FILE import graph, as a count of strongly connected components
+ * larger than one node.
+ *
+ * This field used to be the literal `0` with a comment saying it "requires deeper Tarjan's SCC
+ * analysis on edges". It does not: the snapshot already carries the import edges, and an
+ * import cycle is an SCC over them. Zero is not a neutral placeholder for a metric named
+ * `circularDependencies` — it is the answer a clean repository gets, so the placeholder was
+ * indistinguishable from a real measurement of "none", including across a Timeline comparison
+ * where the number is supposed to show a trend.
+ *
+ * File-level, not symbol-level, deliberately: `viz.edges` are imports between files, and
+ * `QueryEngine.cycles()` already answers the symbol-level question over the call graph. These
+ * are different questions with different answers, and this snapshot only has the import one.
+ *
+ * Iterative Tarjan — the recursive form blows the stack on a deep import chain, and this runs
+ * against arbitrary repositories.
+ */
+function importCycleCount(nodes: readonly GraphNode[], edges: readonly GraphEdge[]): number {
+  const out = new Map<string, string[]>();
+  for (const e of edges) {
+    if (e.kind !== "imports") continue;
+    const list = out.get(e.source);
+    if (list) list.push(e.target);
+    else out.set(e.source, [e.target]);
+  }
+
+  const index = new Map<string, number>();
+  const low = new Map<string, number>();
+  const onStack = new Set<string>();
+  const stack: string[] = [];
+  let idx = 0;
+  let cycles = 0;
+
+  for (const root of nodes) {
+    if (index.has(root.id)) continue;
+    index.set(root.id, idx);
+    low.set(root.id, idx);
+    idx++;
+    stack.push(root.id);
+    onStack.add(root.id);
+    const frames: [string, number][] = [[root.id, 0]];
+
+    while (frames.length > 0) {
+      const frame = frames[frames.length - 1]!;
+      const [v] = frame;
+      const targets = out.get(v) ?? [];
+      let descended = false;
+
+      for (let j = frame[1]; j < targets.length; j++) {
+        const w = targets[j]!;
+        if (!index.has(w)) {
+          frame[1] = j + 1;
+          index.set(w, idx);
+          low.set(w, idx);
+          idx++;
+          stack.push(w);
+          onStack.add(w);
+          frames.push([w, 0]);
+          descended = true;
+          break;
+        }
+        if (onStack.has(w)) low.set(v, Math.min(low.get(v)!, index.get(w)!));
+        frame[1] = j + 1;
+      }
+      if (descended) continue;
+
+      frames.pop();
+      const parent = frames[frames.length - 1]?.[0];
+      if (parent !== undefined) low.set(parent, Math.min(low.get(parent)!, low.get(v)!));
+
+      if (low.get(v) === index.get(v)) {
+        let size = 0;
+        let w: string;
+        do {
+          w = stack.pop()!;
+          onStack.delete(w);
+          size++;
+        } while (w !== v);
+        // A one-node component is a cycle only if the file imports itself, which the import
+        // extractor does not emit; anything larger is a genuine import cycle.
+        if (size > 1) cycles++;
+      }
+    }
+  }
+
+  return cycles;
+}
+
 function computeArchitectureMetrics(snap: ArchitectureSnapshot): ArchitectureMetrics {
   const nodes = snap.result.viz.nodes;
   const edges = snap.result.viz.edges;
   
   let totalFanIn = 0;
+
+  // Fan-out per node in ONE pass over the edges. This was `nodes.forEach(n =>
+  // edges.filter(e => e.source === n.id).length)` — a full edge scan per node, so O(N·E), on
+  // a payload that reaches thousands of nodes and edges on a real repository, re-run for
+  // every snapshot the Timeline builds.
+  const fanOutById = new Map<string, number>();
+  for (const e of edges) fanOutById.set(e.source, (fanOutById.get(e.source) ?? 0) + 1);
   let totalFanOut = 0;
-  
-  nodes.forEach(n => {
+  for (const n of nodes) {
     totalFanIn += n.fanIn;
-    // Fan-out approximation from edges where this node is source
-    totalFanOut += edges.filter(e => e.source === n.id).length;
-  });
+    totalFanOut += fanOutById.get(n.id) ?? 0;
+  }
 
   const nodeCount = nodes.length || 1;
   const edgeCount = edges.length;
@@ -119,7 +208,7 @@ function computeArchitectureMetrics(snap: ArchitectureSnapshot): ArchitectureMet
     coupling,
     cohesion: 1 / (coupling + 1), // Inverse heuristic for baseline
     dependencyDensity: edgeCount / (nodeCount * nodeCount),
-    circularDependencies: 0, // Requires deeper Tarjan's SCC analysis on edges
+    circularDependencies: importCycleCount(nodes, edges),
     averageModuleSize: modules.length ? totalSize / modules.length : 0,
     largestModule,
     hotspots: nodes.filter(n => n.issues > 3).map(n => n.id).slice(0, 5),

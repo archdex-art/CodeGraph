@@ -27,25 +27,33 @@ export const dynamic = "force-dynamic";
  */
 
 /**
- * Repo name (lowercased) → repo id, keyed by both the full `owner/repo` name
- * and its bare last segment, because dependencies are declared as `express`
- * while repos are named `expressjs/express`.
+ * Package name -> the repository that publishes it.
  *
- * Two passes, not one, so precedence is deterministic and does not depend on
- * row order: an exact full-name match always beats another repo's bare segment.
- * Between two repos with the same bare segment the first row wins, and the
- * query's `ORDER BY created_at DESC, id ASC` makes "first" stable.
+ * WHAT THIS USED TO KEY ON, AND WHY IT FOUND NOTHING
+ *
+ * It indexed repositories by DISPLAY NAME (`CodeGraph`, `sindresorhus/slugify`) and then
+ * matched other repositories' declared DEPENDENCY names (`@codegraph/analysis`, `react`)
+ * against it. Those are different namespaces, and they coincide only by luck: this monorepo is
+ * displayed as `CodeGraph` and publishes `@codegraph/analysis`. Measured here: 12 repositories,
+ * 0 edges — while `/api/org`, a second implementation keyed on manifest names, found 14 across
+ * the same set. The page said "dependency edges between indexed repositories" and drew none.
+ *
+ * Manifest-declared names come first because they are the real answer. The display name is
+ * kept as a fallback, since a repository whose manifests were never parsed can still be the
+ * obvious target for `gorilla/mux`, and losing that would trade one silent gap for another.
  */
 function indexByName(repos: readonly FleetRepo[]): Map<string, string> {
   const byName = new Map<string, string>();
+  const claim = (key: string, id: string) => {
+    const k = key.trim().toLowerCase();
+    // First claim wins, so a precise key is never overwritten by a looser one added later.
+    if (k && !byName.has(k)) byName.set(k, id);
+  };
+  for (const r of repos) for (const pkg of r.packageNames) claim(pkg, r.id);
+  for (const r of repos) claim(r.name, r.id);
   for (const r of repos) {
     const name = r.name.toLowerCase();
-    if (!byName.has(name)) byName.set(name, r.id);
-  }
-  for (const r of repos) {
-    const name = r.name.toLowerCase();
-    const bare = name.slice(name.lastIndexOf("/") + 1);
-    if (bare && !byName.has(bare)) byName.set(bare, r.id);
+    claim(name.slice(name.lastIndexOf("/") + 1), r.id);
   }
   return byName;
 }
@@ -65,6 +73,12 @@ export async function GET(req: NextRequest) {
       score: r.score,
       sourceType: r.sourceType,
       loc: r.loc,
+      // Movement since the previous index — what the fleet index below the graph ranks
+      // by. Computed in one query beside the rows, not per node.
+      drift: r.drift,
+      // The fleet index ranks these by score, so a score computed over a truncated walk has
+      // to say so where it is compared against whole-repository ones.
+      capHit: r.capHit,
     });
 
     // Per-source, so one repo listing the same package twice (or listing both

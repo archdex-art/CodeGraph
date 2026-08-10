@@ -1,5 +1,6 @@
 import path from "node:path";
 import {
+  aliasedIntVar,
   boolVar,
   computed,
   derivedStringVar,
@@ -42,21 +43,39 @@ export interface Config {
 
   // ---------- indexing budgets ----------
   readonly maxFiles: number;
+  /**
+   * The per-file byte ceiling the walk applies before a file is ever read.
+   *
+   * Sibling of `maxFiles` and, until this existed, the only one of the two that an operator
+   * could not move: it sat in `indexer.ts` as a bare `400_000`. Both caps decide what the
+   * Health Score is computed over, and a score's inputs should be adjustable by the person
+   * who has to live with the score.
+   */
+  readonly maxFileBytes: number;
+  /**
+   * Wall clock for the git commands `refreshWorkspace` runs against an existing
+   * workspace (`remote get-url`, the depth-50 `fetch`, the fast-forward `merge`).
+   *
+   * Still a stopwatch, and correctly so: every one of those either answers in under a
+   * second or is stuck, and all three are best-effort — a workspace that is present and
+   * on the right remote is analysed as it stands when they fail. The CLONE no longer uses
+   * this, because a clone is a transfer whose duration is the operator's bandwidth times
+   * the repository's size and a stopwatch cannot tell "slow" from "hung": see
+   * `cloneStallMs`.
+   */
   readonly cloneTimeoutMs: number;
+  /**
+   * How long a clone may produce NO output before it is killed as stalled.
+   *
+   * Reads `CG_CLONE_STALL_MS`, falling back to the deprecated `CG_CLONE_TIMEOUT_MS` so a
+   * deployment that already raised the old wall clock keeps the value it chose.
+   */
+  readonly cloneStallMs: number;
+  /** Absolute backstop for a clone that keeps dribbling output but never finishes. */
+  readonly cloneMaxMs: number;
   readonly analysisBudgetMs: number;
 
   // ---------- worker (HLD §5.1, LLD §10.3) ----------
-  /**
-   * Route analysis through the job queue and `apps/worker` instead of running it
-   * inline in the web process (ADR-001).
-   *
-   * Defaults to FALSE, and the default is load-bearing rather than cautious: as of
-   * this phase the container starts only the web server and `tsx` is absent from the
-   * standalone runtime, so a queued job would never be claimed. Enqueuing by default
-   * would replace a slow index with one that silently never runs. Flips to true in
-   * the commit that makes the worker deployable and passes the 512 MB
-   * two-concurrent-job smoke test.
-   */
   /**
    * Permit gate 3 to run the analysed repository's own test suite (LLD §10.3, §7.2).
    *
@@ -67,10 +86,47 @@ export interface Config {
    * than quietly executing a stranger's code.
    */
   readonly allowTestVerification: boolean;
+  /**
+   * Route analysis through the job queue and `apps/worker` instead of running it
+   * inline in the web process (ADR-001).
+   *
+   * Defaults to TRUE IN PRODUCTION and false elsewhere, because the correct value depends on
+   * whether a worker process exists — see the reader below. The exit criteria the previous
+   * unconditional FALSE was waiting on are
+   * met: the worker compiles to JS (`apps/worker/build.mjs`), the image ships it and
+   * the entrypoint starts it beside the web server, and the 512 MB two-concurrent-job
+   * smoke test passed. Leaving the default off meant every deployment that did not set
+   * the variable ran a CPU- and memory-bound parse on the request path, which is the
+   * OOM ADR-001 exists to prevent.
+   *
+   * `CG_USE_WORKER=false` is still fully supported and is what `next dev` and the test
+   * suite use: no second process, `void runJob(...)` inline.
+   */
   readonly useWorker: boolean;
   readonly workerConcurrency: number;
   readonly workerPollIntervalMs: number;
   readonly workerLeaseMs: number;
+  /**
+   * How many analysis passes may be in flight ON THIS HOST at once, in EITHER
+   * execution mode.
+   *
+   * The per-repo mutex only serialises one repository; N distinct repositories meant N
+   * concurrent Tree-sitter passes on a 0.5 vCPU / 512 MB box, which is a queue with no
+   * ceiling. Work over the ceiling waits as a `queued` row rather than being refused.
+   */
+  readonly maxConcurrentJobs: number;
+
+  // ---------- SSE progress streams ----------
+  /**
+   * Concurrently open `/api/jobs/:id/events` connections, globally and per client IP.
+   *
+   * Each stream holds a Node handle and a 500 ms SQLite poll for up to 15 minutes, so
+   * unbounded connections are a cheap way to pin the event loop. Past the ceiling the
+   * route answers 503 with `Retry-After`; the client already falls back to polling
+   * `/api/jobs/:id`, so a refusal degrades the UX rather than breaking it.
+   */
+  readonly maxEventStreams: number;
+  readonly maxEventStreamsPerIp: number;
 
   // ---------- network / proxy ----------
   readonly trustedProxyHops: number;
@@ -83,21 +139,13 @@ export interface Config {
   readonly allowAnonymousIndexing: boolean;
   readonly basicAuthPassword: string | undefined;
   readonly basicAuthUser: string;
+  readonly enableAdvisoryLookup: boolean;
   readonly githubOauthClientId: string | undefined;
   readonly githubOauthClientSecret: string | undefined;
   readonly sessionSecret: string | undefined;
   readonly ownerGithubLogin: string | undefined;
   readonly publicAppUrl: string | undefined;
   readonly forceSecureCookies: boolean | undefined;
-
-  // ---------- optional assistant backends ----------
-  readonly anthropicApiKey: string | undefined;
-  readonly claudeModel: string | undefined;
-  readonly claudeUseSubscription: boolean;
-  readonly claudeCodeOauthToken: string | undefined;
-  readonly localLlmBaseUrl: string | undefined;
-  readonly localLlmModel: string | undefined;
-  readonly localLlmApiKey: string | undefined;
 
   // ---------- host environment ----------
   readonly homeDir: string | undefined;
@@ -133,8 +181,57 @@ export function buildSchema(options: LoadOptions = {}): Schema {
     dataDir: derivedStringVar("CG_DATA_DIR", () => path.join(cwd(), "data")),
 
     maxFiles: intVar("CG_MAX_FILES", { fallback: 4000, min: 1 }),
+    /**
+     * 400_000 is the value `indexer.ts` hardcoded, kept exactly so a deployment that sets
+     * nothing behaves as it did. It is a guard against minified bundles and vendored blobs,
+     * not a judgement about source: raise it on a repository whose real files are genuinely
+     * large, and the walk will read them.
+     */
+    maxFileBytes: intVar("CG_MAX_FILE_BYTES", { fallback: 400_000, min: 1 }),
     cloneTimeoutMs: intVar("CG_CLONE_TIMEOUT_MS", { fallback: 90_000, min: 1 }),
+
+    /**
+     * The clone's IDLE window and its absolute ceiling.
+     *
+     * WHY TWO. The flat 90 s `CG_CLONE_TIMEOUT_MS` that used to bound `git clone` killed
+     * clones that were downloading steadily — whether it fired depended on the operator's
+     * bandwidth, not on the repository. Measured: `microsoft/TypeScript` clones in 15.9 s
+     * on a fast link, and the same clone on a slow one died at 90 s having made continuous
+     * progress the whole time, reported to the user as "The clone took too long and was
+     * stopped." So the primary timer now measures SILENCE: 60 s with no output at all from
+     * `git clone --progress`, which writes a progress line roughly every 100 ms, means the
+     * transfer really has stopped. `cloneMaxMs` is the backstop the stall timer cannot
+     * provide — a remote that dribbles one byte a second resets the stall window forever —
+     * and 30 minutes is deliberately far beyond any clone this container should attempt, so
+     * it fires for pathology rather than for slowness.
+     *
+     * `CG_CLONE_TIMEOUT_MS` remains a DEPRECATED alias for the stall window. A deployment
+     * that raised it did so because 90 s was killing real clones, and that intent maps onto
+     * the stall window, not onto the ceiling. Dropping the alias would have quietly restored
+     * a 60 s limit on exactly the deployments that had already proved they needed more.
+     */
+    cloneStallMs: aliasedIntVar("CG_CLONE_STALL_MS", "CG_CLONE_TIMEOUT_MS", { fallback: 60_000, min: 1 }),
+    cloneMaxMs: intVar("CG_CLONE_MAX_MS", { fallback: 1_800_000, min: 1 }),
     analysisBudgetMs: intVar("CG_ANALYSIS_BUDGET_MS", { fallback: 120_000, min: 1 }),
+
+    allowTestVerification: boolVar("CG_ALLOW_TEST_VERIFICATION", () => false),
+
+    /**
+     * Default: ON in production, OFF everywhere else — because the default has to match
+     * the PROCESS TOPOLOGY, not a preference.
+     *
+     * A queued job is claimed by `apps/worker`, and whether that process exists is decided
+     * outside this file. The container starts it (`entrypoint.sh`, `ENV CG_USE_WORKER=true`);
+     * `next dev` does not, and a developer should not have to run two processes to see an
+     * index finish. A flat `true` would make every dev server enqueue work nobody claims,
+     * which presents as "indexing hangs forever" — strictly worse than the slow-but-working
+     * inline path it replaced. A flat `false`, the previous default, put a CPU- and
+     * memory-bound parse on the request path of every deployment that did not set the
+     * variable, which is the OOM that ADR-001 exists to prevent.
+     *
+     * Either value can still be set explicitly, and the image does set it.
+     */
+    useWorker: boolVar("CG_USE_WORKER", (env) => env["NODE_ENV"] === "production"),
 
     /**
      * Jobs run at once per worker process (LLD §10.3: default 1, max 8).
@@ -146,10 +243,27 @@ export function buildSchema(options: LoadOptions = {}): Schema {
      * which only grows — so raising this multiplies the exposure to the exact
      * failure the worker exists to contain. Raise it only with real headroom.
      */
-    allowTestVerification: boolVar("CG_ALLOW_TEST_VERIFICATION", () => false),
-    useWorker: boolVar("CG_USE_WORKER", () => false),
-
     workerConcurrency: intVar("CG_WORKER_CONCURRENCY", { fallback: 1, min: 1, max: 8 }),
+
+    /**
+     * Host-wide analysis ceiling, applied in both execution modes.
+     *
+     * 2 rather than 1: a single pass leaves the 0.5 vCPU box idle whenever the running
+     * job is waiting on git or the disk, and the 512 MB two-concurrent-job smoke test
+     * measured 341.8 MiB peak RSS — headroom for exactly two, not for N. Max 8 mirrors
+     * `workerConcurrency`; this is a bound on the HOST, so it is never sane to set it
+     * below 1 (that would wedge the queue rather than throttle it).
+     */
+    maxConcurrentJobs: intVar("CG_MAX_CONCURRENT_JOBS", { fallback: 2, min: 1, max: 8 }),
+
+    /**
+     * SSE ceilings. 64 global is generous next to the handful of tabs a real user has
+     * open and still bounds the poll loops to something a 0.5 vCPU box can service; 8
+     * per IP covers a developer with several tabs on one repo while stopping one client
+     * from consuming the global budget on its own.
+     */
+    maxEventStreams: intVar("CG_MAX_EVENT_STREAMS", { fallback: 64, min: 1 }),
+    maxEventStreamsPerIp: intVar("CG_MAX_EVENT_STREAMS_PER_IP", { fallback: 8, min: 1 }),
 
     /**
      * Idle poll interval. Only paid when the queue is empty: a worker that just
@@ -210,6 +324,21 @@ export function buildSchema(options: LoadOptions = {}): Schema {
     basicAuthUser: stringVar("CG_BASIC_AUTH_USER", "codegraph"),
 
     /**
+     * Whether indexing may query the OSV advisory database for dependency vulnerabilities.
+     *
+     * OFF by default, and the default is the interesting decision. Indexing runs against
+     * repositories a stranger submitted, so turning it on means this server makes an outbound
+     * request, derived from that stranger's manifest, on every index. Some operators want
+     * that; an air-gapped or egress-filtered one cannot have it, and a hosted instance may
+     * simply not want to be a proxy for arbitrary package-name lookups.
+     *
+     * Off produces `AdvisoryReport { status: "disabled" }`, never an empty `checked` — "we did
+     * not look" and "we looked and found nothing" are different claims and the type keeps them
+     * apart. Nothing about this flag can turn a missing check into a clean bill of health.
+     */
+    enableAdvisoryLookup: boolVar("CG_ENABLE_ADVISORY_LOOKUP", () => false),
+
+    /**
      * All three must be set for GitHub sign-in to count as configured; a
      * missing one leaves the feature hidden and changes nothing else. Hence
      * optional rather than required — the app boots with an entirely empty
@@ -234,14 +363,6 @@ export function buildSchema(options: LoadOptions = {}): Schema {
      * the browser would then stop sending the session cookie at all.
      */
     forceSecureCookies: optionalBoolVar("CG_FORCE_SECURE_COOKIES"),
-
-    anthropicApiKey: optionalStringVar("ANTHROPIC_API_KEY"),
-    claudeModel: optionalStringVar("CG_CLAUDE_MODEL"),
-    claudeUseSubscription: boolVar("CG_CLAUDE_USE_SUBSCRIPTION", () => false),
-    claudeCodeOauthToken: optionalStringVar("CLAUDE_CODE_OAUTH_TOKEN"),
-    localLlmBaseUrl: optionalStringVar("CG_LOCAL_LLM_BASE_URL"),
-    localLlmModel: optionalStringVar("CG_LOCAL_LLM_MODEL"),
-    localLlmApiKey: optionalStringVar("CG_LOCAL_LLM_API_KEY"),
 
     /** Used only to expand a leading `~` in a user-supplied local path. */
     homeDir: optionalStringVar("HOME"),

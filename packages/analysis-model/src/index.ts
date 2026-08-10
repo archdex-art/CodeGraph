@@ -31,6 +31,18 @@
 export type {
   Dimension,
   FileSignals,
+  AuthorStat,
+  FileOwner,
+  OwnershipEntry,
+  OwnershipReport,
+  SymbolOwnership,
+  ApiEndpoint,
+  ApiMethod,
+  ApiSinkKind,
+  ApiSurface,
+  DataFlowPath,
+  TaintPath,
+  TaintReport,
   Pillar,
   PillarScore,
   ScanCoverage,
@@ -49,6 +61,12 @@ export type {
   ModuleNode,
   TreeNode,
   VizGraph,
+  Advisory,
+  AdvisoryReport,
+  DependencyScope,
+  PackageImportSite,
+  ReplacementImpact,
+  UnusedDependency,
 } from "./models";
 export {
   DIMENSION_META,
@@ -60,5 +78,27 @@ export {
 export { toSarif, sarifRuleId } from "./sarif";
 export type { SarifLog, SarifOptions } from "./sarif";
 export { LANG_BY_EXT, CODE_EXTS } from "./models";
-export { throwIfAborted, yieldToEventLoop, timeStage, YIELD_EVERY } from "./pipeline";
-export type { IndexCacheStore, PipelineContext, StageTimings } from "./pipeline";
+export {
+  throwIfAborted,
+  yieldToEventLoop,
+  timeStage,
+  YIELD_EVERY,
+  emitPhase,
+  coalescePhases,
+  PHASE_MIN_INTERVAL_MS,
+} from "./pipeline";
+export type { IndexCacheStore, IndexPhase, PhaseSink, PipelineContext, StageTimings } from "./pipeline";
+export {
+  HIGH_CONFIDENCE,
+  MEDIUM_CONFIDENCE,
+  activeIssues,
+  applyBaseline,
+  buildBaseline,
+  confidenceTier,
+  findingKey,
+  gateFindings,
+  isBaseline,
+  ruleIdOf,
+  tallyByRule,
+} from "./findings";
+export type { Baseline, ConfidenceTier, RuleTally } from "./findings";

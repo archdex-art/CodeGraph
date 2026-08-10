@@ -9,9 +9,9 @@ import { cloneRepo, resolveLocalDir, indexRepo, cleanup } from "../indexer";
 import { redactCredentials } from "@codegraph/vcs";
 import { isGithubHost } from "@codegraph/vcs";
 import { parseGithubRepo, getDefaultBranch, createPullRequest, GitHubApiError } from "@codegraph/vcs";
-import { candidateFor, FIXERS, parseCheck } from "@codegraph/remediate-engine";
+import { applyFixes, candidateFor, parseCheck, type FileChange } from "@codegraph/remediate-engine";
 import type { ExecutionStep, FileEdit, FixResult, PRDraft } from "./executor-types";
-import type { VerificationRecord } from "@codegraph/verify";
+import type { SuiteRun, VerificationRecord } from "@codegraph/verify";
 import { logger } from "@codegraph/observability";
 import { fingerprint, normalizeSnippet } from "@codegraph/core-domain";
 import { incrementCounter } from "@codegraph/persistence";
@@ -20,50 +20,25 @@ import {
   describeRecord,
   reanalysisGate,
   syntaxGate,
-  testsGate,
+  pairedTestsGate,
+  runTestSuite,
   typesGate,
   type FixCandidate,
   type GateResult,
 } from "@codegraph/verify";
 import { canIsolateTests } from "./sandbox";
-import { createSandbox, detectTestRunner, hasTypeConfig } from "@codegraph/sandbox";
+import { createSandbox, detectTestRunner, hasTypeConfig, typescriptCompiler } from "@codegraph/sandbox";
 
 const SKIP: Record<string, true> = {
   ".git": true, node_modules: true, dist: true, build: true, ".next": true,
   out: true, vendor: true, __pycache__: true, ".venv": true, venv: true, target: true, coverage: true,
 };
-const CODE: Record<string, true> = {
-  ".ts": true, ".tsx": true, ".js": true, ".jsx": true, ".mjs": true, ".cjs": true, ".py": true,
-};
-const MAX = 4000;
-
-function walkCode(root: string): string[] {
-  const out: string[] = [];
-  const stack = [root];
-  while (stack.length && out.length < MAX) {
-    const cur = stack.pop()!;
-    let entries: string[];
-    try { entries = readdirSync(cur); } catch { continue; }
-    for (const name of entries) {
-      const full = path.join(cur, name);
-      let st;
-      try { st = lstatSync(full); } catch { continue; }
-      if (st.isSymbolicLink()) continue; // never follow a symlink out of the disposable sandbox root
-      if (st.isDirectory()) {
-        if (!SKIP[name] && !name.startsWith(".")) stack.push(full);
-      } else if (st.isFile() && CODE[path.extname(name).toLowerCase()] && st.size < 400_000) {
-        out.push(full);
-      }
-    }
-  }
-  return out;
-}
 
 // Diff builder: supports both deletions (after=null) and same-line
 // replacements (after=<new content>). Fixers only ever delete or replace a
 // whole line in place — never insert new lines or reorder existing ones —
 // so hunk line-count bookkeeping only has to account for pure deletions.
-function buildDiff(file: string, before: string[], edits: Map<number, string | null>): string {
+function buildDiff(file: string, before: readonly string[], edits: ReadonlyMap<number, string | null>): string {
   if (edits.size === 0) return "";
   const ctx = 3;
   const idxs = [...edits.keys()].sort((a, b) => a - b);
@@ -189,53 +164,43 @@ export async function executeFixes(
     const before = await indexRepo(work);
     rec("analyze", `Baseline Health Score ${before.score}, ${before.issues.length} issues`, true, t);
 
+    /**
+     * The suite BEFORE any edit.
+     *
+     * Run here rather than beside the other gates because by the time gate 3 fires the tree
+     * has already been patched, and a single post-fix run cannot tell "this fix broke the
+     * suite" from "this suite was already broken". Reporting the second as evidence about the
+     * first is what let a run announce "verification failed (score regressed)" over numbers
+     * that had gone 72 → 73. When verification is not allowed on this host both runs return
+     * `not-allowed` immediately, so this costs nothing in that configuration.
+     */
+    t = now();
+    const suiteOptions = {
+      allowed: canIsolateTests(),
+      canIsolate: canIsolateTests(),
+      detectRunner: () => detectTestRunner(work!),
+    };
+    const testsBefore = await runTestSuite(createSandbox({ root: work }), suiteOptions);
+    rec("analyze", `Suite before edits: ${testsBefore.verdict}`, testsBefore.verdict !== "failed", t);
+
     // 3. apply fixers
     t = now();
-    // Scoped runs read one file. Not an optimisation — reading the rest is what produced
-    // edits nobody asked for.
-    const files = scope
-      ? [path.join(work, scope.file)].filter((f) => existsSync(f))
-      : walkCode(work);
-    const allEdits: FileEdit[] = [];
-    const changed = new Map<string, { before: string[]; edits: Map<number, string | null> }>();
-    for (const full of files) {
-      const rel = path.relative(work, full).split(path.sep).join("/");
-      const ext = path.extname(full).toLowerCase();
-      let text: string;
-      try { text = readFileSync(full, "utf8"); } catch { continue; }
-      const original = text.split("\n");
-
-      // Run every fixer independently against the pristine original lines
-      // (never chained) so each fixer's reported `line` stays valid against
-      // `original` for diffing — chaining would shift a later fixer's line
-      // numbers by however many lines an earlier fixer deleted.
-      const merged = new Map<number, string | null>(); // original line idx -> after (null = delete)
-      const fileEdits: FileEdit[] = [];
-      // Only the fixers that declare they handle this finding's rule (`Fixer.handles`).
-      const applicable = scope ? FIXERS.filter((f) => scope.fixerIds.includes(f.id)) : FIXERS;
-      for (const fx of applicable) {
-        const res = fx.apply({ rel, ext, lines: original });
-        for (const e of res.edits) {
-          const idx = e.line - 1;
-          if (merged.has(idx)) continue; // another fixer already claimed this line this pass
-          merged.set(idx, e.after);
-          fileEdits.push(e);
-        }
-      }
-
-      if (fileEdits.length) {
-        const finalLines: string[] = [];
-        for (let i = 0; i < original.length; i++) {
-          if (!merged.has(i)) { finalLines.push(original[i]); continue; }
-          const after = merged.get(i)!;
-          if (after !== null) finalLines.push(after); // replacement
-          // else: deletion — line dropped entirely
-        }
-        writeFileSync(full, finalLines.join("\n"), "utf8");
-        allEdits.push(...fileEdits);
-        changed.set(rel, { before: original, edits: merged });
-      }
-    }
+    /**
+     * The SHARED codemod loop (`@codegraph/remediate-engine`), not a second copy.
+     *
+     * This function used to inline its own walk + apply + write, and `apply.ts` documented
+     * itself as the extraction that ended exactly that. It had not: the two copies had
+     * drifted, and the web one — the copy the hosted multi-tenant instance runs — was the
+     * weaker of the two. It resolved a scoped `path.join(work, scope.file)` with no
+     * containment proof and no symlink check, both of which `applyFixes` performs, and its
+     * unscoped walk read directories in filesystem order, so the same repository could yield
+     * a differently-ordered patch on a different host. Calling the shared loop is what makes
+     * "the CLI and the UI run the same codemods" a fact rather than a comment.
+     */
+    const { edits: allEdits, changed } = applyFixes(
+      work,
+      scope ? { file: scope.file, fixerIds: scope.fixerIds } : undefined,
+    );
     rec("apply", `Applied ${allEdits.length} edit(s) across ${changed.size} file(s)`, true, t);
 
     if (allEdits.length === 0) {
@@ -277,14 +242,12 @@ export async function executeFixes(
     gates.push(
       await syntaxGate(candidate, sandbox, parseCheck, async (abs) => readFileSync(abs, "utf8"))
     );
-    gates.push(await typesGate(sandbox, () => hasTypeConfig(tree)));
-    gates.push(
-      await testsGate(sandbox, {
-        allowed: canIsolateTests(),
-        canIsolate: canIsolateTests(),
-        detectRunner: () => detectTestRunner(tree),
-      })
-    );
+    gates.push(await typesGate(sandbox, () => hasTypeConfig(tree), typescriptCompiler));
+    // The verdict is the PAIR, never a single post-fix run: green-before + green-after is the
+    // only combination that earns the word "verified", and a suite that never ran is a failed
+    // gate rather than a skipped one.
+    const testsAfter = await runTestSuite(sandbox, suiteOptions);
+    gates.push(pairedTestsGate(testsBefore, testsAfter));
 
     // Gate 4 re-indexes once and reuses that result for the score fields below, so the
     // patched tree is analysed exactly once rather than once per consumer.
@@ -386,6 +349,14 @@ export async function executeFixes(
       rec("record", pr ? "Assembled PR draft + execution record" : "Skipped PR (verification failed)", true, t);
     }
 
+    /**
+     * The message states the reason the GATES gave, never a guess.
+     *
+     * The line it replaces read "verification failed (score regressed)" and was printed over
+     * `72 → 73`. It was hardcoded: any failure, for any reason, was reported as a score
+     * regression. The failing gate knows why it failed, so the message comes from it.
+     */
+    const failed = record.gates.find((g) => g.status === "failed");
     return {
       ok: true,
       applied: allEdits.length,
@@ -393,6 +364,11 @@ export async function executeFixes(
       edits: allEdits.slice(0, 200),
       scoreBefore: before.score,
       scoreAfter: after.score,
+      // Reported beside the verdict, never as the verdict. A fix can improve the score and
+      // still be unverified, and that combination has to be legible rather than contradictory.
+      scoreDelta: after.score - before.score,
+      testsBefore,
+      testsAfter,
       issuesBefore: before.issues.length,
       issuesAfter: after.issues.length,
       verified,
@@ -400,8 +376,8 @@ export async function executeFixes(
       pr,
       steps,
       message: verified
-        ? `Verified: ${allEdits.length} fixes applied, Health Score ${before.score} → ${after.score}, issues ${before.issues.length} → ${after.issues.length}.`
-        : "Fixes applied but verification failed (score regressed) — PR withheld.",
+        ? `Verified against the project's own test suite: ${allEdits.length} fixes applied, Health Score ${before.score} → ${after.score}, issues ${before.issues.length} → ${after.issues.length}.`
+        : `Fixes applied but not verified — ${failed?.reason ?? `the ${failed?.gate ?? "verification"} gate did not pass`}. PR withheld. (Health Score ${before.score} → ${after.score}.)`,
     };
   } catch (e) {
     const msg = redactCredentials(e instanceof Error ? e.message : String(e));
@@ -419,7 +395,7 @@ function buildPR(
   repo: RepoDetail,
   scoreBefore: number,
   scoreAfter: number,
-  edits: FileEdit[],
+  edits: readonly FileEdit[],
   filesChanged: number,
   diff: string,
   record: VerificationRecord

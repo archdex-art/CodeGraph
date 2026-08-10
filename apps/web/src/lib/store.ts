@@ -3,8 +3,9 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import type { ViewerId } from "@codegraph/core-domain";
 import { config } from "@codegraph/config";
-import { createJobQueue } from "@codegraph/jobs";
+import { createJobQueue, createSlotGate, type SlotGate } from "@codegraph/jobs";
 import {
+  abandonOrphanedJobs,
   completeRepoIndex,
   latestRunCoverage,
   recordRun,
@@ -13,8 +14,8 @@ import {
   findQueuedJob,
   findRepo,
   findRepoUnscoped,
+  findLiveJobForRepo,
   insertJob,
-  insertRepo,
   listFleetRepos as listFleetRepoRows,
   listRepos as listRepoRows,
   repoOwnerId,
@@ -23,15 +24,21 @@ import {
   setRepoError,
   setRepoStatus,
   setSaveMode as writeSaveMode,
+  setJobPhase,
+  repoRunDeltas,
+  reposScoredOverSample,
   updateJob,
+  upsertRepo,
   type RepoRow,
 } from "@codegraph/persistence";
 import { indexRepo } from "@codegraph/analysis";
+import { coalescePhases } from "@codegraph/analysis-model";
 import { createIndexCacheStore, dropIndexCacheStore } from "@codegraph/fsx";
 import { logger } from "@codegraph/observability";
 import { cleanup, cloneRepo, getHeadHash, isGithubHost, resolveLocalDir, withToken } from "@codegraph/vcs";
 import { emptyTrash } from "./trash";
-import type { FleetRepo, Job, JobStatus, RepoDetail, RepoSummary, SaveMode, SourceType, VizGraph, IndexResult } from "./types";
+import type { FleetRepo, IndexPhase, Job, JobStatus, RepoDrift, RepoSummary, RepoDetail, SaveMode, SourceType, VizGraph, IndexResult } from "./types";
+import type { AdvisoryReport, ApiSurface, OwnershipReport, TaintReport, UnusedDependency } from "./types";
 
 /**
  * Built lazily rather than at module load: this module is imported by route files
@@ -39,6 +46,36 @@ import type { FleetRepo, Job, JobStatus, RepoDetail, RepoSummary, SaveMode, Sour
  */
 let queue: ReturnType<typeof createJobQueue> | null = null;
 const jobQueue = (): ReturnType<typeof createJobQueue> => (queue ??= createJobQueue());
+
+/**
+ * The host's concurrency ceiling for INLINE dispatch.
+ *
+ * Lazy for the same reason the queue is: `config` reads the environment, and a module-load
+ * read would freeze whatever the environment happened to be at import time — which in the
+ * test suite is before `beforeEach` sets it.
+ */
+let gate: SlotGate | null = null;
+const slots = (): SlotGate => (gate ??= createSlotGate(config.maxConcurrentJobs));
+
+/** Test seam: drop the gate so the next dispatch reads the current config. */
+export function resetSlotGateForTests(): void {
+  gate = null;
+}
+
+/**
+ * Recover jobs that the previous process was running when it exited.
+ *
+ * Inline mode only — see `abandonOrphanedJobs`. Runs ONCE per process, at the first dispatch
+ * rather than at import: a module-level call would fire during Next's build-time collection of
+ * this route graph, against whatever database `dataDir()` resolved to then.
+ */
+let recovered = false;
+function recoverOrphanedJobs(): void {
+  if (recovered || config.useWorker) return;
+  recovered = true;
+  const n = abandonOrphanedJobs();
+  if (n > 0) logger.warn("Recovered jobs left behind by a previous process", { jobs: n });
+}
 
 /**
  * Application-level repo/job operations.
@@ -78,6 +115,29 @@ function parseColumn<T>(raw: string | null | undefined, fallback: T): T {
   }
 }
 
+/**
+ * A nullable analysis column as either a one-key object or NO key at all.
+ *
+ * `exactOptionalPropertyTypes` is on, so `{ ownership: undefined }` and `{}` are different
+ * types — and here they are also different CLAIMS. These columns are NULL for every repository
+ * indexed before migration 007, and a consumer must be able to tell "this run predates the
+ * analysis, re-index it" from "we analysed and found nothing", which is a present report with
+ * empty arrays. Spreading the result of this keeps the key absent in the first case instead of
+ * flattening both into the same shape.
+ *
+ * A malformed blob degrades to absent rather than throwing, matching `parseColumn`: a row that
+ * cannot be read is one we have no analysis for, which is exactly what absent means.
+ */
+function optionalReport<K extends string, T>(key: K, raw: string | null): Partial<Record<K, T>> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as T;
+    return parsed === null ? {} : ({ [key]: parsed } as Record<K, T>);
+  } catch {
+    return {};
+  }
+}
+
 export type CreateIndexJobResult =
   | { readonly ok: true; readonly jobId: string; readonly repoId: string; readonly deduplicated: boolean }
   /**
@@ -104,6 +164,12 @@ export type CreateIndexJobResult =
  * baseline/PR-scoped work, which is the phase that needs `commitSha` before enqueue
  * anyway. What IS enforced today is the per-repo mutex below, which covers the failure
  * §418 is really guarding: two concurrent runs on one workspace directory.
+ *
+ * WHAT THE REPO ROW IS KEYED ON, since P0.9: (owner, source type, canonical target), resolved
+ * by `upsertRepo`. This used to mint a fresh UUID per submission, so re-indexing inserted a
+ * SECOND repository — the dashboard listed one codebase twice with two different scores and no
+ * way to tell which was current. The id now survives a re-index, which is also what makes
+ * every `/repos/<id>` link and bookmark keep working across one.
  */
 export function createIndexJob(
   source: string,
@@ -111,12 +177,13 @@ export function createIndexJob(
   githubToken?: string,
   ownerId?: number | null,
 ): CreateIndexJobResult {
-  const repoId = randomUUID();
+  recoverOrphanedJobs();
   const jobId = randomUUID();
   const name = sourceType === "git" ? gitName(source) : path.basename(source.replace(/\/+$/, "")) || source;
 
-  insertRepo({
-    id: repoId,
+  const { id: repoId, previousStatus } = upsertRepo({
+    // Used only if this target has no row yet; `upsertRepo` returns the existing id otherwise.
+    id: randomUUID(),
     url: source,
     name,
     sourceType,
@@ -124,24 +191,33 @@ export function createIndexJob(
     createdAt: Date.now(),
   });
 
-  // STRANGLER-FIG FLIP (LLD §13.1 step 4, the pattern `CG_ENGINE=v1|v2|both` uses).
+  // INLINE MODE (`CG_USE_WORKER=false`) — what `next dev` and the test suite use. The
+  // deployed default is now the worker (see `config.useWorker`), but this path stays
+  // fully supported because a second process is the wrong shape for a dev server.
   //
-  // Default is the inline path, and that is not timidity — it is the only correct
-  // default until the worker is DEPLOYABLE. Measured today: the container runs
-  // `CMD ["node", "apps/web/server.js"]` and nothing else, and `tsx` is absent from
-  // the standalone runtime, so a queued job in production would sit unclaimed
-  // forever. Enqueuing by default would have turned "indexing is slow" into
-  // "indexing silently never happens", which is strictly worse than the OOM it
-  // replaces.
-  //
-  // Flip to `true` in the same commit that (a) compiles the worker to JS and (b) runs
-  // it alongside the web process in the container. The 512 MB two-concurrent-job
-  // smoke test is what proves that commit, and it is the real exit criterion for P2.
+  // The dispatch goes through the host slot gate rather than straight to `runJob`. The
+  // per-repo mutex below only serialises ONE repository; ten different repositories
+  // submitted at once used to mean ten concurrent parses on a 0.5 vCPU box. Over the
+  // ceiling the job WAITS, holding a `queued` row that looks exactly like one waiting
+  // for a worker, so the caller and the UI need not know which mode is running.
   if (!config.useWorker) {
+    // The mutex the worker path gets from `enqueue`, which this path never needed while every
+    // submission produced its own repo row. Now that a re-submission lands on the SAME row it
+    // does: two runs sharing one workspace directory race on every file in it, and the loser's
+    // result silently wins. Both conditions are required — a busy status with no live job is a
+    // row a crashed process left behind, and refusing that would strand the repository.
+    const live = previousStatus !== null && BUSY_STATUSES[previousStatus as JobStatus]
+      ? findLiveJobForRepo(repoId)
+      : null;
+    if (live) return { ok: false, reason: "repo-busy", jobId: live.id, repoId };
+
+    setRepoStatus(repoId, "queued");
     insertJob(jobId, repoId);
-    void runJob(jobId, repoId, source, sourceType, githubToken);
+    void slots().run(() => runJob(jobId, repoId, source, sourceType, githubToken));
     return { ok: true, jobId, repoId, deduplicated: false };
   }
+
+  setRepoStatus(repoId, "queued");
 
   const queued = jobQueue().enqueue({
     id: jobId,
@@ -208,6 +284,30 @@ function toJobStatus(status: string, stage: string | null): JobStatus {
   }
 }
 
+/**
+ * The persisted phase, or null.
+ *
+ * Tolerant on purpose: the column is written by two independent processes, and a phase
+ * that cannot be parsed must render as "no phase" rather than break the poll the whole
+ * progress UI runs on.
+ */
+function parsePhase(raw: string | null): IndexPhase | null {
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const p = parsed as { stage?: unknown; done?: unknown; total?: unknown };
+    if (typeof p.stage !== "string" || p.stage === "") return null;
+    return {
+      stage: p.stage,
+      ...(typeof p.done === "number" ? { done: p.done } : {}),
+      ...(typeof p.total === "number" ? { total: p.total } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function getJob(jobId: string): Job | null {
   const r = findQueuedJob(jobId);
   if (!r) return null;
@@ -218,12 +318,45 @@ export function getJob(jobId: string): Job | null {
     progress: r.progress,
     message: r.message,
     error: r.error,
+    phase: parsePhase(r.phase_json),
   };
+}
+
+/**
+ * Drift for a page of repos, in one query.
+ *
+ * `failed` comes from the REPO row and the deltas from the RUN rows, because a failed
+ * index writes no run at all — a repo whose last attempt died would otherwise keep
+ * showing the movement of the last run that succeeded, which is the reading least likely
+ * to make anyone look at it.
+ */
+function driftFor(
+  rows: ReadonlyArray<{ id: string; status?: string | null }>,
+): Map<string, RepoDrift> {
+  const deltas = repoRunDeltas(rows.map((r) => r.id));
+  const out = new Map<string, RepoDrift>();
+  for (const row of rows) {
+    const d = deltas.get(row.id);
+    const failed = row.status === "error";
+    if (!d && !failed) continue;
+    out.set(row.id, {
+      findings: d?.findings ?? 0,
+      scoreDelta: d?.scoreDelta ?? null,
+      findingsDelta: d?.findingsDelta ?? null,
+      failed,
+    });
+  }
+  return out;
 }
 
 /** Repos visible to `viewer`: the shared public bucket plus the viewer's own. */
 export function listRepos(viewer: ViewerId): RepoSummary[] {
-  return listRepoRows(viewer).map((r) => ({
+  const rows = listRepoRows(viewer);
+  const drift = driftFor(rows);
+  // One statement for the page, beside the drift query: the dashboard ranks these rows by
+  // score, so it has to know which of those scores are samples.
+  const sampled = reposScoredOverSample(rows.map((r) => r.id));
+  return rows.map((r) => ({
     id: r.id,
     url: r.url,
     name: r.name,
@@ -232,6 +365,8 @@ export function listRepos(viewer: ViewerId): RepoSummary[] {
     score: r.score ?? null,
     createdAt: r.created_at,
     finishedAt: r.finished_at ?? null,
+    drift: drift.get(r.id) ?? null,
+    capHit: sampled.has(r.id),
   }));
 }
 
@@ -257,7 +392,12 @@ function parseDependencies(raw: string | null | undefined): string[] {
  * (REVIEW B7).
  */
 export function listFleetRepos(viewer: ViewerId): FleetRepo[] {
-  return listFleetRepoRows(viewer).map((r) => ({
+  const rows = listFleetRepoRows(viewer);
+  // `status = 'done'` is in this query's WHERE clause, so no row here can be a failed
+  // index — the dashboard is the view that sees those.
+  const drift = driftFor(rows);
+  const sampled = reposScoredOverSample(rows.map((r) => r.id));
+  return rows.map((r) => ({
     id: r.id,
     url: r.url,
     name: r.name,
@@ -265,6 +405,10 @@ export function listFleetRepos(viewer: ViewerId): FleetRepo[] {
     score: r.score ?? null,
     loc: r.loc ?? 0,
     dependencies: parseDependencies(r.deps),
+    // Already selected by `listFleetRepoRows`; it was simply never carried out of the row.
+    packageNames: parseDependencies(r.package_names_json),
+    drift: drift.get(r.id) ?? null,
+    capHit: sampled.has(r.id),
   }));
 }
 
@@ -275,6 +419,9 @@ export function getRepoOwnerId(id: string): number | null | undefined {
 
 function toRepoDetail(r: RepoRow): RepoDetail {
   return {
+    // One repo, so `driftFor` runs its single-statement query over a one-element list
+    // rather than this path having a second, subtly different definition of movement.
+    drift: driftFor([r]).get(r.id) ?? null,
     id: r.id,
     url: r.url,
     name: r.name,
@@ -294,6 +441,19 @@ function toRepoDetail(r: RepoRow): RepoDetail {
     tree: parseColumn(r.tree, EMPTY_TREE),
     modules: parseColumn(r.modules, EMPTY_MODULES),
     symbolGraph: parseColumn(r.symbols, EMPTY_SYMBOLS),
+    /**
+     * Spread rather than assigned, because `exactOptionalPropertyTypes` makes an explicit
+     * `undefined` different from an absent key — and the difference is the whole contract
+     * here. A NULL column means the run predates the analysis, which every consumer renders
+     * as "not analysed"; writing `ownership: undefined` would satisfy the type while a
+     * present-but-empty report and a missing one became indistinguishable downstream.
+     */
+    ...optionalReport<"ownership", OwnershipReport>("ownership", r.ownership_json),
+    ...optionalReport<"apiSurface", ApiSurface>("apiSurface", r.api_surface_json),
+    ...optionalReport<"taint", TaintReport>("taint", r.taint_json),
+    ...optionalReport<"unusedDependencies", readonly UnusedDependency[]>("unusedDependencies", r.unused_deps_json),
+    ...optionalReport<"advisories", AdvisoryReport>("advisories", r.advisories_json),
+    ...optionalReport<"packageNames", readonly string[]>("packageNames", r.package_names_json),
     createdAt: r.created_at,
     finishedAt: r.finished_at ?? null,
   };
@@ -314,7 +474,9 @@ export function getRepo(id: string, viewer: ViewerId): RepoDetail | null {
   // than duplicated into `repos`. Null for anything indexed before ADR-008, which the UI must
   // render as unknown rather than as complete.
   const coverage = latestRunCoverage(id) as RepoDetail["coverage"] | null;
-  return coverage ? { ...detail, coverage } : detail;
+  // `capHit` is repeated onto the summary half of the shape so a `RepoDetail` handed to a
+  // list-shaped consumer cannot read as "walk finished" while its own coverage says otherwise.
+  return coverage ? { ...detail, coverage, capHit: coverage.capHit } : detail;
 }
 
 /**
@@ -388,6 +550,15 @@ export function getIndexedHead(id: string): { hash: string; result: IndexResult 
       tree: parseColumn(r.tree, EMPTY_TREE),
       modules: parseColumn(r.modules, EMPTY_MODULES),
       symbolGraph: parseColumn(r.symbols, EMPTY_SYMBOLS),
+      // Same absent-vs-empty contract as `toRepoDetail`. This feeds the Timeline's HEAD fast
+      // path, which reuses a stored result instead of re-indexing the same commit — so a
+      // fabricated empty report here would be indistinguishable from a real one downstream.
+      ...optionalReport<"ownership", OwnershipReport>("ownership", r.ownership_json),
+      ...optionalReport<"apiSurface", ApiSurface>("apiSurface", r.api_surface_json),
+      ...optionalReport<"taint", TaintReport>("taint", r.taint_json),
+      ...optionalReport<"unusedDependencies", readonly UnusedDependency[]>("unusedDependencies", r.unused_deps_json),
+      ...optionalReport<"advisories", AdvisoryReport>("advisories", r.advisories_json),
+    ...optionalReport<"packageNames", readonly string[]>("packageNames", r.package_names_json),
     },
   };
 }
@@ -443,6 +614,11 @@ async function indexAndRecord(
   // degrades to a full index and never to a failure — neither store method throws.
   const result = await indexRepo(root, {
     cache: createIndexCacheStore(path.join(dataDir(), "index-cache"), root),
+    // Live phase for the progress poll. `setJobPhase` writes one column and nothing else,
+    // so it cannot contradict the coarse state `setJob` above owns; `coalescePhases` holds
+    // it to ~2 writes/second, since the pipeline emits every 15 files and a row write per
+    // file would cost more than the analysis it is reporting on.
+    onPhase: coalescePhases((phase) => setJobPhase(jobId, JSON.stringify(phase))),
   });
   // The reuse decision is otherwise invisible: it changes no output, and the report is not
   // persisted on the repo row. One line per run is what makes "the cache is silently never
@@ -478,6 +654,15 @@ async function indexAndRecord(
     tree: JSON.stringify(result.tree),
     modules: JSON.stringify(result.modules),
     symbols: JSON.stringify(result.symbolGraph),
+    // `?? null` and not `?? "{}"`: a run that produced no report leaves the column NULL, which
+    // readers render as "not analysed". Serialising an empty object here would claim the
+    // analysis ran and found nothing.
+    ownership: result.ownership ? JSON.stringify(result.ownership) : null,
+    apiSurface: result.apiSurface ? JSON.stringify(result.apiSurface) : null,
+    taint: result.taint ? JSON.stringify(result.taint) : null,
+    unusedDeps: result.unusedDependencies ? JSON.stringify(result.unusedDependencies) : null,
+    advisories: result.advisories ? JSON.stringify(result.advisories) : null,
+    packageNames: result.packageNames ? JSON.stringify(result.packageNames) : null,
     workspaceDir: root,
     headHash,
     finishedAt: Date.now(),
@@ -510,11 +695,127 @@ async function indexAndRecord(
   setJob(jobId, "done", 100, `Done — Health Score ${result.score}/100`);
 }
 
-/** Both inline runners end the same way: the job row carries the message, the repo row the state. */
+/**
+ * Why an indexing run failed, in the vocabulary the CLIENT is allowed to see.
+ *
+ * `failJob` used to hand `e.message` straight to the job row, which the jobs API returns
+ * verbatim. For the commonest failure there is — a URL that does not resolve to a repo —
+ * that rendered this to an anonymous visitor on the landing page:
+ *
+ *   Command failed: git -c http.followRedirects=false clone --depth 50 https://example.com/foo/bar
+ *   /app/data/workspaces/6ee8aa2a-3635-4830-b9d6-2c456b9216b9
+ *   fatal: repository 'https://example.com/foo/bar/' not found
+ *
+ * Three disclosures (absolute data-dir path, the internal workspace UUID, the exact git
+ * invocation and its flags) to deliver one useful token: `not found`. That is F023 on the
+ * one route every visitor hits first, and it is also unreadable — the actionable sentence
+ * is the last two words of the third line.
+ *
+ * The patterns below are matched against `git`'s and node's REAL output rather than
+ * invented: see `packages/vcs/src/acquire.ts` for the invocation that produces them
+ * (`GIT_TERMINAL_PROMPT=0` is why an auth failure says "terminal prompts disabled"
+ * instead of hanging, and `http.followRedirects=false` is why a moved repo reports a
+ * redirect refusal), and `resolveLocalDir` for the two local-path throws.
+ */
+export type IndexFailureCause =
+  | "repo-not-found"
+  | "auth-required"
+  | "host-unreachable"
+  | "clone-timeout"
+  | "disk-full"
+  | "not-a-git-repo"
+  | "blocked-url"
+  | "local-access-denied"
+  | "local-path-unreadable"
+  | "unknown";
+
+/**
+ * One sentence per cause, each ending in something the reader can DO. No cause may
+ * interpolate any part of the raw error: the whole point of the indirection is that these
+ * strings are constants an operator can read here and know are safe to ship.
+ */
+export const INDEX_FAILURE_MESSAGES: Record<IndexFailureCause, string> = {
+  "repo-not-found": "Repository not found. Check the URL, or sign in if it is private.",
+  "auth-required":
+    "This repository is private. Sign in with GitHub and pick it from your repository list, or use a public URL.",
+  "host-unreachable":
+    "Could not reach that host. Check the domain is spelled correctly and is reachable from the public internet.",
+  "clone-timeout":
+    "The clone took too long and was stopped. Try again, or index a smaller repository.",
+  "disk-full":
+    "The server ran out of disk space. Delete an indexed repository to free space, then try again.",
+  "not-a-git-repo":
+    "That location is not a git repository. Point CodeGraph at a git checkout or a git URL.",
+  "blocked-url":
+    "That URL was refused. Use a public https git URL — private, loopback and redirecting hosts are not accepted.",
+  "local-access-denied":
+    "Local-folder indexing is disabled on this deployment. Use a git URL instead.",
+  "local-path-unreadable":
+    "That folder could not be read. Check it exists on the server and is a directory the app can read.",
+  // Deliberately not "Indexing failed" — the job's own message already says that directly
+  // above it, and a card that says the same four words twice reads as a rendering bug.
+  unknown: "Indexing did not complete. Retry, and if it keeps failing check the source is a public git URL.",
+};
+
+/**
+ * Ordered because the haystacks OVERLAP. `fatal: unable to access '…': Could not resolve
+ * host: x` carries git's generic access prefix as well as the DNS cause, and a clone the
+ * timeout killed carries nothing but "Command failed" — so structural evidence (the
+ * `killed` flag `child_process` sets when it sends SIGTERM at `cloneTimeoutMs`) is
+ * consulted before text, and the specific text before the generic.
+ */
+const FAILURE_PATTERNS: ReadonlyArray<readonly [IndexFailureCause, readonly string[]]> = [
+  ["local-access-denied", ["local-folder indexing and server-side folder browsing are disabled", "outside the configured local-access root"]],
+  ["local-path-unreadable", ["path does not exist", "not a directory", "eacces"]],
+  ["blocked-url", ["invalid repository url", "not allowed", "unable to find remote helper", "unable to update url base from redirection", "loopback/private/link-local"]],
+  ["auth-required", ["authentication failed", "could not read username", "terminal prompts disabled", "invalid username or password", "access denied", "requested url returned error: 401", "requested url returned error: 403", "permission denied (publickey"]],
+  ["repo-not-found", ["not found", "requested url returned error: 404"]],
+  ["host-unreachable", ["could not resolve host", "failed to connect", "connection refused", "network is unreachable", "no route to host", "temporary failure in name resolution", "enotfound", "econnrefused", "connection timed out"]],
+  ["disk-full", ["enospc", "no space left on device"]],
+  ["not-a-git-repo", ["not a git repository"]],
+  ["clone-timeout", ["timed out", "etimedout"]],
+];
+
+/**
+ * A raw exception → a stable cause and the safe sentence that goes with it.
+ *
+ * `stderr` is folded into the haystack alongside `message` because `execFile`'s rejection
+ * splits the evidence across both, and which half carries the diagnosis depends on how
+ * much git managed to print before it died.
+ */
+export function classifyIndexFailure(e: unknown): { readonly cause: IndexFailureCause; readonly message: string } {
+  // `child_process` killing the clone itself IS the timeout: it sends SIGTERM at
+  // `cloneTimeoutMs` and git dies without printing anything that says so, so this is the
+  // only evidence there will ever be for the commonest slow-repo failure.
+  const killed = e as { killed?: unknown; signal?: unknown } | null;
+  if (killed?.killed === true || killed?.signal === "SIGTERM") {
+    return { cause: "clone-timeout", message: INDEX_FAILURE_MESSAGES["clone-timeout"] };
+  }
+  const withStderr = e as { stderr?: unknown } | null;
+  const stderr = typeof withStderr?.stderr === "string" ? withStderr.stderr : "";
+  const haystack = `${e instanceof Error ? e.message : String(e)}\n${stderr}`.toLowerCase();
+  for (const [cause, needles] of FAILURE_PATTERNS) {
+    if (needles.some((n) => haystack.includes(n))) return { cause, message: INDEX_FAILURE_MESSAGES[cause] };
+  }
+  return { cause: "unknown", message: INDEX_FAILURE_MESSAGES.unknown };
+}
+
+/**
+ * Both inline runners end the same way: the job row carries the message, the repo row the state.
+ *
+ * Progress is whatever the run had REACHED, not 100. Hardcoding 100 drew a full bar above
+ * the word "failed" — the same shape a finished run makes — so the one glanceable signal
+ * on the page said the opposite of the text beside it. Stopping the bar where the work
+ * stopped also says something true: a failure at 15% is a clone that never landed, a
+ * failure at 70% is a repository that cloned and would not parse.
+ */
 function failJob(jobId: string, repoId: string, e: unknown): void {
-  const msg = e instanceof Error ? e.message : String(e);
-  setJob(jobId, "error", 100, "Indexing failed", msg);
-  setRepoError(repoId, "error", msg);
+  const { cause, message } = classifyIndexFailure(e);
+  // The raw text is the operator's ONLY copy — it is deliberately absent from every
+  // response — so it is logged with the ids needed to tie it back to a user's report.
+  logger.warn("indexing failed", { repoId, jobId, cause, err: e instanceof Error ? e.message : String(e) });
+  setJob(jobId, "error", getJob(jobId)?.progress ?? 0, "Indexing failed", message);
+  setRepoError(repoId, "error", message);
 }
 
 async function runJob(
@@ -605,6 +906,7 @@ type StartedReindex =
   | { readonly ok: false; readonly reason: "busy" | "no-workspace" };
 
 function startReindex(repoId: string): StartedReindex {
+  recoverOrphanedJobs();
   const ws = getWorkspaceDir(repoId);
   if (!ws) return { ok: false, reason: "no-workspace" };
 
@@ -613,12 +915,15 @@ function startReindex(repoId: string): StartedReindex {
 
   const jobId = randomUUID();
 
-  // Same strangler-fig flip as `createIndexJob` — read the long comment there. The
-  // default is still inline because a queued job is claimed by nothing in the shipped
-  // container, and a re-index that silently never happens is the exact bug this closes.
+  // Same two modes as `createIndexJob`, and the same host ceiling: a re-index is the
+  // identical pipeline, so it must not be the way to get around the bound.
   if (!config.useWorker) {
     insertJob(jobId, repoId);
-    return { ok: true, jobId, done: runReindexJob(jobId, repoId, ws.dir, ws.sourceType) };
+    return {
+      ok: true,
+      jobId,
+      done: slots().run(() => runReindexJob(jobId, repoId, ws.dir, ws.sourceType)),
+    };
   }
 
   const queued = jobQueue().enqueue({

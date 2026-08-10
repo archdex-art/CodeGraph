@@ -10,7 +10,7 @@ export default function TimelinePage() {
       <SectionHead
         eyebrow="History"
         title="Timeline"
-        blurb="How the Health Score and the graph moved across the repository's history, and which commits moved them."
+        blurb="What the graph measured at each indexed commit — import cycles, god files, fan-in, dependencies, test ratio — and, beside those facts, the scores that only judge them."
       />
       <TimelineView repoId={repo.id} />
     </>

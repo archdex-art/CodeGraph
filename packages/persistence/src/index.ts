@@ -28,14 +28,15 @@ export type {
   RepoFleetRow,
   RepoRow,
   RepoSummaryRow,
+  UpsertedRepo,
   WorkspaceLocation,
 } from "./repos";
+export { canonicalTarget } from "./repo-identity";
 export {
   completeRepoIndex,
   deleteRepo,
   findRepo,
   findRepoUnscoped,
-  insertRepo,
   listFleetRepos,
   listRepos,
   repoOwnerId,
@@ -46,6 +47,7 @@ export {
   setRepoStatus,
   setRepoWorkspace,
   setSaveMode,
+  upsertRepo,
 } from "./repos";
 
 export type { JobRow, QueuedJobRow, NewJob } from "./jobs";
@@ -54,6 +56,7 @@ export {
   queueDepth,
   insertJob,
   updateJob,
+  setJobPhase,
   TERMINAL_JOB_STATUSES,
   enqueueJob,
   claimJob,
@@ -62,12 +65,13 @@ export {
   succeedJob,
   failJob,
   cancelJob,
+  abandonOrphanedJobs,
   isJobCancelled,
   findQueuedJob,
   findLiveJobForRepo,
 } from "./jobs";
 
-export type { AnalysedIssue, NewRun } from "./runs";
+export type { AnalysedIssue, NewRun, RunDelta } from "./runs";
 export {
   findingById,
   latestRunCoverage,
@@ -75,6 +79,8 @@ export {
   pruneRunsForRepo,
   recordRun,
   repoIdForFinding,
+  repoRunDeltas,
+  reposScoredOverSample,
 } from "./runs";
 
 export type { CounterRow, MetricLabels } from "./metrics";
@@ -85,8 +91,6 @@ export {
   renderPrometheus,
   resetCountersForTests,
 } from "./metrics";
-
-export { readSetting, writeSetting } from "./settings";
 
 export type { FindingRow } from "./findings";
 export {

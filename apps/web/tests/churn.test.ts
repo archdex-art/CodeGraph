@@ -24,7 +24,7 @@ describe("git churn feeds judge scoring (Task 6.11)", () => {
 
     const repo: RepoDetail = {
       id: "r", url: "", name: "test", status: "done", sourceType: "git",
-      score: 80, createdAt: 0, finishedAt: 0, hasWorkspace: false, error: null,
+      score: 80, createdAt: 0, finishedAt: 0, hasWorkspace: false, error: null, drift: null,
       loc: 100, languages: [], graphStats: { nodes: 0, edges: 0, files: 0, dirs: 0, dependencies: 0 },
       dimensions: [], issues: [], dependencies: [],
       churnByFile: { "hot.ts": 50, "cold.ts": 1 }, // hot.ts committed 50x in the window, cold.ts once

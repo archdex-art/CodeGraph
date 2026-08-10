@@ -14,6 +14,7 @@ import {
   ANONYMOUS_INDEXING_DISABLED_MESSAGE,
   ANONYMOUS_CONSENT_MESSAGE,
 } from "@/lib/authz";
+import { getVisitorId, mintVisitorId, privateTrialsAvailable, setVisitorCookie } from "@/lib/visitor";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
 import { logger } from "@codegraph/observability";
 
@@ -60,15 +61,41 @@ export async function POST(req: NextRequest) {
   const localPath = (body.localPath || "").trim();
   const session = getSession(req);
 
-  // Before any work: a signed-out index lands in the shared public bucket, so it needs
-  // either an account or an explicit acknowledgement. `requiresConsent` is what lets the
-  // console tell the two refusals apart — one is answerable by the user, the other is
-  // the operator's decision and only offers sign-in.
+  /**
+   * Who owns what this request creates, and whether an anonymous caller may create it at all.
+   *
+   * TWO CONTROLS, answering different questions, and both survive here.
+   *
+   * `anonymousIndexingAllowed()` is the OPERATOR's switch: a deployment can refuse signed-out
+   * indexing outright, and no acknowledgement from the caller overrides it.
+   *
+   * The visitor cookie is the TENANCY. Signed in → that account, private, as before. Signed
+   * out → the browser making the request, via a signed cookie, so a trial repository is
+   * private to whoever ran it instead of landing in a bucket every visitor can read, edit and
+   * delete. The shared bucket is still reachable and is now what `acknowledgePublic: true`
+   * MEANS — an explicit request to publish, rather than the only anonymous option.
+   *
+   * Consent is therefore demanded only when the result really will be world-readable: when
+   * the caller asks to publish, or when there is no `CG_SESSION_SECRET` to sign a visitor
+   * cookie with and the shared bucket is the only place left to put it. Asking for it on a
+   * run that lands somewhere private would be a warning about a thing that is not happening,
+   * which is how consent prompts get clicked through. `requiresConsent` still distinguishes
+   * the two refusals: one is answerable by the user, the other is the operator's decision and
+   * only offers sign-in.
+   *
+   * Without a session secret the old behaviour stands, deliberately: an unsigned owner id is
+   * one any visitor could claim by editing a cookie, which would be worse than the shared
+   * bucket precisely because it would look private.
+   */
+  const wantsPublic = body.acknowledgePublic === true;
+  const existingVisitor = getVisitorId(req);
+  const trialsAvailable = privateTrialsAvailable();
+
   if (!session) {
     if (!anonymousIndexingAllowed()) {
       return NextResponse.json({ error: ANONYMOUS_INDEXING_DISABLED_MESSAGE }, { status: 401 });
     }
-    if (body.acknowledgePublic !== true) {
+    if (!trialsAvailable && !wantsPublic) {
       return NextResponse.json(
         { error: ANONYMOUS_CONSENT_MESSAGE, requiresConsent: true },
         { status: 401 }
@@ -76,6 +103,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const visitorId =
+    session || wantsPublic || !trialsAvailable ? null : existingVisitor ?? mintVisitorId();
+  const ownerId = session?.userId ?? visitorId;
+
+  /** Issue the cookie on the way out, but only when this request minted a NEW identity. */
+  const withVisitorCookie = (res: NextResponse): NextResponse => {
+    if (visitorId !== null && existingVisitor === null) setVisitorCookie(res, visitorId, req);
+    return res;
+  };
   try {
     if (localPath) {
       if (!localAccessAllowed()) {
@@ -89,7 +125,7 @@ export async function POST(req: NextRequest) {
       if (!withinLocalAccessRoot(path.resolve(localPath))) {
         return NextResponse.json({ error: LOCAL_ACCESS_ROOT_MESSAGE }, { status: 403 });
       }
-      return enqueued(createIndexJob(localPath, "local", undefined, session?.userId ?? null));
+      return withVisitorCookie(enqueued(createIndexJob(localPath, "local", undefined, ownerId)));
     }
     if (repoUrl) {
       if (!/^https?:\/\/[\w.-]+\/.+/.test(repoUrl) || !isPublicHttpUrl(repoUrl)) {
@@ -98,7 +134,7 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      return enqueued(createIndexJob(repoUrl, "git", session?.accessToken, session?.userId ?? null));
+      return withVisitorCookie(enqueued(createIndexJob(repoUrl, "git", session?.accessToken, ownerId)));
     }
     return NextResponse.json({ error: "Provide repoUrl or localPath" }, { status: 400 });
   } catch (e) {

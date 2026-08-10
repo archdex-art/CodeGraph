@@ -29,7 +29,10 @@ export function buildVizGraph(
   files: ScannedFile[],
   importEdges: Array<{ from: string; to: string }>,
   fanIn: Map<string, number>,
-  issues: Issue[]
+  issues: Issue[],
+  /* Optional so the many call sites that only render structure keep compiling and keep
+     behaving identically; an index that supplies them gets dependency nodes as well. */
+  externalEdges: ReadonlyArray<{ from: string; pkg: string }> = []
 ): VizGraph {
   // Per-file issue aggregation.
   const issueCount = new Map<string, number>();
@@ -107,6 +110,41 @@ export function buildVizGraph(
     if (included.has(e.from) && included.has(e.to)) {
       edges.push({ source: toPosix(e.from), target: toPosix(e.to), kind: "imports" });
     }
+  }
+
+  /*
+   * External packages as first-class nodes.
+   *
+   * `GraphNodeKind` has named `"dependency"` and `GraphEdge.kind` `"depends"` since the model
+   * was written, and nothing produced either: "what depends on <package>" could only answer
+   * "nothing", which reads as an absence of dependencies rather than an absence of analysis.
+   *
+   * `fanIn` on a dependency node is how many of the rendered files import it, which is the
+   * number that makes the node worth drawing large - a package one file touches and a package
+   * forty files touch are different risks when it needs replacing.
+   */
+  const depFanIn = new Map<string, number>();
+  for (const e of externalEdges) {
+    if (!included.has(e.from)) continue;
+    depFanIn.set(e.pkg, (depFanIn.get(e.pkg) || 0) + 1);
+  }
+  for (const [pkg, count] of depFanIn) {
+    nodes.set(`dep:${pkg}`, {
+      id: `dep:${pkg}`,
+      label: pkg,
+      kind: "dependency",
+      language: null,
+      // An external package has no lines in THIS repository. Reporting its real size would
+      // mean reading node_modules, which the walk deliberately never enters.
+      loc: 0,
+      fanIn: count,
+      issues: 0,
+      worstSeverity: 0,
+    });
+  }
+  for (const e of externalEdges) {
+    if (!included.has(e.from)) continue;
+    edges.push({ source: toPosix(e.from), target: `dep:${e.pkg}`, kind: "depends" });
   }
 
   return { nodes: [...nodes.values()], edges, truncated };

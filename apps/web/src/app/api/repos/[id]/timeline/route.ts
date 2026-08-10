@@ -22,7 +22,18 @@ function badHash(): NextResponse {
   return NextResponse.json({ error: "Invalid commit hash" }, { status: 400 });
 }
 
-// GET /api/repos/:id/timeline?op=metadata|trends|snapshot|compare
+/**
+ * A commit hash from the client becomes a FILENAME in the snapshot cache
+ * (`data/timeline/<repo>/<hash>.json`) and an argument to `git archive`. Anything that is
+ * not a hash has no business doing either, so it is rejected before it reaches the engine
+ * rather than sanitised somewhere downstream.
+ */
+const HASH = /^[0-9a-f]{7,40}$/;
+function isCommitHash(value: string | null): value is string {
+  return value !== null && HASH.test(value);
+}
+
+// GET /api/repos/:id/timeline?op=metadata|trends|points|snapshot|compare|delta
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { denied, ws } = requireWorkspace(req, id);
@@ -46,6 +57,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ trends });
     }
 
+    if (op === "points") {
+      // Cache-only: the structural series plot whatever is already indexed. No build.
+      const points = await engine.getTrendPoints();
+      return NextResponse.json({ points });
+    }
+
     if (op === "snapshot") {
       const hash = searchParams.get("hash");
       if (!hash) return NextResponse.json({ error: "Missing hash" }, { status: 400 });
@@ -57,21 +74,29 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ snapshot });
     }
 
-    if (op === "compare") {
+    if (op === "compare" || op === "delta") {
       const base = searchParams.get("base");
       const head = searchParams.get("head");
       if (!base || !head) return NextResponse.json({ error: "Missing base or head hash" }, { status: 400 });
       if (!isCommitHash(base) || !isCommitHash(head)) return badHash();
 
-      await engine.ensureSnapshot(base);
-      await engine.ensureSnapshot(head);
-      const controller = await engine.getController();
-      const evolution = await controller.compare(base, head);
-      
-      if (!evolution) {
+      // `delta` is the one-click "what changed since last index" path: both sides are
+      // already cached by definition, so it never spends minutes building one.
+      if (op === "compare") {
+        await engine.ensureSnapshot(base);
+        await engine.ensureSnapshot(head);
+      }
+
+      const delta = await engine.getSnapshotDelta(base, head);
+      if (!delta) {
         return NextResponse.json({ error: "One or both snapshots are not cached. Call snapshot first." }, { status: 404 });
       }
-      return NextResponse.json({ evolution });
+
+      // Both sides are cached (the delta above proves it), so `compare` reads the same two
+      // files rather than building anything — the evolution narrative comes free either way.
+      const controller = await engine.getController();
+      const evolution = await controller.compare(base, head);
+      return NextResponse.json({ evolution, delta });
     }
 
     return NextResponse.json({ error: "Unknown op" }, { status: 400 });

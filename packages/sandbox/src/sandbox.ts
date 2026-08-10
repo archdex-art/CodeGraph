@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { childEnv } from "@codegraph/config";
 import type { ExecOptions, ExecResult, SandboxHandle } from "@codegraph/verify";
 
@@ -176,5 +177,38 @@ export async function hasTypeConfig(root: string): Promise<boolean> {
     return statSync(path.join(root, "tsconfig.json")).isFile();
   } catch {
     return false;
+  }
+}
+
+/**
+ * The TypeScript compiler THIS process ships, as an argv pair — never the one the analysed
+ * repository ships.
+ *
+ * Gate 2 used to run `npx tsc --noEmit` with `cwd` set to the freshly cloned tree. `npx`
+ * resolves `./node_modules/.bin/tsc` before anything on `PATH`, and a git repository can
+ * commit that path with mode 100755, so "type-check the fix" was a remote-code-execution
+ * primitive reachable by anyone who could get a repository indexed: index a crafted repo,
+ * POST to the fix route, and the web process executes the attacker's file. Gate 3 — which
+ * knowingly runs a repository's own test suite — is off unless the operator opts in, and
+ * gate 2 sat outside that policy while doing the same thing by accident.
+ *
+ * `process.execPath` plus an absolute path resolved from OUR dependency tree cannot be
+ * redirected by the analysed repository: no `PATH` lookup, no `node_modules/.bin`, no
+ * registry fetch. `tsc --noEmit` itself executes nothing from the tree — it reads
+ * `tsconfig.json` and type-checks — so the remaining surface is file reads, which the
+ * indexer already performs.
+ *
+ * Null when this runtime has no TypeScript (a standalone container that pruned it). The
+ * caller reports that as a skip, because "we could not check" is the honest answer and
+ * falling back to the repository's binary is the bug this replaced.
+ */
+export function typescriptCompiler(): { command: string; args: readonly string[] } | null {
+  try {
+    return {
+      command: process.execPath,
+      args: [createRequire(import.meta.url).resolve("typescript/bin/tsc")],
+    };
+  } catch {
+    return null;
   }
 }

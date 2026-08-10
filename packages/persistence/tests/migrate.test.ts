@@ -110,19 +110,25 @@ describe("upgrading a pre-migration v1 database", () => {
   it("rebuilds settings to a per-account key, preserving pre-migration values", () => {
     // The rebuild that cannot be done with ALTER: SQLite will not change a
     // PRIMARY KEY in place. Rows that were implicitly global become user_id=0.
+    //
+    // Nothing writes `settings` any more — it only ever held the AI-assistant
+    // configuration, which is gone. The table and this rebuild are kept anyway,
+    // and that is exactly what this test defends: an existing deployment whose
+    // database predates the per-account key must still boot. The fixture key
+    // below is the legacy one such a database would actually contain.
     const dbPath = freshDbPath();
     const db = buildLegacyV1Database(dbPath);
-    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("assistant.claudeModel", "sonnet");
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("assistant.model", "legacy");
 
     runMigrations(db);
 
     expect(columns(db, "settings").has("user_id")).toBe(true);
-    const row = db.prepare("SELECT key, user_id, value FROM settings WHERE key='assistant.claudeModel'").get() as {
+    const row = db.prepare("SELECT key, user_id, value FROM settings WHERE key='assistant.model'").get() as {
       user_id: number;
       value: string;
     };
     expect(row.user_id).toBe(0);
-    expect(row.value).toBe("sonnet");
+    expect(row.value).toBe("legacy");
   });
 
   it("is idempotent — running it twice changes nothing and does not re-apply", () => {

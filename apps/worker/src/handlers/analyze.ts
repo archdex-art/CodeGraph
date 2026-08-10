@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { indexRepo } from "@codegraph/analysis";
+import { coalescePhases } from "@codegraph/analysis-model";
 import { initTreeSitter } from "@codegraph/core-graph";
 import { createIndexCacheStore } from "@codegraph/fsx";
 import { logger } from "@codegraph/observability";
@@ -49,8 +50,14 @@ export interface AnalyzePayload {
   readonly workspaceReady?: boolean;
 }
 
-/** Not exported: the executor passes a lambda, so the name has one use, here. */
-type Report = (percent: number, stage: string, message: string) => void;
+/**
+ * Not exported: the executor passes a lambda, so the name has one use, here.
+ *
+ * The 4th argument is the live phase, already JSON. It rides the same protocol line as
+ * the coarse report, so a phase tick has to restate the percent/stage/message it is
+ * arriving under — see `phaseReport` below.
+ */
+type Report = (percent: number, stage: string, message: string, phase?: string | null) => void;
 
 export function parseAnalyzePayload(value: unknown): AnalyzePayload {
   if (typeof value !== "object" || value === null) {
@@ -139,6 +146,14 @@ export async function analyze(
     const result = await indexRepo(root, {
       signal,
       cache: createIndexCacheStore(path.join(dataDir(), "index-cache"), root),
+      // The live phase line. Coalesced by the pipeline's own helper (≤2 writes/second,
+      // stage changes exempt) so the supervisor is not handed a stdout line per file,
+      // and it restates the coarse report it arrives under because the protocol carries
+      // one message shape — a phase with a blank stage would blank the row's `stage`
+      // column and flip the UI's status vocabulary mid-index.
+      onPhase: coalescePhases((phase) =>
+        report(55, "indexing", "Building knowledge graph…", JSON.stringify(phase)),
+      ),
     });
     // Reuse is invisible in the output by construction — an incremental run and a full run
     // of the same tree produce the same result — so the only way to notice that the cache
@@ -175,6 +190,14 @@ export async function analyze(
       tree: JSON.stringify(result.tree),
       modules: JSON.stringify(result.modules),
       symbols: JSON.stringify(result.symbolGraph),
+      // Mirrors the web path in `store.ts`. NULL means "this run produced no report", which
+      // readers render as not-analysed; an empty object here would claim we looked.
+      ownership: result.ownership ? JSON.stringify(result.ownership) : null,
+      apiSurface: result.apiSurface ? JSON.stringify(result.apiSurface) : null,
+      taint: result.taint ? JSON.stringify(result.taint) : null,
+      unusedDeps: result.unusedDependencies ? JSON.stringify(result.unusedDependencies) : null,
+      advisories: result.advisories ? JSON.stringify(result.advisories) : null,
+      packageNames: result.packageNames ? JSON.stringify(result.packageNames) : null,
       workspaceDir: root,
       headHash,
       finishedAt: Date.now(),

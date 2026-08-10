@@ -12,7 +12,7 @@ import {
   parseCheck,
   type FileChange,
 } from "@codegraph/remediate-engine";
-import { createSandbox, detectTestRunner, hasTypeConfig } from "@codegraph/sandbox";
+import { createSandbox, detectTestRunner, hasTypeConfig, typescriptCompiler } from "@codegraph/sandbox";
 import {
   buildRecord,
   describeRecord,
@@ -135,7 +135,7 @@ export async function runFix(opts: FixOptions): Promise<FixOutcome> {
     gates.push(
       await syntaxGate(candidate, sandbox, parseCheck, async (abs) => readFileSync(abs, "utf8"))
     );
-    gates.push(await typesGate(sandbox, () => hasTypeConfig(work)));
+    gates.push(await typesGate(sandbox, () => hasTypeConfig(work), typescriptCompiler));
     gates.push(
       await testsGate(sandbox, {
         // Both true, and that is the entire point of the CLI. On the developer's own machine

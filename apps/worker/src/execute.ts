@@ -58,9 +58,11 @@ async function main(): Promise<number> {
   process.once("SIGINT", onTerm);
 
   // Progress goes to the supervisor over stdout, which owns the lease and is the
-  // only process permitted to write the job row.
-  const report = (percent: number, stage: string, message: string): void => {
-    process.stdout.write(`${JSON.stringify({ percent, stage, message })}\n`);
+  // only process permitted to write the job row. `phase` rides the same line rather
+  // than getting a message kind of its own: a phase is only ever meaningful beside
+  // the stage it belongs to, and one shape means `forward()` stays one branch.
+  const report = (percent: number, stage: string, message: string, phase?: string | null): void => {
+    process.stdout.write(`${JSON.stringify({ percent, stage, message, phase: phase ?? null })}\n`);
   };
 
   try {

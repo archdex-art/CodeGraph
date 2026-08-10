@@ -1,5 +1,11 @@
 import type { RepoDetail } from "../types";
 import { QueryEngine } from "../codeintel/query";
+// The card summaries this file builds are read by a person, so they get the product's
+// pluralisation helper rather than an `(s)` suffix. It comes from `plural`, not `fitText`:
+// lazily creating the canvas is not enough, because `fitText` NAMES `document` and
+// `CanvasRenderingContext2D` at the type level and importing it here failed the Node-target
+// compile in `scripts/tsconfig.json`.
+import { plural } from "../plural";
 // Straight from the score model, not through the indexer: simulating a projected score
 // must not drag in the walker, the ESLint layer and the TypeScript program (LLD §13).
 import { scoreIssues } from "@codegraph/score-engine";
@@ -257,7 +263,7 @@ function projectScore(repo: RepoDetail, buckets: Record<Priority, Finding[]>): n
 function summarize(agent: string, findings: Finding[]): string {
   if (!findings.length) return "No issues found.";
   const worst = findings.reduce((a, b) => (b.severity > a.severity ? b : a));
-  return `${findings.length} finding(s); worst: ${worst.title}.`;
+  return `${plural(findings.length, "finding")}; worst: ${worst.title}.`;
 }
 
 function planSummary(all: Finding[], buckets: Record<Priority, Finding[]>, cur: number, proj: number, truncated: boolean): string {

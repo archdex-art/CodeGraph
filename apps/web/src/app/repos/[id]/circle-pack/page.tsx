@@ -15,7 +15,7 @@ export default function CirclePackPage() {
       />
       {repo.tree && repo.tree.children && repo.tree.children.length > 0 ? (
         <GraphWorkbench repoId={repo.id} graph={repo.symbolGraph}>
-          {(onSelect) => <CirclePackView tree={repo.tree!} onSelect={onSelect} />}
+          {(onSelect) => <CirclePackView tree={repo.tree!} repoName={repo.name} onSelect={onSelect} deepLink />}
         </GraphWorkbench>
       ) : (
         <Empty msg="No file tree available." />

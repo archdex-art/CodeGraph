@@ -17,6 +17,8 @@ export type {
   FixCandidate,
   GateResult,
   SandboxHandle,
+  SuiteRun,
+  SuiteVerdict,
   TextEdit,
   VerificationGate,
   VerificationRecord,
@@ -24,4 +26,12 @@ export type {
 } from "./types";
 
 export { buildRecord, describeRecord } from "./record";
-export { reanalysisGate, syntaxGate, testsGate, typesGate } from "./gates";
+export {
+  pairedTestsGate,
+  reanalysisGate,
+  runTestSuite,
+  syntaxGate,
+  testsGate,
+  typesGate,
+  type TestSuiteOptions,
+} from "./gates";

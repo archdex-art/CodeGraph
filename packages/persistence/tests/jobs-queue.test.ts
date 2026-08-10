@@ -7,6 +7,7 @@ const dataDir = mkdtempSync(path.join(tmpdir(), "cg-jobs-queue-"));
 process.env["CG_DATA_DIR"] = dataDir;
 
 const {
+  abandonOrphanedJobs,
   claimJob,
   cancelJob,
   db,
@@ -15,7 +16,9 @@ const {
   findLiveJobForRepo,
   findQueuedJob,
   heartbeatJob,
+  upsertRepo,
   isJobCancelled,
+  setRepoStatus,
   succeedJob,
   updateJobProgress,
 } = await import("../src/index");
@@ -34,6 +37,7 @@ afterAll(() => {
 
 beforeEach(() => {
   db().exec("DELETE FROM jobs");
+  db().exec("DELETE FROM repos");
 });
 
 function enqueue(id: string, repoId = "repo-1", extra: Record<string, unknown> = {}) {
@@ -328,5 +332,87 @@ describe("findLiveJobForRepo — the per-repo mutex read half", () => {
   it("does not confuse one repo's live job with another's", () => {
     enqueue("job-1", "repo-1");
     expect(findLiveJobForRepo("repo-2")).toBeNull();
+  });
+});
+
+/**
+ * The INLINE twin of the expired-lease arm above.
+ *
+ * With `CG_USE_WORKER=false` nothing polls, so nothing ever reaches `claimJob` and its
+ * recovery. A job whose process exited therefore stayed non-terminal forever, and because
+ * `findLiveJobForRepo` treats every non-terminal status as live, the repository was refused
+ * for re-indexing permanently — the exact "never indexed again" failure the lease arm exists
+ * to prevent, reached by the other door.
+ */
+describe("abandoning jobs left by a dead process", () => {
+  // `upsertRepo` always writes 'queued'; the status under test is set explicitly.
+  const repo = (id: string, status: string) => {
+    upsertRepo({ id, url: `/tmp/${id}`, name: id, sourceType: "local", ownerId: null, createdAt: 1 });
+    setRepoStatus(id, status);
+  };
+
+  it("frees the repository a queued job was holding", () => {
+    repo("repo-1", "indexing");
+    enqueue("j1");
+    expect(findLiveJobForRepo("repo-1")).not.toBeNull();
+
+    expect(abandonOrphanedJobs()).toBe(1);
+
+    // The queue no longer considers the repo busy...
+    expect(findLiveJobForRepo("repo-1")).toBeNull();
+    // ...and the row the UI actually reads no longer claims to be working.
+    const row = db().prepare("SELECT status, error FROM repos WHERE id='repo-1'").get() as {
+      status: string;
+      error: string | null;
+    };
+    expect(row.status).toBe("error");
+    expect(row.error).toMatch(/interrupted/i);
+    // Re-enqueueing now succeeds, which is the whole point.
+    expect(enqueue("j2").deduplicated).toBe(false);
+  });
+
+  it("recovers a job that had started running, not just a queued one", () => {
+    repo("repo-1", "indexing");
+    enqueue("j1");
+    claimJob("worker-a", Date.now() + 60_000);
+    updateJobProgress("j1", "worker-a", 40, "detect", "Detecting");
+
+    expect(abandonOrphanedJobs()).toBe(1);
+    expect(findLiveJobForRepo("repo-1")).toBeNull();
+  });
+
+  /**
+   * `jobs.status` holds two vocabularies — the queue's and the inline executor's — and the
+   * first version of this recovery knew only the queue's. It restamped every completed inline
+   * job as "abandoned", which is history rewriting, not recovery.
+   */
+  it.each([
+    ["done", "the inline executor's success"],
+    ["error", "the inline executor's failure"],
+  ])("leaves a job in %s alone (%s)", (status) => {
+    repo("repo-1", "done");
+    enqueue("j1");
+    db().prepare("UPDATE jobs SET status=?, error=? WHERE id='j1'").run(status, "original reason");
+
+    expect(abandonOrphanedJobs()).toBe(0);
+    const job = db().prepare("SELECT status, error FROM jobs WHERE id='j1'").get() as {
+      status: string;
+      error: string | null;
+    };
+    expect(job.status).toBe(status);
+    expect(job.error).toBe("original reason");
+  });
+
+  it("never rewrites a job that finished, or the repo it finished for", () => {
+    repo("repo-1", "done");
+    enqueue("j1");
+    claimJob("worker-a", Date.now() + 60_000);
+    succeedJob("j1", "worker-a", "Done");
+
+    expect(abandonOrphanedJobs()).toBe(0);
+    const job = db().prepare("SELECT status FROM jobs WHERE id='j1'").get() as { status: string };
+    expect(job.status).toBe("succeeded");
+    const row = db().prepare("SELECT status FROM repos WHERE id='repo-1'").get() as { status: string };
+    expect(row.status).toBe("done");
   });
 });
