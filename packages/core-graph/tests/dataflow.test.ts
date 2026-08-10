@@ -100,3 +100,54 @@ describe("classifyTaint", () => {
     expect(verdict(src)).toBe("tainted");
   });
 });
+
+describe("validate-or-fall-back ternary", () => {
+  /**
+   * `const safe = isSafeReturnPath(raw) ? raw : "/"` is the single most common way a redirect
+   * target gets validated, and it used to read as tainted: the true branch carries the tainted
+   * name, the false branch is a literal, and the join of the two is tainted. A security
+   * analysis that flags the mitigation teaches its reader to discount the next finding, so the
+   * shape is recognised — narrowly, because this direction SUPPRESSES findings.
+   *
+   * `sanitized` and not `untraced`: the path stays visible, reported as defended.
+   */
+  it("treats a validator-guarded value as sanitized", () => {
+    expect(
+      verdict('function h(req: any) { const r = req.query.to; const s = isSafePath(r) ? r : "/"; sink(s); }'),
+    ).toBe("sanitized");
+  });
+
+  it("accepts a property access as the vetted expression", () => {
+    expect(
+      verdict('function h(req: any) { const s = isSafePath(req.query.to) ? req.query.to : "/"; sink(s); }'),
+    ).toBe("sanitized");
+  });
+
+  it("still reports tainted when the condition is not a call", () => {
+    // `flag ? raw : "/"` vets nothing; the flag could be anything.
+    expect(
+      verdict('function h(req: any) { const r = req.query.to; const s = flag ? r : "/"; sink(s); }'),
+    ).toBe("tainted");
+  });
+
+  it("still reports tainted when the kept value is not the one that was vetted", () => {
+    // The bug this prevents: `isSafePath(a) ? b : "/"` validates `a` and returns `b`.
+    expect(
+      verdict('function h(req: any) { const a = "ok"; const b = req.query.to; const s = isSafePath(a) ? b : "/"; sink(s); }'),
+    ).toBe("tainted");
+  });
+
+  it("still reports tainted when the fallback is itself tainted", () => {
+    expect(
+      verdict('function h(req: any) { const r = req.query.to; const s = isSafePath(r) ? r : req.query.other; sink(s); }'),
+    ).toBe("tainted");
+  });
+
+  it("does not treat an arbitrary predicate name as a validator", () => {
+    // `shouldRetry(x) ? x : "/"` is not validation. The naming convention is the whole signal,
+    // so it has to be narrow enough that ordinary conditionals do not clear taint.
+    expect(
+      verdict('function h(req: any) { const r = req.query.to; const s = shouldRetry(r) ? r : "/"; sink(s); }'),
+    ).toBe("tainted");
+  });
+});

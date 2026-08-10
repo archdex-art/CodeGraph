@@ -175,8 +175,58 @@ export function classifyTaint(expr: ts.Expression, q: TaintQuery): TaintVerdict 
    * so the depth cap was already doing all the work. Two termination mechanisms where one is
    * inert is one too many.
    */
+  /**
+   * `isSafeReturnPath(raw) ? raw : "/"` — validate-or-fall-back, and a genuine sanitizer.
+   *
+   * WHY THIS IS HERE. Without it the conditional is walked as two ordinary branches and joined:
+   * the true branch carries the tainted name, the false branch is a literal, and `tainted ∨
+   * untraced` is `tainted`. Measured on this repository, that reported the OAuth callback's
+   * redirect target as an unguarded open redirect at confidence 0.9 — three times — with
+   * `isSafeReturnPath` sitting in the condition doing exactly the job the finding said was
+   * missing. A security analysis that flags the mitigation is worse than one that stays quiet,
+   * because every reader who checks it learns to discount the next one.
+   *
+   * The shape is recognised NARROWLY, because this is the direction that suppresses findings:
+   *   · the condition is a CALL, whose callee name reads as a validator;
+   *   · the value kept on the true branch is the very expression that call vetted;
+   *   · the other branch is a literal, so nothing tainted survives it.
+   * A bare `flag ? raw : "/"` fails the first test, `isOk(a) ? b : "/"` the second, and
+   * `isOk(a) ? a : other` the third — each still reports tainted.
+   *
+   * Note this returns `sanitized`, not `untraced`. The path stays visible and is reported as
+   * defended; it does not vanish. Silently dropping guarded paths is how a reader loses the
+   * ability to tell "checked and safe" from "never looked".
+   */
+  const VALIDATOR_NAME = /^(is|has|assert|ensure|check|validate)[A-Z_]|^(is|has)$|Valid$|Safe$/;
+  const validatedTernary = (node: ts.ConditionalExpression): boolean => {
+    if (!ts.isCallExpression(node.condition)) return false;
+    const callee = ts.isIdentifier(node.condition.expression)
+      ? node.condition.expression.text
+      : ts.isPropertyAccessExpression(node.condition.expression)
+        ? node.condition.expression.name.text
+        : "";
+    if (!VALIDATOR_NAME.test(callee) && !q.sanitizers.has(callee)) return false;
+    // The kept value must be what was vetted, compared by source text so
+    // `isSafe(o.p) ? o.p : "/"` counts and `isSafe(a) ? b : "/"` does not.
+    const kept = node.whenTrue.getText();
+    const vetted = node.condition.arguments.some((a) => a.getText() === kept);
+    if (!vetted) return false;
+    // The fallback must introduce nothing. A literal, or a negation/unary of one.
+    const fallback = node.whenFalse;
+    return (
+      ts.isStringLiteralLike(fallback) ||
+      ts.isNumericLiteral(fallback) ||
+      fallback.kind === ts.SyntaxKind.NullKeyword ||
+      fallback.kind === ts.SyntaxKind.TrueKeyword ||
+      fallback.kind === ts.SyntaxKind.FalseKeyword ||
+      (ts.isIdentifier(fallback) && fallback.text === "undefined")
+    );
+  };
+
   const inspect = (node: ts.Node, depth: number): TaintVerdict => {
     if (depth > 12) return "untraced";
+
+    if (ts.isConditionalExpression(node) && validatedTernary(node)) return "sanitized";
 
     if (ts.isCallExpression(node)) {
       const callee = ts.isIdentifier(node.expression)

@@ -93,16 +93,29 @@ export class QueryEngine {
 
   /** Impact set: transitive callers up to depth (who breaks if this changes). */
   impact(id: string, depth = 3): CodeSymbol[] {
+    return this.impactWithHops(id, depth).map((r) => r.symbol);
+  }
+
+  /**
+   * Impact set with the hop distance each caller was first reached at — the
+   * mirror of `reachableCallees`, walking `callers` instead of `callees`.
+   *
+   * `impact()` delegates here rather than the two keeping their own BFS: the
+   * blast-radius panel needs the distances, and a second traversal is a second
+   * thing to keep in step with the first. The frontier order below is the one
+   * `impact()` already had, so its result is unchanged element-for-element.
+   */
+  impactWithHops(id: string, depth = 3): Array<{ symbol: CodeSymbol; hops: number }> {
     const seen = new Set<string>([id]);
     let frontier = [id];
-    const out: CodeSymbol[] = [];
-    for (let d = 0; d < depth && frontier.length; d++) {
+    const out: Array<{ symbol: CodeSymbol; hops: number }> = [];
+    for (let d = 1; d <= depth && frontier.length; d++) {
       const next: string[] = [];
       for (const cur of frontier) {
         for (const c of this.callers(cur)) {
           if (!seen.has(c.id)) {
             seen.add(c.id);
-            out.push(c);
+            out.push({ symbol: c, hops: d });
             next.push(c.id);
           }
         }
@@ -235,7 +248,16 @@ export class QueryEngine {
             comp.push(w);
           } while (w !== v);
           
-          if (comp.length > 1) {
+          // Tarjan emits every node as its own component, so size alone cannot distinguish
+          // "not in a cycle" from "calls itself". A one-node component is a cycle exactly
+          // when the node has a `calls` edge to itself — direct recursion, which is a real
+          // call cycle and is what the contract above promises. Checking the edge rather
+          // than dropping every singleton is the difference between reporting recursion and
+          // silently discarding it.
+          const selfLoop =
+            comp.length === 1 &&
+            (this.out.get(comp[0]!) ?? []).some((e) => e.kind === "calls" && e.target === comp[0]);
+          if (comp.length > 1 || selfLoop) {
             sccs.push(comp);
             if (sccs.length >= maxReport) break;
           }
