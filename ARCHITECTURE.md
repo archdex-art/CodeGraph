@@ -33,7 +33,7 @@ rather than by convention.
 Browser (Next.js client pages, apps/web/src/app/*)
         │  fetch
         ▼
-API routes (apps/web/src/app/api/*/route.ts)   ← 29 routes, thin HTTP glue
+API routes (apps/web/src/app/api/*/route.ts)   ← 30 routes, thin HTTP glue
         │
         ▼
 apps/web/src/lib/*        web-only concerns: session, authz, store, agents, editor, timeline

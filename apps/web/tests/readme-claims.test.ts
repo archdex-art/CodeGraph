@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { FIXERS } from "@codegraph/remediate-engine";
 
 /**
  * CLAUDE.md §5: "Don't claim in the README what the code doesn't do. Every claim should map to a
@@ -53,8 +54,15 @@ describe("Health Score claims match the model", () => {
 
   it("says the score reports its own coverage, and it does", () => {
     expect(README).toMatch(/coverage it was computed over/);
-    // ADR-008's rendering lives here.
-    expect(read("apps/web/src/app/repos/[id]/page.tsx")).toMatch(/Scored over/);
+    /*
+     * ADR-008's rendering moved out of the page and into `lib/coverage-note.ts` when the
+     * cap-reached disclosure was added, because a sentence with three branches deserves a
+     * test of its own. The claim is unchanged, so the guard follows it rather than being
+     * deleted: the page must still consume the helper, and the helper must still produce the
+     * sentence. `coverage-copy.test.ts` asserts the wording itself.
+     */
+    expect(read("apps/web/src/app/repos/[id]/page.tsx")).toMatch(/coverageNote\(/);
+    expect(read("apps/web/src/lib/coverage-note.ts")).toMatch(/Scored over/);
   });
 });
 
@@ -99,6 +107,23 @@ describe("benchmark numbers are reproducible, not asserted", () => {
   it("pins the benchmark to the commit the README names", () => {
     // A moving target is not a benchmark.
     expect(read("scripts/bench.mts")).toMatch(/const COMMIT = "a371447"/);
+  });
+
+  it("claims the number of codemods the fixer registry actually contains", () => {
+    /**
+     * The row that went stale: "31 fixes across 27 files; Health Score 89 → 96". Two codemods
+     * were deleted for being unsafe or worthless, which took the express fix count to zero,
+     * and the README kept publishing the old figure. `npm run bench` would have caught it —
+     * but only when someone ran it, and the benchmark rows are the one thing in this file a
+     * unit test cannot re-derive, because they need a network clone.
+     *
+     * The registry SIZE needs no clone, and it is the fact the stale row actually depended
+     * on. Asserting it turns "re-run the benchmark" from a habit into a gate.
+     */
+    const WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+    const word = README.match(/ships exactly (\w+) codemods?\b/)?.[1] ?? "";
+    expect(WORDS[word]).toBe(FIXERS.length);
+    for (const fixer of FIXERS) expect(README).toContain(fixer.id);
   });
 });
 

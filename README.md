@@ -34,7 +34,7 @@ flowchart TB
         UI["Dashboard · Report tabs · Built-in Editor"]
     end
 
-    subgraph API["API routes — src/app/api/* (14 routes, thin HTTP glue)"]
+    subgraph API["API routes — src/app/api/* (30 routes, thin HTTP glue)"]
         IDX["/api/index"]
         REPOS["/api/repos · /api/repos/:id"]
         INTEL["/api/repos/:id/intel"]
@@ -157,6 +157,73 @@ verified, `1` for a gate that rejected the patch.
 
 `--rule <id>` narrows to one rule, `--file <path>` to one file, `--json` for machine output.
 
+### CI — fail a change on findings, not on a score
+
+A score threshold fails a pull request for debt its author did not write. `codegraph ci` gates on
+**unaccepted findings at or above a confidence tier**, each carrying one line of evidence you can
+check without opening the file. The exit code is the verdict.
+
+```bash
+node apps/cli/bin.mjs ci . --fail-on high --sarif codegraph.sarif --json codegraph-summary.json
+```
+
+```
+Health     77/100   /path/to/repo
+Findings   200 active · 0 accepted
+Tiers      high 73 · medium 10 · low 117
+
+Top rules
+  99  security/detect-non-literal-fs-filename       low
+  36  hardcoded-local-url                           high
+  19  hardcoded-secret                              high
+
+Gate       --fail-on high
+  ✗ apps/web/tests/security.test.ts:222  hardcoded-secret high
+      assigned to `PASSWORD`, 6 chars, generated-looking
+
+FAIL — 73 unaccepted finding(s) at or above high confidence.
+```
+
+Adopting it on a codebase that already has findings does not require a thousand-line PR:
+
+```bash
+node apps/cli/bin.mjs baseline .     # 3 entries accepting 7 finding(s)
+node apps/cli/bin.mjs ci .           # exit 0 — the gate now fires on what you add next
+```
+
+A baseline entry is *rule + file*, deliberately not line — a line-keyed baseline expires on the
+next commit that adds an import. Accepted findings are **still reported**: they stay in the
+summary, they stay in the SARIF marked `suppressions: external` (code scanning shows them as
+dismissed), and they stay out of the Health Score. A baseline that makes findings vanish is an
+allowlist nobody reviews. `codegraph-ignore <rule> — reason` on the offending line is the
+per-finding escape hatch.
+
+#### In GitHub Actions
+
+`action.yml` at the repo root is a composite action: it runs the gate, writes SARIF, and uploads
+it with `github/codeql-action/upload-sarif@v3`.
+
+```yaml
+permissions:
+  contents: read
+  security-events: write   # SARIF upload
+  pull-requests: write     # the summary comment
+
+steps:
+  - uses: actions/checkout@v4
+  - uses: archdex-art/CodeGraph@main
+    with:
+      path: "."
+      fail-on: high
+      sarif: codegraph.sarif
+```
+
+`.github/workflows/codegraph.yml` is this repository dogfooding it, and adds one **sticky** PR
+comment — found and updated by a hidden HTML marker, so a ten-push PR has one comment with
+current numbers rather than ten comments with stale ones. It carries the score, the tier counts,
+the top five gating findings with `file:line`, rule id and evidence, and how many findings the
+baseline accepted.
+
 ## Installation & deployment
 
 | Mode | Command | Notes |
@@ -198,12 +265,12 @@ quietly, and a README is the last place that should happen.
 
 | What | Result | Source |
 |---|---|---|
-| **Symbol graph extraction** (`expressjs/express@a371447`) | 174 symbols across 159 files plus 113 synthetic module nodes; **299 resolved call edges**, up from 38. Symbols with no inbound edge: **72 of 174 (41%)**, down from 155 (89%). Two defects caused that: call-site attribution required a named enclosing function, discarding 46% of already-resolved calls, and the extractor recorded only `CallExpression`, so rendering a component or passing a callback produced no reference. Precision is measured separately against the TypeScript checker as ground truth — **98.4%** over 2,159 calls where both resolvers answered. Of the symbols still unreferenced on *this* repository, the compiler finds a real call site for only **2%**: the rest are exports, entry points and dynamically-dispatched handlers, not missing edges | `npm run bench` |
-| **Agent swarm** (`expressjs/express@a371447`) | 66 findings across 6 active specialists (P0:24 · P1:2 · P2:40 · P3:0); Health Score 89, *simulated* **89 → 90** if P0+P1 are fixed. The projection re-runs the real scorer over the issues that would remain, so it simulates the shipped model rather than estimating — but it is a simulation, not a measurement. The measured result is the row below | `npm run bench` |
-| **Verified remediation** (`expressjs/express@a371447`) | 31 fixes across 27 files; Health Score **89 → 96** and issues **62 → 31**, both from an actual re-index of the fixed tree rather than a projection. Verification level **`partial`** — syntax and re-analysis passed, types and tests skipped (express ships no `tsconfig.json`, and gate 3 runs only under `--verify`). Valid, applyable unified git diff | `npm run bench` |
+| **Symbol graph extraction** (`expressjs/express@a371447`) | 174 symbols across 159 files plus 112 synthetic module nodes; **301 resolved call edges**, up from 38 — 5 of them self-edges, which the graph used to mis-attribute to module scope. Symbols with no inbound edge: **73 of 174 (42%)**, down from 155 (89%). Two defects caused that: call-site attribution required a named enclosing function, discarding 46% of already-resolved calls, and the extractor recorded only `CallExpression`, so rendering a component or passing a callback produced no reference. Precision is measured separately against the TypeScript checker as ground truth — **98.4%** over 2,159 calls where both resolvers answered. Of the symbols still unreferenced on *this* repository, the compiler finds a real call site for only **2%**: the rest are exports, entry points and framework callbacks, which is the honest ceiling for a resolver with no runtime information | `npm run bench` |
+| **Agent swarm** (`expressjs/express@a371447`) | 54 findings after the critic dedupes, across **7 of 7 active specialists** (P0:21 · P1:1 · P2:24 · P3:8); Health Score 89, *simulated* **89 → 90** if P0+P1 are fixed. The architecture specialist reported 0 here until the recursion fix above — express's 5 self-recursive functions were real call cycles the graph could not see. The projection re-runs the real scorer over the issues that would remain, so it simulates the shipped model rather than estimating — but it is a simulation, not a measurement | `npm run bench` |
+| **Batch remediation** (`expressjs/express@a371447`) | **0 edits.** The batch fixer ships exactly one codemod — `annotate-empty-catch` — and express contains no empty catch block, so there is nothing for it to patch and it says so rather than manufacturing a diff. Two earlier codemods (`remove-debug-output`, `remove-todo-marker`) were deleted after one deleted a CLI script's only output line; the bar in `remediate-engine/src/types.ts` is that a fix cannot change behaviour AND must remove an issue the scorer counts, and nothing else has cleared it yet. This row published "31 fixes, 89 → 96" for a while after those removals — a stale number is exactly what `npm run bench` exists to catch, and it only catches it when someone runs it | `npm run bench` |
 | **Graph-RAG context generation** | Query *"render a view template"* → 5 seeds, 11 slices, ~647 tokens, structured prompt | [`apps/web/CODE_INTELLIGENCE.md`](./apps/web/CODE_INTELLIGENCE.md) |
 | **Memory ceiling under Render's real constraints** | Full pipeline survives indexing `octocat/Hello-World` **and** `expressjs/express` end-to-end inside a container capped at `--memory=512m --cpus=0.5` — the exact config that OOM-killed the server before the fix in [`docs/postmortems/2026-07-10-tree-sitter-oom.md`](./docs/postmortems/2026-07-10-tree-sitter-oom.md) | CI `docker-smoke-test` job, runs on every push |
-| **Test suite** | **94 test files** in the workspace (security, indexer, scoring, pillars, coverage, dependencies, codeintel, graph scope, wheel-zoom policy, anonymous-indexing consent, incremental indexing, executor, verify gates, orchestrator, specialists, migrations, tenant-isolation, workspace containment, timeline hash validation, clone redirect refusal, CLI, README claims, and more). 1,286 cases as of 2026-08-08 — the file count is asserted by a test, the case count is a point-in-time figure that moves with every commit | `npm run test` |
+| **Test suite** | **120 test files** in the workspace (security, indexer, scoring, pillars, coverage, dependencies, codeintel, graph scope, wheel-zoom policy, anonymous-indexing consent, incremental indexing, executor, verify gates, orchestrator, specialists, migrations, tenant-isolation, workspace containment, timeline hash validation, clone redirect refusal, ask recall, dashboard triage, CLI, README claims, and more). 2,206 cases as of 2026-08-09 — the file count is asserted by a test, the case count is a point-in-time figure that moves with every commit | `npm run test` |
 | **Security posture (self-audited, tracked openly)** | Baseline **3/10 → 9.1/10**. Phases 0–3 hardening (SSRF guard, local-access gate, security headers, auth gate, cross-tenant isolation fix), then Phase 7 closed **17 of 27** findings from a follow-up deep audit that surfaced **99 issues (5 critical)** across the full stack. Remaining items are tracked, not hidden — plus an independent pen-test pass that verified every control live and fixed a rate-limit `X-Forwarded-For` bypass | [`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md), [`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md) |
 
 ## Comparison with existing tools
@@ -232,6 +299,22 @@ Tracked live in [`docs/IMPROVEMENT_PLAN.md`](./docs/IMPROVEMENT_PLAN.md) (the pl
 - [x] **Phase 0.6 — Multi-tenant isolation** *(pulled forward, was live-severity)*: per-repo ownership, cross-tenant data leak closed
 - [~] **Phase 4 — Close the agent loop** *(partly shipped)*: the **explicit confirmation gate exists** — every remote mutation now requires `PublishConsent { confirmed: true }`, and no route constructs one, so nothing publishes as shipped. What remains is the endpoint that takes that consent and performs the branch → commit → push → PR, plus the audit trail
 - [ ] **Phase 5 — Scale & domains** *(stretch)*: a second Tree-sitter language extractor (Python) for AST-grade precision beyond regex, runtime/observability domain (OTel ingestion)
+- [x] **Phase 6 — Code-intelligence breadth**: ownership (developer → commit → file → symbol, reviewer recommendation, stale/orphaned areas), APIs as first-class graph entities with endpoint → service → sink flow tracing, inter-procedural taint, dependency advisories (OSV, opt-in), unused-dependency and replacement-impact analysis, PR intelligence over a real diff, and a cross-repository organisational graph — see the table below for what each does and does not know
+
+### What the intelligence layer actually knows
+
+Each row is reachable from a route and covered by tests. The **limits** column is the point: every analysis here reports what it could not determine instead of defaulting to a clean answer, because "we did not look" and "there is nothing there" are different claims.
+
+| Capability | Route | Limits it states about itself |
+|---|---|---|
+| **Ownership** — authors, per-file shares, bus factor, stale/orphaned areas, symbol-level attribution | `/api/repos/:id/ownership?op=summary\|file\|reviewers\|familiarity` | Shares are of COMMITS, not lines. Symbol attribution intersects historical hunks with CURRENT spans, so a symbol that moved is matched where it is now |
+| **Reviewer recommendation** — ownership × recency × co-change | same route, `op=reviewers` | Excludes anyone inactive in the window; each recommendation carries the evidence it was derived from. No history → no recommendation, not a guess |
+| **API entities + data flow** — endpoints as graph nodes, endpoint → service → database/fs/network/process flows | `/api/repos/:id/intel?op=endpoints\|flows\|api-impact\|unauth-paths` | `authenticated` is three-valued: `null` means the handler could not be resolved, and only `false` (resolved, no guard) reaches `unauth-paths` |
+| **Inter-procedural taint** — untrusted values followed argument-index to parameter-index across calls | `/api/repos/:id/intel?op=taint` | Cannot see aliasing, collections, dynamic dispatch or unresolved cross-module calls. Confidence is derived from edge resolution and chain length. Defended paths are reported as `sanitized`, not dropped |
+| **Dependency advisories** — OSV lookup | `/api/repos/:id/dependencies?op=advisories` | **Off by default** (`CG_ENABLE_ADVISORY_LOOKUP`): indexing runs on strangers' repos. Status is `checked` / `unavailable` / `disabled`; only `checked` licenses a conclusion. npm only |
+| **Unused / replaceable dependencies** | `/api/repos/:id/dependencies?op=unused\|impact` | Candidates with a confidence and a caveat, never verdicts. Types-only packages, script-invoked CLIs, config-loaded plugins and peer deps are excluded or downgraded by name |
+| **PR intelligence** — changed symbols, affected endpoints and DB models, blast radius, relevant tests, reviewers, risk | `/api/repos/:id/pr?base=&head=` | Joined against the LAST index, not `head`. Risk is a weighted sum whose every term is published with its evidence — it ranks, it does not predict |
+| **Organisational graph** — cross-repo dependencies, shared libraries, repo cycles, contributors | `/api/org` | An edge is drawn only when one repo's manifest declares the name another depends on. Repos that cannot contribute are listed in `excluded` with a reason |
 
 ### Known issues / security status
 This project audits itself and publishes the results rather than hiding them. A comprehensive follow-up audit ([`docs/AUDIT_2026-07-12.md`](./docs/AUDIT_2026-07-12.md)) found **99 issues (5 critical, 24 high)** beyond what Phases 0–3 already fixed — including a confused-deputy token-relay path in the fix executor and two symlink-escape vectors. **Phase 7 has since closed all 5 criticals and 17 of 27 security findings** (symlink-escape fixes, credential redaction, job-ownership checks, OAuth open-redirect guard, session expiry, rate limiting, and more — each with regression tests), and an independent pen-test pass verified the controls live. The remaining items are testing-debt or deliberate product/infra tradeoffs, all **tracked in the open** ([`docs/PROGRESS_TRACKER.md`](./docs/PROGRESS_TRACKER.md)), not silently patched over. If you're evaluating this for anything beyond local/trusted-host use, read that audit first.

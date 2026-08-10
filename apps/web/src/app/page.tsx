@@ -42,8 +42,8 @@ import { CountUp, Entrance, Magnetic, Reveal, Stagger, StaggerItem } from "@/com
  * of it.
  */
 const PROOF = [
-  { value: 2185, suffix: "", label: "tests, all green", note: "116 files, every gate in CI" },
-  { value: 375, suffix: "", label: "TypeScript files", note: "498 of 519 scanned, 90,663 LOC analysed" },
+  { value: 2206, suffix: "", label: "tests, all green", note: "120 files, every gate in CI" },
+  { value: 379, suffix: "", label: "TypeScript files", note: "498 of 519 scanned, 90,663 LOC analysed" },
   { value: 6.0, decimals: 1, suffix: "s", label: "to index this repo, cold", note: "11 stages, measured 2026-08-09" },
   { value: 11, suffix: "", label: "instrumented stages", note: "each one times itself, every run" },
 ];
@@ -261,7 +261,7 @@ export default function LandingPage() {
                 index gets slower you get a package name, not a shrug.
               </p>
               <p className="mt-md text-meta text-[var(--text-muted)]">
-                Below: an actual run over this repository&apos;s 375 TypeScript files.
+                Below: an actual run over this repository&apos;s 379 TypeScript files.
               </p>
             </Reveal>
 
