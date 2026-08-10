@@ -200,29 +200,17 @@ per-finding escape hatch.
 
 #### In GitHub Actions
 
-`action.yml` at the repo root is a composite action: it runs the gate, writes SARIF, and uploads
-it with `github/codeql-action/upload-sarif@v3`.
+The gate is a CLI, so a workflow is three lines around `codegraph ci`:
 
 ```yaml
-permissions:
-  contents: read
-  security-events: write   # SARIF upload
-  pull-requests: write     # the summary comment
-
-steps:
-  - uses: actions/checkout@v4
-  - uses: archdex-art/CodeGraph@main
-    with:
-      path: "."
-      fail-on: high
-      sarif: codegraph.sarif
+- run: npx codegraph ci . --fail-on high --sarif codegraph.sarif
+- uses: github/codeql-action/upload-sarif@v3
+  with: { sarif_file: codegraph.sarif }
 ```
 
-`.github/workflows/codegraph.yml` is this repository dogfooding it, and adds one **sticky** PR
-comment — found and updated by a hidden HTML marker, so a ten-push PR has one comment with
-current numbers rather than ten comments with stale ones. It carries the score, the tier counts,
-the top five gating findings with `file:line`, rule id and evidence, and how many findings the
-baseline accepted.
+A packaged composite action lives on `feat/codegraph-action` — it is not merged, because it
+runs green locally and produced no artifacts on a hosted runner, and a gate whose own CI cannot
+be reproduced is not one to hand anybody else.
 
 ## Installation & deployment
 

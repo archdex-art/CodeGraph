@@ -51,7 +51,13 @@ export default function OwnershipPage() {
   const repo = useRepo();
   const [data, setData] = useState<OwnershipSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  /*
+   * DERIVED, not set inside the effect. `setLoading(true)` in an effect body is a cascading
+   * render, and it also encoded the state twice: "loading" is exactly "the data I hold is not
+   * for the repo I am rendering", which this compares directly and cannot get out of step.
+   */
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const loading = loadedFor !== repo.id;
 
   const [files, setFiles] = useState("");
   const [reviewers, setReviewers] = useState<ReviewerSuggestion[] | null>(null);
@@ -60,7 +66,6 @@ export default function OwnershipPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     ownershipSummary(repo.id)
       .then((d) => {
         if (!cancelled) {
@@ -72,7 +77,8 @@ export default function OwnershipPage() {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load ownership");
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        // Marks the data as belonging to THIS repo, which is what ends the loading state.
+        if (!cancelled) setLoadedFor(repo.id);
       });
     return () => {
       cancelled = true;

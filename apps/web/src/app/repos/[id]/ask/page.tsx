@@ -49,23 +49,39 @@ export default function AskPage() {
 
   const [draft, setDraft] = useState(asked);
   const [result, setResult] = useState<AskResult | null>(null);
-  const [loading, setLoading] = useState(false);
+  /* Derived, for the same reason as `syncedTo` below: a question with no answer yet IS the
+     loading state, so storing it separately only creates a second thing to keep in step. */
+  const [answeredFor, setAnsweredFor] = useState<string | null>(null);
+  const loading = asked.trim() !== "" && answeredFor !== asked;
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => setDraft(asked), [asked]);
+  /*
+   * Adjusted DURING RENDER, not in an effect.
+   *
+   * Two effects used to do this — one copying `?q=` into the input, one clearing the answer
+   * when the question emptied — and both are the cascading-render shape React warns about:
+   * the component paints the previous question's answer, then re-renders to correct itself.
+   * Comparing against the last question this render tree synced to is the documented
+   * alternative, and it fixes a visible artefact rather than only a lint error: the stale
+   * answer no longer flashes under the new question.
+   */
+  const [syncedTo, setSyncedTo] = useState(asked);
+  if (syncedTo !== asked) {
+    setSyncedTo(asked);
+    setDraft(asked);
+    setResult(null);
+    setError(null);
+  }
 
   useEffect(() => {
-    if (!asked.trim()) {
-      setResult(null);
-      return;
-    }
+    if (!asked.trim()) return;
     let active = true;
-    setLoading(true);
-    setError(null);
+    // No `setLoading(true)` here: `answeredFor` still names the previous question, which is
+    // what `loading` reads. Nothing to set, so nothing cascades.
     intelAsk(repo.id, asked)
       .then((r) => { if (active) setResult(r); })
       .catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : "Query failed"); })
-      .finally(() => { if (active) setLoading(false); });
+      .finally(() => { if (active) setAnsweredFor(asked); });
     return () => { active = false; };
   }, [repo.id, asked]);
 
